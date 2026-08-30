@@ -411,9 +411,16 @@ function SettingsModal({ apiBase, onClose, onSave }) {
 // ---------------------------------------------------------------------------
 // Shared small pieces
 // ---------------------------------------------------------------------------
-function StatCard({ label, value, sub, color }) {
+function StatCard({ label, value, sub, color, onClick }) {
   return (
-    <div className="ft-card" style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 10, padding: "14px 16px", minWidth: 118, flex: 1 }}>
+    <div
+      className={onClick ? "ft-card ft-row" : "ft-card"}
+      onClick={onClick}
+      style={{
+        background: T.card, border: `1px solid ${T.line}`, borderRadius: 10, padding: "14px 16px",
+        minWidth: 118, flex: 1, cursor: onClick ? "pointer" : "default",
+      }}
+    >
       <div style={{ fontSize: 11, color: T.inkSoft, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.4 }}>{label}</div>
       <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 26, fontWeight: 700, color: color || T.ink, marginTop: 4 }}>{value}</div>
       {sub && <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 2 }}>{sub}</div>}
@@ -1433,6 +1440,7 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
   const [showAddLead, setShowAddLead] = useState(false);
   const [showMyLeads, setShowMyLeads] = useState(false);
   const [viewingLead, setViewingLead] = useState(null);
+  const [showTodayLeads, setShowTodayLeads] = useState(false);
 
   const todayLeads = leads.filter((l) => Date.now() - l.createdAt.getTime() < 24 * 3600000);
   const converted = leads.filter((l) => l.status === "won").length;
@@ -1468,7 +1476,7 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
       )}
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
-        <StatCard label="Today's Leads" value={todayLeads.length} />
+        <StatCard label="Today's Leads" value={todayLeads.length} onClick={() => setShowTodayLeads(true)} />
         <StatCard label="Pending" value={pending} color={T.warn} />
         <StatCard label="Converted" value={converted} color={T.verified} />
       </div>
@@ -1497,6 +1505,14 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
         />
       )}
       {showMyLeads && <MyLeadsModal leads={leads} onClose={() => setShowMyLeads(false)} onSelectLead={setViewingLead} />}
+      {showTodayLeads && (
+        <MyLeadsModal
+          leads={todayLeads}
+          title="Today's Leads"
+          onClose={() => setShowTodayLeads(false)}
+          onSelectLead={(l) => { setShowTodayLeads(false); setViewingLead(l); }}
+        />
+      )}
       {viewingLead && <LeadDetailDrawer lead={viewingLead} onClose={() => setViewingLead(null)} onStatusChange={onUpdateLeadStatus} onUpdate={onUpdateLeadDetails} />}
     </div>
   );
@@ -1690,9 +1706,9 @@ function GpsStatus({ gps, verification }) {
   );
 }
 
-function MyLeadsModal({ leads, onClose, onSelectLead }) {
+function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads" }) {
   return (
-    <Overlay onClose={onClose} title="My Leads">
+    <Overlay onClose={onClose} title={title}>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {leads.length === 0 && (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, color: T.inkSoft, fontSize: 13, padding: "30px 8px" }}>
