@@ -69,6 +69,19 @@ button {
   transform: translateY(-1px);
   border-color: #c7c2b2 !important;
 }
+.ft-card {
+  box-shadow: 0 1px 3px rgba(28, 36, 48, 0.05);
+}
+.ft-dashboard-grid {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 18px;
+}
+@media (max-width: 900px) {
+  .ft-dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
 button {
   transition: opacity 0.12s ease, transform 0.08s ease;
 }

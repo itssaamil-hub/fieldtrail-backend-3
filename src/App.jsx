@@ -413,7 +413,7 @@ function SettingsModal({ apiBase, onClose, onSave }) {
 // ---------------------------------------------------------------------------
 function StatCard({ label, value, sub, color }) {
   return (
-    <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 10, padding: "14px 16px", minWidth: 118, flex: 1 }}>
+    <div className="ft-card" style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 10, padding: "14px 16px", minWidth: 118, flex: 1 }}>
       <div style={{ fontSize: 11, color: T.inkSoft, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.4 }}>{label}</div>
       <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 26, fontWeight: 700, color: color || T.ink, marginTop: 4 }}>{value}</div>
       {sub && <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 2 }}>{sub}</div>}
@@ -701,7 +701,7 @@ function LiveMap({ salesmen, leads, onSelectLead }) {
   }, [leads]);
 
   return (
-    <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: 14 }}>
+    <div className="ft-card" style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: 14 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
         <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16 }}>Live Salesmen & Lead Map</div>
         <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: T.verified, fontFamily: "'IBM Plex Mono', monospace" }}><Radio size={12} /> LIVE</div>
@@ -876,7 +876,9 @@ function AdminView({ salesmen, leads, onStatusChange, onAddSalesman, onToggleSal
         </button>
       </div>
       {loadError && (
-        <div style={{ fontSize: 12.5, color: T.danger, background: T.dangerSoft, borderRadius: 8, padding: "9px 12px", marginBottom: 14 }}>{loadError}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: T.danger, background: T.dangerSoft, borderRadius: 8, padding: "9px 12px", marginBottom: 14 }}>
+          <AlertTriangle size={14} /> {loadError}
+        </div>
       )}
       {online && !wsConnected && (
         <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: T.warn, background: T.warnSoft, borderRadius: 8, padding: "8px 12px", marginBottom: 14 }}>
@@ -893,12 +895,12 @@ function AdminView({ salesmen, leads, onStatusChange, onAddSalesman, onToggleSal
         <StatCard label="Pending" value={pending} color={T.warn} />
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 18 }}>
+      <div className="ft-dashboard-grid">
         <LiveMap salesmen={salesmen} leads={leads} onSelectLead={setSelectedLead} />
         <SalesmenPanel salesmen={salesmen} onAddClick={() => setShowAddSalesman(true)} onToggleActive={onToggleSalesmanActive} />
       </div>
 
-      <div style={{ marginTop: 20, background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: 16 }}>
+      <div className="ft-card" style={{ marginTop: 20, background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: 16 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
           <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16 }}>Leads</div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
@@ -955,7 +957,12 @@ function AdminView({ salesmen, leads, onStatusChange, onAddSalesman, onToggleSal
               </div>
             </div>
           ))}
-          {filteredLeads.length === 0 && <div style={{ color: T.inkSoft, fontSize: 13, padding: 8 }}>No leads match these filters.</div>}
+          {filteredLeads.length === 0 && (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, color: T.inkSoft, fontSize: 13, padding: "36px 8px" }}>
+              <List size={22} style={{ opacity: 0.5 }} />
+              No leads match these filters.
+            </div>
+          )}
         </div>
       </div>
 
@@ -974,7 +981,7 @@ function AdminView({ salesmen, leads, onStatusChange, onAddSalesman, onToggleSal
 
 function SalesmenPanel({ salesmen, onAddClick, onToggleActive }) {
   return (
-    <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+    <div className="ft-card" style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16 }}>Salesmen</div>
         <button onClick={onAddClick} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 6, border: "none", cursor: "pointer", background: T.route, color: "#fff", fontWeight: 700, fontSize: 12 }}>
@@ -1069,7 +1076,27 @@ function AddSalesmanModal({ existingCount, onClose, onSubmit }) {
 // Shared between Admin and Salesman — the fields shown adapt automatically
 // to whatever the lead actually has (nullable GPS when Location Settings
 // have GPS off, optional sub-location/POS/renewal fields, etc).
-function LeadDetailDrawer({ lead, onClose, onStatusChange }) {
+function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate }) {
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({
+    subLocation: lead.subLocation || "", posName: lead.posName || "",
+    renewalMonth: lead.renewalMonth || "", renewalDate: lead.renewalDate || "",
+    owner: lead.owner || "", phone: lead.phone || "", notes: lead.notes || "",
+  });
+  const [saving, setSaving] = useState(false);
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const saveEdit = async () => {
+    setSaving(true);
+    await onUpdate(lead.id, {
+      subLocation: form.subLocation, posName: form.posName,
+      renewalMonth: form.renewalMonth, renewalDate: form.renewalDate || null,
+      contactName: form.owner, phone: form.phone, notes: form.notes,
+    });
+    setSaving(false);
+    setEditing(false);
+  };
+
   const detailRows = [
     ["Business Name", lead.business],
     ["Sub Location", lead.subLocation],
@@ -1085,7 +1112,12 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange }) {
       <div style={{ width: 380, maxWidth: "90vw", background: T.card, height: "100%", padding: 20, overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 19 }}>{lead.business}</div>
-          <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: T.inkSoft }}><X size={18} /></button>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {onUpdate && !editing && (
+              <button onClick={() => setEditing(true)} style={{ border: "none", background: "none", cursor: "pointer", color: T.route, fontSize: 12.5, fontWeight: 700 }}>Edit</button>
+            )}
+            <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: T.inkSoft }}><X size={18} /></button>
+          </div>
         </div>
         <div style={{ marginTop: 4, color: T.inkSoft, fontSize: 13 }}>{lead.owner} · {lead.category}</div>
         <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -1093,39 +1125,59 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange }) {
           <SyncBadge syncStatus={lead.syncStatus} />
         </div>
 
-        <div style={{ marginTop: 16, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 8, padding: 12 }}>
-          {detailRows.map(([label, value]) => (
-            <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "5px 0", fontSize: 13 }}>
-              <span style={{ color: T.inkSoft }}>{label}</span>
-              <span style={{ fontWeight: 600, textAlign: "right" }}>{value}</span>
+        {editing ? (
+          <div style={{ marginTop: 16 }}>
+            <Field label="Sub Location"><input style={inputStyle} value={form.subLocation} onChange={set("subLocation")} /></Field>
+            <Field label="POS Name"><input style={inputStyle} value={form.posName} onChange={set("posName")} /></Field>
+            <Field label="Contact Name"><input style={inputStyle} value={form.owner} onChange={set("owner")} /></Field>
+            <Field label="Contact Number"><input style={inputStyle} value={form.phone} onChange={set("phone")} /></Field>
+            <div style={{ display: "flex", gap: 10 }}>
+              <div style={{ flex: 1 }}><Field label="Renewal Month"><input style={inputStyle} value={form.renewalMonth} onChange={set("renewalMonth")} /></Field></div>
+              <div style={{ flex: 1 }}><Field label="Renewal Date"><input style={inputStyle} type="date" value={form.renewalDate} onChange={set("renewalDate")} /></Field></div>
             </div>
-          ))}
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "5px 0", fontSize: 13 }}>
-            <span style={{ color: T.inkSoft }}>Created</span>
-            <span style={{ fontWeight: 600 }}>{lead.createdAt.toLocaleString("en-IN")}</span>
-          </div>
-        </div>
-
-        {lead.hasLocation ? (
-          <div style={{ marginTop: 12, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 8, padding: 12, fontFamily: "'IBM Plex Mono', monospace", fontSize: 12.5 }}>
-            <div>lat: {lead.lat.toFixed(6)}</div>
-            <div>lng: {lead.lng.toFixed(6)}</div>
-            <div>accuracy: ±{lead.accuracy} m</div>
+            <Field label="Comments"><textarea style={{ ...inputStyle, minHeight: 60 }} value={form.notes} onChange={set("notes")} /></Field>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => setEditing(false)} style={{ flex: 1, padding: 10, borderRadius: 8, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
+              <button onClick={saveEdit} disabled={saving} style={{ flex: 1, padding: 10, borderRadius: 8, border: "none", background: T.route, color: "#fff", fontWeight: 700, cursor: "pointer" }}>{saving ? "Saving…" : "Save changes"}</button>
+            </div>
           </div>
         ) : (
-          <div style={{ marginTop: 12, fontSize: 12, color: T.inkSoft, background: T.paperDeep, borderRadius: 8, padding: "8px 10px" }}>
-            No location captured for this lead.
-          </div>
+          <>
+            <div style={{ marginTop: 16, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 8, padding: 12 }}>
+              {detailRows.map(([label, value]) => (
+                <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "5px 0", fontSize: 13 }}>
+                  <span style={{ color: T.inkSoft }}>{label}</span>
+                  <span style={{ fontWeight: 600, textAlign: "right" }}>{value}</span>
+                </div>
+              ))}
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "5px 0", fontSize: 13 }}>
+                <span style={{ color: T.inkSoft }}>Created</span>
+                <span style={{ fontWeight: 600 }}>{lead.createdAt.toLocaleString("en-IN")}</span>
+              </div>
+            </div>
+
+            {lead.hasLocation ? (
+              <div style={{ marginTop: 12, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 8, padding: 12, fontFamily: "'IBM Plex Mono', monospace", fontSize: 12.5 }}>
+                <div>lat: {lead.lat.toFixed(6)}</div>
+                <div>lng: {lead.lng.toFixed(6)}</div>
+                <div>accuracy: ±{lead.accuracy} m</div>
+              </div>
+            ) : (
+              <div style={{ marginTop: 12, fontSize: 12, color: T.inkSoft, background: T.paperDeep, borderRadius: 8, padding: "8px 10px" }}>
+                No location captured for this lead.
+              </div>
+            )}
+
+            {lead.notes && (
+              <div style={{ marginTop: 14 }}>
+                <div style={{ fontSize: 11, textTransform: "uppercase", color: T.inkSoft, fontWeight: 600, letterSpacing: 0.3 }}>Comments</div>
+                <div style={{ fontSize: 13.5, marginTop: 4 }}>{lead.notes}</div>
+              </div>
+            )}
+          </>
         )}
 
-        {lead.notes && (
-          <div style={{ marginTop: 14 }}>
-            <div style={{ fontSize: 11, textTransform: "uppercase", color: T.inkSoft, fontWeight: 600, letterSpacing: 0.3 }}>Comments</div>
-            <div style={{ fontSize: 13.5, marginTop: 4 }}>{lead.notes}</div>
-          </div>
-        )}
-
-        {onStatusChange && (
+        {onStatusChange && !editing && (
           <div style={{ marginTop: 16 }}>
             <div style={{ fontSize: 11, textTransform: "uppercase", color: T.inkSoft, fontWeight: 600, letterSpacing: 0.3, marginBottom: 6 }}>Update status</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -1312,6 +1364,20 @@ function SalesmanApp({ session, online }) {
     }
   };
 
+  const handleUpdateLeadDetails = async (id, payload) => {
+    setLeads((prev) => prev.map((l) => (l.id === id ? {
+      ...l,
+      subLocation: payload.subLocation, posName: payload.posName,
+      renewalMonth: payload.renewalMonth, renewalDate: payload.renewalDate || "",
+      owner: payload.contactName, phone: payload.phone, notes: payload.notes,
+    } : l))); // optimistic
+    try {
+      await api.salesmanUpdateLead(id, payload);
+    } catch {
+      /* left optimistic on failure */
+    }
+  };
+
   if (loading) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: 60, color: T.inkSoft, fontSize: 13 }}>
@@ -1328,6 +1394,7 @@ function SalesmanApp({ session, online }) {
       onToggleDay={handleToggleDay}
       onAddLead={handleAddLead}
       onUpdateLeadStatus={handleUpdateLeadStatus}
+      onUpdateLeadDetails={handleUpdateLeadDetails}
       online={online}
       gpsStatus={gpsStatus}
       queuedCount={queuedCount}
@@ -1362,7 +1429,7 @@ function adHocLeadFromPayload(payload, session) {
   };
 }
 
-function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUpdateLeadStatus, online, gpsStatus, queuedCount, loadError }) {
+function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUpdateLeadStatus, onUpdateLeadDetails, online, gpsStatus, queuedCount, loadError }) {
   const [showAddLead, setShowAddLead] = useState(false);
   const [showMyLeads, setShowMyLeads] = useState(false);
   const [viewingLead, setViewingLead] = useState(null);
@@ -1385,7 +1452,11 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
         </button>
       </div>
 
-      {loadError && <div style={{ fontSize: 12.5, color: T.danger, background: T.dangerSoft, borderRadius: 8, padding: "9px 12px", marginBottom: 14 }}>{loadError}</div>}
+      {loadError && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: T.danger, background: T.dangerSoft, borderRadius: 8, padding: "9px 12px", marginBottom: 14 }}>
+          <AlertTriangle size={14} /> {loadError}
+        </div>
+      )}
 
       {(!online || queuedCount > 0) && (
         <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: T.warn, background: T.warnSoft, padding: "9px 12px", borderRadius: 8, marginBottom: 14 }}>
@@ -1426,7 +1497,7 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
         />
       )}
       {showMyLeads && <MyLeadsModal leads={leads} onClose={() => setShowMyLeads(false)} onSelectLead={setViewingLead} />}
-      {viewingLead && <LeadDetailDrawer lead={viewingLead} onClose={() => setViewingLead(null)} onStatusChange={onUpdateLeadStatus} />}
+      {viewingLead && <LeadDetailDrawer lead={viewingLead} onClose={() => setViewingLead(null)} onStatusChange={onUpdateLeadStatus} onUpdate={onUpdateLeadDetails} />}
     </div>
   );
 }
@@ -1623,7 +1694,12 @@ function MyLeadsModal({ leads, onClose, onSelectLead }) {
   return (
     <Overlay onClose={onClose} title="My Leads">
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {leads.length === 0 && <div style={{ color: T.inkSoft, fontSize: 13 }}>No leads yet today.</div>}
+        {leads.length === 0 && (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, color: T.inkSoft, fontSize: 13, padding: "30px 8px" }}>
+            <List size={22} style={{ opacity: 0.5 }} />
+            No leads yet today — tap "Add Lead" to create one.
+          </div>
+        )}
         {leads.map((l) => (
           <div key={l.id} className="ft-row" onClick={() => onSelectLead(l)} style={{ border: `1px solid ${T.line}`, borderRadius: 8, padding: 10, background: "#fff", cursor: "pointer" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
