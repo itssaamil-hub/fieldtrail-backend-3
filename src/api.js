@@ -132,6 +132,8 @@ export const api = {
     return request(`/admin/leads${qs ? `?${qs}` : ""}`);
   },
   adminUpdateLeadStatus: (id, status) => request(`/admin/leads/${id}/status`, { method: "PATCH", body: { status } }),
+  adminUpdateLead: (id, payload) => request(`/admin/leads/${id}`, { method: "PATCH", body: payload }),
+  adminDeleteLead: (id) => request(`/admin/leads/${id}`, { method: "DELETE" }),
   adminGetSettings: () => request("/admin/settings"),
   adminUpdateSettings: (payload) => request("/admin/settings", { method: "PATCH", body: payload }),
   adminExportSheetsInfo: (params = {}) => {

@@ -124,6 +124,7 @@ export default function App() {
   const [apiBase, setApiBaseState] = useState(getApiBase());
   const [session, setSessionState] = useState(getSession());
   const [showSettings, setShowSettings] = useState(false);
+  const [showCrmSettings, setShowCrmSettings] = useState(false);
   const online = useOnlineStatus();
 
   const handleSaveApiBase = (url) => {
@@ -159,7 +160,7 @@ export default function App() {
 
   return (
     <div style={{ fontFamily: "Inter, system-ui, sans-serif", background: T.paper, minHeight: "100vh", color: T.ink }}>
-      <TopBar online={online} session={session} onLogout={handleLogout} onOpenSettings={() => setShowSettings(true)} />
+      <TopBar online={online} session={session} onLogout={handleLogout} onOpenSettings={() => setShowSettings(true)} onOpenCrmSettings={() => setShowCrmSettings(true)} />
       {body}
       {showSettings && (
         <SettingsModal
@@ -168,12 +169,13 @@ export default function App() {
           onSave={(url) => { handleSaveApiBase(url); setShowSettings(false); }}
         />
       )}
+      {showCrmSettings && <CrmSettingsModal onClose={() => setShowCrmSettings(false)} />}
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-function TopBar({ online, session, onLogout, onOpenSettings }) {
+function TopBar({ online, session, onLogout, onOpenSettings, onOpenCrmSettings }) {
   const { canInstall, installed, promptInstall } = useInstallPrompt();
   const isIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
   const [showIosHint, setShowIosHint] = useState(false);
@@ -223,6 +225,16 @@ function TopBar({ online, session, onLogout, onOpenSettings }) {
                 </div>
               )}
             </div>
+          )}
+
+          {session?.role === "admin" && (
+            <button
+              onClick={onOpenCrmSettings}
+              title="CRM Settings"
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 11px", borderRadius: 6, border: "1px solid #3A4658", cursor: "pointer", fontSize: 12, fontWeight: 600, background: "#2A3444", color: T.paper, fontFamily: "Inter, sans-serif" }}
+            >
+              <Settings size={13} /> {narrow ? "" : "CRM Settings"}
+            </button>
           )}
 
           {session && (
@@ -817,6 +829,31 @@ function AdminApp({ session, online }) {
     }
   };
 
+  const onUpdateLead = async (id, payload) => {
+    setLeads((prev) => prev.map((l) => (l.id === id ? {
+      ...l,
+      subLocation: payload.subLocation, posName: payload.posName,
+      renewalMonth: payload.renewalMonth, renewalDate: payload.renewalDate || "",
+      owner: payload.contactName, phone: payload.phone, notes: payload.notes,
+    } : l))); // optimistic
+    try {
+      await api.adminUpdateLead(id, payload);
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : "Couldn't save changes.");
+      loadAll();
+    }
+  };
+
+  const onDeleteLead = async (id) => {
+    setLeads((prev) => prev.filter((l) => l.id !== id)); // optimistic
+    try {
+      await api.adminDeleteLead(id);
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : "Couldn't delete the lead.");
+      loadAll(); // revert to server truth if the delete actually failed
+    }
+  };
+
   const onAddSalesman = async (payload) => {
     await api.adminCreateSalesman(payload);
     await loadAll();
@@ -845,6 +882,8 @@ function AdminApp({ session, online }) {
       salesmen={salesmen}
       leads={leads}
       onStatusChange={onStatusChange}
+      onUpdateLead={onUpdateLead}
+      onDeleteLead={onDeleteLead}
       onAddSalesman={onAddSalesman}
       onToggleSalesmanActive={onToggleSalesmanActive}
       loadError={loadError}
@@ -854,12 +893,12 @@ function AdminApp({ session, online }) {
   );
 }
 
-function AdminView({ salesmen, leads, onStatusChange, onAddSalesman, onToggleSalesmanActive, loadError, wsConnected, online }) {
+function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead, onAddSalesman, onToggleSalesmanActive, loadError, wsConnected, online }) {
   const [filterSalesman, setFilterSalesman] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [filterDate, setFilterDate] = useState("");
   const [selectedLead, setSelectedLead] = useState(null);
   const [showAddSalesman, setShowAddSalesman] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const [sheetsInfo, setSheetsInfo] = useState(null);
   const [sheetsError, setSheetsError] = useState("");
 
@@ -869,19 +908,14 @@ function AdminView({ salesmen, leads, onStatusChange, onAddSalesman, onToggleSal
   const activeSalesmen = salesmen.filter((s) => s.status === "online").length;
 
   const filteredLeads = leads.filter(
-    (l) => (filterSalesman === "all" || l.salesmanId === filterSalesman) && (filterStatus === "all" || l.status === filterStatus)
+    (l) =>
+      (filterSalesman === "all" || l.salesmanId === filterSalesman) &&
+      (filterStatus === "all" || l.status === filterStatus) &&
+      (!filterDate || l.createdAt.toISOString().slice(0, 10) === filterDate)
   );
 
   return (
     <div style={{ padding: "20px 24px", maxWidth: 1180, margin: "0 auto" }}>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
-        <button
-          onClick={() => setShowSettings(true)}
-          style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 600, color: T.ink, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 8, padding: "7px 12px", cursor: "pointer" }}
-        >
-          <Settings size={14} /> CRM Settings
-        </button>
-      </div>
       {loadError && (
         <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: T.danger, background: T.dangerSoft, borderRadius: 8, padding: "9px 12px", marginBottom: 14 }}>
           <AlertTriangle size={14} /> {loadError}
@@ -913,20 +947,31 @@ function AdminView({ salesmen, leads, onStatusChange, onAddSalesman, onToggleSal
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
             <Select value={filterSalesman} onChange={setFilterSalesman} options={[["all", "All salesmen"], ...salesmen.map((s) => [s.id, s.name])]} />
             <Select value={filterStatus} onChange={setFilterStatus} options={[["all", "All statuses"], ...STATUSES.map((s) => [s, STATUS_LABEL[s]])]} />
+            <input
+              type="date"
+              value={filterDate}
+              onChange={(e) => setFilterDate(e.target.value)}
+              style={{ border: `1px solid ${T.line}`, borderRadius: 6, padding: "6px 8px", fontSize: 12.5, fontFamily: "Inter, sans-serif", background: "#fff", color: T.ink }}
+            />
+            {filterDate && (
+              <button onClick={() => setFilterDate("")} style={{ fontSize: 11.5, color: T.inkSoft, background: "none", border: "none", cursor: "pointer", padding: "6px 4px" }}>
+                Clear date
+              </button>
+            )}
             <ExportButton
               label="CSV"
-              onClick={() => window.open(buildExportUrl("csv", { salesmanId: filterSalesman, status: filterStatus }), "_blank")}
+              onClick={() => window.open(buildExportUrl("csv", { salesmanId: filterSalesman, status: filterStatus, date: filterDate }), "_blank")}
             />
             <ExportButton
               label="Excel"
-              onClick={() => window.open(buildExportUrl("xlsx", { salesmanId: filterSalesman, status: filterStatus }), "_blank")}
+              onClick={() => window.open(buildExportUrl("xlsx", { salesmanId: filterSalesman, status: filterStatus, date: filterDate }), "_blank")}
             />
             <ExportButton
               label="Google Sheets"
               onClick={async () => {
                 setSheetsError("");
                 try {
-                  const info = await api.adminExportSheetsInfo({ salesmanId: filterSalesman, status: filterStatus });
+                  const info = await api.adminExportSheetsInfo({ salesmanId: filterSalesman, status: filterStatus, date: filterDate });
                   setSheetsInfo(info);
                 } catch (err) {
                   setSheetsError(err.message || "Couldn't prepare the Sheets export.");
@@ -973,8 +1018,7 @@ function AdminView({ salesmen, leads, onStatusChange, onAddSalesman, onToggleSal
         </div>
       </div>
 
-      {selectedLead && <LeadDetailDrawer lead={selectedLead} onClose={() => setSelectedLead(null)} onStatusChange={onStatusChange} />}
-      {showSettings && <CrmSettingsModal onClose={() => setShowSettings(false)} />}
+      {selectedLead && <LeadDetailDrawer lead={selectedLead} onClose={() => setSelectedLead(null)} onStatusChange={onStatusChange} onUpdate={onUpdateLead} onDelete={onDeleteLead} />}
       {showAddSalesman && (
         <AddSalesmanModal
           existingCount={salesmen.length}
@@ -1083,7 +1127,8 @@ function AddSalesmanModal({ existingCount, onClose, onSubmit }) {
 // Shared between Admin and Salesman — the fields shown adapt automatically
 // to whatever the lead actually has (nullable GPS when Location Settings
 // have GPS off, optional sub-location/POS/renewal fields, etc).
-function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate }) {
+function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete }) {
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
     subLocation: lead.subLocation || "", posName: lead.posName || "",
@@ -1192,6 +1237,26 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate }) {
                 <button key={s} onClick={() => onStatusChange(lead.id, s)} style={{ fontSize: 11.5, padding: "5px 9px", borderRadius: 6, cursor: "pointer", border: `1px solid ${lead.status === s ? T.route : T.line}`, background: lead.status === s ? T.route : "#fff", color: lead.status === s ? "#fff" : T.ink, fontWeight: 600 }}>{STATUS_LABEL[s]}</button>
               ))}
             </div>
+          </div>
+        )}
+
+        {onDelete && !editing && (
+          <div style={{ marginTop: 20, paddingTop: 16, borderTop: `1px solid ${T.line}` }}>
+            {confirmingDelete ? (
+              <div style={{ background: T.dangerSoft, borderRadius: 8, padding: 12 }}>
+                <div style={{ fontSize: 12.5, color: T.danger, marginBottom: 10 }}>
+                  Delete this lead permanently? This can't be undone.
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={() => setConfirmingDelete(false)} style={{ flex: 1, padding: 9, borderRadius: 7, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
+                  <button onClick={() => { onDelete(lead.id); onClose(); }} style={{ flex: 1, padding: 9, borderRadius: 7, border: "none", background: T.danger, color: "#fff", fontWeight: 700, cursor: "pointer" }}>Delete permanently</button>
+                </div>
+              </div>
+            ) : (
+              <button onClick={() => setConfirmingDelete(true)} style={{ fontSize: 12.5, fontWeight: 700, color: T.danger, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                Delete lead
+              </button>
+            )}
           </div>
         )}
       </div>
