@@ -591,6 +591,17 @@ function ExportButton({ label, onClick }) {
   );
 }
 
+function Tab({ active, onClick, label }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{ padding: "7px 14px", borderRadius: 7, border: `1px solid ${active ? T.route : T.line}`, cursor: "pointer", fontSize: 12.5, fontWeight: 700, background: active ? T.route : "#fff", color: active ? "#fff" : T.ink }}
+    >
+      {label}
+    </button>
+  );
+}
+
 function Select({ value, onChange, options }) {
   return (
     <select value={value} onChange={(e) => onChange(e.target.value)} style={{ border: `1px solid ${T.line}`, borderRadius: 6, padding: "6px 8px", fontSize: 12.5, fontFamily: "Inter, sans-serif", background: "#fff", color: T.ink }}>
@@ -628,7 +639,7 @@ function Overlay({ title, onClose, children }) {
 // markers are plain Leaflet layers kept in refs so live position updates
 // just move existing markers instead of re-creating the map on every render.
 // ---------------------------------------------------------------------------
-function LiveMap({ salesmen, leads, onSelectLead }) {
+function LiveMap({ salesmen, leads, onSelectLead, title = "Live Salesmen & Lead Map", subtitle }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const salesmanMarkersRef = useRef({});
@@ -722,13 +733,14 @@ function LiveMap({ salesmen, leads, onSelectLead }) {
 
   return (
     <div className="ft-card" style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: 14 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-        <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16 }}>Live Salesmen & Lead Map</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: T.verified, fontFamily: "'IBM Plex Mono', monospace" }}><Radio size={12} /> LIVE</div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: subtitle ? 2 : 8 }}>
+        <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16 }}>{title}</div>
+        {!subtitle && <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: T.verified, fontFamily: "'IBM Plex Mono', monospace" }}><Radio size={12} /> LIVE</div>}
       </div>
-      <div ref={containerRef} style={{ width: "100%", height: 360, borderRadius: 8, overflow: "hidden" }} />
+      {subtitle && <div style={{ fontSize: 11.5, color: T.inkSoft, marginBottom: 8 }}>{subtitle}</div>}
+      <div ref={containerRef} style={{ width: "100%", height: subtitle ? 460 : 360, borderRadius: 8, overflow: "hidden" }} />
       <div style={{ display: "flex", gap: 14, marginTop: 8, flexWrap: "wrap", fontSize: 11, color: T.inkSoft }}>
-        <LegendDot color={T.route} label="Salesman (online)" />
+        {salesmen.length > 0 && <LegendDot color={T.route} label="Salesman (online)" />}
         <LegendDot color={T.verified} label="Verified lead" />
         <LegendDot color={T.warn} label="Poor accuracy" />
         <LegendDot color={T.danger} label="Unverified" />
@@ -901,6 +913,7 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
   const [selectedLead, setSelectedLead] = useState(null);
   const [showAddSalesman, setShowAddSalesman] = useState(false);
   const [routeSalesman, setRouteSalesman] = useState(null);
+  const [mapView, setMapView] = useState("live"); // "live" | "leads"
   const [sheetsInfo, setSheetsInfo] = useState(null);
   const [sheetsError, setSheetsError] = useState("");
 
@@ -938,10 +951,19 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
         <StatCard label="Pending" value={pending} color={T.warn} />
       </div>
 
-      <div className="ft-dashboard-grid">
-        <LiveMap salesmen={salesmen} leads={leads} onSelectLead={setSelectedLead} />
-        <SalesmenPanel salesmen={salesmen} onAddClick={() => setShowAddSalesman(true)} onToggleActive={onToggleSalesmanActive} onViewRoute={setRouteSalesman} />
+      <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+        <Tab active={mapView === "live"} onClick={() => setMapView("live")} label="Live Map" />
+        <Tab active={mapView === "leads"} onClick={() => setMapView("leads")} label="Lead Locations" />
       </div>
+
+      {mapView === "live" ? (
+        <div className="ft-dashboard-grid">
+          <LiveMap salesmen={salesmen} leads={leads} onSelectLead={setSelectedLead} />
+          <SalesmenPanel salesmen={salesmen} onAddClick={() => setShowAddSalesman(true)} onToggleActive={onToggleSalesmanActive} onViewRoute={setRouteSalesman} />
+        </div>
+      ) : (
+        <LiveMap salesmen={[]} leads={filteredLeads} onSelectLead={setSelectedLead} title="Lead Locations" subtitle="Respects the salesman/status/date filters below" />
+      )}
 
       <div className="ft-card" style={{ marginTop: 20, background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: 16 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
