@@ -141,6 +141,7 @@ export const api = {
     const qs = new URLSearchParams(entries).toString();
     return request(`/admin/leads/export-sheets-info${qs ? `?${qs}` : ""}`);
   },
+  adminSalesmanHistory: (id, date) => request(`/admin/salesmen/${id}/history?date=${date}`),
 
   salesmanDayStart: (lat, lng) => request("/salesman/day/start", { method: "POST", body: { lat, lng } }),
   salesmanDayEnd: (lat, lng) => request("/salesman/day/end", { method: "POST", body: { lat, lng } }),

@@ -20,6 +20,7 @@ import {
   Settings,
   LogOut,
   Loader2,
+  Route,
 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -899,6 +900,7 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
   const [filterDate, setFilterDate] = useState("");
   const [selectedLead, setSelectedLead] = useState(null);
   const [showAddSalesman, setShowAddSalesman] = useState(false);
+  const [routeSalesman, setRouteSalesman] = useState(null);
   const [sheetsInfo, setSheetsInfo] = useState(null);
   const [sheetsError, setSheetsError] = useState("");
 
@@ -938,7 +940,7 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
 
       <div className="ft-dashboard-grid">
         <LiveMap salesmen={salesmen} leads={leads} onSelectLead={setSelectedLead} />
-        <SalesmenPanel salesmen={salesmen} onAddClick={() => setShowAddSalesman(true)} onToggleActive={onToggleSalesmanActive} />
+        <SalesmenPanel salesmen={salesmen} onAddClick={() => setShowAddSalesman(true)} onToggleActive={onToggleSalesmanActive} onViewRoute={setRouteSalesman} />
       </div>
 
       <div className="ft-card" style={{ marginTop: 20, background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: 16 }}>
@@ -1019,6 +1021,7 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
       </div>
 
       {selectedLead && <LeadDetailDrawer lead={selectedLead} onClose={() => setSelectedLead(null)} onStatusChange={onStatusChange} onUpdate={onUpdateLead} onDelete={onDeleteLead} />}
+      {routeSalesman && <SalesmanRouteModal salesman={routeSalesman} onClose={() => setRouteSalesman(null)} />}
       {showAddSalesman && (
         <AddSalesmanModal
           existingCount={salesmen.length}
@@ -1030,7 +1033,7 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
   );
 }
 
-function SalesmenPanel({ salesmen, onAddClick, onToggleActive }) {
+function SalesmenPanel({ salesmen, onAddClick, onToggleActive, onViewRoute }) {
   return (
     <div className="ft-card" style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -1068,9 +1071,108 @@ function SalesmenPanel({ salesmen, onAddClick, onToggleActive }) {
             <span style={{ display: "flex", alignItems: "center", gap: 3 }}><Clock size={12} /> {fmtTime(s.lastUpdate)}</span>
           </div>
           <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 3 }}>{(s.distanceM / 1000).toFixed(1)} km travelled today</div>
+          <button
+            onClick={() => onViewRoute(s)}
+            style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 8, fontSize: 11.5, fontWeight: 700, color: T.route, background: "none", border: "none", cursor: "pointer", padding: 0 }}
+          >
+            <Route size={12} /> View route
+          </button>
         </div>
       ))}
     </div>
+  );
+}
+
+// Draws a salesman's GPS trail for a chosen day: a polyline through every
+// location ping, start/end markers, and that day's lead pins along the way.
+function SalesmanRouteModal({ salesman, onClose }) {
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const containerRef = useRef(null);
+  const mapRef = useRef(null);
+  const layerRef = useRef(null);
+
+  useEffect(() => {
+    setLoading(true);
+    setError("");
+    api.adminSalesmanHistory(salesman.id, date)
+      .then((res) => setData(res))
+      .catch((err) => setError(err.message || "Couldn't load the route for this day."))
+      .finally(() => setLoading(false));
+  }, [salesman.id, date]);
+
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
+    const map = L.map(containerRef.current, { center: [26.847, 80.975], zoom: 12, scrollWheelZoom: true });
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    }).addTo(map);
+    mapRef.current = map;
+    // Leaflet needs a nudge to size correctly inside a modal that just mounted.
+    setTimeout(() => map.invalidateSize(), 50);
+    return () => { map.remove(); mapRef.current = null; };
+  }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !data) return;
+    if (layerRef.current) { layerRef.current.remove(); layerRef.current = null; }
+
+    const group = L.layerGroup().addTo(map);
+    layerRef.current = group;
+
+    const points = data.route.map((p) => [p.latitude, p.longitude]);
+    if (points.length > 0) {
+      L.polyline(points, { color: T.route, weight: 3, opacity: 0.75 }).addTo(group);
+      L.circleMarker(points[0], { radius: 7, color: "#fff", weight: 2, fillColor: T.verified, fillOpacity: 1 })
+        .bindTooltip("Start", { permanent: false }).addTo(group);
+      L.circleMarker(points[points.length - 1], { radius: 7, color: "#fff", weight: 2, fillColor: T.danger, fillOpacity: 1 })
+        .bindTooltip("Last known", { permanent: false }).addTo(group);
+    }
+
+    data.leads.forEach((l) => {
+      if (l.latitude == null || l.longitude == null) return;
+      L.marker([l.latitude, l.longitude], {
+        icon: L.divIcon({
+          className: "",
+          html: `<div style="width:12px;height:12px;border-radius:50%;background:${l.verification_status === "verified" ? T.verified : T.warn};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.35);"></div>`,
+          iconSize: [12, 12], iconAnchor: [6, 6],
+        }),
+      }).bindTooltip(l.business_name, { direction: "top", offset: [0, -6] }).addTo(group);
+    });
+
+    const allPoints = [...points, ...data.leads.filter((l) => l.latitude != null).map((l) => [l.latitude, l.longitude])];
+    if (allPoints.length > 0) {
+      map.fitBounds(L.latLngBounds(allPoints), { padding: [30, 30], maxZoom: 15 });
+    }
+  }, [data]);
+
+  return (
+    <Overlay onClose={onClose} title={`${salesman.name}'s Route`}>
+      <div style={{ marginBottom: 12 }}>
+        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={inputStyle} />
+      </div>
+      {error && <div style={{ fontSize: 12.5, color: T.danger, background: T.dangerSoft, borderRadius: 8, padding: "8px 10px", marginBottom: 12 }}>{error}</div>}
+      <div ref={containerRef} style={{ width: "100%", height: 320, borderRadius: 8, background: T.paperDeep }} />
+      {loading && (
+        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: T.inkSoft, marginTop: 8 }}>
+          <Loader2 size={13} className="spin" /> Loading route…
+        </div>
+      )}
+      {!loading && data && data.route.length === 0 && (
+        <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 10 }}>No location pings recorded for this day.</div>
+      )}
+      {!loading && data && data.route.length > 0 && (
+        <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 10, display: "flex", gap: 14, flexWrap: "wrap" }}>
+          <span><span style={{ color: T.verified, fontWeight: 700 }}>●</span> Start ({fmtTime(new Date(data.route[0].captured_at))})</span>
+          <span><span style={{ color: T.danger, fontWeight: 700 }}>●</span> Last known ({fmtTime(new Date(data.route[data.route.length - 1].captured_at))})</span>
+          <span>{data.leads.length} lead{data.leads.length === 1 ? "" : "s"} that day</span>
+        </div>
+      )}
+    </Overlay>
   );
 }
 
