@@ -21,6 +21,8 @@ import {
   LogOut,
   Loader2,
   Route,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -75,8 +77,12 @@ const uuid = () =>
     return v.toString(16);
   });
 
-const STATUSES = ["new", "contacted", "follow_up", "demo_scheduled", "proposal_sent", "negotiation", "won", "lost"];
+// Hot/Warm/Cold sit first per spec (the salesman's quick-triage picks),
+// "New" stays as the backend's silent default status for leads nobody has
+// explicitly classified yet — it's still valid, just not pushed to the top.
+const STATUSES = ["hot", "warm", "cold", "new", "contacted", "follow_up", "demo_scheduled", "proposal_sent", "negotiation", "won", "lost"];
 const STATUS_LABEL = {
+  hot: "Hot", warm: "Warm", cold: "Cold",
   new: "New", contacted: "Contacted", follow_up: "Follow-up", demo_scheduled: "Demo Scheduled",
   proposal_sent: "Proposal Sent", negotiation: "Negotiation", won: "Won", lost: "Lost",
 };
@@ -580,14 +586,45 @@ function CrmSettingsModal({ onClose }) {
   );
 }
 
-function ExportButton({ label, onClick }) {
+// Single "Download" button that reveals CSV/Excel/Sheets on click, instead
+// of showing all three as separate buttons all the time.
+function DownloadMenu({ onCsv, onXlsx, onSheets }) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocClick = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [open]);
+
+  const pick = (fn) => () => { setOpen(false); fn(); };
+
   return (
-    <button
-      onClick={onClick}
-      style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, color: T.ink, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 6, padding: "6px 10px", cursor: "pointer" }}
-    >
-      <Download size={12} /> {label}
-    </button>
+    <div ref={containerRef} style={{ position: "relative" }}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: T.ink, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 6, padding: "6px 10px", cursor: "pointer" }}
+      >
+        <Download size={12} /> Download
+      </button>
+      {open && (
+        <div style={{ position: "absolute", top: "calc(100% + 4px)", right: 0, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 8, boxShadow: "0 6px 20px rgba(28,36,48,0.15)", zIndex: 100, minWidth: 150, overflow: "hidden" }}>
+          {[["CSV", onCsv], ["Excel", onXlsx], ["Google Sheets", onSheets]].map(([label, fn]) => (
+            <button
+              key={label}
+              onClick={pick(fn)}
+              style={{ display: "block", width: "100%", textAlign: "left", padding: "9px 12px", fontSize: 12.5, fontWeight: 600, color: T.ink, background: "none", border: "none", cursor: "pointer" }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -882,6 +919,16 @@ function AdminApp({ session, online }) {
     }
   };
 
+  const onEditSalesman = async (id, payload) => {
+    await api.adminUpdateSalesman(id, payload);
+    await loadAll();
+  };
+
+  const onDeleteSalesman = async (id) => {
+    await api.adminDeleteSalesman(id); // no optimistic removal — surfaces the "still has leads" error cleanly if blocked
+    await loadAll();
+  };
+
   if (loading) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: 60, color: T.inkSoft, fontSize: 13 }}>
@@ -898,6 +945,8 @@ function AdminApp({ session, online }) {
       onUpdateLead={onUpdateLead}
       onDeleteLead={onDeleteLead}
       onAddSalesman={onAddSalesman}
+      onEditSalesman={onEditSalesman}
+      onDeleteSalesman={onDeleteSalesman}
       onToggleSalesmanActive={onToggleSalesmanActive}
       loadError={loadError}
       wsConnected={wsConnected}
@@ -906,18 +955,24 @@ function AdminApp({ session, online }) {
   );
 }
 
-function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead, onAddSalesman, onToggleSalesmanActive, loadError, wsConnected, online }) {
+function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead, onAddSalesman, onEditSalesman, onDeleteSalesman, onToggleSalesmanActive, loadError, wsConnected, online }) {
   const [filterSalesman, setFilterSalesman] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterDate, setFilterDate] = useState("");
   const [selectedLead, setSelectedLead] = useState(null);
   const [showAddSalesman, setShowAddSalesman] = useState(false);
+  const [editSalesman, setEditSalesman] = useState(null);
+  const [deleteSalesmanConfirm, setDeleteSalesmanConfirm] = useState(null);
+  const [deleteSalesmanError, setDeleteSalesmanError] = useState("");
   const [routeSalesman, setRouteSalesman] = useState(null);
   const [mapView, setMapView] = useState("live"); // "live" | "leads"
   const [sheetsInfo, setSheetsInfo] = useState(null);
   const [sheetsError, setSheetsError] = useState("");
+  const [statLeadsModal, setStatLeadsModal] = useState(null); // { title, leads } | null
 
   const todayLeads = leads.filter((l) => Date.now() - l.createdAt.getTime() < 24 * 3600000);
+  const hotLeadsToday = todayLeads.filter((l) => l.status === "hot");
+  const warmLeadsToday = todayLeads.filter((l) => l.status === "warm");
   const converted = leads.filter((l) => l.status === "won").length;
   const pending = leads.filter((l) => !["won", "lost"].includes(l.status)).length;
   const activeSalesmen = salesmen.filter((s) => s.status === "online").length;
@@ -946,6 +1001,8 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
         <StatCard label="Total Salesmen" value={salesmen.length} />
         <StatCard label="Active Now" value={activeSalesmen} color={T.verified} />
         <StatCard label="Leads Today" value={todayLeads.length} />
+        <StatCard label={<>Hot Leads <span style={{ fontSize: 8.5, opacity: 0.65 }}>TODAY</span></>} value={hotLeadsToday.length} color={T.danger} onClick={() => setStatLeadsModal({ title: "Hot Leads Today", leads: hotLeadsToday })} />
+        <StatCard label={<>Warm Leads <span style={{ fontSize: 8.5, opacity: 0.65 }}>TODAY</span></>} value={warmLeadsToday.length} color={T.warn} onClick={() => setStatLeadsModal({ title: "Warm Leads Today", leads: warmLeadsToday })} />
         <StatCard label="Total Leads" value={leads.length} />
         <StatCard label="Converted" value={converted} color={T.verified} />
         <StatCard label="Pending" value={pending} color={T.warn} />
@@ -959,7 +1016,14 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
       {mapView === "live" ? (
         <div className="ft-dashboard-grid">
           <LiveMap salesmen={salesmen} leads={leads} onSelectLead={setSelectedLead} />
-          <SalesmenPanel salesmen={salesmen} onAddClick={() => setShowAddSalesman(true)} onToggleActive={onToggleSalesmanActive} onViewRoute={setRouteSalesman} />
+          <SalesmenPanel
+            salesmen={salesmen}
+            onAddClick={() => setShowAddSalesman(true)}
+            onEditClick={setEditSalesman}
+            onToggleActive={onToggleSalesmanActive}
+            onDeleteClick={setDeleteSalesmanConfirm}
+            onViewRoute={setRouteSalesman}
+          />
         </div>
       ) : (
         <LiveMap salesmen={[]} leads={filteredLeads} onSelectLead={setSelectedLead} title="Lead Locations" subtitle="Respects the salesman/status/date filters below" />
@@ -982,17 +1046,10 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
                 Clear date
               </button>
             )}
-            <ExportButton
-              label="CSV"
-              onClick={() => window.open(buildExportUrl("csv", { salesmanId: filterSalesman, status: filterStatus, date: filterDate }), "_blank")}
-            />
-            <ExportButton
-              label="Excel"
-              onClick={() => window.open(buildExportUrl("xlsx", { salesmanId: filterSalesman, status: filterStatus, date: filterDate }), "_blank")}
-            />
-            <ExportButton
-              label="Google Sheets"
-              onClick={async () => {
+            <DownloadMenu
+              onCsv={() => window.open(buildExportUrl("csv", { salesmanId: filterSalesman, status: filterStatus, date: filterDate }), "_blank")}
+              onXlsx={() => window.open(buildExportUrl("xlsx", { salesmanId: filterSalesman, status: filterStatus, date: filterDate }), "_blank")}
+              onSheets={async () => {
                 setSheetsError("");
                 try {
                   const info = await api.adminExportSheetsInfo({ salesmanId: filterSalesman, status: filterStatus, date: filterDate });
@@ -1045,17 +1102,59 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
       {selectedLead && <LeadDetailDrawer lead={selectedLead} onClose={() => setSelectedLead(null)} onStatusChange={onStatusChange} onUpdate={onUpdateLead} onDelete={onDeleteLead} />}
       {routeSalesman && <SalesmanRouteModal salesman={routeSalesman} onClose={() => setRouteSalesman(null)} />}
       {showAddSalesman && (
-        <AddSalesmanModal
+        <SalesmanFormModal
           existingCount={salesmen.length}
           onClose={() => setShowAddSalesman(false)}
           onSubmit={async (s) => { await onAddSalesman(s); setShowAddSalesman(false); }}
+        />
+      )}
+      {editSalesman && (
+        <SalesmanFormModal
+          salesman={editSalesman}
+          onClose={() => setEditSalesman(null)}
+          onSubmit={async (payload) => { await onEditSalesman(editSalesman.id, payload); setEditSalesman(null); }}
+        />
+      )}
+      {deleteSalesmanConfirm && (
+        <Overlay onClose={() => { setDeleteSalesmanConfirm(null); setDeleteSalesmanError(""); }} title={`Delete ${deleteSalesmanConfirm.name}?`}>
+          <div style={{ fontSize: 13, color: T.inkSoft, marginBottom: 14 }}>
+            This permanently removes their account. If they still have any leads, this will be blocked — delete those first.
+          </div>
+          {deleteSalesmanError && (
+            <div style={{ fontSize: 12.5, color: T.danger, background: T.dangerSoft, borderRadius: 8, padding: "8px 10px", marginBottom: 12 }}>{deleteSalesmanError}</div>
+          )}
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={() => { setDeleteSalesmanConfirm(null); setDeleteSalesmanError(""); }} style={{ flex: 1, padding: 10, borderRadius: 8, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
+            <button
+              onClick={async () => {
+                try {
+                  await onDeleteSalesman(deleteSalesmanConfirm.id);
+                  setDeleteSalesmanConfirm(null);
+                  setDeleteSalesmanError("");
+                } catch (err) {
+                  setDeleteSalesmanError(err instanceof ApiError ? err.message : "Couldn't delete this salesman.");
+                }
+              }}
+              style={{ flex: 1, padding: 10, borderRadius: 8, border: "none", background: T.danger, color: "#fff", fontWeight: 700, cursor: "pointer" }}
+            >
+              Delete permanently
+            </button>
+          </div>
+        </Overlay>
+      )}
+      {statLeadsModal && (
+        <MyLeadsModal
+          leads={statLeadsModal.leads}
+          title={statLeadsModal.title}
+          onClose={() => setStatLeadsModal(null)}
+          onSelectLead={(l) => { setStatLeadsModal(null); setSelectedLead(l); }}
         />
       )}
     </div>
   );
 }
 
-function SalesmenPanel({ salesmen, onAddClick, onToggleActive, onViewRoute }) {
+function SalesmenPanel({ salesmen, onAddClick, onEditClick, onToggleActive, onDeleteClick, onViewRoute }) {
   return (
     <div className="ft-card" style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -1093,12 +1192,26 @@ function SalesmenPanel({ salesmen, onAddClick, onToggleActive, onViewRoute }) {
             <span style={{ display: "flex", alignItems: "center", gap: 3 }}><Clock size={12} /> {fmtTime(s.lastUpdate)}</span>
           </div>
           <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 3 }}>{(s.distanceM / 1000).toFixed(1)} km travelled today</div>
-          <button
-            onClick={() => onViewRoute(s)}
-            style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 8, fontSize: 11.5, fontWeight: 700, color: T.route, background: "none", border: "none", cursor: "pointer", padding: 0 }}
-          >
-            <Route size={12} /> View route
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 8 }}>
+            <button
+              onClick={() => onViewRoute(s)}
+              style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11.5, fontWeight: 700, color: T.route, background: "none", border: "none", cursor: "pointer", padding: 0 }}
+            >
+              <Route size={12} /> View route
+            </button>
+            <button
+              onClick={() => onEditClick(s)}
+              style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11.5, fontWeight: 700, color: T.inkSoft, background: "none", border: "none", cursor: "pointer", padding: 0 }}
+            >
+              <Pencil size={12} /> Edit
+            </button>
+            <button
+              onClick={() => onDeleteClick(s)}
+              style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11.5, fontWeight: 700, color: T.danger, background: "none", border: "none", cursor: "pointer", padding: 0 }}
+            >
+              <Trash2 size={12} /> Delete
+            </button>
+          </div>
         </div>
       ))}
     </div>
@@ -1198,40 +1311,50 @@ function SalesmanRouteModal({ salesman, onClose }) {
   );
 }
 
-function AddSalesmanModal({ existingCount, onClose, onSubmit }) {
-  const [form, setForm] = useState({ name: "", phone: "", password: "", area: "", employeeCode: "", dailyTarget: "8" });
+function SalesmanFormModal({ existingCount, salesman, onClose, onSubmit }) {
+  const isEdit = !!salesman;
+  const [form, setForm] = useState({
+    name: salesman?.name || "", phone: salesman?.phone || "", password: "",
+    area: salesman?.area && salesman.area !== "Unassigned" ? salesman.area : "",
+    employeeCode: salesman?.employeeCode || "", dailyTarget: String(salesman?.dailyTarget || 8),
+  });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
-  const canSubmit = form.name.trim().length > 0 && form.phone.trim().length > 0 && form.password.length >= 6;
+  const canSubmit = form.name.trim().length > 0 && form.phone.trim().length > 0 && (isEdit || form.password.length >= 6);
 
   const handleSubmit = async () => {
     setSubmitting(true);
     setError("");
     try {
-      await onSubmit({
+      const payload = {
         fullName: form.name.trim(),
         phone: form.phone.trim(),
-        password: form.password,
-        employeeCode: form.employeeCode.trim() || `EMP-${1000 + existingCount + 1}`,
+        employeeCode: form.employeeCode.trim() || (isEdit ? null : `EMP-${1000 + existingCount + 1}`),
         dailyTarget: Number(form.dailyTarget) || 8,
         area: form.area.trim() || null,
-      });
+      };
+      if (form.password) payload.password = form.password; // only send if actually changing it
+      await onSubmit(payload);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Couldn't create salesman.");
+      setError(err instanceof ApiError ? err.message : `Couldn't ${isEdit ? "save changes" : "create salesman"}.`);
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <Overlay onClose={onClose} title="Add Salesman">
-      <div style={{ fontSize: 12, color: T.inkSoft, background: T.paperDeep, borderRadius: 8, padding: "8px 10px", marginBottom: 14 }}>
-        They'll show up as <strong>OFFLINE</strong> on the map until they install FieldTrail, sign in with this phone + password, and tap Start Day.
-      </div>
+    <Overlay onClose={onClose} title={isEdit ? "Edit Salesman" : "Add Salesman"}>
+      {!isEdit && (
+        <div style={{ fontSize: 12, color: T.inkSoft, background: T.paperDeep, borderRadius: 8, padding: "8px 10px", marginBottom: 14 }}>
+          They'll show up as <strong>OFFLINE</strong> on the map until they install FieldTrail, sign in with this phone + password, and tap Start Day.
+        </div>
+      )}
       <Field label="Full name *"><input style={inputStyle} value={form.name} onChange={set("name")} placeholder="e.g. Priya Sharma" /></Field>
       <Field label="Phone number * (their login)"><input style={inputStyle} value={form.phone} onChange={set("phone")} placeholder="10-digit phone" inputMode="tel" /></Field>
-      <Field label="Password * (min 6 characters, share with them securely)"><input style={inputStyle} type="text" value={form.password} onChange={set("password")} placeholder="Set an initial password" /></Field>
+      <Field label={isEdit ? "Password (leave blank to keep current)" : "Password * (min 6 characters, share with them securely)"}>
+        <input style={inputStyle} type="text" value={form.password} onChange={set("password")} placeholder={isEdit ? "Leave blank to keep unchanged" : "Set an initial password"} />
+      </Field>
       <Field label="Area / territory"><input style={inputStyle} value={form.area} onChange={set("area")} placeholder="e.g. Alambagh" /></Field>
       <Field label="Employee code"><input style={inputStyle} value={form.employeeCode} onChange={set("employeeCode")} placeholder="Auto-generated if left blank" /></Field>
       <Field label="Daily lead target"><input style={inputStyle} type="number" min="1" value={form.dailyTarget} onChange={set("dailyTarget")} /></Field>
@@ -1242,7 +1365,7 @@ function AddSalesmanModal({ existingCount, onClose, onSubmit }) {
         style={{ width: "100%", padding: "12px", borderRadius: 8, border: "none", cursor: canSubmit ? "pointer" : "not-allowed", background: canSubmit ? T.route : "#C7CDD6", color: "#fff", fontWeight: 700, fontSize: 14.5, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
       >
         {submitting && <Loader2 size={16} className="spin" />}
-        {submitting ? "Creating…" : "Create Salesman"}
+        {submitting ? (isEdit ? "Saving…" : "Creating…") : (isEdit ? "Save changes" : "Create Salesman")}
       </button>
     </Overlay>
   );

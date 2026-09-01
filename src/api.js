@@ -126,6 +126,7 @@ export const api = {
   adminSalesmen: () => request("/admin/salesmen"),
   adminCreateSalesman: (payload) => request("/admin/salesmen", { method: "POST", body: payload }),
   adminUpdateSalesman: (id, payload) => request(`/admin/salesmen/${id}`, { method: "PATCH", body: payload }),
+  adminDeleteSalesman: (id) => request(`/admin/salesmen/${id}`, { method: "DELETE" }),
   adminLeads: (params = {}) => {
     const entries = Object.entries(params).filter(([, v]) => v != null && v !== "" && v !== "all");
     const qs = new URLSearchParams(entries).toString();
