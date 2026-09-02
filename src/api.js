@@ -143,6 +143,8 @@ export const api = {
     return request(`/admin/leads/export-sheets-info${qs ? `?${qs}` : ""}`);
   },
   adminSalesmanHistory: (id, date) => request(`/admin/salesmen/${id}/history?date=${date}`),
+  adminSendMessage: (payload) => request("/admin/messages", { method: "POST", body: payload }),
+  adminGetMessages: (salesmanId) => request(`/admin/messages${salesmanId ? `?salesmanId=${salesmanId}` : ""}`),
 
   salesmanDayStart: (lat, lng) => request("/salesman/day/start", { method: "POST", body: { lat, lng } }),
   salesmanDayEnd: (lat, lng) => request("/salesman/day/end", { method: "POST", body: { lat, lng } }),
@@ -152,6 +154,9 @@ export const api = {
   salesmanCreateLead: (payload) => request("/salesman/leads", { method: "POST", body: payload }),
   salesmanUpdateLead: (id, payload) => request(`/salesman/leads/${id}`, { method: "PATCH", body: payload }),
   salesmanGetSettings: () => request("/salesman/settings"),
+  salesmanGetProfile: () => request("/salesman/profile"),
+  salesmanGetMessages: () => request("/salesman/messages"),
+  salesmanMarkMessageRead: (id) => request(`/salesman/messages/${id}/read`, { method: "PATCH" }),
 };
 
 // Builds a downloadable export URL (CSV/XLSX) that includes the auth token

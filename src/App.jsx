@@ -23,6 +23,7 @@ import {
   Route,
   Pencil,
   Trash2,
+  MessageSquare,
 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -968,6 +969,7 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
   const [editSalesman, setEditSalesman] = useState(null);
   const [deleteSalesmanConfirm, setDeleteSalesmanConfirm] = useState(null);
   const [deleteSalesmanError, setDeleteSalesmanError] = useState("");
+  const [messageTarget, setMessageTarget] = useState(null); // salesman object | "all" | null
   const [routeSalesman, setRouteSalesman] = useState(null);
   const [mapView, setMapView] = useState("live"); // "live" | "leads"
   const [sheetsInfo, setSheetsInfo] = useState(null);
@@ -1027,6 +1029,7 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
             onToggleActive={onToggleSalesmanActive}
             onDeleteClick={setDeleteSalesmanConfirm}
             onViewRoute={setRouteSalesman}
+            onMessageClick={setMessageTarget}
           />
         </div>
       ) : (
@@ -1154,18 +1157,30 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
           onSelectLead={(l) => { setStatLeadsModal(null); setSelectedLead(l); }}
         />
       )}
+      {messageTarget && (
+        <MessageComposeModal
+          salesman={messageTarget === "all" ? null : messageTarget}
+          onClose={() => setMessageTarget(null)}
+          onSend={(body) => api.adminSendMessage({ recipientId: messageTarget === "all" ? null : messageTarget.id, body })}
+        />
+      )}
     </div>
   );
 }
 
-function SalesmenPanel({ salesmen, onAddClick, onEditClick, onToggleActive, onDeleteClick, onViewRoute }) {
+function SalesmenPanel({ salesmen, onAddClick, onEditClick, onToggleActive, onDeleteClick, onViewRoute, onMessageClick }) {
   return (
     <div className="ft-card" style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, padding: 18, display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16 }}>Salesmen</div>
-        <button onClick={onAddClick} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 6, border: "none", cursor: "pointer", background: T.route, color: "#fff", fontWeight: 700, fontSize: 12 }}>
-          <Plus size={13} /> Add Salesman
-        </button>
+        <div style={{ display: "flex", gap: 6 }}>
+          <button onClick={() => onMessageClick("all")} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 6, border: `1px solid ${T.line}`, cursor: "pointer", background: "#fff", color: T.ink, fontWeight: 700, fontSize: 12 }}>
+            <MessageSquare size={13} /> Message all
+          </button>
+          <button onClick={onAddClick} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 6, border: "none", cursor: "pointer", background: T.route, color: "#fff", fontWeight: 700, fontSize: 12 }}>
+            <Plus size={13} /> Add Salesman
+          </button>
+        </div>
       </div>
       {salesmen.length === 0 && <div style={{ fontSize: 12.5, color: T.inkSoft }}>No salesmen yet — add your first one.</div>}
       {salesmen.map((s) => (
@@ -1196,12 +1211,18 @@ function SalesmenPanel({ salesmen, onAddClick, onEditClick, onToggleActive, onDe
             <span style={{ display: "flex", alignItems: "center", gap: 3 }}><Clock size={12} /> {fmtTime(s.lastUpdate)}</span>
           </div>
           <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 3 }}>{(s.distanceM / 1000).toFixed(1)} km travelled today</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 8, flexWrap: "wrap" }}>
             <button
               onClick={() => onViewRoute(s)}
               style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11.5, fontWeight: 700, color: T.route, background: "none", border: "none", cursor: "pointer", padding: 0 }}
             >
               <Route size={12} /> View route
+            </button>
+            <button
+              onClick={() => onMessageClick(s)}
+              style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11.5, fontWeight: 700, color: T.route, background: "none", border: "none", cursor: "pointer", padding: 0 }}
+            >
+              <MessageSquare size={12} /> Message
             </button>
             <button
               onClick={() => onEditClick(s)}
@@ -1311,9 +1332,108 @@ function SalesmanRouteModal({ salesman, onClose }) {
           <span>{data.leads.length} lead{data.leads.length === 1 ? "" : "s"} that day</span>
         </div>
       )}
+      {!loading && <AttendanceSummary attendance={data?.attendance} date={date} />}
     </Overlay>
   );
 }
+
+// Day Start / Day End: when, and where (as a tappable maps link), plus
+// total hours worked — computed live if the day hasn't ended yet.
+function AttendanceSummary({ attendance, date }) {
+  if (!attendance || !attendance.start_day_at) {
+    return (
+      <div style={{ fontSize: 12.5, color: T.inkSoft, background: T.paperDeep, borderRadius: 11, padding: "10px 12px", marginTop: 14 }}>
+        No "Start Day" recorded for this date.
+      </div>
+    );
+  }
+
+  const start = new Date(attendance.start_day_at);
+  const end = attendance.end_day_at ? new Date(attendance.end_day_at) : null;
+  const isToday = date === new Date().toISOString().slice(0, 10);
+  const durationMs = (end || (isToday ? new Date() : start)) - start;
+  const hours = Math.floor(durationMs / 3600000);
+  const mins = Math.round((durationMs % 3600000) / 60000);
+
+  const mapsLink = (lat, lng) => `https://www.google.com/maps?q=${lat},${lng}`;
+
+  return (
+    <div style={{ marginTop: 14, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 12, padding: 14 }}>
+      <div style={{ fontSize: 11, textTransform: "uppercase", color: T.inkSoft, fontWeight: 700, letterSpacing: 0.4, marginBottom: 10 }}>Attendance</div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+        <div>
+          <div style={{ fontSize: 11.5, color: T.inkSoft }}>Day started</div>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>{fmtTime(start)}</div>
+          {attendance.start_lat != null && (
+            <a href={mapsLink(attendance.start_lat, attendance.start_lng)} target="_blank" rel="noreferrer" style={{ fontSize: 11.5, color: T.route, fontWeight: 600 }}>
+              View location ↗
+            </a>
+          )}
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: 11.5, color: T.inkSoft }}>{end ? "Day ended" : isToday ? "Still active" : "Not ended"}</div>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>{end ? fmtTime(end) : "—"}</div>
+          {attendance.end_lat != null && (
+            <a href={mapsLink(attendance.end_lat, attendance.end_lng)} target="_blank" rel="noreferrer" style={{ fontSize: 11.5, color: T.route, fontWeight: 600 }}>
+              View location ↗
+            </a>
+          )}
+        </div>
+      </div>
+      <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.line}`, fontSize: 13, fontWeight: 700, color: T.ink }}>
+        Total: {hours}h {mins}m {!end && isToday ? "(so far)" : ""}
+      </div>
+    </div>
+  );
+}
+
+
+function MessageComposeModal({ salesman, onClose, onSend }) {
+  const [body, setBody] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+  const [sent, setSent] = useState(false);
+
+  const handleSend = async () => {
+    if (!body.trim()) return;
+    setSending(true);
+    setError("");
+    try {
+      await onSend(body.trim());
+      setSent(true);
+      setTimeout(onClose, 900);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Couldn't send this message.");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <Overlay onClose={onClose} title={salesman ? `Message ${salesman.name}` : "Message all salesmen"}>
+      {sent ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, color: T.verified, background: T.verifiedSoft, borderRadius: 11, padding: "10px 12px", fontSize: 13, fontWeight: 600 }}>
+          <CheckCircle2 size={16} /> Sent.
+        </div>
+      ) : (
+        <>
+          <Field label="Message / task">
+            <textarea style={{ ...inputStyle, minHeight: 100 }} value={body} onChange={(e) => setBody(e.target.value)} placeholder="e.g. Please prioritize Gomti Nagar leads today" autoFocus />
+          </Field>
+          {error && <div style={{ fontSize: 12.5, color: T.danger, background: T.dangerSoft, borderRadius: 11, padding: "8px 10px", marginBottom: 12 }}>{error}</div>}
+          <button
+            disabled={!body.trim() || sending}
+            onClick={handleSend}
+            style={{ width: "100%", padding: 12, borderRadius: 11, border: "none", cursor: body.trim() ? "pointer" : "not-allowed", background: body.trim() ? T.route : "#C7CDD6", color: "#fff", fontWeight: 700, fontSize: 14.5 }}
+          >
+            {sending ? "Sending…" : "Send"}
+          </button>
+        </>
+      )}
+    </Overlay>
+  );
+}
+
 
 function SalesmanFormModal({ existingCount, salesman, onClose, onSubmit }) {
   const isEdit = !!salesman;
@@ -1532,7 +1652,14 @@ function SalesmanApp({ session, online }) {
   const [gpsStatus, setGpsStatus] = useState("idle"); // idle | tracking | denied | unavailable
   const [queuedCount, setQueuedCount] = useState(getQueuedLeads().length);
   const [continuousTracking, setContinuousTracking] = useState(true); // safe default until settings load
+  const [dailyTarget, setDailyTarget] = useState(8); // overwritten by the salesman's actual profile below
   const lastPingSentRef = useRef(0);
+
+  useEffect(() => {
+    api.salesmanGetProfile()
+      .then((res) => setDailyTarget(res.profile?.daily_target || 8))
+      .catch(() => { /* keep default on failure */ });
+  }, []);
 
   useEffect(() => {
     api.salesmanGetSettings()
@@ -1553,6 +1680,30 @@ function SalesmanApp({ session, online }) {
   }, [session.fullName]);
 
   useEffect(() => { loadLeads(); }, [loadLeads]);
+
+  const [messages, setMessages] = useState([]);
+  const loadMessages = useCallback(async () => {
+    try {
+      const res = await api.salesmanGetMessages();
+      setMessages(res.messages || []);
+    } catch {
+      /* messages are non-critical — fail silently, next poll retries */
+    }
+  }, []);
+  useEffect(() => {
+    loadMessages();
+    const iv = setInterval(loadMessages, 30000); // light polling, no push infra for this yet
+    return () => clearInterval(iv);
+  }, [loadMessages]);
+
+  const markMessageRead = async (id) => {
+    setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, read_at: m.read_at || new Date().toISOString() } : m))); // optimistic
+    try {
+      await api.salesmanMarkMessageRead(id);
+    } catch {
+      /* not critical if this fails silently — next load reconciles */
+    }
+  };
 
   const getBatteryPct = useCallback(async () => {
     try {
@@ -1722,6 +1873,9 @@ function SalesmanApp({ session, online }) {
       gpsStatus={gpsStatus}
       queuedCount={queuedCount}
       loadError={loadError}
+      messages={messages}
+      onMarkMessageRead={markMessageRead}
+      dailyTarget={dailyTarget}
     />
   );
 }
@@ -1752,7 +1906,7 @@ function adHocLeadFromPayload(payload, session) {
   };
 }
 
-function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUpdateLeadStatus, onUpdateLeadDetails, online, gpsStatus, queuedCount, loadError }) {
+function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUpdateLeadStatus, onUpdateLeadDetails, online, gpsStatus, queuedCount, loadError, messages, onMarkMessageRead, dailyTarget }) {
   const [showAddLead, setShowAddLead] = useState(false);
   const [showMyLeads, setShowMyLeads] = useState(false);
   const [viewingLead, setViewingLead] = useState(null);
@@ -1761,7 +1915,7 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
   const todayLeads = leads.filter((l) => Date.now() - l.createdAt.getTime() < 24 * 3600000);
   const converted = leads.filter((l) => l.status === "won").length;
   const pending = leads.filter((l) => !["won", "lost"].includes(l.status)).length;
-  const target = 8;
+  const target = dailyTarget || 8;
 
   return (
     <div style={{ maxWidth: 480, margin: "0 auto", padding: "18px 16px 40px" }}>
@@ -1811,6 +1965,8 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
 
       {!dayStarted && <div style={{ marginTop: 12, fontSize: 12, color: T.warn, background: T.warnSoft, padding: "8px 10px", borderRadius: 11 }}>Start your day to enable lead capture.</div>}
 
+      <MessagesSection messages={messages} onMarkRead={onMarkMessageRead} />
+
       {showAddLead && (
         <AddLeadModal
           session={session}
@@ -1847,6 +2003,50 @@ const DEFAULT_LEAD_SETTINGS = {
   requireContactName: true, requireContactNumber: true, requireStatus: true, requireComments: false,
 };
 const DEFAULT_LOCATION_SETTINGS = { gpsLocation: true, locationMandatoryForNewLead: true, continuousGpsTracking: true };
+
+// Tasks/messages sent by admin, shown right below the lead buttons on the
+// salesman's own dashboard. Unread ones are visually distinct; tapping one
+// marks it read.
+function MessagesSection({ messages, onMarkRead }) {
+  const unreadCount = messages.filter((m) => !m.read_at).length;
+
+  return (
+    <div className="ft-card" style={{ marginTop: 16, background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, padding: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: messages.length ? 10 : 0 }}>
+        <div style={{ fontWeight: 700, fontSize: 14.5, display: "flex", alignItems: "center", gap: 7 }}>
+          <MessageSquare size={15} /> Messages
+        </div>
+        {unreadCount > 0 && (
+          <span style={{ fontSize: 10.5, fontWeight: 700, color: "#fff", background: T.danger, borderRadius: 999, padding: "2px 8px" }}>{unreadCount} new</span>
+        )}
+      </div>
+      {messages.length === 0 ? (
+        <div style={{ fontSize: 12.5, color: T.inkSoft }}>No messages from admin yet.</div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {messages.slice(0, 20).map((m) => (
+            <div
+              key={m.id}
+              onClick={() => !m.read_at && onMarkRead(m.id)}
+              style={{
+                padding: "10px 12px", borderRadius: 11, cursor: m.read_at ? "default" : "pointer",
+                background: m.read_at ? "#fff" : T.warnSoft,
+                border: `1px solid ${m.read_at ? T.line : "transparent"}`,
+              }}
+            >
+              <div style={{ fontSize: 13, color: T.ink, whiteSpace: "pre-wrap" }}>{m.body}</div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
+                <span style={{ fontSize: 10.5, color: T.inkSoft }}>{fmtTime(new Date(m.created_at))}</span>
+                {!m.read_at && <span style={{ fontSize: 10, fontWeight: 700, color: T.warn }}>Tap to mark read</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
   const [form, setForm] = useState({
