@@ -13,8 +13,8 @@ export default defineConfig({
         short_name: "FieldTrail",
         description:
           "Salesman lead capture and live location tracking, with GPS verification built in.",
-        theme_color: "#1C2430",
-        background_color: "#EFEDE6",
+        theme_color: "#1A1D23",
+        background_color: "#F4F5F7",
         display: "standalone",
         orientation: "portrait-primary",
         start_url: "/",
