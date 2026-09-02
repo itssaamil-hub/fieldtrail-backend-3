@@ -964,6 +964,8 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
   const [filterSalesman, setFilterSalesman] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterDate, setFilterDate] = useState("");
+  const [leadsPage, setLeadsPage] = useState(1);
+  const LEADS_PER_PAGE = 50;
   const [selectedLead, setSelectedLead] = useState(null);
   const [showAddSalesman, setShowAddSalesman] = useState(false);
   const [editSalesman, setEditSalesman] = useState(null);
@@ -989,6 +991,12 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
       (filterStatus === "all" || l.status === filterStatus) &&
       (!filterDate || l.createdAt.toISOString().slice(0, 10) === filterDate)
   );
+
+  const totalPages = Math.max(1, Math.ceil(filteredLeads.length / LEADS_PER_PAGE));
+  const currentPage = Math.min(leadsPage, totalPages);
+  const pagedLeads = filteredLeads.slice((currentPage - 1) * LEADS_PER_PAGE, currentPage * LEADS_PER_PAGE);
+
+  useEffect(() => { setLeadsPage(1); }, [filterSalesman, filterStatus, filterDate]);
 
   return (
     <div style={{ padding: "20px 24px", maxWidth: 1180, margin: "0 auto" }}>
@@ -1083,7 +1091,7 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
         )}
 
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {filteredLeads.map((l) => (
+          {pagedLeads.map((l) => (
             <div key={l.id} className="ft-row" onClick={() => setSelectedLead(l)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "10px 12px", border: `1px solid ${T.line}`, borderRadius: 11, cursor: "pointer", background: "#fff" }}>
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontWeight: 600, fontSize: 14 }}>{l.business}</div>
@@ -1104,6 +1112,31 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
             </div>
           )}
         </div>
+
+        {filteredLeads.length > LEADS_PER_PAGE && (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 14, paddingTop: 14, borderTop: `1px solid ${T.line}` }}>
+            <div style={{ fontSize: 12, color: T.inkSoft }}>
+              Showing {(currentPage - 1) * LEADS_PER_PAGE + 1}–{Math.min(currentPage * LEADS_PER_PAGE, filteredLeads.length)} of {filteredLeads.length}
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <button
+                disabled={currentPage <= 1}
+                onClick={() => setLeadsPage((p) => Math.max(1, p - 1))}
+                style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontWeight: 700, fontSize: 12.5, cursor: currentPage <= 1 ? "not-allowed" : "pointer", opacity: currentPage <= 1 ? 0.5 : 1 }}
+              >
+                Previous
+              </button>
+              <span style={{ fontSize: 12.5, color: T.inkSoft }}>Page {currentPage} of {totalPages}</span>
+              <button
+                disabled={currentPage >= totalPages}
+                onClick={() => setLeadsPage((p) => Math.min(totalPages, p + 1))}
+                style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontWeight: 700, fontSize: 12.5, cursor: currentPage >= totalPages ? "not-allowed" : "pointer", opacity: currentPage >= totalPages ? 0.5 : 1 }}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {selectedLead && <LeadDetailDrawer lead={selectedLead} onClose={() => setSelectedLead(null)} onStatusChange={onStatusChange} onUpdate={onUpdateLead} onDelete={onDeleteLead} />}
@@ -1705,6 +1738,15 @@ function SalesmanApp({ session, online }) {
     }
   };
 
+  const deleteMessage = async (id) => {
+    setMessages((prev) => prev.filter((m) => m.id !== id)); // optimistic
+    try {
+      await api.salesmanDeleteMessage(id);
+    } catch {
+      loadMessages(); // reconcile if it actually failed
+    }
+  };
+
   const getBatteryPct = useCallback(async () => {
     try {
       if (navigator.getBattery) {
@@ -1875,6 +1917,7 @@ function SalesmanApp({ session, online }) {
       loadError={loadError}
       messages={messages}
       onMarkMessageRead={markMessageRead}
+      onDeleteMessage={deleteMessage}
       dailyTarget={dailyTarget}
     />
   );
@@ -1906,7 +1949,7 @@ function adHocLeadFromPayload(payload, session) {
   };
 }
 
-function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUpdateLeadStatus, onUpdateLeadDetails, online, gpsStatus, queuedCount, loadError, messages, onMarkMessageRead, dailyTarget }) {
+function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUpdateLeadStatus, onUpdateLeadDetails, online, gpsStatus, queuedCount, loadError, messages, onMarkMessageRead, onDeleteMessage, dailyTarget }) {
   const [showAddLead, setShowAddLead] = useState(false);
   const [showMyLeads, setShowMyLeads] = useState(false);
   const [viewingLead, setViewingLead] = useState(null);
@@ -1965,7 +2008,7 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
 
       {!dayStarted && <div style={{ marginTop: 12, fontSize: 12, color: T.warn, background: T.warnSoft, padding: "8px 10px", borderRadius: 11 }}>Start your day to enable lead capture.</div>}
 
-      <MessagesSection messages={messages} onMarkRead={onMarkMessageRead} />
+      <MessagesSection messages={messages} onMarkRead={onMarkMessageRead} onDelete={onDeleteMessage} />
 
       {showAddLead && (
         <AddLeadModal
@@ -1976,7 +2019,7 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
           onSaved={(lead) => { setShowAddLead(false); setViewingLead(lead); }}
         />
       )}
-      {showMyLeads && <MyLeadsModal leads={leads} onClose={() => setShowMyLeads(false)} onSelectLead={setViewingLead} />}
+      {showMyLeads && <MyLeadsModal leads={leads} onClose={() => setShowMyLeads(false)} onSelectLead={setViewingLead} allowDateFilter />}
       {showTodayLeads && (
         <MyLeadsModal
           leads={todayLeads}
@@ -2007,7 +2050,7 @@ const DEFAULT_LOCATION_SETTINGS = { gpsLocation: true, locationMandatoryForNewLe
 // Tasks/messages sent by admin, shown right below the lead buttons on the
 // salesman's own dashboard. Unread ones are visually distinct; tapping one
 // marks it read.
-function MessagesSection({ messages, onMarkRead }) {
+function MessagesSection({ messages, onMarkRead, onDelete }) {
   const unreadCount = messages.filter((m) => !m.read_at).length;
 
   return (
@@ -2027,17 +2070,27 @@ function MessagesSection({ messages, onMarkRead }) {
           {messages.slice(0, 20).map((m) => (
             <div
               key={m.id}
-              onClick={() => !m.read_at && onMarkRead(m.id)}
               style={{
-                padding: "10px 12px", borderRadius: 11, cursor: m.read_at ? "default" : "pointer",
+                padding: "10px 12px", borderRadius: 11,
                 background: m.read_at ? "#fff" : T.warnSoft,
                 border: `1px solid ${m.read_at ? T.line : "transparent"}`,
               }}
             >
-              <div style={{ fontSize: 13, color: T.ink, whiteSpace: "pre-wrap" }}>{m.body}</div>
+              <div onClick={() => !m.read_at && onMarkRead(m.id)} style={{ fontSize: 13, color: T.ink, whiteSpace: "pre-wrap", cursor: m.read_at ? "default" : "pointer" }}>{m.body}</div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
                 <span style={{ fontSize: 10.5, color: T.inkSoft }}>{fmtTime(new Date(m.created_at))}</span>
-                {!m.read_at && <span style={{ fontSize: 10, fontWeight: 700, color: T.warn }}>Tap to mark read</span>}
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  {!m.read_at && <span style={{ fontSize: 10, fontWeight: 700, color: T.warn }}>Tap to mark read</span>}
+                  {onDelete && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onDelete(m.id); }}
+                      style={{ border: "none", background: "none", cursor: "pointer", color: T.inkSoft, padding: 0, display: "flex", alignItems: "center" }}
+                      title="Delete message"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ))}
@@ -2222,17 +2275,30 @@ function GpsStatus({ gps, verification }) {
   );
 }
 
-function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads" }) {
+function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads", allowDateFilter = false }) {
+  const [filterDate, setFilterDate] = useState("");
+  const shown = filterDate ? leads.filter((l) => l.createdAt.toISOString().slice(0, 10) === filterDate) : leads;
+
   return (
     <Overlay onClose={onClose} title={title}>
+      {allowDateFilter && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+          <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} style={{ ...inputStyle, marginBottom: 0, flex: 1 }} />
+          {filterDate && (
+            <button onClick={() => setFilterDate("")} style={{ fontSize: 11.5, color: T.inkSoft, background: "none", border: "none", cursor: "pointer", whiteSpace: "nowrap" }}>
+              Clear
+            </button>
+          )}
+        </div>
+      )}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {leads.length === 0 && (
+        {shown.length === 0 && (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, color: T.inkSoft, fontSize: 13, padding: "30px 8px" }}>
             <List size={22} style={{ opacity: 0.5 }} />
-            No leads yet today — tap "Add Lead" to create one.
+            {filterDate ? "No leads on this date." : 'No leads yet — tap "Add Lead" to create one.'}
           </div>
         )}
-        {leads.map((l) => (
+        {shown.map((l) => (
           <div key={l.id} className="ft-row" onClick={() => onSelectLead(l)} style={{ border: `1px solid ${T.line}`, borderRadius: 11, padding: 10, background: "#fff", cursor: "pointer" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div style={{ fontWeight: 600, fontSize: 13.5 }}>{l.business}</div>

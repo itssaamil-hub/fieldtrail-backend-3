@@ -157,6 +157,7 @@ export const api = {
   salesmanGetProfile: () => request("/salesman/profile"),
   salesmanGetMessages: () => request("/salesman/messages"),
   salesmanMarkMessageRead: (id) => request(`/salesman/messages/${id}/read`, { method: "PATCH" }),
+  salesmanDeleteMessage: (id) => request(`/salesman/messages/${id}`, { method: "DELETE" }),
 };
 
 // Builds a downloadable export URL (CSV/XLSX) that includes the auth token
