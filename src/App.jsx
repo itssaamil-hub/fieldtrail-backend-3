@@ -1425,7 +1425,23 @@ function MessageComposeModal({ salesman, onClose, onSend }) {
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
-  const [sent, setSent] = useState(false);
+  const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
+
+  const loadHistory = useCallback(async () => {
+    if (!salesman) { setHistoryLoading(false); return; } // broadcast target has no single history to show
+    setHistoryLoading(true);
+    try {
+      const res = await api.adminGetMessages(salesman.id);
+      setHistory(res.messages || []);
+    } catch {
+      /* history is a nice-to-have — send still works even if this fails */
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [salesman]);
+
+  useEffect(() => { loadHistory(); }, [loadHistory]);
 
   const handleSend = async () => {
     if (!body.trim()) return;
@@ -1433,8 +1449,8 @@ function MessageComposeModal({ salesman, onClose, onSend }) {
     setError("");
     try {
       await onSend(body.trim());
-      setSent(true);
-      setTimeout(onClose, 900);
+      setBody("");
+      await loadHistory();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't send this message.");
     } finally {
@@ -1442,27 +1458,59 @@ function MessageComposeModal({ salesman, onClose, onSend }) {
     }
   };
 
+  const handleDelete = async (id) => {
+    setHistory((prev) => prev.filter((m) => m.id !== id)); // optimistic
+    try {
+      await api.adminDeleteMessage(id);
+    } catch {
+      loadHistory(); // reconcile if it actually failed
+    }
+  };
+
   return (
-    <Overlay onClose={onClose} title={salesman ? `Message ${salesman.name}` : "Message all salesmen"}>
-      {sent ? (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, color: T.verified, background: T.verifiedSoft, borderRadius: 11, padding: "10px 12px", fontSize: 13, fontWeight: 600 }}>
-          <CheckCircle2 size={16} /> Sent.
-        </div>
-      ) : (
+    <Overlay onClose={onClose} title={salesman ? `Messages — ${salesman.name}` : "Message all salesmen"}>
+      {salesman && (
         <>
-          <Field label="Message / task">
-            <textarea style={{ ...inputStyle, minHeight: 100 }} value={body} onChange={(e) => setBody(e.target.value)} placeholder="e.g. Please prioritize Gomti Nagar leads today" autoFocus />
-          </Field>
-          {error && <div style={{ fontSize: 12.5, color: T.danger, background: T.dangerSoft, borderRadius: 11, padding: "8px 10px", marginBottom: 12 }}>{error}</div>}
-          <button
-            disabled={!body.trim() || sending}
-            onClick={handleSend}
-            style={{ width: "100%", padding: 12, borderRadius: 11, border: "none", cursor: body.trim() ? "pointer" : "not-allowed", background: body.trim() ? T.route : "#C7CDD6", color: "#fff", fontWeight: 700, fontSize: 14.5 }}
-          >
-            {sending ? "Sending…" : "Send"}
-          </button>
+          <div style={{ fontSize: 11, textTransform: "uppercase", color: T.inkSoft, fontWeight: 700, letterSpacing: 0.4, marginBottom: 8 }}>Sent history</div>
+          {historyLoading ? (
+            <div style={{ fontSize: 12.5, color: T.inkSoft, marginBottom: 14 }}>Loading…</div>
+          ) : history.length === 0 ? (
+            <div style={{ fontSize: 12.5, color: T.inkSoft, marginBottom: 14 }}>No messages sent yet.</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16, maxHeight: 220, overflowY: "auto" }}>
+              {history.map((m) => (
+                <div key={m.id} style={{ padding: "10px 12px", borderRadius: 11, background: "#fff", border: `1px solid ${T.line}` }}>
+                  <div style={{ fontSize: 13, color: T.ink, whiteSpace: "pre-wrap" }}>{m.body}</div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
+                    <span style={{ fontSize: 10.5, color: T.inkSoft }}>
+                      {fmtTime(new Date(m.created_at))} {m.read_at ? "· Read" : "· Unread"}
+                    </span>
+                    <button
+                      onClick={() => handleDelete(m.id)}
+                      style={{ border: "none", background: "none", cursor: "pointer", color: T.inkSoft, padding: 0, display: "flex", alignItems: "center", gap: 4, fontSize: 11 }}
+                      title="Delete message"
+                    >
+                      <Trash2 size={12} /> Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </>
       )}
+
+      <Field label="New message / task">
+        <textarea style={{ ...inputStyle, minHeight: 90 }} value={body} onChange={(e) => setBody(e.target.value)} placeholder="e.g. Please prioritize Gomti Nagar leads today" />
+      </Field>
+      {error && <div style={{ fontSize: 12.5, color: T.danger, background: T.dangerSoft, borderRadius: 11, padding: "8px 10px", marginBottom: 12 }}>{error}</div>}
+      <button
+        disabled={!body.trim() || sending}
+        onClick={handleSend}
+        style={{ width: "100%", padding: 12, borderRadius: 11, border: "none", cursor: body.trim() ? "pointer" : "not-allowed", background: body.trim() ? T.route : "#C7CDD6", color: "#fff", fontWeight: 700, fontSize: 14.5 }}
+      >
+        {sending ? "Sending…" : "Send"}
+      </button>
     </Overlay>
   );
 }
