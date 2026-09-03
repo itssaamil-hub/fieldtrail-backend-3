@@ -988,6 +988,7 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
   const todayLeads = leads.filter((l) => isToday(l.createdAt));
   const hotLeadsToday = todayLeads.filter((l) => l.status === "hot");
   const warmLeadsToday = todayLeads.filter((l) => l.status === "warm");
+  const allHotLeads = leads.filter((l) => l.status === "hot");
   const converted = leads.filter((l) => l.status === "won").length;
   const pending = leads.filter((l) => !["won", "lost"].includes(l.status)).length;
   const activeSalesmen = salesmen.filter((s) => s.status === "online").length;
@@ -1023,6 +1024,7 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
         <StatCard label="Active Now" value={activeSalesmen} color={T.verified} />
         <StatCard label="Leads Today" value={todayLeads.length} />
         <StatCard label={<>Hot Leads <span style={{ fontSize: 8.5, opacity: 0.65 }}>TODAY</span></>} value={hotLeadsToday.length} color={T.danger} onClick={() => setStatLeadsModal({ title: "Hot Leads Today", leads: hotLeadsToday })} />
+        <StatCard label="🔥 Hot Leads" value={allHotLeads.length} color={T.danger} onClick={() => setStatLeadsModal({ title: "🔥 Hot Leads (All)", leads: allHotLeads })} />
         <StatCard label={<>Warm Leads <span style={{ fontSize: 8.5, opacity: 0.65 }}>TODAY</span></>} value={warmLeadsToday.length} color={T.warn} onClick={() => setStatLeadsModal({ title: "Warm Leads Today", leads: warmLeadsToday })} />
         <StatCard label="Total Leads" value={leads.length} />
         <StatCard label="Converted" value={converted} color={T.verified} />
