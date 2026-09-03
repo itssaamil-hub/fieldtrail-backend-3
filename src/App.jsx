@@ -75,6 +75,13 @@ const T = {
 
 const rand = (a, b) => a + Math.random() * (b - a);
 const fmtTime = (d) => (d ? d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "—");
+// Calendar-day check (local time), not a rolling 24h window — this is what
+// makes "Today's Leads" and the daily target actually reset at midnight
+// instead of drifting on a 24-hours-since-creation basis.
+const isToday = (d) => {
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+};
 const uuid = () =>
   "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0;
@@ -978,7 +985,7 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
   const [sheetsError, setSheetsError] = useState("");
   const [statLeadsModal, setStatLeadsModal] = useState(null); // { title, leads } | null
 
-  const todayLeads = leads.filter((l) => Date.now() - l.createdAt.getTime() < 24 * 3600000);
+  const todayLeads = leads.filter((l) => isToday(l.createdAt));
   const hotLeadsToday = todayLeads.filter((l) => l.status === "hot");
   const warmLeadsToday = todayLeads.filter((l) => l.status === "warm");
   const converted = leads.filter((l) => l.status === "won").length;
@@ -2003,7 +2010,7 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
   const [viewingLead, setViewingLead] = useState(null);
   const [showTodayLeads, setShowTodayLeads] = useState(false);
 
-  const todayLeads = leads.filter((l) => Date.now() - l.createdAt.getTime() < 24 * 3600000);
+  const todayLeads = leads.filter((l) => isToday(l.createdAt));
   const converted = leads.filter((l) => l.status === "won").length;
   const pending = leads.filter((l) => !["won", "lost"].includes(l.status)).length;
   const target = dailyTarget || 8;
