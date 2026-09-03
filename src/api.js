@@ -185,6 +185,7 @@ export function mapSalesmanRow(row) {
     area: row.area || "Unassigned",
     employeeCode: row.employee_code || "",
     dailyTarget: row.daily_target || 8,
+    monthlyTarget: row.monthly_target || 200,
     lat: row.last_lat != null ? Number(row.last_lat) : null,
     lng: row.last_lng != null ? Number(row.last_lng) : null,
     battery: row.last_battery_pct != null ? Number(row.last_battery_pct) : null,

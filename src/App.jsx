@@ -82,6 +82,10 @@ const isToday = (d) => {
   const now = new Date();
   return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
 };
+const isThisMonth = (d) => {
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+};
 const uuid = () =>
   "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0;
@@ -1039,6 +1043,7 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
           <LiveMap salesmen={salesmen} leads={leads} onSelectLead={setSelectedLead} />
           <SalesmenPanel
             salesmen={salesmen}
+            leads={leads}
             onAddClick={() => setShowAddSalesman(true)}
             onEditClick={setEditSalesman}
             onToggleActive={onToggleSalesmanActive}
@@ -1208,7 +1213,37 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
   );
 }
 
-function SalesmenPanel({ salesmen, onAddClick, onEditClick, onToggleActive, onDeleteClick, onViewRoute, onMessageClick }) {
+// A little more visual flair than a plain bar — gradient fill, a percentage
+// chip that shifts to green once the target's hit, and a trophy nod for it.
+function MonthlyProgressBar({ salesmanId, target, leads }) {
+  const achieved = leads.filter((l) => l.salesmanId === salesmanId && isThisMonth(l.createdAt)).length;
+  const goal = target || 200;
+  const pct = Math.min(100, Math.round((achieved / goal) * 100));
+  const met = achieved >= goal;
+
+  return (
+    <div style={{ marginTop: 8 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+        <span style={{ fontSize: 10.5, color: T.inkSoft, fontWeight: 600 }}>This month</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10.5, fontWeight: 700, color: met ? T.verified : T.route }}>
+          {met && "🏆"} {achieved} / {goal}
+          <span style={{
+            fontSize: 9.5, padding: "1px 6px", borderRadius: 999,
+            background: met ? T.verifiedSoft : "#EEF1FD", color: met ? T.verified : T.route,
+          }}>{pct}%</span>
+        </span>
+      </div>
+      <div style={{ height: 6, background: T.paperDeep, borderRadius: 999, overflow: "hidden" }}>
+        <div style={{
+          height: "100%", width: `${pct}%`, borderRadius: 999, transition: "width 0.4s ease",
+          background: met ? T.verified : `linear-gradient(90deg, ${T.route}, #6E8BF2)`,
+        }} />
+      </div>
+    </div>
+  );
+}
+
+function SalesmenPanel({ salesmen, leads, onAddClick, onEditClick, onToggleActive, onDeleteClick, onViewRoute, onMessageClick }) {
   return (
     <div className="ft-card" style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, padding: 18, display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -1251,6 +1286,7 @@ function SalesmenPanel({ salesmen, onAddClick, onEditClick, onToggleActive, onDe
             <span style={{ display: "flex", alignItems: "center", gap: 3 }}><Clock size={12} /> {fmtTime(s.lastUpdate)}</span>
           </div>
           <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 3 }}>{(s.distanceM / 1000).toFixed(1)} km travelled today</div>
+          <MonthlyProgressBar salesmanId={s.id} target={s.monthlyTarget} leads={leads} />
           <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 8, flexWrap: "wrap" }}>
             <button
               onClick={() => onViewRoute(s)}
@@ -1529,6 +1565,7 @@ function SalesmanFormModal({ existingCount, salesman, onClose, onSubmit }) {
     name: salesman?.name || "", phone: salesman?.phone || "", password: "",
     area: salesman?.area && salesman.area !== "Unassigned" ? salesman.area : "",
     employeeCode: salesman?.employeeCode || "", dailyTarget: String(salesman?.dailyTarget || 8),
+    monthlyTarget: String(salesman?.monthlyTarget || 200),
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -1544,6 +1581,7 @@ function SalesmanFormModal({ existingCount, salesman, onClose, onSubmit }) {
         phone: form.phone.trim(),
         employeeCode: form.employeeCode.trim() || (isEdit ? null : `EMP-${1000 + existingCount + 1}`),
         dailyTarget: Number(form.dailyTarget) || 8,
+        monthlyTarget: Number(form.monthlyTarget) || 200,
         area: form.area.trim() || null,
       };
       if (form.password) payload.password = form.password; // only send if actually changing it
@@ -1569,7 +1607,10 @@ function SalesmanFormModal({ existingCount, salesman, onClose, onSubmit }) {
       </Field>
       <Field label="Area / territory"><input style={inputStyle} value={form.area} onChange={set("area")} placeholder="e.g. Alambagh" /></Field>
       <Field label="Employee code"><input style={inputStyle} value={form.employeeCode} onChange={set("employeeCode")} placeholder="Auto-generated if left blank" /></Field>
-      <Field label="Daily lead target"><input style={inputStyle} type="number" min="1" value={form.dailyTarget} onChange={set("dailyTarget")} /></Field>
+      <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ flex: 1 }}><Field label="Daily lead target"><input style={inputStyle} type="number" min="1" value={form.dailyTarget} onChange={set("dailyTarget")} /></Field></div>
+        <div style={{ flex: 1 }}><Field label="Monthly lead target"><input style={inputStyle} type="number" min="1" value={form.monthlyTarget} onChange={set("monthlyTarget")} /></Field></div>
+      </div>
       {error && <div style={{ fontSize: 12.5, color: T.danger, background: T.dangerSoft, borderRadius: 11, padding: "8px 10px", marginBottom: 12 }}>{error}</div>}
       <button
         disabled={!canSubmit || submitting}
@@ -1741,12 +1782,16 @@ function SalesmanApp({ session, online }) {
   const [queuedCount, setQueuedCount] = useState(getQueuedLeads().length);
   const [continuousTracking, setContinuousTracking] = useState(true); // safe default until settings load
   const [dailyTarget, setDailyTarget] = useState(8); // overwritten by the salesman's actual profile below
+  const [monthlyTarget, setMonthlyTarget] = useState(200);
   const lastPingSentRef = useRef(0);
 
   useEffect(() => {
     api.salesmanGetProfile()
-      .then((res) => setDailyTarget(res.profile?.daily_target || 8))
-      .catch(() => { /* keep default on failure */ });
+      .then((res) => {
+        setDailyTarget(res.profile?.daily_target || 8);
+        setMonthlyTarget(res.profile?.monthly_target || 200);
+      })
+      .catch(() => { /* keep defaults on failure */ });
   }, []);
 
   useEffect(() => {
@@ -1974,6 +2019,7 @@ function SalesmanApp({ session, online }) {
       onMarkMessageRead={markMessageRead}
       onDeleteMessage={deleteMessage}
       dailyTarget={dailyTarget}
+      monthlyTarget={monthlyTarget}
     />
   );
 }
@@ -2004,7 +2050,7 @@ function adHocLeadFromPayload(payload, session) {
   };
 }
 
-function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUpdateLeadStatus, onUpdateLeadDetails, online, gpsStatus, queuedCount, loadError, messages, onMarkMessageRead, onDeleteMessage, dailyTarget }) {
+function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUpdateLeadStatus, onUpdateLeadDetails, online, gpsStatus, queuedCount, loadError, messages, onMarkMessageRead, onDeleteMessage, dailyTarget, monthlyTarget }) {
   const [showAddLead, setShowAddLead] = useState(false);
   const [showMyLeads, setShowMyLeads] = useState(false);
   const [viewingLead, setViewingLead] = useState(null);
@@ -2012,10 +2058,12 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
   const [showHotLeads, setShowHotLeads] = useState(false);
 
   const todayLeads = leads.filter((l) => isToday(l.createdAt));
+  const monthLeads = leads.filter((l) => isThisMonth(l.createdAt));
   const allHotLeads = leads.filter((l) => l.status === "hot");
   const converted = leads.filter((l) => l.status === "won").length;
   const pending = leads.filter((l) => !["won", "lost"].includes(l.status)).length;
   const target = dailyTarget || 8;
+  const monthTarget = monthlyTarget || 200;
 
   return (
     <div style={{ maxWidth: 480, margin: "0 auto", padding: "18px 16px 40px" }}>
@@ -2056,6 +2104,19 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: T.inkSoft, marginBottom: 6 }}><span>Today's target</span><span>{Math.min(todayLeads.length, target)} / {target}</span></div>
         <div style={{ height: 8, background: T.paperDeep, borderRadius: 11, overflow: "hidden" }}>
           <div style={{ height: "100%", width: `${Math.min(100, (todayLeads.length / target) * 100)}%`, background: T.route }} />
+        </div>
+      </div>
+
+      <div className="ft-card" style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, padding: 16, marginBottom: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 12.5, color: T.inkSoft, marginBottom: 6 }}>
+          <span>Monthly target</span>
+          <span style={{ fontWeight: 700, fontSize: 13, color: T.ink }}>{monthLeads.length} / {monthTarget}</span>
+        </div>
+        <div style={{ height: 8, background: T.paperDeep, borderRadius: 11, overflow: "hidden" }}>
+          <div style={{ height: "100%", width: `${Math.min(100, (monthLeads.length / monthTarget) * 100)}%`, background: T.route, transition: "width 0.3s ease" }} />
+        </div>
+        <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 6 }}>
+          {monthLeads.length >= monthTarget ? "🎉 Target reached!" : `${monthTarget - monthLeads.length} more to hit this month's target`}
         </div>
       </div>
 
