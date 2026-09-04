@@ -595,10 +595,112 @@ function CrmSettingsModal({ onClose }) {
             onChange={toggleLocation("continuousGpsTracking")}
           />
 
+          <FieldOptionsSection />
+
           {saving && <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 12, display: "flex", alignItems: "center", gap: 6 }}><Loader2 size={12} className="spin" /> Saving…</div>}
         </>
       )}
     </Overlay>
+  );
+}
+
+// Lets admin add/remove preset dropdown values for Category and POS Name
+// on the salesman's Add Lead form — no code change needed to add e.g. a
+// new POS provider.
+function FieldOptionsSection() {
+  const [options, setOptions] = useState(null);
+  const [error, setError] = useState("");
+  const [newValue, setNewValue] = useState({ category: "", pos_name: "" });
+  const [adding, setAdding] = useState("");
+
+  const FIELDS = [
+    { key: "category", label: "Category" },
+    { key: "pos_name", label: "POS Name" },
+  ];
+
+  const load = useCallback(async () => {
+    try {
+      const res = await api.adminGetLeadOptions();
+      setOptions(res.options);
+    } catch (err) {
+      setError(err.message || "Couldn't load field options.");
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleAdd = async (fieldKey) => {
+    const value = newValue[fieldKey]?.trim();
+    if (!value) return;
+    setAdding(fieldKey);
+    setError("");
+    try {
+      await api.adminAddLeadOption(fieldKey, value);
+      setNewValue((v) => ({ ...v, [fieldKey]: "" }));
+      await load();
+    } catch (err) {
+      setError(err.message || "Couldn't add that option.");
+    } finally {
+      setAdding("");
+    }
+  };
+
+  const handleDelete = async (id) => {
+    setOptions((prev) => {
+      const next = { ...prev };
+      for (const k of Object.keys(next)) next[k] = next[k].filter((o) => o.id !== id);
+      return next;
+    }); // optimistic
+    try {
+      await api.adminDeleteLeadOption(id);
+    } catch {
+      load(); // reconcile if it actually failed
+    }
+  };
+
+  return (
+    <div style={{ marginTop: 22 }}>
+      <div style={{ fontSize: 11, textTransform: "uppercase", color: T.inkSoft, fontWeight: 700, letterSpacing: 0.4, marginBottom: 4 }}>Field Options</div>
+      <div style={{ fontSize: 12, color: T.inkSoft, marginBottom: 10 }}>Preset choices shown in the salesman's Add Lead dropdowns — add your own (e.g. POS providers like Petpooja, Restrowork).</div>
+      {error && <div style={{ fontSize: 12.5, color: T.danger, background: T.dangerSoft, borderRadius: 11, padding: "8px 10px", marginBottom: 12 }}>{error}</div>}
+
+      {!options ? (
+        <div style={{ fontSize: 12.5, color: T.inkSoft, display: "flex", alignItems: "center", gap: 6 }}><Loader2 size={13} className="spin" /> Loading…</div>
+      ) : (
+        FIELDS.map(({ key, label }) => (
+          <div key={key} style={{ marginBottom: 18 }}>
+            <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 6 }}>{label}</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+              {(options[key] || []).map((o) => (
+                <span key={o.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, color: T.ink, background: T.paperDeep, borderRadius: 999, padding: "4px 6px 4px 11px" }}>
+                  {o.value}
+                  <button onClick={() => handleDelete(o.id)} style={{ border: "none", background: "none", cursor: "pointer", color: T.inkSoft, display: "flex", padding: 2 }} title="Remove">
+                    <X size={11} />
+                  </button>
+                </span>
+              ))}
+              {(options[key] || []).length === 0 && <span style={{ fontSize: 12, color: T.inkSoft }}>No options yet.</span>}
+            </div>
+            <div style={{ display: "flex", gap: 6 }}>
+              <input
+                value={newValue[key] || ""}
+                onChange={(e) => setNewValue((v) => ({ ...v, [key]: e.target.value }))}
+                onKeyDown={(e) => e.key === "Enter" && handleAdd(key)}
+                placeholder={`Add a new ${label.toLowerCase()}…`}
+                style={{ ...inputStyle, marginBottom: 0, flex: 1 }}
+              />
+              <button
+                onClick={() => handleAdd(key)}
+                disabled={!newValue[key]?.trim() || adding === key}
+                style={{ display: "flex", alignItems: "center", gap: 5, padding: "0 14px", borderRadius: 8, border: "none", background: T.route, color: "#fff", fontWeight: 700, fontSize: 12.5, cursor: newValue[key]?.trim() ? "pointer" : "not-allowed" }}
+              >
+                <Plus size={13} /> Create
+              </button>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
   );
 }
 
@@ -2231,10 +2333,11 @@ function MessagesSection({ messages, onMarkRead, onDelete }) {
 function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
   const [form, setForm] = useState({
     business: "", subLocation: "", posName: "", renewalMonth: "", renewalDate: "",
-    owner: "", phone: "", category: "Cafe", status: "new", notes: "",
+    owner: "", phone: "", category: "", status: "new", notes: "",
   });
   const [leadSettings, setLeadSettings] = useState(DEFAULT_LEAD_SETTINGS);
   const [locationSettings, setLocationSettings] = useState(DEFAULT_LOCATION_SETTINGS);
+  const [fieldOptions, setFieldOptions] = useState({ category: [], pos_name: [] });
   const [gps, setGps] = useState({ state: "locating" });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -2249,6 +2352,12 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
         }
       })
       .catch(() => { /* keep defaults if settings can't be fetched */ });
+    api.salesmanGetLeadOptions()
+      .then((res) => {
+        setFieldOptions(res.options || { category: [], pos_name: [] });
+        if (res.options?.category?.length) setForm((f) => (f.category ? f : { ...f, category: res.options.category[0] }));
+      })
+      .catch(() => { /* dropdowns just show empty if this fails — not fatal */ });
   }, []);
 
   useEffect(() => {
@@ -2328,7 +2437,14 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
         <input style={inputStyle} value={form.subLocation} onChange={set("subLocation")} placeholder="e.g. Gomti Nagar" />
       </Field>
       <Field label={`POS Name${leadSettings.requirePosName ? " *" : ""}`}>
-        <input style={inputStyle} value={form.posName} onChange={set("posName")} placeholder="Current POS/software being used" />
+        {fieldOptions.pos_name?.length > 0 ? (
+          <select style={inputStyle} value={form.posName} onChange={set("posName")}>
+            <option value="">Select…</option>
+            {fieldOptions.pos_name.map((p) => <option key={p} value={p}>{p}</option>)}
+          </select>
+        ) : (
+          <input style={inputStyle} value={form.posName} onChange={set("posName")} placeholder="Current POS/software being used" />
+        )}
       </Field>
       <Field label={`Contact Name${leadSettings.requireContactName ? " *" : ""}`}>
         <input style={inputStyle} value={form.owner} onChange={set("owner")} />
@@ -2338,7 +2454,8 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
       </Field>
       <Field label="Category">
         <select style={inputStyle} value={form.category} onChange={set("category")}>
-          {["Cafe", "QSR", "Casual Dining", "Fine Dining", "Cloud Kitchen", "Bakery"].map((c) => <option key={c}>{c}</option>)}
+          <option value="">Select…</option>
+          {(fieldOptions.category?.length ? fieldOptions.category : ["Cafe", "QSR", "Casual Dining", "Fine Dining", "Cloud Kitchen", "Bakery"]).map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
       </Field>
       {leadSettings.requireStatus && (

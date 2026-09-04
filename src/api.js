@@ -145,6 +145,10 @@ export const api = {
   adminSalesmanHistory: (id, date) => request(`/admin/salesmen/${id}/history?date=${date}`),
   adminSendMessage: (payload) => request("/admin/messages", { method: "POST", body: payload }),
   adminGetMessages: (salesmanId) => request(`/admin/messages${salesmanId ? `?salesmanId=${salesmanId}` : ""}`),
+  adminDeleteMessage: (id) => request(`/admin/messages/${id}`, { method: "DELETE" }),
+  adminGetLeadOptions: () => request("/admin/lead-options"),
+  adminAddLeadOption: (fieldKey, value) => request("/admin/lead-options", { method: "POST", body: { fieldKey, value } }),
+  adminDeleteLeadOption: (id) => request(`/admin/lead-options/${id}`, { method: "DELETE" }),
 
   salesmanDayStart: (lat, lng) => request("/salesman/day/start", { method: "POST", body: { lat, lng } }),
   salesmanDayEnd: (lat, lng) => request("/salesman/day/end", { method: "POST", body: { lat, lng } }),
@@ -155,6 +159,7 @@ export const api = {
   salesmanUpdateLead: (id, payload) => request(`/salesman/leads/${id}`, { method: "PATCH", body: payload }),
   salesmanGetSettings: () => request("/salesman/settings"),
   salesmanGetProfile: () => request("/salesman/profile"),
+  salesmanGetLeadOptions: () => request("/salesman/lead-options"),
   salesmanGetMessages: () => request("/salesman/messages"),
   salesmanMarkMessageRead: (id) => request(`/salesman/messages/${id}/read`, { method: "PATCH" }),
   salesmanDeleteMessage: (id) => request(`/salesman/messages/${id}`, { method: "DELETE" }),
