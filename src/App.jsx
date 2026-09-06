@@ -24,6 +24,7 @@ import {
   Pencil,
   Trash2,
   MessageSquare,
+  Contact2,
 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -1013,6 +1014,7 @@ function AdminApp({ session, online }) {
       subLocation: payload.subLocation, posName: payload.posName,
       renewalMonth: payload.renewalMonth, renewalDate: payload.renewalDate || "",
       owner: payload.contactName, phone: payload.phone, notes: payload.notes,
+      dealValue: payload.dealValue,
     } : l))); // optimistic
     try {
       await api.adminUpdateLead(id, payload);
@@ -1142,7 +1144,7 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
         <StatCard label={<>Hot Leads <span style={{ fontSize: 8.5, opacity: 0.65 }}>TODAY</span></>} value={hotLeadsToday.length} color={T.danger} onClick={() => setStatLeadsModal({ title: "Hot Leads Today", leads: hotLeadsToday })} />
         <StatCard label={<>Warm Leads <span style={{ fontSize: 8.5, opacity: 0.65 }}>TODAY</span></>} value={warmLeadsToday.length} color={T.warn} onClick={() => setStatLeadsModal({ title: "Warm Leads Today", leads: warmLeadsToday })} />
         <StatCard label="Total Leads" value={leads.length} />
-        <StatCard label="Converted" value={converted} sub={convertedValue > 0 ? `${fmtMoney(convertedValue)} closed` : undefined} color={T.verified} />
+        <StatCard label="Converted" value={converted} sub={convertedValue > 0 ? `${fmtMoney(convertedValue)} closed` : undefined} color={T.verified} onClick={() => setStatLeadsModal({ title: "Converted Leads", leads: leads.filter((l) => l.status === "won") })} />
         <StatCard label="Pending" value={pending} color={T.warn} />
       </div>
 
@@ -1750,29 +1752,39 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete })
     dealValue: lead.dealValue != null ? String(lead.dealValue) : "",
   });
   const [saving, setSaving] = useState(false);
+  const [savedOverrides, setSavedOverrides] = useState({}); // reflects the drawer's own last successful save immediately, so it never shows stale data while waiting on a full reload
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const displayLead = { ...lead, ...savedOverrides };
 
   const saveEdit = async () => {
     setSaving(true);
-    await onUpdate(lead.id, {
+    const payload = {
       subLocation: form.subLocation, posName: form.posName,
       renewalMonth: form.renewalMonth, renewalDate: form.renewalDate || null,
       contactName: form.owner, phone: form.phone, notes: form.notes,
       dealValue: form.dealValue ? Number(form.dealValue) : null,
-    });
+    };
+    await onUpdate(lead.id, payload);
+    setSavedOverrides((prev) => ({
+      ...prev,
+      subLocation: payload.subLocation, posName: payload.posName,
+      renewalMonth: payload.renewalMonth, renewalDate: payload.renewalDate || "",
+      owner: payload.contactName, phone: payload.phone, notes: payload.notes,
+      dealValue: payload.dealValue,
+    }));
     setSaving(false);
     setEditing(false);
   };
 
   const detailRows = [
-    ["Business Name", lead.business],
-    ["Sub Location", lead.subLocation],
-    ["POS Name", lead.posName],
-    ["Renewal Month", lead.renewalMonth],
-    ["Renewal Date", lead.renewalDate],
-    ["Contact Name", lead.owner],
-    ["Contact Number", lead.phone],
-    ["Expected Deal Value", lead.dealValue != null ? `₹${lead.dealValue.toLocaleString("en-IN")}` : null],
+    ["Business Name", displayLead.business],
+    ["Sub Location", displayLead.subLocation],
+    ["POS Name", displayLead.posName],
+    ["Renewal Month", displayLead.renewalMonth],
+    ["Renewal Date", displayLead.renewalDate],
+    ["Contact Name", displayLead.owner],
+    ["Contact Number", displayLead.phone],
+    ["Expected Deal Value", displayLead.dealValue != null ? `₹${displayLead.dealValue.toLocaleString("en-IN")}` : null],
   ].filter(([, v]) => v);
 
   return (
@@ -1787,7 +1799,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete })
             <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: T.inkSoft }}><X size={18} /></button>
           </div>
         </div>
-        <div style={{ marginTop: 4, color: T.inkSoft, fontSize: 13 }}>{lead.owner} · {lead.category}</div>
+        <div style={{ marginTop: 4, color: T.inkSoft, fontSize: 13 }}>{displayLead.owner} · {lead.category}</div>
         <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
           {lead.hasLocation ? <VerificationStamp status={lead.verification} /> : <NoLocationBadge />}
           <SyncBadge syncStatus={lead.syncStatus} />
@@ -1816,7 +1828,13 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete })
               {detailRows.map(([label, value]) => (
                 <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "5px 0", fontSize: 13 }}>
                   <span style={{ color: T.inkSoft }}>{label}</span>
-                  <span style={{ fontWeight: 600, textAlign: "right" }}>{value}</span>
+                  {label === "Contact Number" ? (
+                    <a href={`tel:${value}`} style={{ fontWeight: 700, textAlign: "right", color: T.route, textDecoration: "none" }}>
+                      {value}
+                    </a>
+                  ) : (
+                    <span style={{ fontWeight: 600, textAlign: "right" }}>{value}</span>
+                  )}
                 </div>
               ))}
               <div style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "5px 0", fontSize: 13 }}>
@@ -1837,10 +1855,10 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete })
               </div>
             )}
 
-            {lead.notes && (
+            {displayLead.notes && (
               <div style={{ marginTop: 14 }}>
                 <div style={{ fontSize: 11, textTransform: "uppercase", color: T.inkSoft, fontWeight: 600, letterSpacing: 0.3 }}>Comments</div>
-                <div style={{ fontSize: 13.5, marginTop: 4 }}>{lead.notes}</div>
+                <div style={{ fontSize: 13.5, marginTop: 4 }}>{displayLead.notes}</div>
               </div>
             )}
           </>
@@ -2103,6 +2121,7 @@ function SalesmanApp({ session, online }) {
       subLocation: payload.subLocation, posName: payload.posName,
       renewalMonth: payload.renewalMonth, renewalDate: payload.renewalDate || "",
       owner: payload.contactName, phone: payload.phone, notes: payload.notes,
+      dealValue: payload.dealValue,
     } : l))); // optimistic
     try {
       await api.salesmanUpdateLead(id, payload);
@@ -2173,6 +2192,7 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
   const [viewingLead, setViewingLead] = useState(null);
   const [showTodayLeads, setShowTodayLeads] = useState(false);
   const [showHotLeads, setShowHotLeads] = useState(false);
+  const [showConverted, setShowConverted] = useState(false);
 
   const todayLeads = leads.filter((l) => isToday(l.createdAt));
   const monthLeads = leads.filter((l) => isThisMonth(l.createdAt));
@@ -2215,7 +2235,7 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
         <StatCard label="Today's Leads" value={todayLeads.length} onClick={() => setShowTodayLeads(true)} />
         <StatCard label="🔥 Hot Leads" value={allHotLeads.length} color={T.danger} onClick={() => setShowHotLeads(true)} />
         <StatCard label="Pending" value={pending} color={T.warn} />
-        <StatCard label="Converted" value={converted} sub={convertedValue > 0 ? `${fmtMoney(convertedValue)} closed` : undefined} color={T.verified} />
+        <StatCard label="Converted" value={converted} sub={convertedValue > 0 ? `${fmtMoney(convertedValue)} closed` : undefined} color={T.verified} onClick={() => setShowConverted(true)} />
       </div>
 
       <div className="ft-card" style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, padding: 16, marginBottom: 16 }}>
@@ -2271,6 +2291,14 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
           title="🔥 Hot Leads"
           onClose={() => setShowHotLeads(false)}
           onSelectLead={(l) => { setShowHotLeads(false); setViewingLead(l); }}
+        />
+      )}
+      {showConverted && (
+        <MyLeadsModal
+          leads={leads.filter((l) => l.status === "won")}
+          title="Converted Leads"
+          onClose={() => setShowConverted(false)}
+          onSelectLead={(l) => { setShowConverted(false); setViewingLead(l); }}
         />
       )}
       {viewingLead && <LeadDetailDrawer lead={viewingLead} onClose={() => setViewingLead(null)} onStatusChange={onUpdateLeadStatus} onUpdate={onUpdateLeadDetails} />}
@@ -2358,6 +2386,21 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
   const [gps, setGps] = useState({ state: "locating" });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [contactPickerSupported] = useState(() => typeof navigator !== "undefined" && "contacts" in navigator && "ContactsManager" in window);
+
+  const pickContact = async () => {
+    try {
+      const contacts = await navigator.contacts.select(["name", "tel"], { multiple: false });
+      if (contacts.length > 0) {
+        const c = contacts[0];
+        const rawPhone = c.tel?.[0] || "";
+        const digitsOnly = rawPhone.replace(/\D/g, "").slice(-10); // keep last 10 digits, strip +91 etc.
+        setForm((f) => ({ ...f, phone: digitsOnly || rawPhone, owner: f.owner || c.name?.[0] || "" }));
+      }
+    } catch {
+      /* user cancelled the picker, or it failed — no error needed, they can still type it in */
+    }
+  };
 
   useEffect(() => {
     api.salesmanGetSettings()
@@ -2468,7 +2511,19 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
         <input style={inputStyle} value={form.owner} onChange={set("owner")} />
       </Field>
       <Field label={`Contact Number${leadSettings.requireContactNumber ? " *" : ""}`}>
-        <input style={inputStyle} value={form.phone} onChange={set("phone")} />
+        <div style={{ display: "flex", gap: 6 }}>
+          <input style={{ ...inputStyle, marginBottom: 0, flex: 1 }} value={form.phone} onChange={set("phone")} />
+          {contactPickerSupported && (
+            <button
+              type="button"
+              onClick={pickContact}
+              title="Pick from contacts"
+              style={{ display: "flex", alignItems: "center", gap: 5, padding: "0 12px", borderRadius: 8, border: `1px solid ${T.line}`, background: "#fff", color: T.route, fontWeight: 700, fontSize: 12.5, cursor: "pointer", whiteSpace: "nowrap" }}
+            >
+              <Contact2 size={14} /> Pick
+            </button>
+          )}
+        </div>
       </Field>
       <Field label="Category">
         <input style={inputStyle} value={form.category} onChange={set("category")} placeholder="e.g. Cafe" list="category-options" />
