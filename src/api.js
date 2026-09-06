@@ -214,6 +214,7 @@ export function mapLeadRow(row) {
     posName: row.pos_name || "",
     renewalMonth: row.renewal_month || "",
     renewalDate: row.renewal_date || "",
+    dealValue: row.deal_value != null ? Number(row.deal_value) : null,
     owner: row.contact_name,
     phone: row.phone,
     category: row.category,

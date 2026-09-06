@@ -75,6 +75,15 @@ const T = {
 
 const rand = (a, b) => a + Math.random() * (b - a);
 const fmtTime = (d) => (d ? d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "—");
+// Compact currency for small stat-card sub-text — ₹45K, ₹1.2L, ₹3.4Cr — so
+// a large closed-deal total never forces the tile to grow.
+const fmtMoney = (n) => {
+  if (n == null) return "";
+  if (n >= 1e7) return `₹${(n / 1e7).toFixed(1)}Cr`;
+  if (n >= 1e5) return `₹${(n / 1e5).toFixed(1)}L`;
+  if (n >= 1e3) return `₹${(n / 1e3).toFixed(1)}K`;
+  return `₹${n.toLocaleString("en-IN")}`;
+};
 // Calendar-day check (local time), not a rolling 24h window — this is what
 // makes "Today's Leads" and the daily target actually reset at midnight
 // instead of drifting on a 24-hours-since-creation basis.
@@ -574,6 +583,7 @@ function CrmSettingsModal({ onClose }) {
           <SettingToggle label="Require Contact Number" checked={leadSettings.requireContactNumber} onChange={toggleLead("requireContactNumber")} />
           <SettingToggle label="Require Status" checked={leadSettings.requireStatus} onChange={toggleLead("requireStatus")} />
           <SettingToggle label="Require Comments" checked={leadSettings.requireComments} onChange={toggleLead("requireComments")} />
+          <SettingToggle label="Require Expected Deal Value" checked={leadSettings.requireDealValue} onChange={toggleLead("requireDealValue")} />
 
           <div style={{ fontSize: 11, textTransform: "uppercase", color: T.inkSoft, fontWeight: 700, letterSpacing: 0.4, marginTop: 22, marginBottom: 4 }}>Location Settings</div>
           <SettingToggle
@@ -1095,6 +1105,7 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
   const hotLeadsToday = todayLeads.filter((l) => l.status === "hot");
   const warmLeadsToday = todayLeads.filter((l) => l.status === "warm");
   const converted = leads.filter((l) => l.status === "won").length;
+  const convertedValue = leads.filter((l) => l.status === "won" && l.dealValue != null).reduce((sum, l) => sum + l.dealValue, 0);
   const pending = leads.filter((l) => !["won", "lost"].includes(l.status)).length;
   const activeSalesmen = salesmen.filter((s) => s.status === "online").length;
 
@@ -1131,7 +1142,7 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
         <StatCard label={<>Hot Leads <span style={{ fontSize: 8.5, opacity: 0.65 }}>TODAY</span></>} value={hotLeadsToday.length} color={T.danger} onClick={() => setStatLeadsModal({ title: "Hot Leads Today", leads: hotLeadsToday })} />
         <StatCard label={<>Warm Leads <span style={{ fontSize: 8.5, opacity: 0.65 }}>TODAY</span></>} value={warmLeadsToday.length} color={T.warn} onClick={() => setStatLeadsModal({ title: "Warm Leads Today", leads: warmLeadsToday })} />
         <StatCard label="Total Leads" value={leads.length} />
-        <StatCard label="Converted" value={converted} color={T.verified} />
+        <StatCard label="Converted" value={converted} sub={convertedValue > 0 ? `${fmtMoney(convertedValue)} closed` : undefined} color={T.verified} />
         <StatCard label="Pending" value={pending} color={T.warn} />
       </div>
 
@@ -1736,6 +1747,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete })
     subLocation: lead.subLocation || "", posName: lead.posName || "",
     renewalMonth: lead.renewalMonth || "", renewalDate: lead.renewalDate || "",
     owner: lead.owner || "", phone: lead.phone || "", notes: lead.notes || "",
+    dealValue: lead.dealValue != null ? String(lead.dealValue) : "",
   });
   const [saving, setSaving] = useState(false);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -1746,6 +1758,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete })
       subLocation: form.subLocation, posName: form.posName,
       renewalMonth: form.renewalMonth, renewalDate: form.renewalDate || null,
       contactName: form.owner, phone: form.phone, notes: form.notes,
+      dealValue: form.dealValue ? Number(form.dealValue) : null,
     });
     setSaving(false);
     setEditing(false);
@@ -1759,6 +1772,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete })
     ["Renewal Date", lead.renewalDate],
     ["Contact Name", lead.owner],
     ["Contact Number", lead.phone],
+    ["Expected Deal Value", lead.dealValue != null ? `₹${lead.dealValue.toLocaleString("en-IN")}` : null],
   ].filter(([, v]) => v);
 
   return (
@@ -1789,6 +1803,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete })
               <div style={{ flex: 1 }}><Field label="Renewal Month"><input style={inputStyle} value={form.renewalMonth} onChange={set("renewalMonth")} /></Field></div>
               <div style={{ flex: 1 }}><Field label="Renewal Date"><input style={inputStyle} type="date" value={form.renewalDate} onChange={set("renewalDate")} /></Field></div>
             </div>
+            <Field label="Expected Deal Value"><input style={inputStyle} type="number" min="0" value={form.dealValue} onChange={set("dealValue")} placeholder="₹ e.g. 45000" /></Field>
             <Field label="Comments"><textarea style={{ ...inputStyle, minHeight: 60 }} value={form.notes} onChange={set("notes")} /></Field>
             <div style={{ display: "flex", gap: 8 }}>
               <button onClick={() => setEditing(false)} style={{ flex: 1, padding: 10, borderRadius: 11, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
@@ -2163,6 +2178,7 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
   const monthLeads = leads.filter((l) => isThisMonth(l.createdAt));
   const allHotLeads = leads.filter((l) => l.status === "hot");
   const converted = leads.filter((l) => l.status === "won").length;
+  const convertedValue = leads.filter((l) => l.status === "won" && l.dealValue != null).reduce((sum, l) => sum + l.dealValue, 0);
   const pending = leads.filter((l) => !["won", "lost"].includes(l.status)).length;
   const target = dailyTarget || 8;
   const monthTarget = monthlyTarget || 200;
@@ -2199,7 +2215,7 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
         <StatCard label="Today's Leads" value={todayLeads.length} onClick={() => setShowTodayLeads(true)} />
         <StatCard label="🔥 Hot Leads" value={allHotLeads.length} color={T.danger} onClick={() => setShowHotLeads(true)} />
         <StatCard label="Pending" value={pending} color={T.warn} />
-        <StatCard label="Converted" value={converted} color={T.verified} />
+        <StatCard label="Converted" value={converted} sub={convertedValue > 0 ? `${fmtMoney(convertedValue)} closed` : undefined} color={T.verified} />
       </div>
 
       <div className="ft-card" style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, padding: 16, marginBottom: 16 }}>
@@ -2273,6 +2289,7 @@ function BigButton({ icon: IconC, label, onClick, primary, disabled }) {
 const DEFAULT_LEAD_SETTINGS = {
   requireBusinessName: true, requireSubLocation: true, requirePosName: true,
   requireContactName: true, requireContactNumber: true, requireStatus: true, requireComments: false,
+  requireDealValue: false,
 };
 const DEFAULT_LOCATION_SETTINGS = { gpsLocation: true, locationMandatoryForNewLead: true, continuousGpsTracking: true };
 
@@ -2333,11 +2350,11 @@ function MessagesSection({ messages, onMarkRead, onDelete }) {
 function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
   const [form, setForm] = useState({
     business: "", subLocation: "", posName: "", renewalMonth: "", renewalDate: "",
-    owner: "", phone: "", category: "", status: "new", notes: "",
+    owner: "", phone: "", category: "", status: "new", notes: "", dealValue: "",
   });
   const [leadSettings, setLeadSettings] = useState(DEFAULT_LEAD_SETTINGS);
   const [locationSettings, setLocationSettings] = useState(DEFAULT_LOCATION_SETTINGS);
-  const [fieldOptions, setFieldOptions] = useState({ category: [], pos_name: [] });
+  const [fieldOptions, setFieldOptions] = useState({ category: [], pos_name: [], sub_location: [] });
   const [gps, setGps] = useState({ state: "locating" });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -2382,6 +2399,7 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
     (!leadSettings.requireContactName || form.owner.trim().length > 0) &&
     (!leadSettings.requireContactNumber || form.phone.trim().length > 0) &&
     (!leadSettings.requireComments || form.notes.trim().length > 0) &&
+    (!leadSettings.requireDealValue || form.dealValue.trim().length > 0) &&
     locationReady;
 
   const verification = gps.state === "ok" ? (gps.accuracy > 50 ? "poor_accuracy" : "verified") : null;
@@ -2403,6 +2421,7 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
       category: form.category,
       status: form.status,
       notes: form.notes,
+      dealValue: form.dealValue ? Number(form.dealValue) : null,
       lat: hasGps ? gps.lat : null,
       lng: hasGps ? gps.lng : null,
       accuracyM: hasGps ? gps.accuracy : null,
@@ -2434,17 +2453,16 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
         <input style={inputStyle} value={form.business} onChange={set("business")} placeholder="e.g. Ganga Cafe" />
       </Field>
       <Field label={`Sub Location${leadSettings.requireSubLocation ? " *" : ""}`}>
-        <input style={inputStyle} value={form.subLocation} onChange={set("subLocation")} placeholder="e.g. Gomti Nagar" />
+        <input style={inputStyle} value={form.subLocation} onChange={set("subLocation")} placeholder="e.g. Gomti Nagar" list="sub-location-options" />
+        <datalist id="sub-location-options">
+          {(fieldOptions.sub_location || []).map((v) => <option key={v} value={v} />)}
+        </datalist>
       </Field>
       <Field label={`POS Name${leadSettings.requirePosName ? " *" : ""}`}>
-        {fieldOptions.pos_name?.length > 0 ? (
-          <select style={inputStyle} value={form.posName} onChange={set("posName")}>
-            <option value="">Select…</option>
-            {fieldOptions.pos_name.map((p) => <option key={p} value={p}>{p}</option>)}
-          </select>
-        ) : (
-          <input style={inputStyle} value={form.posName} onChange={set("posName")} placeholder="Current POS/software being used" />
-        )}
+        <input style={inputStyle} value={form.posName} onChange={set("posName")} placeholder="Current POS/software being used" list="pos-name-options" />
+        <datalist id="pos-name-options">
+          {(fieldOptions.pos_name || []).map((v) => <option key={v} value={v} />)}
+        </datalist>
       </Field>
       <Field label={`Contact Name${leadSettings.requireContactName ? " *" : ""}`}>
         <input style={inputStyle} value={form.owner} onChange={set("owner")} />
@@ -2453,10 +2471,10 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
         <input style={inputStyle} value={form.phone} onChange={set("phone")} />
       </Field>
       <Field label="Category">
-        <select style={inputStyle} value={form.category} onChange={set("category")}>
-          <option value="">Select…</option>
-          {(fieldOptions.category?.length ? fieldOptions.category : ["Cafe", "QSR", "Casual Dining", "Fine Dining", "Cloud Kitchen", "Bakery"]).map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
+        <input style={inputStyle} value={form.category} onChange={set("category")} placeholder="e.g. Cafe" list="category-options" />
+        <datalist id="category-options">
+          {(fieldOptions.category?.length ? fieldOptions.category : ["Cafe", "QSR", "Casual Dining", "Fine Dining", "Cloud Kitchen", "Bakery"]).map((v) => <option key={v} value={v} />)}
+        </datalist>
       </Field>
       {leadSettings.requireStatus && (
         <Field label="Status *">
@@ -2465,6 +2483,9 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
           </select>
         </Field>
       )}
+      <Field label={`Expected Deal Value${leadSettings.requireDealValue ? " *" : ""}`}>
+        <input style={inputStyle} type="number" min="0" inputMode="decimal" value={form.dealValue} onChange={set("dealValue")} placeholder="₹ e.g. 45000" />
+      </Field>
       <div style={{ display: "flex", gap: 10 }}>
         <div style={{ flex: 1 }}>
           <Field label="Renewal Month"><input style={inputStyle} value={form.renewalMonth} onChange={set("renewalMonth")} placeholder="e.g. March" /></Field>
