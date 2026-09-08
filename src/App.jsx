@@ -1098,6 +1098,7 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
   const [deleteSalesmanError, setDeleteSalesmanError] = useState("");
   const [messageTarget, setMessageTarget] = useState(null); // salesman object | "all" | null
   const [routeSalesman, setRouteSalesman] = useState(null);
+  const [viewingSalesmanLeads, setViewingSalesmanLeads] = useState(null);
   const [mapView, setMapView] = useState("live"); // "live" | "leads"
   const [sheetsInfo, setSheetsInfo] = useState(null);
   const [sheetsError, setSheetsError] = useState("");
@@ -1165,6 +1166,7 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
             onDeleteClick={setDeleteSalesmanConfirm}
             onViewRoute={setRouteSalesman}
             onMessageClick={setMessageTarget}
+            onOpenSalesmanLeads={setViewingSalesmanLeads}
           />
         </div>
       ) : (
@@ -1268,6 +1270,14 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
 
       {selectedLead && <LeadDetailDrawer lead={selectedLead} onClose={() => setSelectedLead(null)} onStatusChange={onStatusChange} onUpdate={onUpdateLead} onDelete={onDeleteLead} />}
       {routeSalesman && <SalesmanRouteModal salesman={routeSalesman} onClose={() => setRouteSalesman(null)} />}
+      {viewingSalesmanLeads && (
+        <SalesmanLeadsModal
+          salesman={viewingSalesmanLeads}
+          leads={leads}
+          onClose={() => setViewingSalesmanLeads(null)}
+          onSelectLead={(l) => { setViewingSalesmanLeads(null); setSelectedLead(l); }}
+        />
+      )}
       {showAddSalesman && (
         <SalesmanFormModal
           existingCount={salesmen.length}
@@ -1330,6 +1340,67 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
 
 // A little more visual flair than a plain bar — gradient fill, a percentage
 // chip that shifts to green once the target's hit, and a trophy nod for it.
+// Tap a salesman's name to see just their leads, broken out by Hot/Warm/
+// Cold/Converted/Pending — instead of hunting through the main filtered list.
+function SalesmanLeadsModal({ salesman, leads, onClose, onSelectLead }) {
+  const [tab, setTab] = useState("all");
+  const mine = leads.filter((l) => l.salesmanId === salesman.id);
+
+  const groups = {
+    all: mine,
+    hot: mine.filter((l) => l.status === "hot"),
+    warm: mine.filter((l) => l.status === "warm"),
+    cold: mine.filter((l) => l.status === "cold"),
+    converted: mine.filter((l) => l.status === "won"),
+    pending: mine.filter((l) => !["won", "lost"].includes(l.status)),
+  };
+  const TABS = [
+    ["all", "All"], ["hot", "🔥 Hot"], ["warm", "Warm"], ["cold", "Cold"],
+    ["converted", "Converted"], ["pending", "Pending"],
+  ];
+  const shown = groups[tab];
+
+  return (
+    <Overlay onClose={onClose} title={`${salesman.name}'s Leads`}>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+        {TABS.map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            style={{
+              padding: "6px 12px", borderRadius: 8, border: `1px solid ${tab === key ? T.route : T.line}`,
+              background: tab === key ? T.route : "#fff", color: tab === key ? "#fff" : T.ink,
+              fontWeight: 700, fontSize: 12, cursor: "pointer",
+            }}
+          >
+            {label} ({groups[key].length})
+          </button>
+        ))}
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {shown.length === 0 && (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, color: T.inkSoft, fontSize: 13, padding: "30px 8px" }}>
+            <List size={22} style={{ opacity: 0.5 }} />
+            No leads in this category.
+          </div>
+        )}
+        {shown.map((l) => (
+          <div key={l.id} className="ft-row" onClick={() => onSelectLead(l)} style={{ border: `1px solid ${T.line}`, borderRadius: 11, padding: 10, background: "#fff", cursor: "pointer" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div style={{ fontWeight: 600, fontSize: 13.5 }}>{l.business}</div>
+              {l.hasLocation ? <VerificationStamp status={l.verification} small /> : <NoLocationBadge small />}
+            </div>
+            <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 3, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <span>{STATUS_LABEL[l.status]} · {fmtTime(l.createdAt)}{l.dealValue != null ? ` · ${fmtMoney(l.dealValue)}` : ""}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Overlay>
+  );
+}
+
 function MonthlyProgressBar({ salesmanId, target, leads }) {
   const achieved = leads.filter((l) => l.salesmanId === salesmanId && isThisMonth(l.createdAt)).length;
   const goal = target || 200;
@@ -1358,7 +1429,7 @@ function MonthlyProgressBar({ salesmanId, target, leads }) {
   );
 }
 
-function SalesmenPanel({ salesmen, leads, onAddClick, onEditClick, onToggleActive, onDeleteClick, onViewRoute, onMessageClick }) {
+function SalesmenPanel({ salesmen, leads, onAddClick, onEditClick, onToggleActive, onDeleteClick, onViewRoute, onMessageClick, onOpenSalesmanLeads }) {
   return (
     <div className="ft-card" style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, padding: 18, display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -1376,7 +1447,7 @@ function SalesmenPanel({ salesmen, leads, onAddClick, onEditClick, onToggleActiv
       {salesmen.map((s) => (
         <div key={s.id} className="ft-row" style={{ border: `1px solid ${T.line}`, borderRadius: 12, padding: 12, background: "#fff", opacity: s.isActive === false ? 0.55 : 1 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ fontWeight: 700, fontSize: 13.5 }}>{s.name}</div>
+            <div onClick={() => onOpenSalesmanLeads(s)} style={{ fontWeight: 700, fontSize: 13.5, cursor: "pointer", color: T.route }}>{s.name}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{
                 fontSize: 10.5, fontWeight: 700, padding: "3px 9px", borderRadius: 999,
