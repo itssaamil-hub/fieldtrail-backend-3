@@ -96,6 +96,16 @@ const isThisMonth = (d) => {
   const now = new Date();
   return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
 };
+// True if a date falls between today and `days` days from now (inclusive) —
+// used for the "renewal/expiry coming up" box, not a rolling calendar month,
+// so it stays useful no matter what day you're looking on.
+const isWithinDays = (d, days) => {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const end = new Date(start);
+  end.setDate(end.getDate() + days);
+  return d >= start && d <= end;
+};
 const uuid = () =>
   "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0;
@@ -106,11 +116,16 @@ const uuid = () =>
 // Hot/Warm/Cold sit first per spec (the salesman's quick-triage picks),
 // "New" stays as the backend's silent default status for leads nobody has
 // explicitly classified yet — it's still valid, just not pushed to the top.
-const STATUSES = ["hot", "warm", "cold", "new", "contacted", "follow_up", "demo_scheduled", "proposal_sent", "negotiation", "won", "lost"];
+// The funnel: Cold → Conversation → Hot → Demo → Negotiation → Won/Lost/Nurture.
+// This is what's shown in every status picker going forward.
+const STATUSES = ["cold", "conversation", "hot", "demo", "negotiation", "won", "lost", "nurture"];
 const STATUS_LABEL = {
-  hot: "Hot", warm: "Warm", cold: "Cold",
-  new: "New", contacted: "Contacted", follow_up: "Follow-up", demo_scheduled: "Demo Scheduled",
-  proposal_sent: "Proposal Sent", negotiation: "Negotiation", won: "Won", lost: "Lost",
+  cold: "Cold", conversation: "Conversation", hot: "Hot", demo: "Demo",
+  negotiation: "Negotiation", won: "Won", lost: "Lost", nurture: "Nurture",
+  // Legacy values — no longer selectable, but kept here so any older lead
+  // still using one of these displays correctly instead of showing blank.
+  warm: "Warm", new: "New", contacted: "Contacted", follow_up: "Follow-up",
+  demo_scheduled: "Demo Scheduled", proposal_sent: "Proposal Sent",
 };
 
 function useOnlineStatus() {
@@ -1106,7 +1121,8 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
 
   const todayLeads = leads.filter((l) => isToday(l.createdAt));
   const hotLeadsToday = todayLeads.filter((l) => l.status === "hot");
-  const warmLeadsToday = todayLeads.filter((l) => l.status === "warm");
+  const inNegotiation = leads.filter((l) => l.status === "negotiation");
+  const upcomingRenewals = leads.filter((l) => l.renewalDate && isWithinDays(new Date(l.renewalDate), 30));
   const converted = leads.filter((l) => l.status === "won").length;
   const convertedValue = leads.filter((l) => l.status === "won" && l.dealValue != null).reduce((sum, l) => sum + l.dealValue, 0);
   const pending = leads.filter((l) => !["won", "lost"].includes(l.status)).length;
@@ -1143,10 +1159,11 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
         <StatCard label="Active Now" value={activeSalesmen} color={T.verified} />
         <StatCard label="Leads Today" value={todayLeads.length} />
         <StatCard label={<>Hot Leads <span style={{ fontSize: 8.5, opacity: 0.65 }}>TODAY</span></>} value={hotLeadsToday.length} color={T.danger} onClick={() => setStatLeadsModal({ title: "Hot Leads Today", leads: hotLeadsToday })} />
-        <StatCard label={<>Warm Leads <span style={{ fontSize: 8.5, opacity: 0.65 }}>TODAY</span></>} value={warmLeadsToday.length} color={T.warn} onClick={() => setStatLeadsModal({ title: "Warm Leads Today", leads: warmLeadsToday })} />
+        <StatCard label="In Negotiation" value={inNegotiation.length} color={T.route} onClick={() => setStatLeadsModal({ title: "In Negotiation", leads: inNegotiation })} />
         <StatCard label="Total Leads" value={leads.length} />
         <StatCard label="Converted" value={converted} sub={convertedValue > 0 ? `${fmtMoney(convertedValue)} closed` : undefined} color={T.verified} onClick={() => setStatLeadsModal({ title: "Converted Leads", leads: leads.filter((l) => l.status === "won") })} />
         <StatCard label="Pending" value={pending} color={T.warn} />
+        <StatCard label="Renewals Due" sub="next 30 days" value={upcomingRenewals.length} color={T.accent} onClick={() => setStatLeadsModal({ title: "Renewals Due (Next 30 Days)", leads: upcomingRenewals })} />
       </div>
 
       <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
@@ -1349,13 +1366,13 @@ function SalesmanLeadsModal({ salesman, leads, onClose, onSelectLead }) {
   const groups = {
     all: mine,
     hot: mine.filter((l) => l.status === "hot"),
-    warm: mine.filter((l) => l.status === "warm"),
+    negotiation: mine.filter((l) => l.status === "negotiation"),
     cold: mine.filter((l) => l.status === "cold"),
     converted: mine.filter((l) => l.status === "won"),
     pending: mine.filter((l) => !["won", "lost"].includes(l.status)),
   };
   const TABS = [
-    ["all", "All"], ["hot", "🔥 Hot"], ["warm", "Warm"], ["cold", "Cold"],
+    ["all", "All"], ["hot", "🔥 Hot"], ["negotiation", "Negotiation"], ["cold", "Cold"],
     ["converted", "Converted"], ["pending", "Pending"],
   ];
   const shown = groups[tab];
@@ -2449,7 +2466,7 @@ function MessagesSection({ messages, onMarkRead, onDelete }) {
 function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
   const [form, setForm] = useState({
     business: "", subLocation: "", posName: "", renewalMonth: "", renewalDate: "",
-    owner: "", phone: "", category: "", status: "new", notes: "", dealValue: "",
+    owner: "", phone: "", category: "", status: "cold", notes: "", dealValue: "",
   });
   const [leadSettings, setLeadSettings] = useState(DEFAULT_LEAD_SETTINGS);
   const [locationSettings, setLocationSettings] = useState(DEFAULT_LOCATION_SETTINGS);
@@ -2697,6 +2714,11 @@ function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads", allowD
             </div>
             <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 3, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <span>{STATUS_LABEL[l.status]} · {fmtTime(l.createdAt)}</span>
+              {l.renewalDate && (
+                <span style={{ fontWeight: 700, color: T.accent }}>
+                  Renews {new Date(l.renewalDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                </span>
+              )}
               <SyncBadge syncStatus={l.syncStatus} />
             </div>
           </div>
