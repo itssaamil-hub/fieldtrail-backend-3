@@ -21,12 +21,13 @@ const EXPORT_FIELDS = [
   { key: "notes", label: "Comments" },
 ];
 
-async function fetchExportRows({ salesmanId, status }) {
+async function fetchExportRows({ salesmanId, status, date }) {
   const clauses = [];
   const params = [];
   let i = 1;
   if (salesmanId) { clauses.push(`l.salesman_id = $${i++}`); params.push(salesmanId); }
   if (status) { clauses.push(`l.status = $${i++}`); params.push(status); }
+  if (date) { clauses.push(`l.created_at::date = $${i++}`); params.push(date); }
   const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
 
   const { rows } = await db.query(
@@ -69,7 +70,7 @@ router.get("/salesmen", async (req, res) => {
   const { rows } = await db.query(
     `SELECT u.id, u.full_name, u.phone, u.photo_url, u.is_active,
             sp.status, sp.last_lat, sp.last_lng, sp.last_battery_pct, sp.last_speed_mps,
-            sp.last_seen_at, sp.daily_target, sp.employee_code
+            sp.last_seen_at, sp.daily_target, sp.monthly_target, sp.employee_code, sp.area
      FROM users u JOIN salesman_profiles sp ON sp.user_id = u.id
      WHERE u.role = 'salesman'
      ORDER BY u.full_name`
@@ -79,7 +80,7 @@ router.get("/salesmen", async (req, res) => {
 
 // POST /admin/salesmen — create a new salesman
 router.post("/salesmen", async (req, res) => {
-  const { fullName, phone, email, password, employeeCode, dailyTarget } = req.body;
+  const { fullName, phone, email, password, employeeCode, dailyTarget, monthlyTarget, area } = req.body;
   if (!fullName || !phone || !password) {
     return res.status(400).json({ error: "fullName, phone and password are required" });
   }
@@ -95,8 +96,8 @@ router.post("/salesmen", async (req, res) => {
     );
     const user = rows[0];
     await client.query(
-      `INSERT INTO salesman_profiles (user_id, employee_code, daily_target) VALUES ($1,$2,$3)`,
-      [user.id, employeeCode, dailyTarget || 8]
+      `INSERT INTO salesman_profiles (user_id, employee_code, daily_target, monthly_target, area) VALUES ($1,$2,$3,$4,$5)`,
+      [user.id, employeeCode, dailyTarget || 8, monthlyTarget || 200, area]
     );
     await client.query("COMMIT");
     await logActivity({ actorId: req.user.id, action: "salesman.created", entityType: "user", entityId: user.id });
@@ -110,16 +111,63 @@ router.post("/salesmen", async (req, res) => {
   }
 });
 
-// PATCH /admin/salesmen/:id — activate/deactivate, reassign target etc.
+// PATCH /admin/salesmen/:id — full edit (name/phone/password/area/employee
+// code/target) as well as activate/deactivate. Password is only updated
+// when a new one is actually supplied.
 router.patch("/salesmen/:id", async (req, res) => {
-  const { isActive, dailyTarget } = req.body;
-  await db.query(`UPDATE users SET is_active = COALESCE($2, is_active) WHERE id = $1`, [req.params.id, isActive]);
-  if (dailyTarget != null) {
-    await db.query(`UPDATE salesman_profiles SET daily_target = $2 WHERE user_id = $1`, [req.params.id, dailyTarget]);
+  const { isActive, dailyTarget, monthlyTarget, fullName, phone, password, area, employeeCode } = req.body;
+  const { id } = req.params;
+
+  try {
+    if (fullName != null || phone != null || isActive != null || password) {
+      const passwordHash = password ? await bcrypt.hash(password, 10) : null;
+      await db.query(
+        `UPDATE users SET
+           full_name = COALESCE($2, full_name),
+           phone = COALESCE($3, phone),
+           is_active = COALESCE($4, is_active),
+           password_hash = COALESCE($5, password_hash)
+         WHERE id = $1`,
+        [id, fullName, phone, isActive, passwordHash]
+      );
+    }
+    if (dailyTarget != null || monthlyTarget != null || area != null || employeeCode != null) {
+      await db.query(
+        `UPDATE salesman_profiles SET
+           daily_target = COALESCE($2, daily_target),
+           monthly_target = COALESCE($3, monthly_target),
+           area = COALESCE($4, area),
+           employee_code = COALESCE($5, employee_code)
+         WHERE user_id = $1`,
+        [id, dailyTarget, monthlyTarget, area, employeeCode]
+      );
+    }
+    await logActivity({ actorId: req.user.id, action: "salesman.updated", entityType: "user", entityId: id, metadata: req.body });
+    res.json({ ok: true });
+  } catch (err) {
+    if (err.code === "23505") return res.status(409).json({ error: "Phone number already in use" });
+    throw err;
   }
-  await logActivity({ actorId: req.user.id, action: "salesman.updated", entityType: "user", entityId: req.params.id, metadata: req.body });
-  res.json({ ok: true });
 });
+
+// DELETE /admin/salesmen/:id — permanent delete. Blocked by the DB itself
+// (leads.salesman_id has no cascade) while the salesman still has any
+// leads — that's the intended rule: delete their leads first.
+router.delete("/salesmen/:id", async (req, res) => {
+  try {
+    const { rowCount } = await db.query(`DELETE FROM users WHERE id = $1 AND role = 'salesman'`, [req.params.id]);
+    if (rowCount === 0) return res.status(404).json({ error: "Salesman not found" });
+    await logActivity({ actorId: req.user.id, action: "salesman.deleted", entityType: "user", entityId: req.params.id });
+    res.json({ ok: true });
+  } catch (err) {
+    if (err.code === "23503") {
+      const { rows } = await db.query(`SELECT count(*) FROM leads WHERE salesman_id = $1`, [req.params.id]);
+      return res.status(409).json({ error: `This salesman still has ${rows[0].count} lead(s). Delete their leads first.` });
+    }
+    throw err;
+  }
+});
+
 
 // GET /admin/salesmen/:id/history?date=YYYY-MM-DD — route for that day
 router.get("/salesmen/:id/history", async (req, res) => {
@@ -136,7 +184,12 @@ router.get("/salesmen/:id/history", async (req, res) => {
      FROM leads WHERE salesman_id = $1 AND created_at::date = $2`,
     [req.params.id, date]
   );
-  res.json({ route: rows, leads: leads.rows });
+  const attendance = await db.query(
+    `SELECT start_day_at, start_lat, start_lng, end_day_at, end_lat, end_lng
+     FROM attendance WHERE salesman_id = $1 AND day = $2`,
+    [req.params.id, date]
+  );
+  res.json({ route: rows, leads: leads.rows, attendance: attendance.rows[0] || null });
 });
 
 // -----------------------------------------------------------------------
@@ -163,6 +216,46 @@ router.get("/leads", async (req, res) => {
 });
 
 // PATCH /admin/leads/:id/status
+// PATCH /admin/leads/:id — general field edit (any lead, any salesman).
+// Same editable field set as the salesman side; location/verification
+// fields remain immutable (enforced by the DB trigger either way).
+router.patch("/leads/:id", async (req, res) => {
+  const { id } = req.params;
+  const { subLocation, posName, renewalMonth, renewalDate, contactName, phone, notes, dealValue } = req.body;
+
+  const existing = await db.query(`SELECT id FROM leads WHERE id = $1`, [id]);
+  if (!existing.rows[0]) return res.status(404).json({ error: "Lead not found" });
+
+  const { rows } = await db.query(
+    `UPDATE leads SET
+       sub_location = COALESCE($2, sub_location),
+       pos_name = COALESCE($3, pos_name),
+       renewal_month = COALESCE($4, renewal_month),
+       renewal_date = COALESCE($5, renewal_date),
+       contact_name = COALESCE($6, contact_name),
+       phone = COALESCE($7, phone),
+       notes = COALESCE($8, notes),
+       deal_value = COALESCE($9, deal_value)
+     WHERE id = $1 RETURNING *`,
+    [id, subLocation, posName, renewalMonth, renewalDate, contactName, phone, notes, dealValue]
+  );
+  await logActivity({ actorId: req.user.id, action: "lead.edited", entityType: "lead", entityId: id, metadata: req.body });
+
+  res.json({ lead: rows[0] });
+});
+
+// DELETE /admin/leads/:id — permanent delete, admin only. Logged before
+// deletion since the audit row can't reference a lead that no longer exists.
+router.delete("/leads/:id", async (req, res) => {
+  const existing = await db.query(`SELECT id, business_name FROM leads WHERE id = $1`, [req.params.id]);
+  if (!existing.rows[0]) return res.status(404).json({ error: "Lead not found" });
+
+  await logActivity({ actorId: req.user.id, action: "lead.deleted", entityType: "lead", entityId: req.params.id, metadata: { businessName: existing.rows[0].business_name } });
+  await db.query(`DELETE FROM leads WHERE id = $1`, [req.params.id]);
+
+  res.json({ ok: true });
+});
+
 router.patch("/leads/:id/status", async (req, res) => {
   const { status } = req.body;
   const current = await db.query(`SELECT status FROM leads WHERE id = $1`, [req.params.id]);
@@ -284,6 +377,105 @@ router.get("/notifications", async (req, res) => {
   const where = unreadOnly === "true" ? "WHERE is_read = false" : "";
   const { rows } = await db.query(`SELECT * FROM notifications ${where} ORDER BY created_at DESC LIMIT 200`);
   res.json({ notifications: rows });
+});
+
+// -----------------------------------------------------------------------
+// MESSAGES / TASKS — admin sends, salesman reads. recipientId omitted or
+// null means broadcast to every salesman.
+// POST /admin/messages { recipientId?: uuid, body: string }
+router.post("/messages", async (req, res) => {
+  const { recipientId, body } = req.body;
+  if (!body || !body.trim()) return res.status(400).json({ error: "Message body is required" });
+
+  if (recipientId) {
+    const { rows } = await db.query(
+      `INSERT INTO messages (sender_id, recipient_id, body) VALUES ($1,$2,$3) RETURNING *`,
+      [req.user.id, recipientId, body.trim()]
+    );
+    await logActivity({ actorId: req.user.id, action: "message.sent", entityType: "message", entityId: rows[0].id, metadata: { recipientId } });
+    return res.status(201).json({ message: rows[0] });
+  }
+
+  // Broadcast: one row per active salesman, so each has their own read state.
+  const salesmen = await db.query(`SELECT id FROM users WHERE role = 'salesman' AND is_active`);
+  const inserted = [];
+  for (const s of salesmen.rows) {
+    const { rows } = await db.query(
+      `INSERT INTO messages (sender_id, recipient_id, body) VALUES ($1,$2,$3) RETURNING *`,
+      [req.user.id, s.id, body.trim()]
+    );
+    inserted.push(rows[0]);
+  }
+  await logActivity({ actorId: req.user.id, action: "message.broadcast", entityType: "message", entityId: null, metadata: { recipientCount: inserted.length } });
+  res.status(201).json({ messages: inserted });
+});
+
+// GET /admin/messages?salesmanId= — sent history, optionally for one salesman
+router.get("/messages", async (req, res) => {
+  const { salesmanId } = req.query;
+  const clauses = [];
+  const params = [];
+  let i = 1;
+  if (salesmanId) { clauses.push(`m.recipient_id = $${i++}`); params.push(salesmanId); }
+  const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
+
+  const { rows } = await db.query(
+    `SELECT m.*, u.full_name AS recipient_name
+     FROM messages m JOIN users u ON u.id = m.recipient_id
+     ${where} ORDER BY m.created_at DESC LIMIT 200`,
+    params
+  );
+  res.json({ messages: rows });
+});
+
+// DELETE /admin/messages/:id
+router.delete("/messages/:id", async (req, res) => {
+  const { rowCount } = await db.query(`DELETE FROM messages WHERE id = $1`, [req.params.id]);
+  if (rowCount === 0) return res.status(404).json({ error: "Message not found" });
+  res.json({ ok: true });
+});
+
+// -----------------------------------------------------------------------
+// LEAD FIELD OPTIONS — admin-managed presets for Category / POS Name
+// dropdowns in the Add Lead form.
+const ALLOWED_FIELD_KEYS = ["category", "pos_name", "sub_location"];
+
+// GET /admin/lead-options — all fields, grouped
+router.get("/lead-options", async (req, res) => {
+  const { rows } = await db.query(
+    `SELECT id, field_key, value FROM lead_field_options ORDER BY field_key, value`
+  );
+  const grouped = { category: [], pos_name: [], sub_location: [] };
+  for (const r of rows) {
+    if (!grouped[r.field_key]) grouped[r.field_key] = [];
+    grouped[r.field_key].push({ id: r.id, value: r.value });
+  }
+  res.json({ options: grouped });
+});
+
+// POST /admin/lead-options { fieldKey, value }
+router.post("/lead-options", async (req, res) => {
+  const { fieldKey, value } = req.body;
+  if (!ALLOWED_FIELD_KEYS.includes(fieldKey)) return res.status(400).json({ error: "Invalid fieldKey" });
+  if (!value || !value.trim()) return res.status(400).json({ error: "Value is required" });
+
+  try {
+    const { rows } = await db.query(
+      `INSERT INTO lead_field_options (field_key, value) VALUES ($1,$2) RETURNING id, field_key, value`,
+      [fieldKey, value.trim()]
+    );
+    res.status(201).json({ option: rows[0] });
+  } catch (err) {
+    if (err.code === "23505") return res.status(409).json({ error: "That option already exists" });
+    throw err;
+  }
+});
+
+// DELETE /admin/lead-options/:id
+router.delete("/lead-options/:id", async (req, res) => {
+  const { rowCount } = await db.query(`DELETE FROM lead_field_options WHERE id = $1`, [req.params.id]);
+  if (rowCount === 0) return res.status(404).json({ error: "Option not found" });
+  res.json({ ok: true });
 });
 
 module.exports = router;
