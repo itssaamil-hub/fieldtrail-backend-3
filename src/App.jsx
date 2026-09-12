@@ -26,6 +26,10 @@ import {
   MessageSquare,
   Contact2,
   Search,
+  Flame,
+  Handshake,
+  CalendarClock,
+  Target as TargetIcon,
 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -485,19 +489,28 @@ function SettingsModal({ apiBase, onClose, onSave }) {
 // ---------------------------------------------------------------------------
 // Shared small pieces
 // ---------------------------------------------------------------------------
-function StatCard({ label, value, sub, color, onClick }) {
+function StatCard({ label, value, sub, color, icon: IconC, onClick }) {
+  const c = color || T.ink;
   return (
     <div
       className={onClick ? "ft-card ft-row" : "ft-card"}
       onClick={onClick}
       style={{
-        background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, padding: "16px 18px",
+        background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, padding: "14px 16px",
         minWidth: 118, flex: 1, cursor: onClick ? "pointer" : "default",
+        boxShadow: "0 1px 2px rgba(20,20,30,0.04)", transition: "transform 0.15s ease, box-shadow 0.15s ease",
       }}
     >
-      <div style={{ fontSize: 11, color: T.inkSoft, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.4 }}>{label}</div>
-      <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 26, fontWeight: 700, color: color || T.ink, marginTop: 4 }}>{value}</div>
-      {sub && <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 2 }}>{sub}</div>}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+        <div style={{ fontSize: 10.5, color: T.inkSoft, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</div>
+        {IconC && (
+          <div style={{ width: 24, height: 24, borderRadius: 8, background: `${c}1A`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <IconC size={13} color={c} />
+          </div>
+        )}
+      </div>
+      <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 24, fontWeight: 700, color: c }}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 2 }}>{sub}</div>}
     </div>
   );
 }
@@ -2321,6 +2334,8 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
   const [showTodayLeads, setShowTodayLeads] = useState(false);
   const [showHotLeads, setShowHotLeads] = useState(false);
   const [showConverted, setShowConverted] = useState(false);
+  const [showNegotiation, setShowNegotiation] = useState(false);
+  const [showRenewals, setShowRenewals] = useState(false);
 
   const todayLeads = leads.filter((l) => isToday(l.createdAt));
   const monthLeads = leads.filter((l) => isThisMonth(l.createdAt));
@@ -2329,6 +2344,11 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
   const convertedValue = leads.filter((l) => l.status === "won" && l.dealValue != null).reduce((sum, l) => sum + l.dealValue, 0);
   const pending = leads.filter((l) => !["won", "lost"].includes(l.status)).length;
   const inConversation = leads.filter((l) => l.status === "conversation").length;
+  const inNegotiation = leads.filter((l) => l.status === "negotiation");
+  const upcomingRenewals = leads.filter((l) =>
+    (l.renewalDate && isWithinDays(new Date(l.renewalDate), 30)) ||
+    (!l.renewalDate && isUpcomingRenewalMonth(l.renewalMonth))
+  );
   const target = dailyTarget || 8;
   const monthTarget = monthlyTarget || 200;
 
@@ -2360,27 +2380,44 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
-        <StatCard label="Today's Leads" value={todayLeads.length} onClick={() => setShowTodayLeads(true)} />
-        <StatCard label="🔥 Hot Leads" value={allHotLeads.length} color={T.danger} onClick={() => setShowHotLeads(true)} />
-        <StatCard label="Conversation" value={inConversation} sub={`${pending} pending`} color={T.route} />
-        <StatCard label="Converted" value={converted} sub={convertedValue > 0 ? `${fmtMoney(convertedValue)} closed` : undefined} color={T.verified} onClick={() => setShowConverted(true)} />
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
+        <StatCard label="Today" value={todayLeads.length} icon={TargetIcon} color={T.route} onClick={() => setShowTodayLeads(true)} />
+        <StatCard label="Hot" value={allHotLeads.length} icon={Flame} color={T.danger} onClick={() => setShowHotLeads(true)} />
+        <StatCard label="Conversation" value={inConversation} icon={MessageSquare} color={T.accent} />
+        <StatCard label="Negotiation" value={inNegotiation.length} icon={Handshake} color={T.warn} onClick={() => setShowNegotiation(true)} />
+        <StatCard label="Converted" value={converted} sub={convertedValue > 0 ? fmtMoney(convertedValue) : undefined} icon={CheckCircle2} color={T.verified} onClick={() => setShowConverted(true)} />
+        <StatCard label="Renewals" value={upcomingRenewals.length} sub="next 30 days" icon={CalendarClock} color={T.accent} onClick={() => setShowRenewals(true)} />
       </div>
 
-      <div className="ft-card" style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, padding: 16, marginBottom: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: T.inkSoft, marginBottom: 6 }}><span>Today's target</span><span>{Math.min(todayLeads.length, target)} / {target}</span></div>
-        <div style={{ height: 8, background: T.paperDeep, borderRadius: 11, overflow: "hidden" }}>
-          <div style={{ height: "100%", width: `${Math.min(100, (todayLeads.length / target) * 100)}%`, background: T.route }} />
+      <div
+        className="ft-card"
+        style={{
+          background: `linear-gradient(155deg, ${T.card} 0%, ${T.paperDeep} 100%)`,
+          border: `1px solid ${T.line}`, borderRadius: 16, padding: "18px 18px 16px",
+          marginBottom: 16, boxShadow: "0 1px 3px rgba(20,20,30,0.05)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 14 }}>
+          <TargetIcon size={14} color={T.route} />
+          <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 13.5 }}>Your Targets</div>
         </div>
-      </div>
 
-      <div className="ft-card" style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, padding: 16, marginBottom: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 12.5, color: T.inkSoft, marginBottom: 6 }}>
-          <span>Monthly target</span>
-          <span style={{ fontWeight: 700, fontSize: 13, color: T.ink }}>{monthLeads.length} / {monthTarget}</span>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 12, color: T.inkSoft, marginBottom: 6 }}>
+          <span>Today</span>
+          <span style={{ fontWeight: 700, fontSize: 13.5, color: T.ink }}>{Math.min(todayLeads.length, target)} / {target}</span>
         </div>
-        <div style={{ height: 8, background: T.paperDeep, borderRadius: 11, overflow: "hidden" }}>
-          <div style={{ height: "100%", width: `${Math.min(100, (monthLeads.length / monthTarget) * 100)}%`, background: T.route, transition: "width 0.3s ease" }} />
+        <div style={{ height: 7, background: T.paperDeep, borderRadius: 11, overflow: "hidden" }}>
+          <div style={{ height: "100%", width: `${Math.min(100, (todayLeads.length / target) * 100)}%`, background: T.route, transition: "width 0.3s ease", borderRadius: 11 }} />
+        </div>
+
+        <div style={{ height: 1, background: T.line, margin: "16px 0 14px" }} />
+
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 12, color: T.inkSoft, marginBottom: 6 }}>
+          <span>This month</span>
+          <span style={{ fontWeight: 700, fontSize: 13.5, color: T.ink }}>{monthLeads.length} / {monthTarget}</span>
+        </div>
+        <div style={{ height: 7, background: T.paperDeep, borderRadius: 11, overflow: "hidden" }}>
+          <div style={{ height: "100%", width: `${Math.min(100, (monthLeads.length / monthTarget) * 100)}%`, background: T.accent, transition: "width 0.3s ease", borderRadius: 11 }} />
         </div>
         <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 6 }}>
           {monthLeads.length >= monthTarget ? "🎉 Target reached!" : `${monthTarget - monthLeads.length} more to hit this month's target`}
@@ -2428,6 +2465,22 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
           title="Converted Leads"
           onClose={() => setShowConverted(false)}
           onSelectLead={(l) => { setShowConverted(false); setViewingLead(l); }}
+        />
+      )}
+      {showNegotiation && (
+        <MyLeadsModal
+          leads={inNegotiation}
+          title="In Negotiation"
+          onClose={() => setShowNegotiation(false)}
+          onSelectLead={(l) => { setShowNegotiation(false); setViewingLead(l); }}
+        />
+      )}
+      {showRenewals && (
+        <MyLeadsModal
+          leads={upcomingRenewals}
+          title="Renewals Due (Next 30 Days)"
+          onClose={() => setShowRenewals(false)}
+          onSelectLead={(l) => { setShowRenewals(false); setViewingLead(l); }}
         />
       )}
       {viewingLead && <LeadDetailDrawer lead={viewingLead} onClose={() => setViewingLead(null)} onStatusChange={onUpdateLeadStatus} onUpdate={onUpdateLeadDetails} />}
@@ -2731,25 +2784,50 @@ function GpsStatus({ gps, verification }) {
 
 function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads", allowDateFilter = false }) {
   const [filterDate, setFilterDate] = useState("");
-  const shown = filterDate ? leads.filter((l) => l.createdAt.toISOString().slice(0, 10) === filterDate) : leads;
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const shown = leads.filter(
+    (l) =>
+      (!filterDate || l.createdAt.toISOString().slice(0, 10) === filterDate) &&
+      (filterStatus === "all" || l.status === filterStatus) &&
+      (!searchQuery.trim() || [l.business, l.owner, l.phone, l.subLocation].some((f) => f && f.toLowerCase().includes(searchQuery.trim().toLowerCase())))
+  );
 
   return (
     <Overlay onClose={onClose} title={title}>
-      {allowDateFilter && (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-          <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} style={{ ...inputStyle, marginBottom: 0, flex: 1 }} />
-          {filterDate && (
-            <button onClick={() => setFilterDate("")} style={{ fontSize: 11.5, color: T.inkSoft, background: "none", border: "none", cursor: "pointer", whiteSpace: "nowrap" }}>
-              Clear
-            </button>
-          )}
-        </div>
-      )}
+      <div style={{ position: "relative", marginBottom: 10 }}>
+        <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: T.inkSoft }} />
+        <input
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search by business, contact, phone, or area…"
+          style={{ ...inputStyle, marginBottom: 0, width: "100%", padding: "9px 12px 9px 32px", boxSizing: "border-box" }}
+        />
+        {searchQuery && (
+          <button onClick={() => setSearchQuery("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer", color: T.inkSoft }}>
+            <X size={14} />
+          </button>
+        )}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+        <Select value={filterStatus} onChange={setFilterStatus} options={[["all", "All statuses"], ...STATUSES.map((s) => [s, STATUS_LABEL[s]])]} />
+        {allowDateFilter && (
+          <>
+            <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} style={{ ...inputStyle, marginBottom: 0, flex: 1, minWidth: 130 }} />
+            {filterDate && (
+              <button onClick={() => setFilterDate("")} style={{ fontSize: 11.5, color: T.inkSoft, background: "none", border: "none", cursor: "pointer", whiteSpace: "nowrap" }}>
+                Clear date
+              </button>
+            )}
+          </>
+        )}
+      </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {shown.length === 0 && (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, color: T.inkSoft, fontSize: 13, padding: "30px 8px" }}>
             <List size={22} style={{ opacity: 0.5 }} />
-            {filterDate ? "No leads on this date." : 'No leads yet — tap "Add Lead" to create one.'}
+            {filterDate || filterStatus !== "all" || searchQuery.trim() ? "No leads match these filters." : 'No leads yet — tap "Add Lead" to create one.'}
           </div>
         )}
         {shown.map((l) => (
