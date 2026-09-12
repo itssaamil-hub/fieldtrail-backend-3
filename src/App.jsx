@@ -1231,7 +1231,7 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
         <StatCard label={<>Hot Leads <span style={{ fontSize: 8.5, opacity: 0.65 }}>TODAY</span></>} value={hotLeadsToday.length} color={T.danger} onClick={() => setStatLeadsModal({ title: "Hot Leads Today", leads: hotLeadsToday })} />
         <StatCard label="In Negotiation" value={inNegotiation.length} color={T.route} onClick={() => setStatLeadsModal({ title: "In Negotiation", leads: inNegotiation })} />
         <StatCard label="Total Leads" value={leads.length} />
-        <StatCard label="Converted" value={converted} sub={convertedValue > 0 ? `${fmtMoney(convertedValue)} closed` : undefined} color={T.verified} onClick={() => setStatLeadsModal({ title: "Converted Leads", leads: leads.filter((l) => l.status === "won") })} />
+        <StatCard label="Won" value={converted} sub={convertedValue > 0 ? `${fmtMoney(convertedValue)} closed` : undefined} color={T.verified} onClick={() => setStatLeadsModal({ title: "Won Leads", leads: leads.filter((l) => l.status === "won") })} />
         <StatCard label="Pending" value={pending} color={T.warn} />
         <StatCard label="Renewals Due" sub="next 30 days" value={upcomingRenewals.length} color={T.accent} onClick={() => setStatLeadsModal({ title: "Renewals Due (Next 30 Days)", leads: upcomingRenewals })} />
       </div>
@@ -1776,7 +1776,7 @@ function SalesmanLeadsModal({ salesman, leads, onClose, onSelectLead }) {
   };
   const TABS = [
     ["all", "All"], ["hot", "🔥 Hot"], ["negotiation", "Negotiation"], ["cold", "Cold"],
-    ["converted", "Converted"], ["pending", "Pending"],
+    ["converted", "Won"], ["pending", "Pending"],
   ];
   const shown = groups[tab];
 
@@ -2801,7 +2801,7 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
         <StatCard label="Hot" value={allHotLeads.length} icon={Flame} color={T.danger} onClick={() => setShowHotLeads(true)} />
         <StatCard label="Conversation" value={inConversation} icon={MessageSquare} color={T.accent} />
         <StatCard label="Negotiation" value={inNegotiation.length} icon={Handshake} color={T.warn} onClick={() => setShowNegotiation(true)} />
-        <StatCard label="Converted" value={converted} sub={convertedValue > 0 ? fmtMoney(convertedValue) : undefined} icon={CheckCircle2} color={T.verified} onClick={() => setShowConverted(true)} />
+        <StatCard label="Won" value={converted} sub={convertedValue > 0 ? fmtMoney(convertedValue) : undefined} icon={CheckCircle2} color={T.verified} onClick={() => setShowConverted(true)} />
         <StatCard label="Renewals" value={upcomingRenewals.length} sub="next 30 days" icon={CalendarClock} color={T.accent} onClick={() => setShowRenewals(true)} />
       </div>
 
@@ -2878,7 +2878,7 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
       {showConverted && (
         <MyLeadsModal
           leads={leads.filter((l) => l.status === "won")}
-          title="Converted Leads"
+          title="Won Leads"
           onClose={() => setShowConverted(false)}
           onSelectLead={(l) => { setShowConverted(false); setViewingLead(l); }}
         />
