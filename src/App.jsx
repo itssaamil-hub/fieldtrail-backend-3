@@ -25,6 +25,7 @@ import {
   Trash2,
   MessageSquare,
   Contact2,
+  Search,
 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -105,6 +106,19 @@ const isWithinDays = (d, days) => {
   const end = new Date(start);
   end.setDate(end.getDate() + days);
   return d >= start && d <= end;
+};
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+// A lead's Renewal Month alone (no exact date) still counts as "upcoming"
+// if it names the current or next calendar month — e.g. typing "October"
+// while today is in September should surface it right away.
+const isUpcomingRenewalMonth = (monthName) => {
+  if (!monthName) return false;
+  const idx = MONTH_NAMES.findIndex((m) => m.toLowerCase() === monthName.toLowerCase());
+  if (idx === -1) return false;
+  const now = new Date();
+  const curMonth = now.getMonth();
+  const nextMonth = (curMonth + 1) % 12;
+  return idx === curMonth || idx === nextMonth;
 };
 const uuid = () =>
   "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
@@ -1104,6 +1118,7 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
   const [filterSalesman, setFilterSalesman] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterDate, setFilterDate] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [leadsPage, setLeadsPage] = useState(1);
   const LEADS_PER_PAGE = 50;
   const [selectedLead, setSelectedLead] = useState(null);
@@ -1122,7 +1137,10 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
   const todayLeads = leads.filter((l) => isToday(l.createdAt));
   const hotLeadsToday = todayLeads.filter((l) => l.status === "hot");
   const inNegotiation = leads.filter((l) => l.status === "negotiation");
-  const upcomingRenewals = leads.filter((l) => l.renewalDate && isWithinDays(new Date(l.renewalDate), 30));
+  const upcomingRenewals = leads.filter((l) =>
+    (l.renewalDate && isWithinDays(new Date(l.renewalDate), 30)) ||
+    (!l.renewalDate && isUpcomingRenewalMonth(l.renewalMonth))
+  );
   const converted = leads.filter((l) => l.status === "won").length;
   const convertedValue = leads.filter((l) => l.status === "won" && l.dealValue != null).reduce((sum, l) => sum + l.dealValue, 0);
   const pending = leads.filter((l) => !["won", "lost"].includes(l.status)).length;
@@ -1132,14 +1150,15 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
     (l) =>
       (filterSalesman === "all" || l.salesmanId === filterSalesman) &&
       (filterStatus === "all" || l.status === filterStatus) &&
-      (!filterDate || l.createdAt.toISOString().slice(0, 10) === filterDate)
+      (!filterDate || l.createdAt.toISOString().slice(0, 10) === filterDate) &&
+      (!searchQuery.trim() || [l.business, l.owner, l.phone, l.subLocation].some((f) => f && f.toLowerCase().includes(searchQuery.trim().toLowerCase())))
   );
 
   const totalPages = Math.max(1, Math.ceil(filteredLeads.length / LEADS_PER_PAGE));
   const currentPage = Math.min(leadsPage, totalPages);
   const pagedLeads = filteredLeads.slice((currentPage - 1) * LEADS_PER_PAGE, currentPage * LEADS_PER_PAGE);
 
-  useEffect(() => { setLeadsPage(1); }, [filterSalesman, filterStatus, filterDate]);
+  useEffect(() => { setLeadsPage(1); }, [filterSalesman, filterStatus, filterDate, searchQuery]);
 
   return (
     <div style={{ padding: "20px 24px", maxWidth: 1180, margin: "0 auto" }}>
@@ -1193,6 +1212,22 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
       <div className="ft-card" style={{ marginTop: 20, background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, padding: 18 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
           <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16 }}>Leads</div>
+        </div>
+        <div style={{ position: "relative", marginBottom: 12 }}>
+          <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: T.inkSoft }} />
+          <input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search leads by business, contact, phone, or area…"
+            style={{ width: "100%", padding: "9px 12px 9px 32px", borderRadius: 10, border: `1px solid ${T.line}`, fontSize: 13.5, boxSizing: "border-box" }}
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer", color: T.inkSoft }}>
+              <X size={14} />
+            </button>
+          )}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
             <Select value={filterSalesman} onChange={setFilterSalesman} options={[["all", "All salesmen"], ...salesmen.map((s) => [s.id, s.name])]} />
             <Select value={filterStatus} onChange={setFilterStatus} options={[["all", "All statuses"], ...STATUSES.map((s) => [s, STATUS_LABEL[s]])]} />
@@ -1900,7 +1935,12 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete })
             <Field label="Contact Name"><input style={inputStyle} value={form.owner} onChange={set("owner")} /></Field>
             <Field label="Contact Number"><input style={inputStyle} value={form.phone} onChange={set("phone")} /></Field>
             <div style={{ display: "flex", gap: 10 }}>
-              <div style={{ flex: 1 }}><Field label="Renewal Month"><input style={inputStyle} value={form.renewalMonth} onChange={set("renewalMonth")} /></Field></div>
+              <div style={{ flex: 1 }}><Field label="Renewal Month">
+                <select style={inputStyle} value={form.renewalMonth} onChange={set("renewalMonth")}>
+                  <option value="">Select…</option>
+                  {MONTH_NAMES.map((m) => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </Field></div>
               <div style={{ flex: 1 }}><Field label="Renewal Date"><input style={inputStyle} type="date" value={form.renewalDate} onChange={set("renewalDate")} /></Field></div>
             </div>
             <Field label="Expected Deal Value"><input style={inputStyle} type="number" min="0" value={form.dealValue} onChange={set("dealValue")} placeholder="₹ e.g. 45000" /></Field>
@@ -2288,6 +2328,7 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
   const converted = leads.filter((l) => l.status === "won").length;
   const convertedValue = leads.filter((l) => l.status === "won" && l.dealValue != null).reduce((sum, l) => sum + l.dealValue, 0);
   const pending = leads.filter((l) => !["won", "lost"].includes(l.status)).length;
+  const inConversation = leads.filter((l) => l.status === "conversation").length;
   const target = dailyTarget || 8;
   const monthTarget = monthlyTarget || 200;
 
@@ -2322,7 +2363,7 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
         <StatCard label="Today's Leads" value={todayLeads.length} onClick={() => setShowTodayLeads(true)} />
         <StatCard label="🔥 Hot Leads" value={allHotLeads.length} color={T.danger} onClick={() => setShowHotLeads(true)} />
-        <StatCard label="Pending" value={pending} color={T.warn} />
+        <StatCard label="Conversation" value={inConversation} sub={`${pending} pending`} color={T.route} />
         <StatCard label="Converted" value={converted} sub={convertedValue > 0 ? `${fmtMoney(convertedValue)} closed` : undefined} color={T.verified} onClick={() => setShowConverted(true)} />
       </div>
 
@@ -2631,7 +2672,12 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
       </Field>
       <div style={{ display: "flex", gap: 10 }}>
         <div style={{ flex: 1 }}>
-          <Field label="Renewal Month"><input style={inputStyle} value={form.renewalMonth} onChange={set("renewalMonth")} placeholder="e.g. March" /></Field>
+          <Field label="Renewal Month">
+            <select style={inputStyle} value={form.renewalMonth} onChange={set("renewalMonth")}>
+              <option value="">Select…</option>
+              {MONTH_NAMES.map((m) => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </Field>
         </div>
         <div style={{ flex: 1 }}>
           <Field label="Renewal Date"><input style={inputStyle} type="date" value={form.renewalDate} onChange={set("renewalDate")} /></Field>
