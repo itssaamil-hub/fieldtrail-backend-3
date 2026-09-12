@@ -1333,7 +1333,7 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
         )}
       </div>
 
-      {selectedLead && <LeadDetailDrawer lead={selectedLead} onClose={() => setSelectedLead(null)} onStatusChange={onStatusChange} onUpdate={onUpdateLead} onDelete={onDeleteLead} />}
+      {selectedLead && <LeadDetailDrawer lead={selectedLead} onClose={() => setSelectedLead(null)} onStatusChange={onStatusChange} onUpdate={onUpdateLead} onDelete={onDeleteLead} fetchHistory={api.adminLeadHistory} />}
       {routeSalesman && <SalesmanRouteModal salesman={routeSalesman} onClose={() => setRouteSalesman(null)} />}
       {viewingSalesmanLeads && (
         <SalesmanLeadsModal
@@ -1878,9 +1878,11 @@ function SalesmanFormModal({ existingCount, salesman, onClose, onSubmit }) {
 // Shared between Admin and Salesman — the fields shown adapt automatically
 // to whatever the lead actually has (nullable GPS when Location Settings
 // have GPS off, optional sub-location/POS/renewal fields, etc).
-function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete }) {
+function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, fetchHistory }) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [history, setHistory] = useState(null); // null = loading, [] = loaded & empty
+  const [historyError, setHistoryError] = useState("");
   const [form, setForm] = useState({
     subLocation: lead.subLocation || "", posName: lead.posName || "",
     renewalMonth: lead.renewalMonth || "", renewalDate: lead.renewalDate || "",
@@ -1891,6 +1893,18 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete })
   const [savedOverrides, setSavedOverrides] = useState({}); // reflects the drawer's own last successful save immediately, so it never shows stale data while waiting on a full reload
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const displayLead = { ...lead, ...savedOverrides };
+
+  useEffect(() => {
+    if (!fetchHistory) return;
+    let cancelled = false;
+    setHistory(null);
+    setHistoryError("");
+    fetchHistory(lead.id)
+      .then((res) => { if (!cancelled) setHistory(res.history || []); })
+      .catch((err) => { if (!cancelled) setHistoryError(err.message || "Couldn't load status history."); });
+    return () => { cancelled = true; };
+  }, [lead.id, lead.status, fetchHistory]);
+
 
   const saveEdit = async () => {
     setSaving(true);
@@ -2013,6 +2027,53 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete })
                 <button key={s} onClick={() => onStatusChange(lead.id, s)} style={{ fontSize: 11.5, padding: "5px 9px", borderRadius: 6, cursor: "pointer", border: `1px solid ${lead.status === s ? T.route : T.line}`, background: lead.status === s ? T.route : "#fff", color: lead.status === s ? "#fff" : T.ink, fontWeight: 600 }}>{STATUS_LABEL[s]}</button>
               ))}
             </div>
+          </div>
+        )}
+
+        {fetchHistory && !editing && (
+          <div style={{ marginTop: 20, paddingTop: 16, borderTop: `1px solid ${T.line}` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, textTransform: "uppercase", color: T.inkSoft, fontWeight: 600, letterSpacing: 0.3, marginBottom: 10 }}>
+              <Clock size={12} /> Activity Log
+            </div>
+            {history === null && !historyError && (
+              <div style={{ fontSize: 12.5, color: T.inkSoft, display: "flex", alignItems: "center", gap: 6 }}>
+                <Loader2 size={13} className="spin" /> Loading history…
+              </div>
+            )}
+            {historyError && (
+              <div style={{ fontSize: 12.5, color: T.danger }}>{historyError}</div>
+            )}
+            {history && history.length === 0 && (
+              <div style={{ fontSize: 12.5, color: T.inkSoft }}>No status changes yet — still at {STATUS_LABEL[lead.status]}.</div>
+            )}
+            {history && history.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                {[...history].reverse().map((h, i) => (
+                  <div key={h.id} style={{ display: "flex", gap: 10, paddingBottom: i === history.length - 1 ? 0 : 12 }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 8 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: 99, background: T.route, marginTop: 4, flexShrink: 0 }} />
+                      {i !== history.length - 1 && <div style={{ width: 1.5, flex: 1, background: T.line, marginTop: 2 }} />}
+                    </div>
+                    <div style={{ paddingBottom: 4 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+                        {h.old_status ? (
+                          <>
+                            <span style={{ color: T.inkSoft, fontWeight: 500 }}>{STATUS_LABEL[h.old_status] || h.old_status}</span>
+                            <span style={{ color: T.inkSoft }}>→</span>
+                            <span>{STATUS_LABEL[h.new_status] || h.new_status}</span>
+                          </>
+                        ) : (
+                          <span>Set to {STATUS_LABEL[h.new_status] || h.new_status}</span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 2 }}>
+                        {h.changed_by_name} · {new Date(h.changed_at).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -2483,7 +2544,7 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
           onSelectLead={(l) => { setShowRenewals(false); setViewingLead(l); }}
         />
       )}
-      {viewingLead && <LeadDetailDrawer lead={viewingLead} onClose={() => setViewingLead(null)} onStatusChange={onUpdateLeadStatus} onUpdate={onUpdateLeadDetails} />}
+      {viewingLead && <LeadDetailDrawer lead={viewingLead} onClose={() => setViewingLead(null)} onStatusChange={onUpdateLeadStatus} onUpdate={onUpdateLeadDetails} fetchHistory={api.salesmanLeadHistory} />}
     </div>
   );
 }
