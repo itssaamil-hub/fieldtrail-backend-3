@@ -192,6 +192,7 @@ export default function App() {
   const [session, setSessionState] = useState(getSession());
   const [showSettings, setShowSettings] = useState(false);
   const [showCrmSettings, setShowCrmSettings] = useState(false);
+  const [adminPage, setAdminPage] = useState("dashboard"); // "dashboard" | "reports" — lives here so the toggle can live in the dark TopBar
   const online = useOnlineStatus();
 
   const handleSaveApiBase = (url) => {
@@ -220,14 +221,22 @@ export default function App() {
   } else if (!session) {
     body = <LoginScreen apiBase={apiBase} online={online} onLoggedIn={handleLoggedIn} onOpenSettings={() => setShowSettings(true)} />;
   } else if (session.role === "admin") {
-    body = <AdminApp session={session} online={online} onLogout={handleLogout} />;
+    body = <AdminApp session={session} online={online} onLogout={handleLogout} page={adminPage} />;
   } else {
     body = <SalesmanApp session={session} online={online} onLogout={handleLogout} />;
   }
 
   return (
     <div style={{ fontFamily: "Inter, system-ui, sans-serif", background: T.paper, minHeight: "100vh", color: T.ink }}>
-      <TopBar online={online} session={session} onLogout={handleLogout} onOpenSettings={() => setShowSettings(true)} onOpenCrmSettings={() => setShowCrmSettings(true)} />
+      <TopBar
+        online={online}
+        session={session}
+        onLogout={handleLogout}
+        onOpenSettings={() => setShowSettings(true)}
+        onOpenCrmSettings={() => setShowCrmSettings(true)}
+        page={session?.role === "admin" ? adminPage : undefined}
+        onChangePage={session?.role === "admin" ? setAdminPage : undefined}
+      />
       {body}
       {showSettings && (
         <SettingsModal
@@ -242,7 +251,7 @@ export default function App() {
 }
 
 // ---------------------------------------------------------------------------
-function TopBar({ online, session, onLogout, onOpenSettings, onOpenCrmSettings }) {
+function TopBar({ online, session, onLogout, onOpenSettings, onOpenCrmSettings, page, onChangePage }) {
   const { canInstall, installed, promptInstall } = useInstallPrompt();
   const isIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
   const [showIosHint, setShowIosHint] = useState(false);
@@ -269,6 +278,29 @@ function TopBar({ online, session, onLogout, onOpenSettings, onOpenCrmSettings }
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <ConnectionPill online={online} />
+
+          {page && onChangePage && (
+            <div style={{ display: "flex", gap: 2, background: "#2A3444", borderRadius: 7, padding: 2, border: "1px solid #3A4658" }}>
+              <button
+                onClick={() => onChangePage("dashboard")}
+                style={{
+                  display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, padding: "5px 10px", borderRadius: 5, cursor: "pointer", border: "none",
+                  background: page === "dashboard" ? T.accent : "transparent", color: page === "dashboard" ? "#fff" : "#9AA5B1",
+                }}
+              >
+                {narrow ? <Gauge size={13} /> : "Dashboard"}
+              </button>
+              <button
+                onClick={() => onChangePage("reports")}
+                style={{
+                  display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, padding: "5px 10px", borderRadius: 5, cursor: "pointer", border: "none",
+                  background: page === "reports" ? T.accent : "transparent", color: page === "reports" ? "#fff" : "#9AA5B1",
+                }}
+              >
+                <BarChart3 size={13} /> {narrow ? "" : "Reports"}
+              </button>
+            </div>
+          )}
 
           <button
             onClick={onOpenSettings}
@@ -964,7 +996,7 @@ function LiveMap({ salesmen, leads, onSelectLead, title = "Live Salesmen & Lead 
 // for instant pushes (new leads, live location, status changes), and falls
 // back to a periodic refetch as a safety net if the socket drops.
 // ---------------------------------------------------------------------------
-function AdminApp({ session, online }) {
+function AdminApp({ session, online, page }) {
   const [salesmen, setSalesmen] = useState([]);
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1124,12 +1156,12 @@ function AdminApp({ session, online }) {
       loadError={loadError}
       wsConnected={wsConnected}
       online={online}
+      page={page}
     />
   );
 }
 
-function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead, onAddSalesman, onEditSalesman, onDeleteSalesman, onToggleSalesmanActive, loadError, wsConnected, online }) {
-  const [page, setPage] = useState("dashboard"); // "dashboard" | "reports"
+function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead, onAddSalesman, onEditSalesman, onDeleteSalesman, onToggleSalesmanActive, loadError, wsConnected, online, page }) {
   const [filterSalesman, setFilterSalesman] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterDate, setFilterDate] = useState("");
@@ -1177,27 +1209,6 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
 
   return (
     <div style={{ padding: "20px 24px", maxWidth: 1180, margin: "0 auto" }}>
-      <div style={{ display: "flex", gap: 6, marginBottom: 18, borderBottom: `1px solid ${T.line}`, paddingBottom: 10 }}>
-        <button
-          onClick={() => setPage("dashboard")}
-          style={{
-            fontSize: 13, fontWeight: 600, padding: "7px 12px", borderRadius: 8, cursor: "pointer", border: "none",
-            background: page === "dashboard" ? T.route : "transparent", color: page === "dashboard" ? "#fff" : T.inkSoft,
-          }}
-        >
-          Dashboard
-        </button>
-        <button
-          onClick={() => setPage("reports")}
-          style={{
-            display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, padding: "7px 12px", borderRadius: 8, cursor: "pointer", border: "none",
-            background: page === "reports" ? T.route : "transparent", color: page === "reports" ? "#fff" : T.inkSoft,
-          }}
-        >
-          <BarChart3 size={14} /> Reports
-        </button>
-      </div>
-
       {page === "reports" ? (
         <ReportsPage salesmen={salesmen} leads={leads} />
       ) : (
