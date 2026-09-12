@@ -136,6 +136,11 @@ export const api = {
   adminUpdateLead: (id, payload) => request(`/admin/leads/${id}`, { method: "PATCH", body: payload }),
   adminDeleteLead: (id) => request(`/admin/leads/${id}`, { method: "DELETE" }),
   adminLeadHistory: (id) => request(`/admin/leads/${id}/history`),
+  adminReportTimeInStage: () => request(`/admin/reports/time-in-stage`),
+  adminReportDailyActivity: (params) => {
+    const qs = new URLSearchParams(Object.entries(params || {}).filter(([, v]) => v != null && v !== "")).toString();
+    return request(`/admin/reports/daily-activity${qs ? `?${qs}` : ""}`);
+  },
   adminGetSettings: () => request("/admin/settings"),
   adminUpdateSettings: (payload) => request("/admin/settings", { method: "PATCH", body: payload }),
   adminExportSheetsInfo: (params = {}) => {
