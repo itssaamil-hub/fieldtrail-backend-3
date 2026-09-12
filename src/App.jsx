@@ -535,7 +535,7 @@ function StatCard({ label, value, sub, color, icon: IconC, onClick }) {
       }}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, marginBottom: 8 }}>
-        <div style={{ fontSize: 10.5, color: T.inkSoft, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, minWidth: 0, overflowWrap: "break-word" }}>{label}</div>
+        <div style={{ fontSize: 9, color: T.inkSoft, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.2, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{label}</div>
         {IconC && (
           <div style={{ width: 24, height: 24, borderRadius: 8, background: `${c}1A`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <IconC size={13} color={c} />
