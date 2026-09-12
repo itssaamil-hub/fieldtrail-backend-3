@@ -135,6 +135,7 @@ export const api = {
   adminUpdateLeadStatus: (id, status) => request(`/admin/leads/${id}/status`, { method: "PATCH", body: { status } }),
   adminUpdateLead: (id, payload) => request(`/admin/leads/${id}`, { method: "PATCH", body: payload }),
   adminDeleteLead: (id) => request(`/admin/leads/${id}`, { method: "DELETE" }),
+  adminLeadHistory: (id) => request(`/admin/leads/${id}/history`),
   adminGetSettings: () => request("/admin/settings"),
   adminUpdateSettings: (payload) => request("/admin/settings", { method: "PATCH", body: payload }),
   adminExportSheetsInfo: (params = {}) => {
@@ -155,6 +156,7 @@ export const api = {
   salesmanPing: (payload) => request("/salesman/location/ping", { method: "POST", body: payload }),
   salesmanLeads: () => request("/salesman/leads"),
   salesmanLead: (id) => request(`/salesman/leads/${id}`),
+  salesmanLeadHistory: (id) => request(`/salesman/leads/${id}/history`),
   salesmanCreateLead: (payload) => request("/salesman/leads", { method: "POST", body: payload }),
   salesmanUpdateLead: (id, payload) => request(`/salesman/leads/${id}`, { method: "PATCH", body: payload }),
   salesmanGetSettings: () => request("/salesman/settings"),
