@@ -497,12 +497,12 @@ function StatCard({ label, value, sub, color, icon: IconC, onClick }) {
       onClick={onClick}
       style={{
         background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, padding: "14px 16px",
-        minWidth: 118, flex: 1, cursor: onClick ? "pointer" : "default",
+        minWidth: 96, flex: 1, cursor: onClick ? "pointer" : "default", overflow: "hidden",
         boxShadow: "0 1px 2px rgba(20,20,30,0.04)", transition: "transform 0.15s ease, box-shadow 0.15s ease",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-        <div style={{ fontSize: 10.5, color: T.inkSoft, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, marginBottom: 8 }}>
+        <div style={{ fontSize: 10.5, color: T.inkSoft, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, minWidth: 0, overflowWrap: "break-word" }}>{label}</div>
         {IconC && (
           <div style={{ width: 24, height: 24, borderRadius: 8, background: `${c}1A`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <IconC size={13} color={c} />
@@ -510,7 +510,7 @@ function StatCard({ label, value, sub, color, icon: IconC, onClick }) {
         )}
       </div>
       <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 24, fontWeight: 700, color: c }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 2 }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 2, overflowWrap: "break-word" }}>{sub}</div>}
     </div>
   );
 }
@@ -2441,7 +2441,7 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8, marginBottom: 16 }}>
         <StatCard label="Today" value={todayLeads.length} icon={TargetIcon} color={T.route} onClick={() => setShowTodayLeads(true)} />
         <StatCard label="Hot" value={allHotLeads.length} icon={Flame} color={T.danger} onClick={() => setShowHotLeads(true)} />
         <StatCard label="Conversation" value={inConversation} icon={MessageSquare} color={T.accent} />
