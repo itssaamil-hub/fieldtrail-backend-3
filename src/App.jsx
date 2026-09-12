@@ -30,6 +30,7 @@ import {
   Handshake,
   CalendarClock,
   Target as TargetIcon,
+  BarChart3,
 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -1128,6 +1129,7 @@ function AdminApp({ session, online }) {
 }
 
 function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead, onAddSalesman, onEditSalesman, onDeleteSalesman, onToggleSalesmanActive, loadError, wsConnected, online }) {
+  const [page, setPage] = useState("dashboard"); // "dashboard" | "reports"
   const [filterSalesman, setFilterSalesman] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterDate, setFilterDate] = useState("");
@@ -1175,6 +1177,31 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
 
   return (
     <div style={{ padding: "20px 24px", maxWidth: 1180, margin: "0 auto" }}>
+      <div style={{ display: "flex", gap: 6, marginBottom: 18, borderBottom: `1px solid ${T.line}`, paddingBottom: 10 }}>
+        <button
+          onClick={() => setPage("dashboard")}
+          style={{
+            fontSize: 13, fontWeight: 600, padding: "7px 12px", borderRadius: 8, cursor: "pointer", border: "none",
+            background: page === "dashboard" ? T.route : "transparent", color: page === "dashboard" ? "#fff" : T.inkSoft,
+          }}
+        >
+          Dashboard
+        </button>
+        <button
+          onClick={() => setPage("reports")}
+          style={{
+            display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, padding: "7px 12px", borderRadius: 8, cursor: "pointer", border: "none",
+            background: page === "reports" ? T.route : "transparent", color: page === "reports" ? "#fff" : T.inkSoft,
+          }}
+        >
+          <BarChart3 size={14} /> Reports
+        </button>
+      </div>
+
+      {page === "reports" ? (
+        <ReportsPage salesmen={salesmen} leads={leads} />
+      ) : (
+        <>
       {loadError && (
         <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: T.danger, background: T.dangerSoft, borderRadius: 11, padding: "9px 12px", marginBottom: 14 }}>
           <AlertTriangle size={14} /> {loadError}
@@ -1399,6 +1426,8 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
           onSend={(body) => api.adminSendMessage({ recipientId: messageTarget === "all" ? null : messageTarget.id, body })}
         />
       )}
+      </>
+      )}
     </div>
   );
 }
@@ -1407,6 +1436,321 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
 // chip that shifts to green once the target's hit, and a trophy nod for it.
 // Tap a salesman's name to see just their leads, broken out by Hot/Warm/
 // Cold/Converted/Pending — instead of hunting through the main filtered list.
+const REPORT_CARDS = [
+  { key: "performance", title: "Salesman performance", desc: "Leads, conversion rate and target progress per salesman.", icon: Contact2, color: "#3B5BDB" },
+  { key: "funnel", title: "Funnel and conversion", desc: "Lead count and drop-off at each pipeline stage.", icon: Handshake, color: "#7B4FC9" },
+  { key: "renewals", title: "Renewals due", desc: "Everything renewing in the next 30, 60 or 90 days.", icon: CalendarClock, color: "#B8791F" },
+  { key: "daily", title: "Daily activity", desc: "Visits, leads touched and distance travelled per day.", icon: MapPin, color: "#12805C" },
+  { key: "stage", title: "Time in stage", desc: "Average days a lead spends at each status.", icon: Clock, color: "#C0392B" },
+  { key: "export", title: "Lead export", desc: "Download leads as CSV, Excel, or push to Google Sheets.", icon: Download, color: "#1D7A8C" },
+];
+
+function ReportsPage({ salesmen, leads }) {
+  const [active, setActive] = useState(null);
+  const activeCard = REPORT_CARDS.find((c) => c.key === active);
+
+  if (!active) {
+    return (
+      <div>
+        <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 18, marginBottom: 4 }}>Reports</div>
+        <div style={{ fontSize: 13, color: T.inkSoft, marginBottom: 16 }}>Choose a report to view</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
+          {REPORT_CARDS.map((c) => (
+            <div
+              key={c.key}
+              onClick={() => setActive(c.key)}
+              className="ft-card"
+              style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, padding: 16, cursor: "pointer", boxShadow: "0 1px 2px rgba(20,20,30,0.04)" }}
+            >
+              <div style={{ width: 32, height: 32, borderRadius: 9, background: `${c.color}1A`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
+                <c.icon size={17} color={c.color} />
+              </div>
+              <div style={{ fontSize: 14.5, fontWeight: 700, marginBottom: 4 }}>{c.title}</div>
+              <div style={{ fontSize: 12, color: T.inkSoft, lineHeight: 1.5 }}>{c.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <button
+        onClick={() => setActive(null)}
+        style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: T.inkSoft, background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: 16 }}
+      >
+        ← Back to reports
+      </button>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
+        {activeCard && <activeCard.icon size={18} color={activeCard.color} />}
+        <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 17 }}>{activeCard?.title}</div>
+      </div>
+      {active === "performance" && <SalesmanPerformanceReport salesmen={salesmen} leads={leads} />}
+      {active === "funnel" && <FunnelReport leads={leads} />}
+      {active === "renewals" && <RenewalsReport leads={leads} />}
+      {active === "daily" && <DailyActivityReport salesmen={salesmen} />}
+      {active === "stage" && <TimeInStageReport />}
+      {active === "export" && <LeadExportReport salesmen={salesmen} />}
+    </div>
+  );
+}
+
+function SalesmanPerformanceReport({ salesmen, leads }) {
+  const rows = salesmen.map((s) => {
+    const own = leads.filter((l) => l.salesmanId === s.id);
+    const thisMonth = own.filter((l) => isThisMonth(l.createdAt));
+    const won = own.filter((l) => l.status === "won");
+    const dealValue = won.reduce((sum, l) => sum + (l.dealValue || 0), 0);
+    const conversionPct = own.length ? Math.round((won.length / own.length) * 100) : 0;
+    const targetPct = s.monthlyTarget ? Math.round((thisMonth.length / s.monthlyTarget) * 100) : null;
+    return { salesman: s, total: own.length, thisMonth: thisMonth.length, won: won.length, dealValue, conversionPct, targetPct };
+  });
+
+  if (rows.length === 0) return <EmptyReportState text="No salesmen yet." />;
+
+  return (
+    <div style={{ overflowX: "auto" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+        <thead>
+          <tr style={{ borderBottom: `1px solid ${T.line}` }}>
+            {["Salesman", "This month", "Total leads", "Won", "Conversion", "Target %", "Deal value"].map((h) => (
+              <th key={h} style={{ textAlign: "left", padding: "8px 10px", color: T.inkSoft, fontWeight: 600, fontSize: 11.5, textTransform: "uppercase", letterSpacing: 0.3, whiteSpace: "nowrap" }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.salesman.id} style={{ borderBottom: `1px solid ${T.line}` }}>
+              <td style={{ padding: "9px 10px", fontWeight: 600 }}>{r.salesman.name}</td>
+              <td style={{ padding: "9px 10px" }}>{r.thisMonth}</td>
+              <td style={{ padding: "9px 10px" }}>{r.total}</td>
+              <td style={{ padding: "9px 10px" }}>{r.won}</td>
+              <td style={{ padding: "9px 10px", color: r.conversionPct >= 30 ? T.verified : T.ink }}>{r.conversionPct}%</td>
+              <td style={{ padding: "9px 10px" }}>
+                {r.targetPct == null ? "—" : (
+                  <span style={{ color: r.targetPct >= 100 ? T.verified : r.targetPct >= 60 ? T.warn : T.danger, fontWeight: 600 }}>{r.targetPct}%</span>
+                )}
+              </td>
+              <td style={{ padding: "9px 10px" }}>{r.dealValue > 0 ? fmtMoney(r.dealValue) : "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function FunnelReport({ leads }) {
+  const total = leads.length;
+  const counts = STATUSES.map((s) => ({ status: s, count: leads.filter((l) => l.status === s).length }));
+  const maxCount = Math.max(1, ...counts.map((c) => c.count));
+
+  if (total === 0) return <EmptyReportState text="No leads yet." />;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {counts.map((c) => {
+        const pctOfTotal = total ? Math.round((c.count / total) * 100) : 0;
+        const barPct = Math.round((c.count / maxCount) * 100);
+        return (
+          <div key={c.status}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4 }}>
+              <span style={{ fontWeight: 600 }}>{STATUS_LABEL[c.status]}</span>
+              <span style={{ color: T.inkSoft }}>{c.count} leads · {pctOfTotal}%</span>
+            </div>
+            <div style={{ height: 9, background: T.paperDeep, borderRadius: 11, overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${barPct}%`, background: T.route, borderRadius: 11, transition: "width 0.3s ease" }} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function RenewalsReport({ leads }) {
+  const [days, setDays] = useState(30);
+  const upcoming = leads.filter((l) =>
+    (l.renewalDate && isWithinDays(new Date(l.renewalDate), days)) ||
+    (!l.renewalDate && days >= 30 && isUpcomingRenewalMonth(l.renewalMonth))
+  );
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+        {[30, 60, 90].map((d) => (
+          <button
+            key={d}
+            onClick={() => setDays(d)}
+            style={{ fontSize: 12.5, padding: "6px 12px", borderRadius: 8, cursor: "pointer", border: `1px solid ${days === d ? T.route : T.line}`, background: days === d ? T.route : "#fff", color: days === d ? "#fff" : T.ink, fontWeight: 600 }}
+          >
+            Next {d} days
+          </button>
+        ))}
+      </div>
+      {upcoming.length === 0 ? (
+        <EmptyReportState text={`No renewals due in the next ${days} days.`} />
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {upcoming.map((l) => (
+            <div key={l.id} style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 11, padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 13.5 }}>{l.business}</div>
+                <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 2 }}>{l.owner} · {l.phone}</div>
+              </div>
+              <div style={{ fontSize: 12.5, color: T.accent, fontWeight: 600, textAlign: "right" }}>
+                {l.renewalDate || l.renewalMonth || "—"}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DailyActivityReport({ salesmen }) {
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [data, setData] = useState(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    setData(null);
+    setError("");
+    api.adminReportDailyActivity({ date })
+      .then((res) => { if (!cancelled) setData(res.salesmen || []); })
+      .catch((err) => { if (!cancelled) setError(err.message || "Couldn't load activity."); });
+    return () => { cancelled = true; };
+  }, [date]);
+
+  return (
+    <div>
+      <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ ...inputStyle, marginBottom: 14, width: 180 }} />
+      {error && <div style={{ fontSize: 12.5, color: T.danger, marginBottom: 10 }}>{error}</div>}
+      {data === null && !error && (
+        <div style={{ fontSize: 13, color: T.inkSoft, display: "flex", alignItems: "center", gap: 6 }}>
+          <Loader2 size={14} className="spin" /> Loading…
+        </div>
+      )}
+      {data && data.length === 0 && <EmptyReportState text="No salesmen found." />}
+      {data && data.length > 0 && (
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead>
+              <tr style={{ borderBottom: `1px solid ${T.line}` }}>
+                {["Salesman", "Day started", "Visits", "Leads added", "Distance"].map((h) => (
+                  <th key={h} style={{ textAlign: "left", padding: "8px 10px", color: T.inkSoft, fontWeight: 600, fontSize: 11.5, textTransform: "uppercase", letterSpacing: 0.3, whiteSpace: "nowrap" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {data.map((r) => (
+                <tr key={r.salesmanId} style={{ borderBottom: `1px solid ${T.line}` }}>
+                  <td style={{ padding: "9px 10px", fontWeight: 600 }}>{r.salesmanName}</td>
+                  <td style={{ padding: "9px 10px", color: r.dayStarted ? T.ink : T.inkSoft }}>
+                    {r.dayStarted ? new Date(r.dayStarted).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" }) : "Didn't start"}
+                  </td>
+                  <td style={{ padding: "9px 10px" }}>{r.visitCount}</td>
+                  <td style={{ padding: "9px 10px" }}>{r.leadsCount}</td>
+                  <td style={{ padding: "9px 10px" }}>{r.distanceKm.toFixed(1)} km</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TimeInStageReport() {
+  const [stages, setStages] = useState(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    api.adminReportTimeInStage()
+      .then((res) => { if (!cancelled) setStages(res.stages || []); })
+      .catch((err) => { if (!cancelled) setError(err.message || "Couldn't load this report."); });
+    return () => { cancelled = true; };
+  }, []);
+
+  if (error) return <div style={{ fontSize: 12.5, color: T.danger }}>{error}</div>;
+  if (stages === null) {
+    return (
+      <div style={{ fontSize: 13, color: T.inkSoft, display: "flex", alignItems: "center", gap: 6 }}>
+        <Loader2 size={14} className="spin" /> Loading…
+      </div>
+    );
+  }
+  if (stages.length === 0) return <EmptyReportState text="Not enough status changes yet to compute this." />;
+
+  const maxDays = Math.max(1, ...stages.map((s) => s.avgDays));
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {stages.map((s) => (
+        <div key={s.status}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4 }}>
+            <span style={{ fontWeight: 600 }}>{STATUS_LABEL[s.status] || s.status}</span>
+            <span style={{ color: T.inkSoft }}>{s.avgDays.toFixed(1)} days avg · {s.completedCount} leads</span>
+          </div>
+          <div style={{ height: 9, background: T.paperDeep, borderRadius: 11, overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${Math.round((s.avgDays / maxDays) * 100)}%`, background: T.danger, borderRadius: 11, transition: "width 0.3s ease" }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function LeadExportReport({ salesmen }) {
+  const [salesmanId, setSalesmanId] = useState("all");
+  const [status, setStatus] = useState("all");
+  const [date, setDate] = useState("");
+  const [sheetsInfo, setSheetsInfo] = useState(null);
+  const [sheetsError, setSheetsError] = useState("");
+
+  return (
+    <div>
+      <div style={{ fontSize: 13, color: T.inkSoft, marginBottom: 14 }}>Exports the same 9 fields every time: business, sub location, POS name, renewal month/date, status, contact name, phone, and comments.</div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 14 }}>
+        <Select value={salesmanId} onChange={setSalesmanId} options={[["all", "All salesmen"], ...salesmen.map((s) => [s.id, s.name])]} />
+        <Select value={status} onChange={setStatus} options={[["all", "All statuses"], ...STATUSES.map((s) => [s, STATUS_LABEL[s]])]} />
+        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ ...inputStyle, marginBottom: 0 }} />
+        {date && (
+          <button onClick={() => setDate("")} style={{ fontSize: 11.5, color: T.inkSoft, background: "none", border: "none", cursor: "pointer" }}>Clear date</button>
+        )}
+      </div>
+      {sheetsError && <div style={{ fontSize: 12, color: T.danger, marginBottom: 10 }}>{sheetsError}</div>}
+      <DownloadMenu
+        onCsv={() => window.open(buildExportUrl("csv", { salesmanId, status, date }), "_blank")}
+        onXlsx={() => window.open(buildExportUrl("xlsx", { salesmanId, status, date }), "_blank")}
+        onSheets={async () => {
+          setSheetsError("");
+          try {
+            const info = await api.adminExportSheetsInfo({ salesmanId, status, date });
+            setSheetsInfo(info);
+          } catch (err) {
+            setSheetsError(err.message || "Couldn't prepare the Sheets export.");
+          }
+        }}
+      />
+      {sheetsInfo && (
+        <div style={{ marginTop: 12, fontSize: 12.5, color: T.inkSoft }}>
+          <a href={sheetsInfo.url || sheetsInfo.sheetUrl} target="_blank" rel="noreferrer" style={{ color: T.route, fontWeight: 600 }}>Open in Google Sheets →</a>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EmptyReportState({ text }) {
+  return <div style={{ fontSize: 13, color: T.inkSoft, textAlign: "center", padding: "30px 0" }}>{text}</div>;
+}
+
 function SalesmanLeadsModal({ salesman, leads, onClose, onSelectLead }) {
   const [tab, setTab] = useState("all");
   const mine = leads.filter((l) => l.salesmanId === salesman.id);
