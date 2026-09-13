@@ -32,6 +32,7 @@ import {
   Target as TargetIcon,
   BarChart3,
   Wallet,
+  Receipt,
 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -193,6 +194,7 @@ export default function App() {
   const [session, setSessionState] = useState(getSession());
   const [showSettings, setShowSettings] = useState(false);
   const [showCrmSettings, setShowCrmSettings] = useState(false);
+  const [showAddExpense, setShowAddExpense] = useState(false);
   const [topPage, setTopPage] = useState("dashboard"); // "dashboard" | "reports" — lives here so the toggle can live in the dark TopBar, for both roles
   const online = useOnlineStatus();
 
@@ -237,6 +239,7 @@ export default function App() {
         onOpenCrmSettings={() => setShowCrmSettings(true)}
         page={session ? topPage : undefined}
         onChangePage={session ? setTopPage : undefined}
+        onAddExpense={session?.role === "admin" ? () => setShowAddExpense(true) : undefined}
       />
       {body}
       {showSettings && (
@@ -247,12 +250,13 @@ export default function App() {
         />
       )}
       {showCrmSettings && <CrmSettingsModal onClose={() => setShowCrmSettings(false)} />}
+      {showAddExpense && <AddExpenseModal onClose={() => setShowAddExpense(false)} />}
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-function TopBar({ online, session, onLogout, onOpenSettings, onOpenCrmSettings, page, onChangePage }) {
+function TopBar({ online, session, onLogout, onOpenSettings, onOpenCrmSettings, page, onChangePage, onAddExpense }) {
   const { canInstall, installed, promptInstall } = useInstallPrompt();
   const isIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
   const [showIosHint, setShowIosHint] = useState(false);
@@ -301,6 +305,15 @@ function TopBar({ online, session, onLogout, onOpenSettings, onOpenCrmSettings, 
                 <BarChart3 size={13} /> {narrow ? "" : "Reports"}
               </button>
             </div>
+          )}
+
+          {onAddExpense && (
+            <button
+              onClick={onAddExpense}
+              style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, padding: "6px 10px", borderRadius: 7, cursor: "pointer", border: "1px solid #3A4658", background: "#2A3444", color: "#fff" }}
+            >
+              <Wallet size={13} /> {narrow ? "" : "Expenses"}
+            </button>
           )}
 
           <button
@@ -609,6 +622,74 @@ function SettingToggle({ label, description, checked, onChange }) {
         }} />
       </button>
     </div>
+  );
+}
+
+const EXPENSE_CATEGORIES = ["Salary", "Travel", "Fuel", "Food", "Other"];
+
+function AddExpenseModal({ onClose }) {
+  const [salesmen, setSalesmen] = useState([]);
+  const [category, setCategory] = useState(EXPENSE_CATEGORIES[0]);
+  const [salesmanId, setSalesmanId] = useState("");
+  const [amount, setAmount] = useState("");
+  const [spentOn, setSpentOn] = useState(new Date().toISOString().slice(0, 10));
+  const [note, setNote] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    api.adminSalesmen().then((res) => setSalesmen((res.salesmen || []).map(mapSalesmanRow))).catch(() => {});
+  }, []);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    const num = Number(amount);
+    if (!num || num <= 0) { setError("Enter a valid amount."); return; }
+    setSaving(true);
+    setError("");
+    try {
+      await api.adminCreateExpense({ category, amount: num, salesmanId: salesmanId || undefined, note: note.trim() || undefined, spentOn });
+      onClose();
+    } catch (err) {
+      setError(err.message || "Couldn't save that expense.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Overlay title="Add expense" onClose={onClose}>
+      <form onSubmit={submit}>
+        <label style={{ fontSize: 11.5, fontWeight: 600, color: T.inkSoft, textTransform: "uppercase", letterSpacing: 0.3 }}>Category</label>
+        <Select value={category} onChange={setCategory} options={EXPENSE_CATEGORIES.map((c) => [c, c])} />
+
+        <div style={{ height: 10 }} />
+        <label style={{ fontSize: 11.5, fontWeight: 600, color: T.inkSoft, textTransform: "uppercase", letterSpacing: 0.3 }}>Salesman (optional)</label>
+        <Select value={salesmanId} onChange={setSalesmanId} options={[["", "Not linked to a salesman"], ...salesmen.map((s) => [s.id, s.name])]} />
+
+        <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+          <div style={{ flex: 1 }}>
+            <label style={{ fontSize: 11.5, fontWeight: 600, color: T.inkSoft, textTransform: "uppercase", letterSpacing: 0.3 }}>Amount</label>
+            <input type="number" step="0.01" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" style={inputStyle} autoFocus />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={{ fontSize: 11.5, fontWeight: 600, color: T.inkSoft, textTransform: "uppercase", letterSpacing: 0.3 }}>Date</label>
+            <input type="date" value={spentOn} onChange={(e) => setSpentOn(e.target.value)} style={inputStyle} />
+          </div>
+        </div>
+
+        <label style={{ fontSize: 11.5, fontWeight: 600, color: T.inkSoft, textTransform: "uppercase", letterSpacing: 0.3 }}>Note (optional)</label>
+        <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. September salary" style={inputStyle} />
+
+        {error && <div style={{ fontSize: 12, color: T.danger, marginBottom: 10 }}>{error}</div>}
+        <button
+          type="submit" disabled={saving}
+          style={{ width: "100%", padding: "11px", borderRadius: 10, border: "none", background: T.route, color: "#fff", fontWeight: 700, fontSize: 13.5, cursor: saving ? "default" : "pointer", opacity: saving ? 0.7 : 1 }}
+        >
+          {saving ? "Saving…" : "Save expense"}
+        </button>
+      </form>
+    </Overlay>
   );
 }
 
@@ -1453,6 +1534,7 @@ const REPORT_CARDS = [
   { key: "funnel", title: "Funnel and conversion", desc: "Lead count and drop-off at each pipeline stage.", icon: Handshake, color: "#7B4FC9" },
   { key: "renewals", title: "Renewals due", desc: "Everything renewing in the next 30, 60 or 90 days.", icon: CalendarClock, color: "#B8791F" },
   { key: "payments", title: "Payment due", desc: "Won deals — total, paid, and pending — with payments you can record.", icon: Wallet, color: "#C0392B" },
+  { key: "expenses", title: "Expenses", desc: "Salary and other spending, broken down by category.", icon: Receipt, color: "#993C1D" },
   { key: "daily", title: "Daily activity", desc: "Visits, leads touched and distance travelled per day.", icon: MapPin, color: "#12805C" },
   { key: "stage", title: "Time in stage", desc: "Average days a lead spends at each status.", icon: Clock, color: "#8B5E00" },
   { key: "export", title: "Lead export", desc: "Download leads as CSV, Excel, or push to Google Sheets.", icon: Download, color: "#1D7A8C" },
@@ -1503,6 +1585,7 @@ function ReportsPage({ salesmen, leads }) {
       {active === "funnel" && <FunnelReport leads={leads} />}
       {active === "renewals" && <RenewalsReport leads={leads} />}
       {active === "payments" && <PaymentDueReport salesmen={salesmen} />}
+      {active === "expenses" && <ExpensesReport salesmen={salesmen} />}
       {active === "daily" && <DailyActivityReport salesmen={salesmen} />}
       {active === "stage" && <TimeInStageReport />}
       {active === "export" && <LeadExportReport salesmen={salesmen} />}
@@ -1753,6 +1836,96 @@ function RecordPaymentModal({ row, onClose, onRecorded }) {
         </button>
       </form>
     </Overlay>
+  );
+}
+
+function ExpensesReport({ salesmen }) {
+  const [category, setCategory] = useState("all");
+  const [salesmanId, setSalesmanId] = useState("all");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [expenses, setExpenses] = useState(null);
+  const [error, setError] = useState("");
+
+  const load = useCallback(() => {
+    setExpenses(null);
+    setError("");
+    api.adminExpenses({ category, salesmanId, from, to })
+      .then((res) => setExpenses(res.expenses || []))
+      .catch((err) => setError(err.message || "Couldn't load expenses."));
+  }, [category, salesmanId, from, to]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const del = async (id) => {
+    try {
+      await api.adminDeleteExpense(id);
+      load();
+    } catch (err) {
+      setError(err.message || "Couldn't delete that expense.");
+    }
+  };
+
+  const total = (expenses || []).reduce((sum, e) => sum + e.amount, 0);
+  const byCategory = {};
+  (expenses || []).forEach((e) => { byCategory[e.category] = (byCategory[e.category] || 0) + e.amount; });
+  const categoryRows = Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
+  const maxCategory = Math.max(1, ...categoryRows.map(([, v]) => v));
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 14 }}>
+        <Select value={category} onChange={setCategory} options={[["all", "All categories"], ...EXPENSE_CATEGORIES.map((c) => [c, c])]} />
+        <Select value={salesmanId} onChange={setSalesmanId} options={[["all", "All salesmen"], ...salesmen.map((s) => [s.id, s.name])]} />
+        <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} style={{ ...inputStyle, marginBottom: 0, width: 135 }} />
+        <span style={{ fontSize: 12, color: T.inkSoft }}>to</span>
+        <input type="date" value={to} onChange={(e) => setTo(e.target.value)} style={{ ...inputStyle, marginBottom: 0, width: 135 }} />
+      </div>
+
+      {error && <div style={{ fontSize: 12.5, color: T.danger, marginBottom: 10 }}>{error}</div>}
+      {expenses === null && !error && (
+        <div style={{ fontSize: 13, color: T.inkSoft, display: "flex", alignItems: "center", gap: 6 }}>
+          <Loader2 size={14} className="spin" /> Loading…
+        </div>
+      )}
+      {expenses && expenses.length === 0 && <EmptyReportState text="No expenses recorded for these filters." />}
+
+      {expenses && expenses.length > 0 && (
+        <>
+          <div style={{ fontSize: 12.5, color: T.inkSoft, marginBottom: 14 }}>Total spend: <span style={{ fontWeight: 700, color: T.ink }}>{fmtMoney(total)}</span></div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
+            {categoryRows.map(([cat, amt]) => (
+              <div key={cat}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, marginBottom: 4 }}>
+                  <span style={{ fontWeight: 600 }}>{cat}</span>
+                  <span style={{ color: T.inkSoft }}>{fmtMoney(amt)}</span>
+                </div>
+                <div style={{ height: 8, background: T.paperDeep, borderRadius: 11, overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${Math.round((amt / maxCategory) * 100)}%`, background: T.danger, borderRadius: 11 }} />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {expenses.map((e) => (
+              <div key={e.id} style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 10, padding: "9px 12px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+                <div>
+                  <div style={{ fontSize: 12.5, fontWeight: 600 }}>{e.category} · {fmtMoney(e.amount)}</div>
+                  <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 1 }}>
+                    {e.spentOn}{e.salesmanName ? ` · ${e.salesmanName}` : ""}{e.note ? ` · ${e.note}` : ""}
+                  </div>
+                </div>
+                <button onClick={() => del(e.id)} style={{ background: "none", border: "none", cursor: "pointer", color: T.inkSoft, padding: 4 }} aria-label="Delete expense">
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 
