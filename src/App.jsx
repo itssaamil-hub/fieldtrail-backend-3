@@ -2915,7 +2915,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
           </>
         )}
 
-        {onStatusChange && !editing && lead.status !== "won" && (
+        {onStatusChange && !editing && (
           <div style={{ marginTop: 16 }}>
             <div style={{ fontSize: 11, textTransform: "uppercase", color: T.inkSoft, fontWeight: 600, letterSpacing: 0.3, marginBottom: 6 }}>Update status</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -2923,11 +2923,6 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                 <button key={s} onClick={() => onStatusChange(lead.id, s)} style={{ fontSize: 11.5, padding: "5px 9px", borderRadius: 6, cursor: "pointer", border: `1px solid ${lead.status === s ? T.route : T.line}`, background: lead.status === s ? T.route : "#fff", color: lead.status === s ? "#fff" : T.ink, fontWeight: 600 }}>{STATUS_LABEL[s]}</button>
               ))}
             </div>
-          </div>
-        )}
-        {onStatusChange && !editing && lead.status === "won" && (
-          <div style={{ marginTop: 16, fontSize: 12, color: T.verified, display: "flex", alignItems: "center", gap: 6, fontWeight: 600 }}>
-            <CheckCircle2 size={14} /> Won — final stage
           </div>
         )}
 
@@ -3807,7 +3802,9 @@ function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads", allowD
         )}
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-        <Select value={filterStatus} onChange={setFilterStatus} options={[["all", "All statuses"], ...STATUSES.map((s) => [s, STATUS_LABEL[s]])]} />
+        {!isWonModal && (
+          <Select value={filterStatus} onChange={setFilterStatus} options={[["all", "All statuses"], ...STATUSES.map((s) => [s, STATUS_LABEL[s]])]} />
+        )}
         {allowDateFilter && (
           <>
             <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} style={{ ...inputStyle, marginBottom: 0, flex: 1, minWidth: 130 }} />
