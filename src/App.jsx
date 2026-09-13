@@ -247,6 +247,7 @@ export default function App() {
           apiBase={apiBase}
           onClose={() => setShowSettings(false)}
           onSave={(url) => { handleSaveApiBase(url); setShowSettings(false); }}
+          onLogout={session ? () => { setShowSettings(false); handleLogout(); } : undefined}
         />
       )}
       {showCrmSettings && <CrmSettingsModal onClose={() => setShowCrmSettings(false)} />}
@@ -284,14 +285,14 @@ function TopBar({ online, session, onLogout, onOpenSettings, onOpenCrmSettings, 
 
   return (
     <div style={{ position: "sticky", top: 0, zIndex: 40 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", paddingTop: "calc(14px + env(safe-area-inset-top))", background: T.ink, color: T.paper, gap: 10, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", paddingTop: "calc(14px + env(safe-area-inset-top))", background: "linear-gradient(135deg, #5B3FA6 0%, #7B4FC9 100%)", color: "#fff", gap: 10, flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 30, height: 30, borderRadius: 7, background: T.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <LogoMark size={16} color={T.paper} />
           </div>
           <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 17, letterSpacing: 0.2 }}>Engage</div>
           {!narrow && session && (
-            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: "#9AA5B1", marginLeft: 4 }}>
+            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: "rgba(255,255,255,0.65)", marginLeft: 4 }}>
               {session.fullName} · {session.role}
             </div>
           )}
@@ -300,12 +301,12 @@ function TopBar({ online, session, onLogout, onOpenSettings, onOpenCrmSettings, 
           <ConnectionPill online={online} />
 
           {page && onChangePage && (
-            <div style={{ display: "flex", gap: 2, background: "#2A3444", borderRadius: 7, padding: 2, border: "1px solid #3A4658" }}>
+            <div style={{ display: "flex", gap: 2, background: "rgba(255,255,255,0.14)", borderRadius: 7, padding: 2, border: "1px solid rgba(255,255,255,0.22)" }}>
               <button
                 onClick={() => onChangePage("dashboard")}
                 style={{
                   display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, padding: "5px 10px", borderRadius: 5, cursor: "pointer", border: "none",
-                  background: page === "dashboard" ? T.accent : "transparent", color: page === "dashboard" ? "#fff" : "#9AA5B1",
+                  background: page === "dashboard" ? "#fff" : "transparent", color: page === "dashboard" ? "#5B3FA6" : "rgba(255,255,255,0.75)",
                 }}
               >
                 {narrow ? <Gauge size={13} /> : "Dashboard"}
@@ -314,7 +315,7 @@ function TopBar({ online, session, onLogout, onOpenSettings, onOpenCrmSettings, 
                 onClick={() => onChangePage("reports")}
                 style={{
                   display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, padding: "5px 10px", borderRadius: 5, cursor: "pointer", border: "none",
-                  background: page === "reports" ? T.accent : "transparent", color: page === "reports" ? "#fff" : "#9AA5B1",
+                  background: page === "reports" ? "#fff" : "transparent", color: page === "reports" ? "#5B3FA6" : "rgba(255,255,255,0.75)",
                 }}
               >
                 <BarChart3 size={13} /> {narrow ? "" : "Reports"}
@@ -325,7 +326,7 @@ function TopBar({ online, session, onLogout, onOpenSettings, onOpenCrmSettings, 
           {onAddExpense && (
             <button
               onClick={onAddExpense}
-              style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, padding: "6px 10px", borderRadius: 7, cursor: "pointer", border: "1px solid #3A4658", background: "#2A3444", color: "#fff" }}
+              style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, padding: "6px 10px", borderRadius: 7, cursor: "pointer", border: "1px solid rgba(255,255,255,0.22)", background: "rgba(255,255,255,0.14)", color: "#fff" }}
             >
               <Wallet size={13} /> {narrow ? "" : "Expenses"}
             </button>
@@ -334,7 +335,7 @@ function TopBar({ online, session, onLogout, onOpenSettings, onOpenCrmSettings, 
           <button
             onClick={onOpenSettings}
             title="Backend settings"
-            style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 6, border: "1px solid #3A4658", cursor: "pointer", background: "#2A3444", color: T.paper }}
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 6, border: "1px solid rgba(255,255,255,0.22)", cursor: "pointer", background: "rgba(255,255,255,0.14)", color: "#fff" }}
           >
             <Settings size={14} />
           </button>
@@ -342,7 +343,7 @@ function TopBar({ online, session, onLogout, onOpenSettings, onOpenCrmSettings, 
           {!installed && (
             <div style={{ position: "relative" }}>
               <button onClick={() => (canInstall ? promptInstall() : setShowIosHint((v) => !v))}
-                style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 11px", borderRadius: 6, border: "1px solid #3A4658", cursor: "pointer", fontSize: 12, fontWeight: 600, background: "#2A3444", color: T.paper, fontFamily: "Inter, sans-serif" }}
+                style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 11px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.22)", cursor: "pointer", fontSize: 12, fontWeight: 600, background: "rgba(255,255,255,0.14)", color: "#fff", fontFamily: "Inter, sans-serif" }}
                 title="Install Engage as an app">
                 <Download size={13} /> {narrow ? "" : "Install"}
               </button>
@@ -359,19 +360,19 @@ function TopBar({ online, session, onLogout, onOpenSettings, onOpenCrmSettings, 
             <button
               onClick={onOpenCrmSettings}
               title="CRM Settings"
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 11px", borderRadius: 6, border: "1px solid #3A4658", cursor: "pointer", fontSize: 12, fontWeight: 600, background: "#2A3444", color: T.paper, fontFamily: "Inter, sans-serif" }}
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 11px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.22)", cursor: "pointer", fontSize: 12, fontWeight: 600, background: "rgba(255,255,255,0.14)", color: "#fff", fontFamily: "Inter, sans-serif" }}
             >
               <Settings size={13} /> {narrow ? "" : "CRM Settings"}
             </button>
           )}
 
-          {session && (
+          {session && !narrow && (
             <button
               onClick={onLogout}
               title="Log out"
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 11px", borderRadius: 6, border: "1px solid #3A4658", cursor: "pointer", fontSize: 12, fontWeight: 600, background: "transparent", color: "#B7C0CC", fontFamily: "Inter, sans-serif" }}
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 11px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.25)", cursor: "pointer", fontSize: 12, fontWeight: 600, background: "transparent", color: "rgba(255,255,255,0.75)", fontFamily: "Inter, sans-serif" }}
             >
-              <LogOut size={13} /> {narrow ? "" : "Log out"}
+              <LogOut size={13} /> Log out
             </button>
           )}
         </div>
@@ -527,7 +528,7 @@ function LoginScreen({ apiBase, online, onLoggedIn, onOpenSettings }) {
   );
 }
 
-function SettingsModal({ apiBase, onClose, onSave }) {
+function SettingsModal({ apiBase, onClose, onSave, onLogout }) {
   const [url, setUrl] = useState(apiBase || "");
   return (
     <Overlay onClose={onClose} title="Backend settings">
@@ -544,6 +545,17 @@ function SettingsModal({ apiBase, onClose, onSave }) {
       >
         Save
       </button>
+      {onLogout && (
+        <>
+          <div style={{ height: 1, background: T.line, margin: "18px 0 14px" }} />
+          <button
+            onClick={onLogout}
+            style={{ width: "100%", padding: "11px", borderRadius: 11, border: `1px solid ${T.dangerSoft}`, cursor: "pointer", background: "#fff", color: T.danger, fontWeight: 700, fontSize: 13.5, display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}
+          >
+            <LogOut size={14} /> Log out
+          </button>
+        </>
+      )}
     </Overlay>
   );
 }
@@ -1468,7 +1480,7 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
         )}
       </div>
 
-      {selectedLead && <LeadDetailDrawer lead={selectedLead} onClose={() => setSelectedLead(null)} onStatusChange={onStatusChange} onUpdate={onUpdateLead} onDelete={onDeleteLead} fetchHistory={api.adminLeadHistory} />}
+      {selectedLead && <LeadDetailDrawer lead={leads.find((l) => l.id === selectedLead.id) || selectedLead} onClose={() => setSelectedLead(null)} onStatusChange={onStatusChange} onUpdate={onUpdateLead} onDelete={onDeleteLead} fetchHistory={api.adminLeadHistory} />}
       {routeSalesman && <SalesmanRouteModal salesman={routeSalesman} onClose={() => setRouteSalesman(null)} />}
       {viewingSalesmanLeads && (
         <SalesmanLeadsModal
@@ -1729,6 +1741,7 @@ function PaymentDueReport({ salesmen }) {
   const [summary, setSummary] = useState(null);
   const [error, setError] = useState("");
   const [recordingFor, setRecordingFor] = useState(null); // the payment row being paid against
+  const [expandedLeadId, setExpandedLeadId] = useState(null);
 
   const load = useCallback(() => {
     setPayments(null);
@@ -1772,29 +1785,41 @@ function PaymentDueReport({ salesmen }) {
       {payments && payments.length > 0 && (
         <>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {payments.map((p) => (
-              <div key={p.leadId} style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: "12px 14px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 13.5 }}>{p.business}</div>
-                    <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 2 }}>{p.salesmanName} · {p.contactName} · {p.phone}</div>
+            {payments.map((p) => {
+              const isExpanded = expandedLeadId === p.leadId;
+              return (
+                <div key={p.leadId} style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: "12px 14px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: 13.5 }}>{p.business}</div>
+                      <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 2 }}>{p.salesmanName} · {p.contactName} · {p.phone}</div>
+                    </div>
+                    {p.pending > 0 && (
+                      <button
+                        onClick={() => setRecordingFor(p)}
+                        style={{ fontSize: 11.5, fontWeight: 700, padding: "6px 10px", borderRadius: 7, border: "none", background: T.route, color: "#fff", cursor: "pointer", whiteSpace: "nowrap" }}
+                      >
+                        Record payment
+                      </button>
+                    )}
                   </div>
-                  {p.pending > 0 && (
+                  <div style={{ display: "flex", gap: 16, marginTop: 10, fontSize: 12.5 }}>
+                    <div><span style={{ color: T.inkSoft }}>Total </span><span style={{ fontWeight: 700 }}>{fmtMoney(p.dealValue)}</span></div>
+                    <div><span style={{ color: T.inkSoft }}>Paid </span><span style={{ fontWeight: 700, color: T.verified }}>{fmtMoney(p.paidTotal)}</span></div>
+                    <div><span style={{ color: T.inkSoft }}>Pending </span><span style={{ fontWeight: 700, color: p.pending > 0 ? T.danger : T.verified }}>{fmtMoney(p.pending)}</span></div>
+                  </div>
+                  {p.paymentCount > 0 && (
                     <button
-                      onClick={() => setRecordingFor(p)}
-                      style={{ fontSize: 11.5, fontWeight: 700, padding: "6px 10px", borderRadius: 7, border: "none", background: T.route, color: "#fff", cursor: "pointer", whiteSpace: "nowrap" }}
+                      onClick={() => setExpandedLeadId(isExpanded ? null : p.leadId)}
+                      style={{ marginTop: 10, fontSize: 11.5, fontWeight: 600, color: T.route, background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", gap: 4 }}
                     >
-                      Record payment
+                      {isExpanded ? "Hide" : "View"} {p.paymentCount} payment{p.paymentCount === 1 ? "" : "s"} {isExpanded ? "▲" : "▼"}
                     </button>
                   )}
+                  {isExpanded && <PaymentHistoryList leadId={p.leadId} onChanged={load} />}
                 </div>
-                <div style={{ display: "flex", gap: 16, marginTop: 10, fontSize: 12.5 }}>
-                  <div><span style={{ color: T.inkSoft }}>Total </span><span style={{ fontWeight: 700 }}>{fmtMoney(p.dealValue)}</span></div>
-                  <div><span style={{ color: T.inkSoft }}>Paid </span><span style={{ fontWeight: 700, color: T.verified }}>{fmtMoney(p.paidTotal)}</span></div>
-                  <div><span style={{ color: T.inkSoft }}>Pending </span><span style={{ fontWeight: 700, color: p.pending > 0 ? T.danger : T.verified }}>{fmtMoney(p.pending)}</span></div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </>
       )}
@@ -1807,6 +1832,100 @@ function PaymentDueReport({ salesmen }) {
         />
       )}
     </div>
+  );
+}
+
+function PaymentHistoryList({ leadId, onChanged }) {
+  const [payments, setPayments] = useState(null);
+  const [error, setError] = useState("");
+  const [editing, setEditing] = useState(null); // the payment being edited
+
+  const load = useCallback(() => {
+    api.adminLeadPayments(leadId).then((res) => setPayments(res.payments || [])).catch((err) => setError(err.message || "Couldn't load payment history."));
+  }, [leadId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const del = async (paymentId) => {
+    try {
+      await api.adminDeletePayment(leadId, paymentId);
+      load();
+      onChanged();
+    } catch (err) {
+      setError(err.message || "Couldn't delete that payment.");
+    }
+  };
+
+  return (
+    <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.line}`, display: "flex", flexDirection: "column", gap: 6 }}>
+      {error && <div style={{ fontSize: 11.5, color: T.danger }}>{error}</div>}
+      {payments === null && !error && <div style={{ fontSize: 12, color: T.inkSoft }}>Loading…</div>}
+      {payments && payments.map((p) => (
+        <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, fontSize: 12 }}>
+          <div>
+            <span style={{ fontWeight: 700 }}>{fmtMoney(p.amount)}</span>
+            <span style={{ color: T.inkSoft }}> · {new Date(p.paidAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}{p.note ? ` · ${p.note}` : ""} · {p.recordedByName}</span>
+          </div>
+          <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+            <button onClick={() => setEditing(p)} style={{ background: "none", border: "none", cursor: "pointer", color: T.inkSoft, padding: 4 }} aria-label="Edit payment">
+              <Pencil size={13} />
+            </button>
+            <button onClick={() => del(p.id)} style={{ background: "none", border: "none", cursor: "pointer", color: T.inkSoft, padding: 4 }} aria-label="Delete payment">
+              <Trash2 size={13} />
+            </button>
+          </div>
+        </div>
+      ))}
+      {editing && (
+        <EditPaymentModal
+          leadId={leadId}
+          payment={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => { setEditing(null); load(); onChanged(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+function EditPaymentModal({ leadId, payment, onClose, onSaved }) {
+  const [amount, setAmount] = useState(String(payment.amount));
+  const [note, setNote] = useState(payment.note || "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const submit = async (e) => {
+    e.preventDefault();
+    const num = Number(amount);
+    if (!num || num <= 0) { setError("Enter a valid amount."); return; }
+    setSaving(true);
+    setError("");
+    try {
+      await api.adminEditPayment(leadId, payment.id, { amount: num, note: note.trim() || undefined });
+      onSaved();
+    } catch (err) {
+      setError(err.message || "Couldn't save that change.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Overlay title="Edit payment" onClose={onClose}>
+      <form onSubmit={submit}>
+        <label style={{ fontSize: 11.5, fontWeight: 600, color: T.inkSoft, textTransform: "uppercase", letterSpacing: 0.3 }}>Amount</label>
+        <input type="number" step="0.01" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} style={inputStyle} autoFocus />
+        <label style={{ fontSize: 11.5, fontWeight: 600, color: T.inkSoft, textTransform: "uppercase", letterSpacing: 0.3 }}>Note (optional)</label>
+        <input type="text" value={note} onChange={(e) => setNote(e.target.value)} style={inputStyle} />
+        {error && <div style={{ fontSize: 12, color: T.danger, marginBottom: 10 }}>{error}</div>}
+        <button
+          type="submit" disabled={saving}
+          style={{ width: "100%", padding: "11px", borderRadius: 10, border: "none", background: T.route, color: "#fff", fontWeight: 700, fontSize: 13.5, cursor: saving ? "default" : "pointer", opacity: saving ? 0.7 : 1 }}
+        >
+          {saving ? "Saving…" : "Save changes"}
+        </button>
+      </form>
+    </Overlay>
   );
 }
 
@@ -2796,7 +2915,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
           </>
         )}
 
-        {onStatusChange && !editing && (
+        {onStatusChange && !editing && lead.status !== "won" && (
           <div style={{ marginTop: 16 }}>
             <div style={{ fontSize: 11, textTransform: "uppercase", color: T.inkSoft, fontWeight: 600, letterSpacing: 0.3, marginBottom: 6 }}>Update status</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -2804,6 +2923,11 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                 <button key={s} onClick={() => onStatusChange(lead.id, s)} style={{ fontSize: 11.5, padding: "5px 9px", borderRadius: 6, cursor: "pointer", border: `1px solid ${lead.status === s ? T.route : T.line}`, background: lead.status === s ? T.route : "#fff", color: lead.status === s ? "#fff" : T.ink, fontWeight: 600 }}>{STATUS_LABEL[s]}</button>
               ))}
             </div>
+          </div>
+        )}
+        {onStatusChange && !editing && lead.status === "won" && (
+          <div style={{ marginTop: 16, fontSize: 12, color: T.verified, display: "flex", alignItems: "center", gap: 6, fontWeight: 600 }}>
+            <CheckCircle2 size={14} /> Won — final stage
           </div>
         )}
 
@@ -3326,7 +3450,7 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
           onSelectLead={(l) => { setShowRenewals(false); setViewingLead(l); }}
         />
       )}
-      {viewingLead && <LeadDetailDrawer lead={viewingLead} onClose={() => setViewingLead(null)} onStatusChange={onUpdateLeadStatus} onUpdate={onUpdateLeadDetails} fetchHistory={api.salesmanLeadHistory} />}
+      {viewingLead && <LeadDetailDrawer lead={leads.find((l) => l.id === viewingLead.id) || viewingLead} onClose={() => setViewingLead(null)} onStatusChange={onUpdateLeadStatus} onUpdate={onUpdateLeadDetails} fetchHistory={api.salesmanLeadHistory} />}
       </>
       )}
     </div>
@@ -3631,16 +3755,43 @@ function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads", allowD
   const [filterDate, setFilterDate] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [revenuePeriod, setRevenuePeriod] = useState("all"); // "all" | "month" — only shown for the Won Leads modal
+  const isWonModal = title === "Won Leads";
 
   const shown = leads.filter(
     (l) =>
       (!filterDate || l.createdAt.toISOString().slice(0, 10) === filterDate) &&
       (filterStatus === "all" || l.status === filterStatus) &&
+      (!isWonModal || revenuePeriod === "all" || isThisMonth(l.createdAt)) &&
       (!searchQuery.trim() || [l.business, l.owner, l.phone, l.subLocation].some((f) => f && f.toLowerCase().includes(searchQuery.trim().toLowerCase())))
   );
 
+  const totalRevenue = isWonModal ? shown.reduce((sum, l) => sum + (l.dealValue || 0), 0) : 0;
+
   return (
     <Overlay onClose={onClose} title={title}>
+      {isWonModal && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 12, padding: "10px 12px", background: T.paperDeep, borderRadius: 11 }}>
+          <div>
+            <div style={{ fontSize: 10.5, color: T.inkSoft, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4 }}>{revenuePeriod === "all" ? "All-time revenue" : "This month's revenue"}</div>
+            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 18, color: T.verified }}>{fmtMoney(totalRevenue)}</div>
+          </div>
+          <div style={{ display: "flex", gap: 2, background: "#fff", borderRadius: 8, padding: 2, border: `1px solid ${T.line}` }}>
+            <button
+              onClick={() => setRevenuePeriod("all")}
+              style={{ fontSize: 11.5, fontWeight: 600, padding: "5px 9px", borderRadius: 6, border: "none", cursor: "pointer", background: revenuePeriod === "all" ? T.route : "transparent", color: revenuePeriod === "all" ? "#fff" : T.inkSoft }}
+            >
+              All time
+            </button>
+            <button
+              onClick={() => setRevenuePeriod("month")}
+              style={{ fontSize: 11.5, fontWeight: 600, padding: "5px 9px", borderRadius: 6, border: "none", cursor: "pointer", background: revenuePeriod === "month" ? T.route : "transparent", color: revenuePeriod === "month" ? "#fff" : T.inkSoft }}
+            >
+              This month
+            </button>
+          </div>
+        </div>
+      )}
       <div style={{ position: "relative", marginBottom: 10 }}>
         <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: T.inkSoft }} />
         <input
