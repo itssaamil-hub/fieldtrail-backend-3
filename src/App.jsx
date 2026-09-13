@@ -192,7 +192,7 @@ export default function App() {
   const [session, setSessionState] = useState(getSession());
   const [showSettings, setShowSettings] = useState(false);
   const [showCrmSettings, setShowCrmSettings] = useState(false);
-  const [adminPage, setAdminPage] = useState("dashboard"); // "dashboard" | "reports" — lives here so the toggle can live in the dark TopBar
+  const [topPage, setTopPage] = useState("dashboard"); // "dashboard" | "reports" — lives here so the toggle can live in the dark TopBar, for both roles
   const online = useOnlineStatus();
 
   const handleSaveApiBase = (url) => {
@@ -221,9 +221,9 @@ export default function App() {
   } else if (!session) {
     body = <LoginScreen apiBase={apiBase} online={online} onLoggedIn={handleLoggedIn} onOpenSettings={() => setShowSettings(true)} />;
   } else if (session.role === "admin") {
-    body = <AdminApp session={session} online={online} onLogout={handleLogout} page={adminPage} />;
+    body = <AdminApp session={session} online={online} onLogout={handleLogout} page={topPage} />;
   } else {
-    body = <SalesmanApp session={session} online={online} onLogout={handleLogout} />;
+    body = <SalesmanApp session={session} online={online} onLogout={handleLogout} page={topPage} />;
   }
 
   return (
@@ -234,8 +234,8 @@ export default function App() {
         onLogout={handleLogout}
         onOpenSettings={() => setShowSettings(true)}
         onOpenCrmSettings={() => setShowCrmSettings(true)}
-        page={session?.role === "admin" ? adminPage : undefined}
-        onChangePage={session?.role === "admin" ? setAdminPage : undefined}
+        page={session ? topPage : undefined}
+        onChangePage={session ? setTopPage : undefined}
       />
       {body}
       {showSettings && (
@@ -1762,6 +1762,98 @@ function EmptyReportState({ text }) {
   return <div style={{ fontSize: 13, color: T.inkSoft, textAlign: "center", padding: "30px 0" }}>{text}</div>;
 }
 
+const SALESMAN_REPORT_CARDS = [
+  { key: "performance", title: "My performance", desc: "Your leads, conversion rate and target progress.", icon: Contact2, color: "#3B5BDB" },
+  { key: "renewals", title: "Renewals due", desc: "Your leads renewing in the next 30, 60 or 90 days.", icon: CalendarClock, color: "#B8791F" },
+];
+
+function SalesmanReportsPage({ leads, dailyTarget, monthlyTarget }) {
+  const [active, setActive] = useState(null);
+  const activeCard = SALESMAN_REPORT_CARDS.find((c) => c.key === active);
+
+  if (!active) {
+    return (
+      <div>
+        <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 18, marginBottom: 4 }}>Reports</div>
+        <div style={{ fontSize: 13, color: T.inkSoft, marginBottom: 16 }}>Choose a report to view</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {SALESMAN_REPORT_CARDS.map((c) => (
+            <div
+              key={c.key}
+              onClick={() => setActive(c.key)}
+              className="ft-card"
+              style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, padding: 16, cursor: "pointer", boxShadow: "0 1px 2px rgba(20,20,30,0.04)" }}
+            >
+              <div style={{ width: 32, height: 32, borderRadius: 9, background: `${c.color}1A`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
+                <c.icon size={17} color={c.color} />
+              </div>
+              <div style={{ fontSize: 14.5, fontWeight: 700, marginBottom: 4 }}>{c.title}</div>
+              <div style={{ fontSize: 12, color: T.inkSoft, lineHeight: 1.5 }}>{c.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <button
+        onClick={() => setActive(null)}
+        style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: T.inkSoft, background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: 16 }}
+      >
+        ← Back to reports
+      </button>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
+        {activeCard && <activeCard.icon size={18} color={activeCard.color} />}
+        <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 17 }}>{activeCard?.title}</div>
+      </div>
+      {active === "performance" && <MyPerformanceReport leads={leads} dailyTarget={dailyTarget} monthlyTarget={monthlyTarget} />}
+      {active === "renewals" && <RenewalsReport leads={leads} />}
+    </div>
+  );
+}
+
+function MyPerformanceReport({ leads, dailyTarget, monthlyTarget }) {
+  const todayLeads = leads.filter((l) => isToday(l.createdAt));
+  const monthLeads = leads.filter((l) => isThisMonth(l.createdAt));
+  const won = leads.filter((l) => l.status === "won");
+  const dealValue = won.reduce((sum, l) => sum + (l.dealValue || 0), 0);
+  const conversionPct = leads.length ? Math.round((won.length / leads.length) * 100) : 0;
+
+  return (
+    <div>
+      <div
+        className="ft-card"
+        style={{ background: `linear-gradient(155deg, ${T.card} 0%, ${T.paperDeep} 100%)`, border: `1px solid ${T.line}`, borderRadius: 16, padding: "18px 18px 16px", marginBottom: 16, boxShadow: "0 1px 3px rgba(20,20,30,0.05)" }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 12, color: T.inkSoft, marginBottom: 6 }}>
+          <span>Today</span>
+          <span style={{ fontWeight: 700, fontSize: 13.5, color: T.ink }}>{Math.min(todayLeads.length, dailyTarget)} / {dailyTarget}</span>
+        </div>
+        <div style={{ height: 7, background: T.paperDeep, borderRadius: 11, overflow: "hidden" }}>
+          <div style={{ height: "100%", width: `${Math.min(100, (todayLeads.length / dailyTarget) * 100)}%`, background: T.route, borderRadius: 11 }} />
+        </div>
+        <div style={{ height: 1, background: T.line, margin: "16px 0 14px" }} />
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 12, color: T.inkSoft, marginBottom: 6 }}>
+          <span>This month</span>
+          <span style={{ fontWeight: 700, fontSize: 13.5, color: T.ink }}>{monthLeads.length} / {monthlyTarget}</span>
+        </div>
+        <div style={{ height: 7, background: T.paperDeep, borderRadius: 11, overflow: "hidden" }}>
+          <div style={{ height: "100%", width: `${Math.min(100, (monthLeads.length / monthlyTarget) * 100)}%`, background: T.accent, borderRadius: 11 }} />
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <StatCard label="Total leads" value={leads.length} icon={Contact2} color={T.route} />
+        <StatCard label="Won" value={won.length} sub={dealValue > 0 ? fmtMoney(dealValue) : undefined} icon={CheckCircle2} color={T.verified} />
+        <StatCard label="Conversion" value={`${conversionPct}%`} icon={TargetIcon} color={conversionPct >= 30 ? T.verified : T.warn} />
+        <StatCard label="Deal value" value={dealValue > 0 ? fmtMoney(dealValue) : "—"} icon={Handshake} color={T.accent} />
+      </div>
+    </div>
+  );
+}
+
 function SalesmanLeadsModal({ salesman, leads, onClose, onSelectLead }) {
   const [tab, setTab] = useState("all");
   const mine = leads.filter((l) => l.salesmanId === salesman.id);
@@ -2465,7 +2557,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
 // ---------------------------------------------------------------------------
 const PING_MIN_INTERVAL_MS = 12000;
 
-function SalesmanApp({ session, online }) {
+function SalesmanApp({ session, online, page }) {
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -2713,6 +2805,7 @@ function SalesmanApp({ session, online }) {
       onDeleteMessage={deleteMessage}
       dailyTarget={dailyTarget}
       monthlyTarget={monthlyTarget}
+      page={page}
     />
   );
 }
@@ -2743,7 +2836,7 @@ function adHocLeadFromPayload(payload, session) {
   };
 }
 
-function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUpdateLeadStatus, onUpdateLeadDetails, online, gpsStatus, queuedCount, loadError, messages, onMarkMessageRead, onDeleteMessage, dailyTarget, monthlyTarget }) {
+function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUpdateLeadStatus, onUpdateLeadDetails, online, gpsStatus, queuedCount, loadError, messages, onMarkMessageRead, onDeleteMessage, dailyTarget, monthlyTarget, page }) {
   const [showAddLead, setShowAddLead] = useState(false);
   const [showMyLeads, setShowMyLeads] = useState(false);
   const [viewingLead, setViewingLead] = useState(null);
@@ -2770,6 +2863,10 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
 
   return (
     <div style={{ maxWidth: 480, margin: "0 auto", padding: "18px 16px 40px" }}>
+      {page === "reports" ? (
+        <SalesmanReportsPage leads={leads} dailyTarget={target} monthlyTarget={monthTarget} />
+      ) : (
+        <>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <div>
           <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 18 }}>{session.fullName}</div>
@@ -2900,6 +2997,8 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
         />
       )}
       {viewingLead && <LeadDetailDrawer lead={viewingLead} onClose={() => setViewingLead(null)} onStatusChange={onUpdateLeadStatus} onUpdate={onUpdateLeadDetails} fetchHistory={api.salesmanLeadHistory} />}
+      </>
+      )}
     </div>
   );
 }
