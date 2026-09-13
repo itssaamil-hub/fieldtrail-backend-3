@@ -9,10 +9,10 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["favicon.png", "apple-touch-icon.png"],
       manifest: {
-        name: "FieldTrail — Lead & Location Ledger",
-        short_name: "FieldTrail",
+        name: "Engage — Lead & Location Ledger",
+        short_name: "Engage",
         description:
-          "Salesman lead capture and live location tracking, with GPS verification built in.",
+          "Employee lead capture and live location tracking, with GPS verification built in.",
         theme_color: "#1A1D23",
         background_color: "#F4F5F7",
         display: "standalone",
