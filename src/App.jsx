@@ -78,7 +78,7 @@ const T = {
   warnSoft: "#FDF3E0",
   danger: "#C0392B",
   dangerSoft: "#FBEAE8",
-  route: "#3B5BDB",
+  route: "#145C5D",
   accent: "#F5793B",
 };
 
@@ -1557,7 +1557,7 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
 // Tap a salesman's name to see just their leads, broken out by Hot/Warm/
 // Cold/Converted/Pending — instead of hunting through the main filtered list.
 const REPORT_CARDS = [
-  { key: "performance", title: "Employee performance", desc: "Leads, conversion rate and target progress per employee.", icon: Contact2, color: "#3B5BDB" },
+  { key: "performance", title: "Employee performance", desc: "Leads, conversion rate and target progress per employee.", icon: Contact2, color: "#145C5D" },
   { key: "funnel", title: "Funnel and conversion", desc: "Lead count and drop-off at each pipeline stage.", icon: Handshake, color: "#7B4FC9" },
   { key: "renewals", title: "Renewals due", desc: "Everything renewing in the next 30, 60 or 90 days.", icon: CalendarClock, color: "#B8791F" },
   { key: "payments", title: "Payment due", desc: "Won deals — total, paid, and pending — with payments you can record.", icon: Wallet, color: "#C0392B" },
@@ -2212,7 +2212,7 @@ function EmptyReportState({ text }) {
 }
 
 const SALESMAN_REPORT_CARDS = [
-  { key: "performance", title: "My performance", desc: "Your leads, conversion rate and target progress.", icon: Contact2, color: "#3B5BDB" },
+  { key: "performance", title: "My performance", desc: "Your leads, conversion rate and target progress.", icon: Contact2, color: "#145C5D" },
   { key: "renewals", title: "Renewals due", desc: "Your leads renewing in the next 30, 60 or 90 days.", icon: CalendarClock, color: "#B8791F" },
 ];
 
