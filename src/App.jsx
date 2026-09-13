@@ -285,7 +285,7 @@ function TopBar({ online, session, onLogout, onOpenSettings, onOpenCrmSettings, 
 
   return (
     <div style={{ position: "sticky", top: 0, zIndex: 40 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", paddingTop: "calc(14px + env(safe-area-inset-top))", background: "linear-gradient(135deg, #5B3FA6 0%, #7B4FC9 100%)", color: "#fff", gap: 10, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", paddingTop: "calc(14px + env(safe-area-inset-top))", background: "linear-gradient(135deg, #2C46B0 0%, #3B5BDB 100%)", color: "#fff", gap: 10, flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 30, height: 30, borderRadius: 7, background: T.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <LogoMark size={16} color={T.paper} />
@@ -306,7 +306,7 @@ function TopBar({ online, session, onLogout, onOpenSettings, onOpenCrmSettings, 
                 onClick={() => onChangePage("dashboard")}
                 style={{
                   display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, padding: "5px 10px", borderRadius: 5, cursor: "pointer", border: "none",
-                  background: page === "dashboard" ? "#fff" : "transparent", color: page === "dashboard" ? "#5B3FA6" : "rgba(255,255,255,0.75)",
+                  background: page === "dashboard" ? "#fff" : "transparent", color: page === "dashboard" ? "#3B5BDB" : "rgba(255,255,255,0.75)",
                 }}
               >
                 {narrow ? <Gauge size={13} /> : "Dashboard"}
@@ -315,7 +315,7 @@ function TopBar({ online, session, onLogout, onOpenSettings, onOpenCrmSettings, 
                 onClick={() => onChangePage("reports")}
                 style={{
                   display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, padding: "5px 10px", borderRadius: 5, cursor: "pointer", border: "none",
-                  background: page === "reports" ? "#fff" : "transparent", color: page === "reports" ? "#5B3FA6" : "rgba(255,255,255,0.75)",
+                  background: page === "reports" ? "#fff" : "transparent", color: page === "reports" ? "#3B5BDB" : "rgba(255,255,255,0.75)",
                 }}
               >
                 <BarChart3 size={13} /> {narrow ? "" : "Reports"}
