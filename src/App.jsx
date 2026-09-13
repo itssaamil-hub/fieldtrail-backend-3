@@ -31,6 +31,7 @@ import {
   CalendarClock,
   Target as TargetIcon,
   BarChart3,
+  Wallet,
 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -1451,8 +1452,9 @@ const REPORT_CARDS = [
   { key: "performance", title: "Salesman performance", desc: "Leads, conversion rate and target progress per salesman.", icon: Contact2, color: "#3B5BDB" },
   { key: "funnel", title: "Funnel and conversion", desc: "Lead count and drop-off at each pipeline stage.", icon: Handshake, color: "#7B4FC9" },
   { key: "renewals", title: "Renewals due", desc: "Everything renewing in the next 30, 60 or 90 days.", icon: CalendarClock, color: "#B8791F" },
+  { key: "payments", title: "Payment due", desc: "Won deals — total, paid, and pending — with payments you can record.", icon: Wallet, color: "#C0392B" },
   { key: "daily", title: "Daily activity", desc: "Visits, leads touched and distance travelled per day.", icon: MapPin, color: "#12805C" },
-  { key: "stage", title: "Time in stage", desc: "Average days a lead spends at each status.", icon: Clock, color: "#C0392B" },
+  { key: "stage", title: "Time in stage", desc: "Average days a lead spends at each status.", icon: Clock, color: "#8B5E00" },
   { key: "export", title: "Lead export", desc: "Download leads as CSV, Excel, or push to Google Sheets.", icon: Download, color: "#1D7A8C" },
 ];
 
@@ -1500,6 +1502,7 @@ function ReportsPage({ salesmen, leads }) {
       {active === "performance" && <SalesmanPerformanceReport salesmen={salesmen} leads={leads} />}
       {active === "funnel" && <FunnelReport leads={leads} />}
       {active === "renewals" && <RenewalsReport leads={leads} />}
+      {active === "payments" && <PaymentDueReport salesmen={salesmen} />}
       {active === "daily" && <DailyActivityReport salesmen={salesmen} />}
       {active === "stage" && <TimeInStageReport />}
       {active === "export" && <LeadExportReport salesmen={salesmen} />}
@@ -1618,6 +1621,138 @@ function RenewalsReport({ leads }) {
         </div>
       )}
     </div>
+  );
+}
+
+function PaymentDueReport({ salesmen }) {
+  const [salesmanId, setSalesmanId] = useState("all");
+  const [onlyPending, setOnlyPending] = useState(true);
+  const [payments, setPayments] = useState(null);
+  const [error, setError] = useState("");
+  const [recordingFor, setRecordingFor] = useState(null); // the payment row being paid against
+
+  const load = useCallback(() => {
+    setPayments(null);
+    setError("");
+    api.adminPayments({ salesmanId, onlyPending: onlyPending ? "true" : "" })
+      .then((res) => setPayments(res.payments || []))
+      .catch((err) => setError(err.message || "Couldn't load payments."));
+  }, [salesmanId, onlyPending]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const totalPending = (payments || []).reduce((sum, p) => sum + p.pending, 0);
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 14 }}>
+        <Select value={salesmanId} onChange={setSalesmanId} options={[["all", "All salesmen"], ...salesmen.map((s) => [s.id, s.name])]} />
+        <button
+          onClick={() => setOnlyPending((v) => !v)}
+          style={{ fontSize: 12.5, padding: "6px 12px", borderRadius: 8, cursor: "pointer", border: `1px solid ${onlyPending ? T.route : T.line}`, background: onlyPending ? T.route : "#fff", color: onlyPending ? "#fff" : T.ink, fontWeight: 600 }}
+        >
+          {onlyPending ? "Showing pending only" : "Showing all Won deals"}
+        </button>
+      </div>
+
+      {error && <div style={{ fontSize: 12.5, color: T.danger, marginBottom: 10 }}>{error}</div>}
+      {payments === null && !error && (
+        <div style={{ fontSize: 13, color: T.inkSoft, display: "flex", alignItems: "center", gap: 6 }}>
+          <Loader2 size={14} className="spin" /> Loading…
+        </div>
+      )}
+      {payments && payments.length === 0 && <EmptyReportState text={onlyPending ? "Nothing pending — everything's been paid." : "No Won deals with a deal value yet."} />}
+
+      {payments && payments.length > 0 && (
+        <>
+          <div style={{ fontSize: 12.5, color: T.inkSoft, marginBottom: 10 }}>Total pending: <span style={{ fontWeight: 700, color: T.danger }}>{fmtMoney(totalPending)}</span></div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {payments.map((p) => (
+              <div key={p.leadId} style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: "12px 14px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 13.5 }}>{p.business}</div>
+                    <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 2 }}>{p.salesmanName} · {p.contactName} · {p.phone}</div>
+                  </div>
+                  {p.pending > 0 && (
+                    <button
+                      onClick={() => setRecordingFor(p)}
+                      style={{ fontSize: 11.5, fontWeight: 700, padding: "6px 10px", borderRadius: 7, border: "none", background: T.route, color: "#fff", cursor: "pointer", whiteSpace: "nowrap" }}
+                    >
+                      Record payment
+                    </button>
+                  )}
+                </div>
+                <div style={{ display: "flex", gap: 16, marginTop: 10, fontSize: 12.5 }}>
+                  <div><span style={{ color: T.inkSoft }}>Total </span><span style={{ fontWeight: 700 }}>{fmtMoney(p.dealValue)}</span></div>
+                  <div><span style={{ color: T.inkSoft }}>Paid </span><span style={{ fontWeight: 700, color: T.verified }}>{fmtMoney(p.paidTotal)}</span></div>
+                  <div><span style={{ color: T.inkSoft }}>Pending </span><span style={{ fontWeight: 700, color: p.pending > 0 ? T.danger : T.verified }}>{fmtMoney(p.pending)}</span></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {recordingFor && (
+        <RecordPaymentModal
+          row={recordingFor}
+          onClose={() => setRecordingFor(null)}
+          onRecorded={() => { setRecordingFor(null); load(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+function RecordPaymentModal({ row, onClose, onRecorded }) {
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const submit = async (e) => {
+    e.preventDefault();
+    const num = Number(amount);
+    if (!num || num <= 0) { setError("Enter a valid amount."); return; }
+    if (num > row.pending + 0.01) { setError(`That's more than the ${fmtMoney(row.pending)} still pending.`); return; }
+    setSaving(true);
+    setError("");
+    try {
+      await api.adminRecordPayment(row.leadId, { amount: num, note: note.trim() || undefined });
+      onRecorded();
+    } catch (err) {
+      setError(err.message || "Couldn't record that payment.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Overlay title={`Record payment — ${row.business}`} onClose={onClose}>
+      <div style={{ fontSize: 12.5, color: T.inkSoft, marginBottom: 14 }}>
+        {fmtMoney(row.pending)} pending of {fmtMoney(row.dealValue)} total.
+      </div>
+      <form onSubmit={submit}>
+        <label style={{ fontSize: 11.5, fontWeight: 600, color: T.inkSoft, textTransform: "uppercase", letterSpacing: 0.3 }}>Amount received</label>
+        <input
+          type="number" step="0.01" min="0" value={amount} onChange={(e) => setAmount(e.target.value)}
+          placeholder={`Up to ${row.pending}`} style={inputStyle} autoFocus
+        />
+        <label style={{ fontSize: 11.5, fontWeight: 600, color: T.inkSoft, textTransform: "uppercase", letterSpacing: 0.3 }}>Note (optional)</label>
+        <input
+          type="text" value={note} onChange={(e) => setNote(e.target.value)}
+          placeholder="e.g. UPI, part payment" style={inputStyle}
+        />
+        {error && <div style={{ fontSize: 12, color: T.danger, marginBottom: 10 }}>{error}</div>}
+        <button
+          type="submit" disabled={saving}
+          style={{ width: "100%", padding: "11px", borderRadius: 10, border: "none", background: T.route, color: "#fff", fontWeight: 700, fontSize: 13.5, cursor: saving ? "default" : "pointer", opacity: saving ? 0.7 : 1 }}
+        >
+          {saving ? "Saving…" : "Record payment"}
+        </button>
+      </form>
+    </Overlay>
   );
 }
 
