@@ -147,6 +147,12 @@ export const api = {
   },
   adminLeadPayments: (leadId) => request(`/admin/leads/${leadId}/payments`),
   adminRecordPayment: (leadId, payload) => request(`/admin/leads/${leadId}/payments`, { method: "POST", body: payload }),
+  adminExpenses: (params) => {
+    const qs = new URLSearchParams(Object.entries(params || {}).filter(([, v]) => v != null && v !== "" && v !== "all")).toString();
+    return request(`/admin/expenses${qs ? `?${qs}` : ""}`);
+  },
+  adminCreateExpense: (payload) => request(`/admin/expenses`, { method: "POST", body: payload }),
+  adminDeleteExpense: (id) => request(`/admin/expenses/${id}`, { method: "DELETE" }),
   adminGetSettings: () => request("/admin/settings"),
   adminUpdateSettings: (payload) => request("/admin/settings", { method: "PATCH", body: payload }),
   adminExportSheetsInfo: (params = {}) => {
