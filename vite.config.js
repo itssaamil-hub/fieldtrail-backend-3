@@ -3,16 +3,25 @@ import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
+  build: {
+    rollupOptions: {
+      // Render's Linux build machine doesn't have (and doesn't need) the
+      // macOS-only native fsevents watcher; without this, an unrelated
+      // internal Rollup/vite-plugin-pwa error-handling path tries to resolve
+      // it anyway and fails the whole build.
+      external: ["fsevents"],
+    },
+  },
   plugins: [
     react(),
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["favicon.png", "apple-touch-icon.png"],
       manifest: {
-        name: "FieldTrail — Lead & Location Ledger",
-        short_name: "FieldTrail",
+        name: "Engage — Lead & Location Ledger",
+        short_name: "Engage",
         description:
-          "Salesman lead capture and live location tracking, with GPS verification built in.",
+          "Employee lead capture and live location tracking, with GPS verification built in.",
         theme_color: "#1A1D23",
         background_color: "#F4F5F7",
         display: "standalone",
