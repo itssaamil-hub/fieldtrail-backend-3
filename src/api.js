@@ -141,6 +141,12 @@ export const api = {
     const qs = new URLSearchParams(Object.entries(params || {}).filter(([, v]) => v != null && v !== "")).toString();
     return request(`/admin/reports/daily-activity${qs ? `?${qs}` : ""}`);
   },
+  adminPayments: (params) => {
+    const qs = new URLSearchParams(Object.entries(params || {}).filter(([, v]) => v != null && v !== "" && v !== "all")).toString();
+    return request(`/admin/payments${qs ? `?${qs}` : ""}`);
+  },
+  adminLeadPayments: (leadId) => request(`/admin/leads/${leadId}/payments`),
+  adminRecordPayment: (leadId, payload) => request(`/admin/leads/${leadId}/payments`, { method: "POST", body: payload }),
   adminGetSettings: () => request("/admin/settings"),
   adminUpdateSettings: (payload) => request("/admin/settings", { method: "PATCH", body: payload }),
   adminExportSheetsInfo: (params = {}) => {
