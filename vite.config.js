@@ -6,11 +6,15 @@ export default defineConfig({
   build: {
     rollupOptions: {
       // Render's Linux build machine doesn't have (and doesn't need) the
-      // macOS-only native fsevents watcher; without this, an unrelated
-      // internal Rollup/vite-plugin-pwa error-handling path tries to resolve
-      // it anyway and fails the whole build.
-      external: ["fsevents"],
+      // macOS-only native fsevents watcher. Using a function instead of a
+      // plain array catches it regardless of how it's requested internally
+      // (e.g. by chokidar/rollup's own watch-mode resolution), which the
+      // plain array form can miss.
+      external: (id) => id === "fsevents",
     },
+  },
+  optimizeDeps: {
+    exclude: ["fsevents"],
   },
   plugins: [
     react(),
