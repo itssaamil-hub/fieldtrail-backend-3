@@ -1711,6 +1711,7 @@ function PaymentDueReport({ salesmen }) {
   const [salesmanId, setSalesmanId] = useState("all");
   const [onlyPending, setOnlyPending] = useState(true);
   const [payments, setPayments] = useState(null);
+  const [summary, setSummary] = useState(null);
   const [error, setError] = useState("");
   const [recordingFor, setRecordingFor] = useState(null); // the payment row being paid against
 
@@ -1718,16 +1719,23 @@ function PaymentDueReport({ salesmen }) {
     setPayments(null);
     setError("");
     api.adminPayments({ salesmanId, onlyPending: onlyPending ? "true" : "" })
-      .then((res) => setPayments(res.payments || []))
+      .then((res) => { setPayments(res.payments || []); setSummary(res.summary || null); })
       .catch((err) => setError(err.message || "Couldn't load payments."));
   }, [salesmanId, onlyPending]);
 
   useEffect(() => { load(); }, [load]);
 
-  const totalPending = (payments || []).reduce((sum, p) => sum + p.pending, 0);
-
   return (
     <div>
+      {summary && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10, marginBottom: 16 }}>
+          <StatCard label="Pending" value={fmtMoney(summary.pendingTotal)} icon={Wallet} color={T.danger} />
+          <StatCard label="Collected this month" value={fmtMoney(summary.collectedThisMonth)} icon={CalendarClock} color={T.verified} />
+          <StatCard label="Collected all time" value={fmtMoney(summary.collectedAllTime)} icon={CheckCircle2} color={T.route} />
+          <StatCard label="Total deal value" value={fmtMoney(summary.dealValueTotal)} icon={TargetIcon} color={T.accent} />
+        </div>
+      )}
+
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 14 }}>
         <Select value={salesmanId} onChange={setSalesmanId} options={[["all", "All salesmen"], ...salesmen.map((s) => [s.id, s.name])]} />
         <button
@@ -1748,7 +1756,6 @@ function PaymentDueReport({ salesmen }) {
 
       {payments && payments.length > 0 && (
         <>
-          <div style={{ fontSize: 12.5, color: T.inkSoft, marginBottom: 10 }}>Total pending: <span style={{ fontWeight: 700, color: T.danger }}>{fmtMoney(totalPending)}</span></div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {payments.map((p) => (
               <div key={p.leadId} style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: "12px 14px" }}>
