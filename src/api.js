@@ -147,6 +147,8 @@ export const api = {
   },
   adminLeadPayments: (leadId) => request(`/admin/leads/${leadId}/payments`),
   adminRecordPayment: (leadId, payload) => request(`/admin/leads/${leadId}/payments`, { method: "POST", body: payload }),
+  adminEditPayment: (leadId, paymentId, payload) => request(`/admin/leads/${leadId}/payments/${paymentId}`, { method: "PATCH", body: payload }),
+  adminDeletePayment: (leadId, paymentId) => request(`/admin/leads/${leadId}/payments/${paymentId}`, { method: "DELETE" }),
   adminExpenses: (params) => {
     const qs = new URLSearchParams(Object.entries(params || {}).filter(([, v]) => v != null && v !== "" && v !== "all")).toString();
     return request(`/admin/expenses${qs ? `?${qs}` : ""}`);
