@@ -213,9 +213,23 @@ function usePushNotifications(session) {
   const [preferences, setPreferences] = useState(NOTIFICATION_PREF_DEFAULTS);
 
   useEffect(() => {
+    if (!supported) return;
+    // One-time cleanup: an earlier version of this feature registered push-sw.js
+    // at the root scope, which collided with the main app's service worker and
+    // caused a reload loop. Remove that old registration wherever it's found.
+    navigator.serviceWorker.getRegistrations().then((regs) => {
+      regs.forEach((reg) => {
+        if (reg.active?.scriptURL?.endsWith("/push-sw.js") && reg.scope.endsWith("/")  && !reg.scope.endsWith("/push/")) {
+          reg.unregister();
+        }
+      });
+    }).catch(() => {});
+  }, [supported]);
+
+  useEffect(() => {
     if (!supported || !session) { setChecking(false); return; }
     let cancelled = false;
-    navigator.serviceWorker.register("/push-sw.js")
+    navigator.serviceWorker.register("/push/push-sw.js", { scope: "/push/" })
       .then((reg) => reg.pushManager.getSubscription())
       .then((sub) => { if (!cancelled) setSubscribed(!!sub); })
       .catch(() => {})
@@ -234,7 +248,7 @@ function usePushNotifications(session) {
     try {
       const permission = await Notification.requestPermission();
       if (permission !== "granted") { setError("Notifications are blocked — allow them for this site in your browser settings to turn this on."); return; }
-      const reg = await navigator.serviceWorker.register("/push-sw.js");
+      const reg = await navigator.serviceWorker.register("/push/push-sw.js", { scope: "/push/" });
       const { publicKey } = await api.notificationsVapidKey();
       const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) });
       await api.notificationsSubscribe(sub.toJSON());
@@ -250,7 +264,7 @@ function usePushNotifications(session) {
     setBusy(true);
     setError("");
     try {
-      const reg = await navigator.serviceWorker.register("/push-sw.js");
+      const reg = await navigator.serviceWorker.register("/push/push-sw.js", { scope: "/push/" });
       const sub = await reg.pushManager.getSubscription();
       if (sub) {
         await api.notificationsUnsubscribe(sub.endpoint).catch(() => {});
