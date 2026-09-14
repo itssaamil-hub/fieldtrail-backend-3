@@ -198,6 +198,7 @@ export default function App() {
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [topPage, setTopPage] = useState("dashboard"); // "dashboard" | "reports" — lives here so the toggle can live in the dark TopBar, for both roles
   const online = useOnlineStatus();
+  const { canInstall, installed, promptInstall } = useInstallPrompt();
 
   const handleSaveApiBase = (url) => {
     const changed = url !== apiBase;
@@ -235,12 +236,10 @@ export default function App() {
       <TopBar
         online={online}
         session={session}
-        onLogout={handleLogout}
-        onOpenSettings={() => setShowSettings(true)}
-        onOpenCrmSettings={() => setShowCrmSettings(true)}
         page={session ? topPage : undefined}
         onChangePage={session ? setTopPage : undefined}
         onAddExpense={session?.role === "admin" ? () => setShowAddExpense(true) : undefined}
+        onOpenSettings={() => setShowSettings(true)}
       />
       {body}
       {showSettings && (
@@ -249,6 +248,10 @@ export default function App() {
           onClose={() => setShowSettings(false)}
           onSave={(url) => { handleSaveApiBase(url); setShowSettings(false); }}
           onLogout={session ? () => { setShowSettings(false); handleLogout(); } : undefined}
+          onOpenCrmSettings={session?.role === "admin" ? () => { setShowSettings(false); setShowCrmSettings(true); } : undefined}
+          canInstall={canInstall}
+          installed={installed}
+          promptInstall={promptInstall}
         />
       )}
       {showCrmSettings && <CrmSettingsModal onClose={() => setShowCrmSettings(false)} />}
@@ -273,10 +276,7 @@ function LogoMark({ size = 20, color = "#fff" }) {
   );
 }
 
-function TopBar({ online, session, onLogout, onOpenSettings, onOpenCrmSettings, page, onChangePage, onAddExpense }) {
-  const { canInstall, installed, promptInstall } = useInstallPrompt();
-  const isIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
-  const [showIosHint, setShowIosHint] = useState(false);
+function TopBar({ online, session, page, onChangePage, onAddExpense, onOpenSettings }) {
   const [narrow, setNarrow] = useState(window.innerWidth < 560);
   useEffect(() => {
     const onResize = () => setNarrow(window.innerWidth < 560);
@@ -287,19 +287,16 @@ function TopBar({ online, session, onLogout, onOpenSettings, onOpenCrmSettings, 
   return (
     <div style={{ position: "sticky", top: 0, zIndex: 40 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", paddingTop: "calc(14px + env(safe-area-inset-top))", background: "linear-gradient(135deg, #0F3D3E 0%, #145C5D 100%)", color: "#fff", gap: 10, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <div style={{ width: 30, height: 30, borderRadius: 7, background: T.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <LogoMark size={16} color={T.paper} />
           </div>
           <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 17, letterSpacing: 0.2 }}>Engage</div>
           {!narrow && session && (
-            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: "rgba(255,255,255,0.65)", marginLeft: 4 }}>
+            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: "rgba(255,255,255,0.65)", marginRight: 4 }}>
               {session.fullName} · {session.role}
             </div>
           )}
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <ConnectionPill online={online} />
 
           {page && onChangePage && (
             <div style={{ display: "flex", gap: 2, background: "rgba(255,255,255,0.14)", borderRadius: 7, padding: 2, border: "1px solid rgba(255,255,255,0.22)" }}>
@@ -332,50 +329,17 @@ function TopBar({ online, session, onLogout, onOpenSettings, onOpenCrmSettings, 
               <Wallet size={13} /> {narrow ? "" : "Expenses"}
             </button>
           )}
+        </div>
 
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <ConnectionPill online={online} />
           <button
             onClick={onOpenSettings}
-            title="Backend settings"
+            title="Settings"
             style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 6, border: "1px solid rgba(255,255,255,0.22)", cursor: "pointer", background: "rgba(255,255,255,0.14)", color: "#fff" }}
           >
             <Settings size={14} />
           </button>
-
-          {!installed && (
-            <div style={{ position: "relative" }}>
-              <button onClick={() => (canInstall ? promptInstall() : setShowIosHint((v) => !v))}
-                style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 11px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.22)", cursor: "pointer", fontSize: 12, fontWeight: 600, background: "rgba(255,255,255,0.14)", color: "#fff", fontFamily: "Inter, sans-serif" }}
-                title="Install Engage as an app">
-                <Download size={13} /> {narrow ? "" : "Install"}
-              </button>
-              {showIosHint && isIos && !canInstall && (
-                <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, width: 230, background: T.card, color: T.ink, borderRadius: 10, padding: 12, fontSize: 12, lineHeight: 1.5, boxShadow: "0 8px 24px rgba(0,0,0,0.25)", zIndex: 60 }}>
-                  On iPhone/iPad: tap the <strong>Share</strong> icon in Safari, then <strong>"Add to Home Screen."</strong>
-                  <button onClick={() => setShowIosHint(false)} style={{ display: "block", marginTop: 8, background: "none", border: "none", color: T.route, fontWeight: 600, cursor: "pointer", padding: 0, fontSize: 12 }}>Got it</button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {session?.role === "admin" && (
-            <button
-              onClick={onOpenCrmSettings}
-              title="CRM Settings"
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 11px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.22)", cursor: "pointer", fontSize: 12, fontWeight: 600, background: "rgba(255,255,255,0.14)", color: "#fff", fontFamily: "Inter, sans-serif" }}
-            >
-              <Settings size={13} /> {narrow ? "" : "CRM Settings"}
-            </button>
-          )}
-
-          {session && !narrow && (
-            <button
-              onClick={onLogout}
-              title="Log out"
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 11px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.25)", cursor: "pointer", fontSize: 12, fontWeight: 600, background: "transparent", color: "rgba(255,255,255,0.75)", fontFamily: "Inter, sans-serif" }}
-            >
-              <LogOut size={13} /> Log out
-            </button>
-          )}
         </div>
       </div>
     </div>
@@ -529,10 +493,39 @@ function LoginScreen({ apiBase, online, onLoggedIn, onOpenSettings }) {
   );
 }
 
-function SettingsModal({ apiBase, onClose, onSave, onLogout }) {
+function SettingsModal({ apiBase, onClose, onSave, onLogout, onOpenCrmSettings, canInstall, installed, promptInstall }) {
   const [url, setUrl] = useState(apiBase || "");
+  const isIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+  const [showIosHint, setShowIosHint] = useState(false);
+
   return (
-    <Overlay onClose={onClose} title="Backend settings">
+    <Overlay onClose={onClose} title="Settings">
+      {!installed && (
+        <div style={{ marginBottom: 18 }}>
+          <button
+            onClick={() => (canInstall ? promptInstall() : setShowIosHint((v) => !v))}
+            style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "11px", borderRadius: 11, border: `1px solid ${T.line}`, cursor: "pointer", background: T.paperDeep, color: T.ink, fontWeight: 700, fontSize: 13.5 }}
+          >
+            <Download size={14} /> Install as an app
+          </button>
+          {showIosHint && isIos && !canInstall && (
+            <div style={{ marginTop: 8, background: T.paperDeep, borderRadius: 10, padding: 12, fontSize: 12, lineHeight: 1.5, color: T.inkSoft }}>
+              On iPhone/iPad: tap the <strong>Share</strong> icon in Safari, then <strong>"Add to Home Screen."</strong>
+            </div>
+          )}
+        </div>
+      )}
+
+      {onOpenCrmSettings && (
+        <button
+          onClick={onOpenCrmSettings}
+          style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "11px", borderRadius: 11, border: `1px solid ${T.line}`, cursor: "pointer", background: T.paperDeep, color: T.ink, fontWeight: 700, fontSize: 13.5, marginBottom: 18 }}
+        >
+          <Settings size={14} /> CRM Settings
+        </button>
+      )}
+
+      <div style={{ fontSize: 11, fontWeight: 700, color: T.inkSoft, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 8 }}>Backend</div>
       <div style={{ fontSize: 12, color: T.inkSoft, marginBottom: 12 }}>
         Changing this will sign you out, since sessions are tied to a specific backend.
       </div>
