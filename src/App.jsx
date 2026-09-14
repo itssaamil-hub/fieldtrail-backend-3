@@ -895,7 +895,7 @@ function FieldOptionsSection() {
 
 // Single "Download" button that reveals CSV/Excel/Sheets on click, instead
 // of showing all three as separate buttons all the time.
-function DownloadMenu({ onCsv, onXlsx, onSheets }) {
+function DownloadMenu({ onCsv, onXlsx, onSheets, onPdf }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
 
@@ -909,6 +909,8 @@ function DownloadMenu({ onCsv, onXlsx, onSheets }) {
   }, [open]);
 
   const pick = (fn) => () => { setOpen(false); fn(); };
+  const options = [["CSV", onCsv], ["Excel", onXlsx], ["Google Sheets", onSheets]];
+  if (onPdf) options.push(["PDF", onPdf]);
 
   return (
     <div ref={containerRef} style={{ position: "relative" }}>
@@ -920,7 +922,7 @@ function DownloadMenu({ onCsv, onXlsx, onSheets }) {
       </button>
       {open && (
         <div style={{ position: "absolute", top: "calc(100% + 4px)", right: 0, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 11, boxShadow: "0 6px 20px rgba(28,36,48,0.15)", zIndex: 100, minWidth: 150, overflow: "hidden" }}>
-          {[["CSV", onCsv], ["Excel", onXlsx], ["Google Sheets", onSheets]].map(([label, fn]) => (
+          {options.map(([label, fn]) => (
             <button
               key={label}
               onClick={pick(fn)}
@@ -1757,6 +1759,8 @@ function PaymentDueReport({ salesmen }) {
   const [error, setError] = useState("");
   const [recordingFor, setRecordingFor] = useState(null); // the payment row being paid against
   const [expandedLeadId, setExpandedLeadId] = useState(null);
+  const [sheetsInfo, setSheetsInfo] = useState(null);
+  const [sheetsError, setSheetsError] = useState("");
 
   const load = useCallback(() => {
     setPayments(null);
@@ -1767,6 +1771,8 @@ function PaymentDueReport({ salesmen }) {
   }, [salesmanId, onlyPending]);
 
   useEffect(() => { load(); }, [load]);
+
+  const exportParams = { salesmanId, onlyPending: onlyPending ? "true" : "" };
 
   return (
     <div>
@@ -1779,16 +1785,44 @@ function PaymentDueReport({ salesmen }) {
         </div>
       )}
 
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 14 }}>
-        <Select value={salesmanId} onChange={setSalesmanId} options={[["all", "All employees"], ...salesmen.map((s) => [s.id, s.name])]} />
-        <button
-          onClick={() => setOnlyPending((v) => !v)}
-          style={{ fontSize: 12.5, padding: "6px 12px", borderRadius: 8, cursor: "pointer", border: `1px solid ${onlyPending ? T.route : T.line}`, background: onlyPending ? T.route : "#fff", color: onlyPending ? "#fff" : T.ink, fontWeight: 600 }}
-        >
-          {onlyPending ? "Showing pending only" : "Showing all Won deals"}
-        </button>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <Select value={salesmanId} onChange={setSalesmanId} options={[["all", "All employees"], ...salesmen.map((s) => [s.id, s.name])]} />
+          <button
+            onClick={() => setOnlyPending((v) => !v)}
+            style={{ fontSize: 12.5, padding: "6px 12px", borderRadius: 8, cursor: "pointer", border: `1px solid ${onlyPending ? T.route : T.line}`, background: onlyPending ? T.route : "#fff", color: onlyPending ? "#fff" : T.ink, fontWeight: 600 }}
+          >
+            {onlyPending ? "Showing pending only" : "Showing all Won deals"}
+          </button>
+        </div>
+        <DownloadMenu
+          onCsv={() => window.open(buildExportUrl("csv", exportParams, "payments"), "_blank")}
+          onXlsx={() => window.open(buildExportUrl("xlsx", exportParams, "payments"), "_blank")}
+          onPdf={() => window.open(buildExportUrl("pdf", exportParams, "payments"), "_blank")}
+          onSheets={async () => {
+            setSheetsError("");
+            try {
+              const info = await api.adminExportPaymentsSheetsInfo(exportParams);
+              setSheetsInfo(info);
+            } catch (err) {
+              setSheetsError(err.message || "Couldn't prepare the Sheets export.");
+            }
+          }}
+        />
       </div>
-
+      {sheetsError && <div style={{ fontSize: 12, color: T.danger, marginBottom: 10 }}>{sheetsError}</div>}
+      {sheetsInfo && (
+        <div style={{ fontSize: 12, background: T.paperDeep, borderRadius: 11, padding: "10px 12px", marginBottom: 14 }}>
+          No Google account is connected, so this can't push directly into a Sheet — but you can pull it in live:
+          open a new Google Sheet, put this formula in cell A1, and re-enter it anytime to refresh:
+          <div style={{ fontFamily: "'IBM Plex Mono', monospace", background: "#fff", border: `1px solid ${T.line}`, borderRadius: 6, padding: "6px 8px", marginTop: 6, wordBreak: "break-all" }}>
+            {sheetsInfo.importFormula}
+          </div>
+          <button onClick={() => { navigator.clipboard?.writeText(sheetsInfo.importFormula); }} style={{ marginTop: 8, fontSize: 11.5, fontWeight: 600, color: T.route, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+            Copy formula
+          </button>
+        </div>
+      )}
       {error && <div style={{ fontSize: 12.5, color: T.danger, marginBottom: 10 }}>{error}</div>}
       {payments === null && !error && (
         <div style={{ fontSize: 13, color: T.inkSoft, display: "flex", alignItems: "center", gap: 6 }}>
