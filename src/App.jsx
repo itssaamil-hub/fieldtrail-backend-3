@@ -33,6 +33,7 @@ import {
   BarChart3,
   Wallet,
   Receipt,
+  LayoutGrid,
 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -1275,6 +1276,7 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterDate, setFilterDate] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [leadsViewMode, setLeadsViewMode] = useState("list"); // "list" | "board"
   const [leadsPage, setLeadsPage] = useState(1);
   const LEADS_PER_PAGE = 50;
   const [selectedLead, setSelectedLead] = useState(null);
@@ -1372,6 +1374,20 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
       <div className="ft-card" style={{ marginTop: 20, background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, padding: 18 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
           <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16 }}>Leads</div>
+          <div style={{ display: "flex", gap: 2, background: T.paperDeep, borderRadius: 8, padding: 2 }}>
+            <button
+              onClick={() => setLeadsViewMode("list")}
+              style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, padding: "5px 10px", borderRadius: 6, border: "none", cursor: "pointer", background: leadsViewMode === "list" ? "#fff" : "transparent", color: leadsViewMode === "list" ? T.ink : T.inkSoft, boxShadow: leadsViewMode === "list" ? "0 1px 2px rgba(20,20,30,0.08)" : "none" }}
+            >
+              <List size={13} /> List
+            </button>
+            <button
+              onClick={() => setLeadsViewMode("board")}
+              style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, padding: "5px 10px", borderRadius: 6, border: "none", cursor: "pointer", background: leadsViewMode === "board" ? "#fff" : "transparent", color: leadsViewMode === "board" ? T.ink : T.inkSoft, boxShadow: leadsViewMode === "board" ? "0 1px 2px rgba(20,20,30,0.08)" : "none" }}
+            >
+              <LayoutGrid size={13} /> Board
+            </button>
+          </div>
         </div>
         <div style={{ position: "relative", marginBottom: 12 }}>
           <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: T.inkSoft }} />
@@ -1431,6 +1447,8 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
           </div>
         )}
 
+        {leadsViewMode === "list" ? (
+          <>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {pagedLeads.map((l) => (
             <div key={l.id} className="ft-row" onClick={() => setSelectedLead(l)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "10px 12px", border: `1px solid ${T.line}`, borderRadius: 11, cursor: "pointer", background: "#fff" }}>
@@ -1477,6 +1495,10 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
               </button>
             </div>
           </div>
+        )}
+          </>
+        ) : (
+          <LeadsBoardView leads={filteredLeads} onStatusChange={onStatusChange} onSelectLead={setSelectedLead} />
         )}
       </div>
 
@@ -2203,6 +2225,69 @@ function LeadExportReport({ salesmen }) {
           <a href={sheetsInfo.url || sheetsInfo.sheetUrl} target="_blank" rel="noreferrer" style={{ color: T.route, fontWeight: 600 }}>Open in Google Sheets →</a>
         </div>
       )}
+    </div>
+  );
+}
+
+function LeadsBoardView({ leads, onStatusChange, onSelectLead }) {
+  const [draggingId, setDraggingId] = useState(null);
+  const [dragOverStatus, setDragOverStatus] = useState(null);
+
+  const columns = STATUSES.map((s) => ({ status: s, leads: leads.filter((l) => l.status === s) }));
+
+  const handleDrop = (status) => {
+    if (draggingId) {
+      const lead = leads.find((l) => l.id === draggingId);
+      if (lead && lead.status !== status) onStatusChange(draggingId, status);
+    }
+    setDraggingId(null);
+    setDragOverStatus(null);
+  };
+
+  return (
+    <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 8 }}>
+      {columns.map((col) => (
+        <div
+          key={col.status}
+          onDragOver={(e) => { e.preventDefault(); setDragOverStatus(col.status); }}
+          onDragLeave={() => setDragOverStatus((s) => (s === col.status ? null : s))}
+          onDrop={(e) => { e.preventDefault(); handleDrop(col.status); }}
+          style={{
+            flex: "0 0 240px", background: dragOverStatus === col.status ? T.paperDeep : "transparent",
+            border: `1.5px dashed ${dragOverStatus === col.status ? T.route : T.line}`, borderRadius: 12, padding: 8,
+            display: "flex", flexDirection: "column", minHeight: 120, transition: "background 0.12s ease, border-color 0.12s ease",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 4px 8px" }}>
+            <div style={{ fontSize: 12.5, fontWeight: 700 }}>{STATUS_LABEL[col.status]}</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: T.inkSoft, background: T.paperDeep, borderRadius: 999, padding: "1px 7px" }}>{col.leads.length}</div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {col.leads.map((l) => (
+              <div
+                key={l.id}
+                draggable
+                onDragStart={() => setDraggingId(l.id)}
+                onDragEnd={() => { setDraggingId(null); setDragOverStatus(null); }}
+                onClick={() => onSelectLead(l)}
+                style={{
+                  background: "#fff", border: `1px solid ${T.line}`, borderRadius: 10, padding: "9px 10px", cursor: "grab",
+                  opacity: draggingId === l.id ? 0.4 : 1, boxShadow: "0 1px 2px rgba(20,20,30,0.05)",
+                }}
+              >
+                <div style={{ fontWeight: 700, fontSize: 12.5, marginBottom: 3 }}>{l.business}</div>
+                <div style={{ fontSize: 11, color: T.inkSoft }}>{l.salesmanName}</div>
+                {l.status === "won" && l.dealValue != null && (
+                  <div style={{ fontSize: 11, fontWeight: 700, color: T.verified, marginTop: 4 }}>{fmtMoney(l.dealValue)}</div>
+                )}
+              </div>
+            ))}
+            {col.leads.length === 0 && (
+              <div style={{ fontSize: 11, color: T.inkSoft, textAlign: "center", padding: "14px 4px" }}>Drop here</div>
+            )}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -3011,6 +3096,7 @@ function SalesmanApp({ session, online, page }) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [dayStarted, setDayStartedState] = useState(getDayStarted(session.id));
+  const [togglingDay, setTogglingDay] = useState(false);
   const [gpsStatus, setGpsStatus] = useState("idle"); // idle | tracking | denied | unavailable
   const [queuedCount, setQueuedCount] = useState(getQueuedLeads().length);
   const [continuousTracking, setContinuousTracking] = useState(true); // safe default until settings load
@@ -3158,7 +3244,11 @@ function SalesmanApp({ session, online, page }) {
       navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 8000 });
     });
 
+  const [justToggled, setJustToggled] = useState(false); // brief "Started"/"Ended" confirmation flash
+
   const handleToggleDay = async () => {
+    if (togglingDay) return; // guard against double-taps while a request is already in flight
+    setTogglingDay(true);
     try {
       const pos = await getCurrentPositionAsync().catch(() => null);
       const lat = pos?.coords.latitude;
@@ -3172,8 +3262,12 @@ function SalesmanApp({ session, online, page }) {
         setDayStartedFlag(session.id, true);
         setDayStartedState(true);
       }
+      setJustToggled(true);
+      setTimeout(() => setJustToggled(false), 1600);
     } catch (err) {
       setLoadError(err instanceof ApiError ? err.message : "Couldn't reach the server — try again.");
+    } finally {
+      setTogglingDay(false);
     }
   };
 
@@ -3242,6 +3336,8 @@ function SalesmanApp({ session, online, page }) {
       leads={leads}
       dayStarted={dayStarted}
       onToggleDay={handleToggleDay}
+      togglingDay={togglingDay}
+      justToggledDay={justToggled}
       onAddLead={handleAddLead}
       onUpdateLeadStatus={handleUpdateLeadStatus}
       onUpdateLeadDetails={handleUpdateLeadDetails}
@@ -3285,7 +3381,7 @@ function adHocLeadFromPayload(payload, session) {
   };
 }
 
-function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUpdateLeadStatus, onUpdateLeadDetails, online, gpsStatus, queuedCount, loadError, messages, onMarkMessageRead, onDeleteMessage, dailyTarget, monthlyTarget, page }) {
+function SalesmanView({ session, leads, dayStarted, onToggleDay, togglingDay, justToggledDay, onAddLead, onUpdateLeadStatus, onUpdateLeadDetails, online, gpsStatus, queuedCount, loadError, messages, onMarkMessageRead, onDeleteMessage, dailyTarget, monthlyTarget, page }) {
   const [showAddLead, setShowAddLead] = useState(false);
   const [showMyLeads, setShowMyLeads] = useState(false);
   const [viewingLead, setViewingLead] = useState(null);
@@ -3293,6 +3389,7 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
   const [showHotLeads, setShowHotLeads] = useState(false);
   const [showConverted, setShowConverted] = useState(false);
   const [showNegotiation, setShowNegotiation] = useState(false);
+  const [showConversation, setShowConversation] = useState(false);
   const [showRenewals, setShowRenewals] = useState(false);
 
   const todayLeads = leads.filter((l) => isToday(l.createdAt));
@@ -3301,7 +3398,7 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
   const converted = leads.filter((l) => l.status === "won").length;
   const convertedValue = leads.filter((l) => l.status === "won" && l.dealValue != null).reduce((sum, l) => sum + l.dealValue, 0);
   const pending = leads.filter((l) => !["won", "lost"].includes(l.status)).length;
-  const inConversation = leads.filter((l) => l.status === "conversation").length;
+  const inConversation = leads.filter((l) => l.status === "conversation");
   const inNegotiation = leads.filter((l) => l.status === "negotiation");
   const upcomingRenewals = leads.filter((l) =>
     (l.renewalDate && isWithinDays(new Date(l.renewalDate), 30)) ||
@@ -3321,9 +3418,18 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
           <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 18 }}>{session.fullName}</div>
           <div style={{ fontSize: 12, color: T.inkSoft }}>{session.phone}</div>
         </div>
-        <button onClick={onToggleDay} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", borderRadius: 11, border: "none", cursor: "pointer", background: dayStarted ? T.dangerSoft : T.verifiedSoft, color: dayStarted ? T.danger : T.verified, fontWeight: 700, fontSize: 13 }}>
-          {dayStarted ? <Square size={14} /> : <Play size={14} />}
-          {dayStarted ? "End Day" : "Start Day"}
+        <button
+          onClick={onToggleDay}
+          disabled={togglingDay}
+          style={{
+            display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", borderRadius: 11, border: "none",
+            cursor: togglingDay ? "default" : "pointer", opacity: togglingDay ? 0.75 : 1,
+            background: justToggledDay ? T.verifiedSoft : dayStarted ? T.dangerSoft : T.verifiedSoft,
+            color: justToggledDay ? T.verified : dayStarted ? T.danger : T.verified, fontWeight: 700, fontSize: 13,
+          }}
+        >
+          {togglingDay ? <Loader2 size={14} className="spin" /> : justToggledDay ? <CheckCircle2 size={14} /> : dayStarted ? <Square size={14} /> : <Play size={14} />}
+          {togglingDay ? (dayStarted ? "Ending…" : "Starting…") : justToggledDay ? (dayStarted ? "Started" : "Ended") : dayStarted ? "End Day" : "Start Day"}
         </button>
       </div>
 
@@ -3345,7 +3451,7 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8, marginBottom: 16 }}>
         <StatCard label="Today" value={todayLeads.length} icon={TargetIcon} color={T.route} onClick={() => setShowTodayLeads(true)} />
         <StatCard label="Hot" value={allHotLeads.length} icon={Flame} color={T.danger} onClick={() => setShowHotLeads(true)} />
-        <StatCard label="Conversation" value={inConversation} icon={MessageSquare} color={T.accent} />
+        <StatCard label="Conversation" value={inConversation.length} icon={MessageSquare} color={T.accent} onClick={() => setShowConversation(true)} />
         <StatCard label="Negotiation" value={inNegotiation.length} icon={Handshake} color={T.warn} onClick={() => setShowNegotiation(true)} />
         <StatCard label="Won" value={converted} sub={convertedValue > 0 ? fmtMoney(convertedValue) : undefined} icon={CheckCircle2} color={T.verified} onClick={() => setShowConverted(true)} />
         <StatCard label="Renewals" value={upcomingRenewals.length} sub="next 30 days" icon={CalendarClock} color={T.accent} onClick={() => setShowRenewals(true)} />
@@ -3435,6 +3541,14 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, onAddLead, onUp
           title="In Negotiation"
           onClose={() => setShowNegotiation(false)}
           onSelectLead={(l) => { setShowNegotiation(false); setViewingLead(l); }}
+        />
+      )}
+      {showConversation && (
+        <MyLeadsModal
+          leads={inConversation}
+          title="In Conversation"
+          onClose={() => setShowConversation(false)}
+          onSelectLead={(l) => { setShowConversation(false); setViewingLead(l); }}
         />
       )}
       {showRenewals && (
