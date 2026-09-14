@@ -162,6 +162,11 @@ export const api = {
     const qs = new URLSearchParams(entries).toString();
     return request(`/admin/leads/export-sheets-info${qs ? `?${qs}` : ""}`);
   },
+  adminExportPaymentsSheetsInfo: (params = {}) => {
+    const entries = Object.entries(params).filter(([, v]) => v != null && v !== "" && v !== "all");
+    const qs = new URLSearchParams(entries).toString();
+    return request(`/admin/payments/export-sheets-info${qs ? `?${qs}` : ""}`);
+  },
   adminSalesmanHistory: (id, date) => request(`/admin/salesmen/${id}/history?date=${date}`),
   adminSendMessage: (payload) => request("/admin/messages", { method: "POST", body: payload }),
   adminGetMessages: (salesmanId) => request(`/admin/messages${salesmanId ? `?salesmanId=${salesmanId}` : ""}`),
@@ -190,13 +195,13 @@ export const api = {
 // as a query param, since these are opened as plain navigations/downloads
 // rather than fetch() calls — a normal Authorization header isn't possible
 // for a direct link click.
-export function buildExportUrl(format, params = {}) {
+export function buildExportUrl(format, params = {}, resource = "leads") {
   const base = getApiBase();
   const session = getSession();
   const entries = Object.entries(params).filter(([, v]) => v != null && v !== "" && v !== "all");
   const qs = new URLSearchParams(entries);
   if (session?.token) qs.set("token", session.token);
-  return `${base}/admin/leads/export.${format}?${qs.toString()}`;
+  return `${base}/admin/${resource}/export.${format}?${qs.toString()}`;
 }
 
 // ---------------------------------------------------------------------------
