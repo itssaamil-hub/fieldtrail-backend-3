@@ -155,6 +155,13 @@ export const api = {
   },
   adminCreateExpense: (payload) => request(`/admin/expenses`, { method: "POST", body: payload }),
   adminDeleteExpense: (id) => request(`/admin/expenses/${id}`, { method: "DELETE" }),
+
+  // Push notifications — shared across both roles.
+  notificationsVapidKey: () => request(`/notifications/vapid-public-key`),
+  notificationsSubscribe: (subscription) => request(`/notifications/subscribe`, { method: "POST", body: subscription }),
+  notificationsUnsubscribe: (endpoint) => request(`/notifications/subscribe`, { method: "DELETE", body: { endpoint } }),
+  notificationsGetPreferences: () => request(`/notifications/preferences`),
+  notificationsSetPreferences: (payload) => request(`/notifications/preferences`, { method: "PATCH", body: payload }),
   adminGetSettings: () => request("/admin/settings"),
   adminUpdateSettings: (payload) => request("/admin/settings", { method: "PATCH", body: payload }),
   adminExportSheetsInfo: (params = {}) => {
@@ -240,6 +247,7 @@ export function mapLeadRow(row) {
     posName: row.pos_name || "",
     renewalMonth: row.renewal_month || "",
     renewalDate: row.renewal_date || "",
+    nextFollowUpDate: row.next_follow_up_date || "",
     dealValue: row.deal_value != null ? Number(row.deal_value) : null,
     owner: row.contact_name,
     phone: row.phone,
