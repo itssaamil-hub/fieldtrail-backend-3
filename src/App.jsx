@@ -34,6 +34,7 @@ import {
   Wallet,
   Receipt,
   LayoutGrid,
+  Bell,
 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -189,6 +190,92 @@ function useInstallPrompt() {
   return { canInstall: !!deferredPrompt && !installed, installed, promptInstall };
 }
 
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; i++) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
+}
+
+const NOTIFICATION_PREF_DEFAULTS = {
+  hotLead: true, statusConversation: true, statusNegotiation: true,
+  statusDemo: true, renewalDue: true, followUpDue: true,
+};
+
+function usePushNotifications(session) {
+  const supported = typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window && typeof Notification !== "undefined";
+  const [subscribed, setSubscribed] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [preferences, setPreferences] = useState(NOTIFICATION_PREF_DEFAULTS);
+
+  useEffect(() => {
+    if (!supported || !session) { setChecking(false); return; }
+    let cancelled = false;
+    navigator.serviceWorker.register("/push-sw.js")
+      .then((reg) => reg.pushManager.getSubscription())
+      .then((sub) => { if (!cancelled) setSubscribed(!!sub); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setChecking(false); });
+    return () => { cancelled = true; };
+  }, [supported, session]);
+
+  useEffect(() => {
+    if (!subscribed) return;
+    api.notificationsGetPreferences().then((res) => setPreferences(res.preferences)).catch(() => {});
+  }, [subscribed]);
+
+  const enable = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") { setError("Notifications are blocked — allow them for this site in your browser settings to turn this on."); return; }
+      const reg = await navigator.serviceWorker.register("/push-sw.js");
+      const { publicKey } = await api.notificationsVapidKey();
+      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) });
+      await api.notificationsSubscribe(sub.toJSON());
+      setSubscribed(true);
+    } catch (err) {
+      setError(err.message || "Couldn't turn on notifications.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const disable = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      const reg = await navigator.serviceWorker.register("/push-sw.js");
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        await api.notificationsUnsubscribe(sub.endpoint).catch(() => {});
+        await sub.unsubscribe();
+      }
+      setSubscribed(false);
+    } catch (err) {
+      setError(err.message || "Couldn't turn off notifications.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const setPreference = async (key, value) => {
+    setPreferences((p) => ({ ...p, [key]: value }));
+    try {
+      await api.notificationsSetPreferences({ [key]: value });
+    } catch (err) {
+      setError(err.message || "Couldn't save that preference.");
+    }
+  };
+
+  return { supported, subscribed, checking, busy, error, preferences, enable, disable, setPreference };
+}
+
 // ---------------------------------------------------------------------------
 export default function App() {
   const [apiBase, setApiBaseState] = useState(getApiBase());
@@ -199,6 +286,7 @@ export default function App() {
   const [topPage, setTopPage] = useState("dashboard"); // "dashboard" | "reports" — lives here so the toggle can live in the dark TopBar, for both roles
   const online = useOnlineStatus();
   const { canInstall, installed, promptInstall } = useInstallPrompt();
+  const pushNotifications = usePushNotifications(session);
 
   const handleSaveApiBase = (url) => {
     const changed = url !== apiBase;
@@ -252,6 +340,7 @@ export default function App() {
           canInstall={canInstall}
           installed={installed}
           promptInstall={promptInstall}
+          push={pushNotifications}
         />
       )}
       {showCrmSettings && <CrmSettingsModal onClose={() => setShowCrmSettings(false)} />}
@@ -493,10 +582,19 @@ function LoginScreen({ apiBase, online, onLoggedIn, onOpenSettings }) {
   );
 }
 
-function SettingsModal({ apiBase, onClose, onSave, onLogout, onOpenCrmSettings, canInstall, installed, promptInstall }) {
+function SettingsModal({ apiBase, onClose, onSave, onLogout, onOpenCrmSettings, canInstall, installed, promptInstall, push }) {
   const [url, setUrl] = useState(apiBase || "");
   const isIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
   const [showIosHint, setShowIosHint] = useState(false);
+
+  const PREF_ROWS = [
+    ["hotLead", "🔥 Hot leads"],
+    ["statusConversation", "Deal moves to Conversation"],
+    ["statusNegotiation", "Deal moves to Negotiation"],
+    ["statusDemo", "Deal moves to Demo"],
+    ["renewalDue", "Renewals due"],
+    ["followUpDue", "Follow-ups due"],
+  ];
 
   return (
     <Overlay onClose={onClose} title="Settings">
@@ -523,6 +621,51 @@ function SettingsModal({ apiBase, onClose, onSave, onLogout, onOpenCrmSettings, 
         >
           <Settings size={14} /> CRM Settings
         </button>
+      )}
+
+      {push && (
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: T.inkSoft, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 8 }}>Notifications</div>
+          {!push.supported ? (
+            <div style={{ fontSize: 12, color: T.inkSoft, background: T.paperDeep, borderRadius: 10, padding: 12 }}>
+              Push notifications aren't supported in this browser. On iPhone, install the app first (Add to Home Screen), then try again from there.
+            </div>
+          ) : push.checking ? (
+            <div style={{ fontSize: 12, color: T.inkSoft }}>Checking…</div>
+          ) : !push.subscribed ? (
+            <button
+              onClick={push.enable}
+              disabled={push.busy}
+              style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "11px", borderRadius: 11, border: `1px solid ${T.line}`, cursor: push.busy ? "default" : "pointer", background: T.paperDeep, color: T.ink, fontWeight: 700, fontSize: 13.5, opacity: push.busy ? 0.7 : 1 }}
+            >
+              <Bell size={14} /> {push.busy ? "Turning on…" : "Turn on push notifications"}
+            </button>
+          ) : (
+            <>
+              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                {PREF_ROWS.map(([key, label]) => (
+                  <label key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 2px", cursor: "pointer" }}>
+                    <span style={{ fontSize: 13 }}>{label}</span>
+                    <input
+                      type="checkbox"
+                      checked={!!push.preferences[key]}
+                      onChange={(e) => push.setPreference(key, e.target.checked)}
+                      style={{ width: 18, height: 18, accentColor: T.route, cursor: "pointer" }}
+                    />
+                  </label>
+                ))}
+              </div>
+              <button
+                onClick={push.disable}
+                disabled={push.busy}
+                style={{ width: "100%", marginTop: 10, padding: "9px", borderRadius: 10, border: `1px solid ${T.line}`, cursor: push.busy ? "default" : "pointer", background: "#fff", color: T.inkSoft, fontWeight: 600, fontSize: 12.5, opacity: push.busy ? 0.7 : 1 }}
+              >
+                {push.busy ? "Turning off…" : "Turn off notifications"}
+              </button>
+            </>
+          )}
+          {push.error && <div style={{ fontSize: 11.5, color: T.danger, marginTop: 8 }}>{push.error}</div>}
+        </div>
       )}
 
       <div style={{ fontSize: 11, fontWeight: 700, color: T.inkSoft, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 8 }}>Backend</div>
@@ -2896,6 +3039,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
     renewalMonth: lead.renewalMonth || "", renewalDate: lead.renewalDate || "",
     owner: lead.owner || "", phone: lead.phone || "", notes: lead.notes || "",
     dealValue: lead.dealValue != null ? String(lead.dealValue) : "",
+    nextFollowUpDate: lead.nextFollowUpDate || "",
   });
   const [saving, setSaving] = useState(false);
   const [savedOverrides, setSavedOverrides] = useState({}); // reflects the drawer's own last successful save immediately, so it never shows stale data while waiting on a full reload
@@ -2921,6 +3065,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
       renewalMonth: form.renewalMonth, renewalDate: form.renewalDate || null,
       contactName: form.owner, phone: form.phone, notes: form.notes,
       dealValue: form.dealValue ? Number(form.dealValue) : null,
+      nextFollowUpDate: form.nextFollowUpDate || null,
     };
     await onUpdate(lead.id, payload);
     setSavedOverrides((prev) => ({
@@ -2929,6 +3074,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
       renewalMonth: payload.renewalMonth, renewalDate: payload.renewalDate || "",
       owner: payload.contactName, phone: payload.phone, notes: payload.notes,
       dealValue: payload.dealValue,
+      nextFollowUpDate: payload.nextFollowUpDate || "",
     }));
     setSaving(false);
     setEditing(false);
@@ -2940,6 +3086,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
     ["POS Name", displayLead.posName],
     ["Renewal Month", displayLead.renewalMonth],
     ["Renewal Date", displayLead.renewalDate],
+    ["Next Follow-up", displayLead.nextFollowUpDate],
     ["Contact Name", displayLead.owner],
     ["Contact Number", displayLead.phone],
     ["Expected Deal Value", displayLead.dealValue != null ? `₹${displayLead.dealValue.toLocaleString("en-IN")}` : null],
@@ -2979,6 +3126,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
               <div style={{ flex: 1 }}><Field label="Renewal Date"><input style={inputStyle} type="date" value={form.renewalDate} onChange={set("renewalDate")} /></Field></div>
             </div>
             <Field label="Expected Deal Value"><input style={inputStyle} type="number" min="0" value={form.dealValue} onChange={set("dealValue")} placeholder="₹ e.g. 45000" /></Field>
+            <Field label="Next Follow-up Date"><input style={inputStyle} type="date" value={form.nextFollowUpDate} onChange={set("nextFollowUpDate")} /></Field>
             <Field label="Comments"><textarea style={{ ...inputStyle, minHeight: 60 }} value={form.notes} onChange={set("notes")} /></Field>
             <div style={{ display: "flex", gap: 8 }}>
               <button onClick={() => setEditing(false)} style={{ flex: 1, padding: 10, borderRadius: 11, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
