@@ -35,6 +35,8 @@ import {
   Receipt,
   LayoutGrid,
   Bell,
+  Lock,
+  LockOpen,
 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -201,7 +203,7 @@ function urlBase64ToUint8Array(base64String) {
 
 const NOTIFICATION_PREF_DEFAULTS = {
   hotLead: true, statusConversation: true, statusNegotiation: true,
-  statusDemo: true, renewalDue: true, followUpDue: true,
+  statusDemo: true, renewalDue: true, followUpDue: true, dayStartDigest: true,
 };
 
 function usePushNotifications(session) {
@@ -612,6 +614,7 @@ function SettingsModal({ apiBase, onClose, onSave, onLogout, onOpenCrmSettings, 
     ["statusDemo", "Deal moves to Demo"],
     ["renewalDue", "Renewals due"],
     ["followUpDue", "Follow-ups due"],
+    ["dayStartDigest", "Day-start report (~1pm)"],
   ];
 
   return (
@@ -924,6 +927,7 @@ function CrmSettingsModal({ onClose }) {
           <SettingToggle label="Require Status" checked={leadSettings.requireStatus} onChange={toggleLead("requireStatus")} />
           <SettingToggle label="Require Comments" checked={leadSettings.requireComments} onChange={toggleLead("requireComments")} />
           <SettingToggle label="Require Expected Deal Value" checked={leadSettings.requireDealValue} onChange={toggleLead("requireDealValue")} />
+          <SettingToggle label="Require Next Follow-up Date" checked={leadSettings.requireFollowUpDate} onChange={toggleLead("requireFollowUpDate")} />
 
           <div style={{ fontSize: 11, textTransform: "uppercase", color: T.inkSoft, fontWeight: 700, letterSpacing: 0.4, marginTop: 22, marginBottom: 4 }}>Location Settings</div>
           <SettingToggle
@@ -1153,6 +1157,7 @@ function LiveMap({ salesmen, leads, onSelectLead, title = "Live Employees & Lead
   const leadMarkersRef = useRef({});
   const onSelectLeadRef = useRef(onSelectLead);
   const flownOnceRef = useRef(false);
+  const [locked, setLocked] = useState(true); // frozen by default so an accidental touch/scroll doesn't drag the map
   onSelectLeadRef.current = onSelectLead;
 
   const salesmanIcon = (s) =>
@@ -1179,7 +1184,7 @@ function LiveMap({ salesmen, leads, onSelectLead, title = "Live Employees & Lead
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
-    const map = L.map(containerRef.current, { center: [26.847, 80.975], zoom: 12, scrollWheelZoom: true });
+    const map = L.map(containerRef.current, { center: [26.847, 80.975], zoom: 12, scrollWheelZoom: false, dragging: false, touchZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false });
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
@@ -1187,6 +1192,18 @@ function LiveMap({ salesmen, leads, onSelectLead, title = "Live Employees & Lead
     mapRef.current = map;
     return () => { map.remove(); mapRef.current = null; };
   }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const toggle = (name) => (locked ? map[name].disable() : map[name].enable());
+    toggle("dragging");
+    toggle("scrollWheelZoom");
+    toggle("touchZoom");
+    toggle("doubleClickZoom");
+    toggle("boxZoom");
+    if (map.keyboard) toggle("keyboard");
+  }, [locked]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -1245,7 +1262,21 @@ function LiveMap({ salesmen, leads, onSelectLead, title = "Live Employees & Lead
         {!subtitle && <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: T.verified, fontFamily: "'IBM Plex Mono', monospace" }}><Radio size={12} /> LIVE</div>}
       </div>
       {subtitle && <div style={{ fontSize: 11.5, color: T.inkSoft, marginBottom: 8 }}>{subtitle}</div>}
-      <div ref={containerRef} style={{ width: "100%", height: subtitle ? 460 : 360, borderRadius: 11, overflow: "hidden" }} />
+      <div style={{ position: "relative" }}>
+        <div ref={containerRef} style={{ width: "100%", height: subtitle ? 460 : 360, borderRadius: 11, overflow: "hidden" }} />
+        <button
+          onClick={() => setLocked((v) => !v)}
+          title={locked ? "Map is locked — tap to unlock and move it" : "Map is unlocked — tap to lock it in place"}
+          style={{
+            position: "absolute", top: 10, right: 10, zIndex: 1000, display: "flex", alignItems: "center", gap: 6,
+            padding: "7px 11px", borderRadius: 999, border: "none", cursor: "pointer",
+            background: locked ? "rgba(26,29,35,0.85)" : T.route, color: "#fff", fontSize: 11.5, fontWeight: 700,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
+          }}
+        >
+          {locked ? <Lock size={13} /> : <LockOpen size={13} />} {locked ? "Locked" : "Movable"}
+        </button>
+      </div>
       <div style={{ display: "flex", gap: 14, marginTop: 8, flexWrap: "wrap", fontSize: 11, color: T.inkSoft }}>
         {salesmen.length > 0 && <LegendDot color={T.route} label="Employee (online)" />}
         <LegendDot color={T.verified} label="Verified lead" />
@@ -1465,6 +1496,7 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
   const converted = leads.filter((l) => l.status === "won").length;
   const convertedValue = leads.filter((l) => l.status === "won" && l.dealValue != null).reduce((sum, l) => sum + l.dealValue, 0);
   const pending = leads.filter((l) => !["won", "lost"].includes(l.status)).length;
+  const upcomingFollowUps = leads.filter((l) => l.nextFollowUpDate && new Date(l.nextFollowUpDate) >= new Date(new Date().toDateString()));
   const activeSalesmen = salesmen.filter((s) => s.status === "online").length;
 
   const filteredLeads = leads.filter(
@@ -1501,12 +1533,12 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
         <StatCard label="Total Employees" value={salesmen.length} />
         <StatCard label="Active Now" value={activeSalesmen} color={T.verified} />
-        <StatCard label="Leads Today" value={todayLeads.length} />
+        <StatCard label="Leads Today" value={todayLeads.length} onClick={() => setStatLeadsModal({ title: "Leads Today", leads: todayLeads })} />
         <StatCard label={<>Hot Leads <span style={{ fontSize: 8.5, opacity: 0.65 }}>TODAY</span></>} value={hotLeadsToday.length} color={T.danger} onClick={() => setStatLeadsModal({ title: "Hot Leads Today", leads: hotLeadsToday })} />
         <StatCard label="In Negotiation" value={inNegotiation.length} color={T.route} onClick={() => setStatLeadsModal({ title: "In Negotiation", leads: inNegotiation })} />
-        <StatCard label="Total Leads" value={leads.length} />
+        <StatCard label="Total Leads" value={leads.length} sub={`${pending} pending`} />
         <StatCard label="Won" value={converted} sub={convertedValue > 0 ? `${fmtMoney(convertedValue)} closed` : undefined} color={T.verified} onClick={() => setStatLeadsModal({ title: "Won Leads", leads: leads.filter((l) => l.status === "won") })} />
-        <StatCard label="Pending" value={pending} color={T.warn} />
+        <StatCard label="Upcoming Follow-up" value={upcomingFollowUps.length} color={T.warn} onClick={() => setStatLeadsModal({ title: "Upcoming Follow-ups", leads: upcomingFollowUps })} />
         <StatCard label="Renewals Due" sub="next 30 days" value={upcomingRenewals.length} color={T.accent} onClick={() => setStatLeadsModal({ title: "Renewals Due (Next 30 Days)", leads: upcomingRenewals })} />
       </div>
 
@@ -1950,6 +1982,7 @@ function PaymentDueReport({ salesmen }) {
   const [expandedLeadId, setExpandedLeadId] = useState(null);
   const [sheetsInfo, setSheetsInfo] = useState(null);
   const [sheetsError, setSheetsError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const load = useCallback(() => {
     setPayments(null);
@@ -1999,6 +2032,20 @@ function PaymentDueReport({ salesmen }) {
           }}
         />
       </div>
+      <div style={{ position: "relative", marginBottom: 14 }}>
+        <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: T.inkSoft }} />
+        <input
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search by business, contact, or phone…"
+          style={{ ...inputStyle, marginBottom: 0, width: "100%", padding: "9px 12px 9px 32px", boxSizing: "border-box" }}
+        />
+        {searchQuery && (
+          <button onClick={() => setSearchQuery("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer", color: T.inkSoft }}>
+            <X size={14} />
+          </button>
+        )}
+      </div>
       {sheetsError && <div style={{ fontSize: 12, color: T.danger, marginBottom: 10 }}>{sheetsError}</div>}
       {sheetsInfo && (
         <div style={{ fontSize: 12, background: T.paperDeep, borderRadius: 11, padding: "10px 12px", marginBottom: 14 }}>
@@ -2020,10 +2067,16 @@ function PaymentDueReport({ salesmen }) {
       )}
       {payments && payments.length === 0 && <EmptyReportState text={onlyPending ? "Nothing pending — everything's been paid." : "No Won deals with a deal value yet."} />}
 
-      {payments && payments.length > 0 && (
+      {(() => {
+        const filteredPayments = (payments || []).filter(
+          (p) => !searchQuery.trim() || [p.business, p.contactName, p.phone].some((f) => f && f.toLowerCase().includes(searchQuery.trim().toLowerCase()))
+        );
+        if (!payments || payments.length === 0) return null;
+        if (filteredPayments.length === 0) return <EmptyReportState text="No payments match that search." />;
+        return (
         <>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {payments.map((p) => {
+            {filteredPayments.map((p) => {
               const isExpanded = expandedLeadId === p.leadId;
               return (
                 <div key={p.leadId} style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: "12px 14px" }}>
@@ -2060,7 +2113,8 @@ function PaymentDueReport({ salesmen }) {
             })}
           </div>
         </>
-      )}
+        );
+      })()}
 
       {recordingFor && (
         <RecordPaymentModal
@@ -3012,13 +3066,20 @@ function AdminAddLeadModal({ salesmen, onClose, onSubmit }) {
   const [form, setForm] = useState({
     salesmanId: activeSalesmen[0]?.id || "",
     business: "", subLocation: "", posName: "", renewalMonth: "", renewalDate: "",
-    owner: "", phone: "", status: "cold", notes: "", dealValue: "",
+    owner: "", phone: "", status: "cold", notes: "", dealValue: "", nextFollowUpDate: "",
   });
+  const [leadSettings, setLeadSettings] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  const canSubmit = form.salesmanId && form.business.trim().length > 0;
+  useEffect(() => {
+    api.adminGetSettings().then((res) => setLeadSettings(res.leadSettings || null)).catch(() => {});
+  }, []);
+
+  const canSubmit =
+    form.salesmanId && form.business.trim().length > 0 &&
+    (!leadSettings?.requireFollowUpDate || form.nextFollowUpDate.trim().length > 0);
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -3037,6 +3098,7 @@ function AdminAddLeadModal({ salesmen, onClose, onSubmit }) {
         status: form.status,
         notes: form.notes || null,
         dealValue: form.dealValue ? Number(form.dealValue) : null,
+        nextFollowUpDate: form.nextFollowUpDate || null,
       });
     } catch (err) {
       setError(err.message || "Couldn't create that lead.");
@@ -3069,11 +3131,14 @@ function AdminAddLeadModal({ salesmen, onClose, onSubmit }) {
             </Field></div>
             <div style={{ flex: 1 }}><Field label="Renewal Date"><input style={inputStyle} type="date" value={form.renewalDate} onChange={set("renewalDate")} /></Field></div>
           </div>
-          <Field label="Status">
-            <select style={inputStyle} value={form.status} onChange={set("status")}>
-              {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
-            </select>
-          </Field>
+          <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 1 }}><Field label="Status">
+              <select style={inputStyle} value={form.status} onChange={set("status")}>
+                {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+              </select>
+            </Field></div>
+            <div style={{ flex: 1 }}><Field label={`Next Follow-up${leadSettings?.requireFollowUpDate ? " *" : ""}`}><input style={inputStyle} type="date" value={form.nextFollowUpDate} onChange={set("nextFollowUpDate")} /></Field></div>
+          </div>
           <Field label="Expected Deal Value"><input style={inputStyle} type="number" min="0" value={form.dealValue} onChange={set("dealValue")} placeholder="₹ e.g. 45000" /></Field>
           <Field label="Comments"><textarea style={{ ...inputStyle, minHeight: 60 }} value={form.notes} onChange={set("notes")} /></Field>
 
@@ -3255,8 +3320,10 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
               </Field></div>
               <div style={{ flex: 1 }}><Field label="Renewal Date"><input style={inputStyle} type="date" value={form.renewalDate} onChange={set("renewalDate")} /></Field></div>
             </div>
-            <Field label="Expected Deal Value"><input style={inputStyle} type="number" min="0" value={form.dealValue} onChange={set("dealValue")} placeholder="₹ e.g. 45000" /></Field>
-            <Field label="Next Follow-up Date"><input style={inputStyle} type="date" value={form.nextFollowUpDate} onChange={set("nextFollowUpDate")} /></Field>
+            <div style={{ display: "flex", gap: 10 }}>
+              <div style={{ flex: 1 }}><Field label="Expected Deal Value"><input style={inputStyle} type="number" min="0" value={form.dealValue} onChange={set("dealValue")} placeholder="₹ e.g. 45000" /></Field></div>
+              <div style={{ flex: 1 }}><Field label="Next Follow-up Date"><input style={inputStyle} type="date" value={form.nextFollowUpDate} onChange={set("nextFollowUpDate")} /></Field></div>
+            </div>
             <Field label="Comments"><textarea style={{ ...inputStyle, minHeight: 60 }} value={form.notes} onChange={set("notes")} /></Field>
             <div style={{ display: "flex", gap: 8 }}>
               <button onClick={() => setEditing(false)} style={{ flex: 1, padding: 10, borderRadius: 11, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
@@ -3882,7 +3949,7 @@ function BigButton({ icon: IconC, label, onClick, primary, disabled }) {
 const DEFAULT_LEAD_SETTINGS = {
   requireBusinessName: true, requireSubLocation: true, requirePosName: true,
   requireContactName: true, requireContactNumber: true, requireStatus: true, requireComments: false,
-  requireDealValue: false,
+  requireDealValue: false, requireFollowUpDate: false,
 };
 const DEFAULT_LOCATION_SETTINGS = { gpsLocation: true, locationMandatoryForNewLead: true, continuousGpsTracking: true };
 
@@ -3943,7 +4010,7 @@ function MessagesSection({ messages, onMarkRead, onDelete }) {
 function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
   const [form, setForm] = useState({
     business: "", subLocation: "", posName: "", renewalMonth: "", renewalDate: "",
-    owner: "", phone: "", category: "", status: "cold", notes: "", dealValue: "",
+    owner: "", phone: "", category: "", status: "cold", notes: "", dealValue: "", nextFollowUpDate: "",
   });
   const [leadSettings, setLeadSettings] = useState(DEFAULT_LEAD_SETTINGS);
   const [locationSettings, setLocationSettings] = useState(DEFAULT_LOCATION_SETTINGS);
@@ -4008,6 +4075,7 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
     (!leadSettings.requireContactNumber || form.phone.trim().length > 0) &&
     (!leadSettings.requireComments || form.notes.trim().length > 0) &&
     (!leadSettings.requireDealValue || form.dealValue.trim().length > 0) &&
+    (!leadSettings.requireFollowUpDate || form.nextFollowUpDate.trim().length > 0) &&
     locationReady;
 
   const verification = gps.state === "ok" ? (gps.accuracy > 50 ? "poor_accuracy" : "verified") : null;
@@ -4030,6 +4098,7 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
       status: form.status,
       notes: form.notes,
       dealValue: form.dealValue ? Number(form.dealValue) : null,
+      nextFollowUpDate: form.nextFollowUpDate || null,
       lat: hasGps ? gps.lat : null,
       lng: hasGps ? gps.lng : null,
       accuracyM: hasGps ? gps.accuracy : null,
@@ -4103,9 +4172,18 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
           </select>
         </Field>
       )}
-      <Field label={`Expected Deal Value${leadSettings.requireDealValue ? " *" : ""}`}>
-        <input style={inputStyle} type="number" min="0" inputMode="decimal" value={form.dealValue} onChange={set("dealValue")} placeholder="₹ e.g. 45000" />
-      </Field>
+      <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ flex: 1 }}>
+          <Field label={`Expected Deal Value${leadSettings.requireDealValue ? " *" : ""}`}>
+            <input style={inputStyle} type="number" min="0" inputMode="decimal" value={form.dealValue} onChange={set("dealValue")} placeholder="₹ e.g. 45000" />
+          </Field>
+        </div>
+        <div style={{ flex: 1 }}>
+          <Field label={`Next Follow-up${leadSettings.requireFollowUpDate ? " *" : ""}`}>
+            <input style={inputStyle} type="date" value={form.nextFollowUpDate} onChange={set("nextFollowUpDate")} />
+          </Field>
+        </div>
+      </div>
       <div style={{ display: "flex", gap: 10 }}>
         <div style={{ flex: 1 }}>
           <Field label="Renewal Month">
