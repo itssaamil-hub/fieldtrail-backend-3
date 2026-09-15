@@ -161,6 +161,7 @@ export const api = {
   notificationsVapidKey: () => request(`/notifications/vapid-public-key`),
   notificationsSubscribe: (subscription) => request(`/notifications/subscribe`, { method: "POST", body: subscription }),
   notificationsUnsubscribe: (endpoint) => request(`/notifications/subscribe`, { method: "DELETE", body: { endpoint } }),
+  notificationsUnsubscribeAll: () => request(`/notifications/subscriptions-all`, { method: "DELETE" }),
   notificationsGetPreferences: () => request(`/notifications/preferences`),
   notificationsSetPreferences: (payload) => request(`/notifications/preferences`, { method: "PATCH", body: payload }),
   adminGetSettings: () => request("/admin/settings"),
