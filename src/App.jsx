@@ -478,7 +478,7 @@ function TopBar({ online, session, page, onChangePage, onAddExpense, onOpenSetti
 
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <ConnectionPill online={online} />
-          {onOpenNotifications && <button type="button" onClick={onOpenNotifications} title="Notifications" aria-label="Notifications" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 36, height: 44, borderRadius: 6, border: "1px solid rgba(255,255,255,0.22)", cursor: "pointer", background: "rgba(255,255,255,0.14)", color: "#fff" }}><Bell size={17} /></button>}
+          {onOpenNotifications && <button type="button" onClick={onOpenNotifications} title="Notifications" aria-label="Notifications" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 6, border: "1px solid rgba(255,255,255,0.22)", cursor: "pointer", background: "rgba(255,255,255,0.14)", color: "#fff" }}><Bell size={14} /></button>}
           <button
             onClick={onOpenSettings}
             title="Settings"
