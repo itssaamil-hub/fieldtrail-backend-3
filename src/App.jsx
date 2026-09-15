@@ -264,12 +264,16 @@ function usePushNotifications(session) {
     setBusy(true);
     setError("");
     try {
+      // Unsubscribe locally on this browser (whatever registration is currently active).
       const reg = await navigator.serviceWorker.register("/push/push-sw.js", { scope: "/push/" });
       const sub = await reg.pushManager.getSubscription();
-      if (sub) {
-        await api.notificationsUnsubscribe(sub.endpoint).catch(() => {});
-        await sub.unsubscribe();
-      }
+      if (sub) await sub.unsubscribe().catch(() => {});
+
+      // Also wipe every subscription row this account has on the server —
+      // including any stale one left over from a device/browser that's
+      // since changed, so a dead subscription can never silently swallow
+      // sends the person can no longer see.
+      await api.notificationsUnsubscribeAll().catch(() => {});
       setSubscribed(false);
     } catch (err) {
       setError(err.message || "Couldn't turn off notifications.");
