@@ -1,3 +1,4 @@
+import NotificationsPanel from "./NotificationsPanel.jsx";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   MapPin,
@@ -203,7 +204,7 @@ function urlBase64ToUint8Array(base64String) {
 
 const NOTIFICATION_PREF_DEFAULTS = {
   hotLead: true, statusConversation: true, statusNegotiation: true,
-  statusDemo: true, renewalDue: true, followUpDue: true, dayStartDigest: true,
+  statusDemo: true, renewalDue: true, followUpDue: true, dayStartDigest: true, salesBriefing: true,
 };
 
 function usePushNotifications(session) {
@@ -303,10 +304,39 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showCrmSettings, setShowCrmSettings] = useState(false);
   const [showAddExpense, setShowAddExpense] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notificationLead, setNotificationLead] = useState(null);
   const [topPage, setTopPage] = useState("dashboard"); // "dashboard" | "reports" — lives here so the toggle can live in the dark TopBar, for both roles
   const online = useOnlineStatus();
   const { canInstall, installed, promptInstall } = useInstallPrompt();
   const pushNotifications = usePushNotifications(session);
+
+  useEffect(() => {
+    const openFromLocation = () => {
+      if (session && window.location.hash === "#sales-briefing") {
+        setShowSettings(false); setShowCrmSettings(false); setShowAddExpense(false);
+        setShowNotifications(true);
+      }
+    };
+    const onNotification = event => {
+      if (event.data?.type !== "OPEN_NOTIFICATION") return;
+      try {
+        const url = new URL(event.data.url, window.location.origin);
+        if (url.origin !== window.location.origin || url.hash !== "#sales-briefing") return;
+        if (window.location.hash !== url.hash) window.location.hash = url.hash;
+        openFromLocation();
+      } catch { /* Ignore malformed messages. */ }
+    };
+    openFromLocation();
+    window.addEventListener("hashchange", openFromLocation);
+    navigator.serviceWorker?.addEventListener("message", onNotification);
+    return () => { window.removeEventListener("hashchange", openFromLocation); navigator.serviceWorker?.removeEventListener("message", onNotification); };
+  }, [session]);
+
+  const closeNotifications = () => {
+    setShowNotifications(false);
+    if (window.location.hash === "#sales-briefing") window.history.replaceState(null, "", window.location.pathname + window.location.search);
+  };
 
   const handleSaveApiBase = (url) => {
     const changed = url !== apiBase;
@@ -326,6 +356,8 @@ export default function App() {
   const handleLogout = () => {
     clearSession();
     setSessionState(null);
+    closeNotifications();
+    setNotificationLead(null);
   };
 
   let body;
@@ -336,7 +368,7 @@ export default function App() {
   } else if (session.role === "admin") {
     body = <AdminApp session={session} online={online} onLogout={handleLogout} page={topPage} />;
   } else {
-    body = <SalesmanApp session={session} online={online} onLogout={handleLogout} page={topPage} />;
+    body = <SalesmanApp key={`salesman-${session.id}`} notificationLead={notificationLead} session={session} online={online} onLogout={handleLogout} page={topPage} />;
   }
 
   return (
@@ -347,9 +379,13 @@ export default function App() {
         page={session ? topPage : undefined}
         onChangePage={session ? setTopPage : undefined}
         onAddExpense={session?.role === "admin" ? () => setShowAddExpense(true) : undefined}
-        onOpenSettings={() => setShowSettings(true)}
+        onOpenNotifications={session ? () => { setShowSettings(false); setShowNotifications(true); } : undefined}
+        onOpenSettings={() => { closeNotifications(); setShowSettings(true); }}
       />
       {body}
+      {session && showNotifications && <NotificationsPanel key={`notifications-${session.id}`} session={session} online={online} onClose={closeNotifications} onOpenLead={id => {
+        closeNotifications(); setTopPage("dashboard"); setNotificationLead({ id, openedAt: Date.now() });
+      }} />}
       {showSettings && (
         <SettingsModal
           apiBase={apiBase}
@@ -385,7 +421,7 @@ function LogoMark({ size = 20, color = "#fff" }) {
   );
 }
 
-function TopBar({ online, session, page, onChangePage, onAddExpense, onOpenSettings }) {
+function TopBar({ online, session, page, onChangePage, onAddExpense, onOpenSettings, onOpenNotifications }) {
   const [narrow, setNarrow] = useState(window.innerWidth < 560);
   useEffect(() => {
     const onResize = () => setNarrow(window.innerWidth < 560);
@@ -442,6 +478,7 @@ function TopBar({ online, session, page, onChangePage, onAddExpense, onOpenSetti
 
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <ConnectionPill online={online} />
+          {onOpenNotifications && <button type="button" onClick={onOpenNotifications} title="Notifications" aria-label="Notifications" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 36, height: 44, borderRadius: 6, border: "1px solid rgba(255,255,255,0.22)", cursor: "pointer", background: "rgba(255,255,255,0.14)", color: "#fff" }}><Bell size={17} /></button>}
           <button
             onClick={onOpenSettings}
             title="Settings"
@@ -615,6 +652,7 @@ function SettingsModal({ apiBase, onClose, onSave, onLogout, onOpenCrmSettings, 
     ["renewalDue", "Renewals due"],
     ["followUpDue", "Follow-ups due"],
     ["dayStartDigest", "Day-start report (~1pm)"],
+    ["salesBriefing", "Daily sales briefing"],
   ];
 
   return (
@@ -3463,7 +3501,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
 // ---------------------------------------------------------------------------
 const PING_MIN_INTERVAL_MS = 12000;
 
-function SalesmanApp({ session, online, page }) {
+function SalesmanApp({ session, online, page, notificationLead }) {
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -3704,6 +3742,7 @@ function SalesmanApp({ session, online, page }) {
 
   return (
     <SalesmanView
+      notificationLead={notificationLead}
       session={session}
       leads={leads}
       dayStarted={dayStarted}
@@ -3753,7 +3792,7 @@ function adHocLeadFromPayload(payload, session) {
   };
 }
 
-function SalesmanView({ session, leads, dayStarted, onToggleDay, togglingDay, justToggledDay, onAddLead, onUpdateLeadStatus, onUpdateLeadDetails, online, gpsStatus, queuedCount, loadError, messages, onMarkMessageRead, onDeleteMessage, dailyTarget, monthlyTarget, page }) {
+function SalesmanView({ notificationLead, session, leads, dayStarted, onToggleDay, togglingDay, justToggledDay, onAddLead, onUpdateLeadStatus, onUpdateLeadDetails, online, gpsStatus, queuedCount, loadError, messages, onMarkMessageRead, onDeleteMessage, dailyTarget, monthlyTarget, page }) {
   const [showAddLead, setShowAddLead] = useState(false);
   const [showMyLeads, setShowMyLeads] = useState(false);
   const [viewingLead, setViewingLead] = useState(null);
@@ -3763,6 +3802,20 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, togglingDay, ju
   const [showNegotiation, setShowNegotiation] = useState(false);
   const [showConversation, setShowConversation] = useState(false);
   const [showRenewals, setShowRenewals] = useState(false);
+
+  const [notificationLeadError, setNotificationLeadError] = useState("");
+  useEffect(() => {
+    if (!notificationLead) return;
+    let cancelled = false;
+    setNotificationLeadError("");
+    setShowAddLead(false); setShowMyLeads(false); setShowTodayLeads(false); setShowHotLeads(false);
+    setShowConverted(false); setShowNegotiation(false); setShowConversation(false); setShowRenewals(false);
+    setViewingLead(null);
+    api.salesmanLead(notificationLead.id).then(res => {
+      if (!cancelled) setViewingLead(mapLeadRow(res.lead));
+    }).catch(err => { if (!cancelled) setNotificationLeadError(err.message || "Couldn't open this lead. Please refresh your briefing."); });
+    return () => { cancelled = true; };
+  }, [notificationLead]);
 
   const todayLeads = leads.filter((l) => isToday(l.createdAt));
   const monthLeads = leads.filter((l) => isThisMonth(l.createdAt));
@@ -3805,6 +3858,7 @@ function SalesmanView({ session, leads, dayStarted, onToggleDay, togglingDay, ju
         </button>
       </div>
 
+      {notificationLeadError && <div role="alert" style={{ padding: 12, color: T.danger, background: T.dangerSoft, marginBottom: 14 }}>{notificationLeadError}</div>}
       {loadError && (
         <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: T.danger, background: T.dangerSoft, borderRadius: 11, padding: "9px 12px", marginBottom: 14 }}>
           <AlertTriangle size={14} /> {loadError}
