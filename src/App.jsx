@@ -1371,6 +1371,11 @@ function AdminApp({ session, online, page }) {
     }
   };
 
+  const onAddLead = async (payload) => {
+    await api.adminCreateLead(payload);
+    await loadAll(); // simplest way to get the new lead mapped + inserted in the right sorted position
+  };
+
   const onAddSalesman = async (payload) => {
     await api.adminCreateSalesman(payload);
     await loadAll();
@@ -1411,6 +1416,7 @@ function AdminApp({ session, online, page }) {
       onStatusChange={onStatusChange}
       onUpdateLead={onUpdateLead}
       onDeleteLead={onDeleteLead}
+      onAddLead={onAddLead}
       onAddSalesman={onAddSalesman}
       onEditSalesman={onEditSalesman}
       onDeleteSalesman={onDeleteSalesman}
@@ -1423,12 +1429,13 @@ function AdminApp({ session, online, page }) {
   );
 }
 
-function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead, onAddSalesman, onEditSalesman, onDeleteSalesman, onToggleSalesmanActive, loadError, wsConnected, online, page }) {
+function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead, onAddLead, onAddSalesman, onEditSalesman, onDeleteSalesman, onToggleSalesmanActive, loadError, wsConnected, online, page }) {
   const [filterSalesman, setFilterSalesman] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterDate, setFilterDate] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [leadsViewMode, setLeadsViewMode] = useState("list"); // "list" | "board"
+  const [showAdminAddLead, setShowAdminAddLead] = useState(false);
   const [leadsPage, setLeadsPage] = useState(1);
   const LEADS_PER_PAGE = 50;
   const [selectedLead, setSelectedLead] = useState(null);
@@ -1526,19 +1533,30 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
       <div className="ft-card" style={{ marginTop: 20, background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, padding: 18 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
           <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16 }}>Leads</div>
-          <div style={{ display: "flex", gap: 2, background: T.paperDeep, borderRadius: 8, padding: 2 }}>
-            <button
-              onClick={() => setLeadsViewMode("list")}
-              style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, padding: "5px 10px", borderRadius: 6, border: "none", cursor: "pointer", background: leadsViewMode === "list" ? "#fff" : "transparent", color: leadsViewMode === "list" ? T.ink : T.inkSoft, boxShadow: leadsViewMode === "list" ? "0 1px 2px rgba(20,20,30,0.08)" : "none" }}
-            >
-              <List size={13} /> List
-            </button>
-            <button
-              onClick={() => setLeadsViewMode("board")}
-              style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, padding: "5px 10px", borderRadius: 6, border: "none", cursor: "pointer", background: leadsViewMode === "board" ? "#fff" : "transparent", color: leadsViewMode === "board" ? T.ink : T.inkSoft, boxShadow: leadsViewMode === "board" ? "0 1px 2px rgba(20,20,30,0.08)" : "none" }}
-            >
-              <LayoutGrid size={13} /> Board
-            </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ display: "flex", gap: 2, background: T.paperDeep, borderRadius: 8, padding: 2 }}>
+              <button
+                onClick={() => setLeadsViewMode("list")}
+                style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, padding: "5px 10px", borderRadius: 6, border: "none", cursor: "pointer", background: leadsViewMode === "list" ? "#fff" : "transparent", color: leadsViewMode === "list" ? T.ink : T.inkSoft, boxShadow: leadsViewMode === "list" ? "0 1px 2px rgba(20,20,30,0.08)" : "none" }}
+              >
+                <List size={13} /> List
+              </button>
+              <button
+                onClick={() => setLeadsViewMode("board")}
+                style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, padding: "5px 10px", borderRadius: 6, border: "none", cursor: "pointer", background: leadsViewMode === "board" ? "#fff" : "transparent", color: leadsViewMode === "board" ? T.ink : T.inkSoft, boxShadow: leadsViewMode === "board" ? "0 1px 2px rgba(20,20,30,0.08)" : "none" }}
+              >
+                <LayoutGrid size={13} /> Board
+              </button>
+            </div>
+            {onAddLead && (
+              <button
+                onClick={() => setShowAdminAddLead(true)}
+                title="Add lead"
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 8, border: "none", cursor: "pointer", background: T.route, color: "#fff" }}
+              >
+                <Plus size={16} />
+              </button>
+            )}
           </div>
         </div>
         <div style={{ position: "relative", marginBottom: 12 }}>
@@ -1656,6 +1674,16 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
 
       {selectedLead && <LeadDetailDrawer lead={leads.find((l) => l.id === selectedLead.id) || selectedLead} onClose={() => setSelectedLead(null)} onStatusChange={onStatusChange} onUpdate={onUpdateLead} onDelete={onDeleteLead} fetchHistory={api.adminLeadHistory} />}
       {routeSalesman && <SalesmanRouteModal salesman={routeSalesman} onClose={() => setRouteSalesman(null)} />}
+      {showAdminAddLead && (
+        <AdminAddLeadModal
+          salesmen={salesmen}
+          onClose={() => setShowAdminAddLead(false)}
+          onSubmit={async (payload) => {
+            await onAddLead(payload);
+            setShowAdminAddLead(false);
+          }}
+        />
+      )}
       {viewingSalesmanLeads && (
         <SalesmanLeadsModal
           salesman={viewingSalesmanLeads}
@@ -2974,6 +3002,90 @@ function MessageComposeModal({ salesman, onClose, onSend }) {
   );
 }
 
+
+function AdminAddLeadModal({ salesmen, onClose, onSubmit }) {
+  const activeSalesmen = salesmen.filter((s) => s.isActive);
+  const [form, setForm] = useState({
+    salesmanId: activeSalesmen[0]?.id || "",
+    business: "", subLocation: "", posName: "", renewalMonth: "", renewalDate: "",
+    owner: "", phone: "", status: "cold", notes: "", dealValue: "",
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const canSubmit = form.salesmanId && form.business.trim().length > 0;
+
+  const handleSubmit = async () => {
+    if (!canSubmit) return;
+    setSubmitting(true);
+    setError("");
+    try {
+      await onSubmit({
+        salesmanId: form.salesmanId,
+        businessName: form.business.trim(),
+        subLocation: form.subLocation || null,
+        posName: form.posName || null,
+        renewalMonth: form.renewalMonth || null,
+        renewalDate: form.renewalDate || null,
+        contactName: form.owner || null,
+        phone: form.phone || null,
+        status: form.status,
+        notes: form.notes || null,
+        dealValue: form.dealValue ? Number(form.dealValue) : null,
+      });
+    } catch (err) {
+      setError(err.message || "Couldn't create that lead.");
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Overlay onClose={onClose} title="Add Lead">
+      {activeSalesmen.length === 0 ? (
+        <div style={{ fontSize: 13, color: T.inkSoft }}>Add an active employee first before creating a lead for them.</div>
+      ) : (
+        <>
+          <Field label="Assign to">
+            <select style={inputStyle} value={form.salesmanId} onChange={set("salesmanId")}>
+              {activeSalesmen.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          </Field>
+          <Field label="Business Name"><input style={inputStyle} value={form.business} onChange={set("business")} placeholder="e.g. Sharma Textiles" autoFocus /></Field>
+          <Field label="Sub Location"><input style={inputStyle} value={form.subLocation} onChange={set("subLocation")} /></Field>
+          <Field label="POS Name"><input style={inputStyle} value={form.posName} onChange={set("posName")} /></Field>
+          <Field label="Contact Name"><input style={inputStyle} value={form.owner} onChange={set("owner")} /></Field>
+          <Field label="Contact Number"><input style={inputStyle} value={form.phone} onChange={set("phone")} /></Field>
+          <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 1 }}><Field label="Renewal Month">
+              <select style={inputStyle} value={form.renewalMonth} onChange={set("renewalMonth")}>
+                <option value="">Select…</option>
+                {MONTH_NAMES.map((m) => <option key={m} value={m}>{m}</option>)}
+              </select>
+            </Field></div>
+            <div style={{ flex: 1 }}><Field label="Renewal Date"><input style={inputStyle} type="date" value={form.renewalDate} onChange={set("renewalDate")} /></Field></div>
+          </div>
+          <Field label="Status">
+            <select style={inputStyle} value={form.status} onChange={set("status")}>
+              {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+            </select>
+          </Field>
+          <Field label="Expected Deal Value"><input style={inputStyle} type="number" min="0" value={form.dealValue} onChange={set("dealValue")} placeholder="₹ e.g. 45000" /></Field>
+          <Field label="Comments"><textarea style={{ ...inputStyle, minHeight: 60 }} value={form.notes} onChange={set("notes")} /></Field>
+
+          {error && <div style={{ fontSize: 12.5, color: T.danger, marginBottom: 10 }}>{error}</div>}
+          <button
+            onClick={handleSubmit}
+            disabled={!canSubmit || submitting}
+            style={{ width: "100%", padding: "12px", borderRadius: 11, border: "none", cursor: canSubmit && !submitting ? "pointer" : "not-allowed", background: canSubmit ? T.route : "#C7CDD6", color: "#fff", fontWeight: 700, fontSize: 14.5 }}
+          >
+            {submitting ? "Adding…" : "Add Lead"}
+          </button>
+        </>
+      )}
+    </Overlay>
+  );
+}
 
 function SalesmanFormModal({ existingCount, salesman, onClose, onSubmit }) {
   const isEdit = !!salesman;
