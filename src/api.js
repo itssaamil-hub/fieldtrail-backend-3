@@ -132,6 +132,7 @@ export const api = {
     const qs = new URLSearchParams(entries).toString();
     return request(`/admin/leads${qs ? `?${qs}` : ""}`);
   },
+  adminCreateLead: (payload) => request(`/admin/leads`, { method: "POST", body: payload }),
   adminUpdateLeadStatus: (id, status) => request(`/admin/leads/${id}/status`, { method: "PATCH", body: { status } }),
   adminUpdateLead: (id, payload) => request(`/admin/leads/${id}`, { method: "PATCH", body: payload }),
   adminDeleteLead: (id) => request(`/admin/leads/${id}`, { method: "DELETE" }),
