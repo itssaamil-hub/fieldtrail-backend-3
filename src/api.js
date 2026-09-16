@@ -119,6 +119,18 @@ async function request(path, { method = "GET", body, auth = true } = {}) {
 }
 
 export const api = {
+  onboardingCustomers: params => request(`/onboarding/customers?${new URLSearchParams(params)}`),
+  onboardingStart: id => request(`/onboarding/${id}/start`, {method:'POST'}),
+  onboardingGet: id => request(`/onboarding/${id}`),
+  onboardingUpdate: (id,stepId,body) => request(`/onboarding/${id}/steps/${stepId}`, {method:'PATCH',body}),
+  onboardingSummary: id => request(`/onboarding/${id}/summary`),
+  onboardingTemplate: () => request('/onboarding/template'),
+  onboardingSaveTemplate: body => request('/onboarding/template', {method:'PUT',body}),
+  onboardingPDF: async id => {
+    const response = await fetch(`${getApiBase()}/onboarding/${id}/pdf`, {headers:{Authorization:`Bearer ${getSession()?.token || ''}`}});
+    if(!response.ok){let data;try{data=await response.json()}catch{}throw new ApiError(data?.error || 'Could not download the PDF',response.status)}
+    return response.blob();
+  },
   dealValueReport: () => request('/admin/reports/deal-values'),
   tasks: (params = {}) => request(`/tasks?${new URLSearchParams(params)}`),
   createTask: body => request('/tasks', { method: 'POST', body }),

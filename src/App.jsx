@@ -1,3 +1,4 @@
+import OnboardingPanel, { AppMenu, OnboardingTemplateEditor } from "./Onboarding.jsx";
 import DealValueReport from "./DealValueReport.jsx";
 import { TasksEntry } from "./Tasks.jsx";
 import LeadBriefPopup from "./LeadBriefPopup.jsx";
@@ -378,6 +379,8 @@ export default function App() {
   const [apiBase, setApiBaseState] = useState(getApiBase());
   const [session, setSessionState] = useState(getSession());
   const [showSettings, setShowSettings] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showOnboardingSettings, setShowOnboardingSettings] = useState(false);
   const [showCrmSettings, setShowCrmSettings] = useState(false);
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -435,6 +438,7 @@ export default function App() {
     setSessionState(null);
     closeNotifications();
     setNotificationLead(null);
+    setShowOnboarding(false); setShowOnboardingSettings(false);
   };
 
   let body;
@@ -458,7 +462,8 @@ export default function App() {
         onAddExpense={session?.role === "admin" ? () => setShowAddExpense(true) : undefined}
         unreadCount={unreadCount}
         onOpenNotifications={session ? () => { setShowSettings(false); setShowNotifications(true); } : undefined}
-        onOpenSettings={() => { closeNotifications(); setShowSettings(true); }}
+        onOpenSettings={() => { closeNotifications(); setShowOnboarding(false); setShowSettings(true); }}
+        onOpenOnboarding={() => { closeNotifications(); setShowSettings(false); setShowOnboarding(true); }}
       />
       {body}
       {session && showNotifications && <NotificationsPanel key={`notifications-${session.id}`} session={session} online={online} onClose={closeNotifications} onOpenLead={id => {
@@ -471,12 +476,15 @@ export default function App() {
           onSave={(url) => { handleSaveApiBase(url); setShowSettings(false); }}
           onLogout={session ? () => { setShowSettings(false); handleLogout(); } : undefined}
           onOpenCrmSettings={session?.role === "admin" ? () => { setShowSettings(false); setShowCrmSettings(true); } : undefined}
+          onOpenOnboardingSettings={session?.role === "admin" ? () => { setShowSettings(false); setShowOnboardingSettings(true); } : undefined}
           canInstall={canInstall}
           installed={installed}
           promptInstall={promptInstall}
           push={pushNotifications}
         />
       )}
+      {session && showOnboarding && <OnboardingPanel key={session.id} onClose={() => setShowOnboarding(false)} />}
+      {session?.role === "admin" && showOnboardingSettings && <OnboardingTemplateEditor onClose={() => setShowOnboardingSettings(false)} />}
       {showCrmSettings && <CrmSettingsModal onClose={() => setShowCrmSettings(false)} />}
       {showAddExpense && <AddExpenseModal onClose={() => setShowAddExpense(false)} />}
     </div>
@@ -499,7 +507,7 @@ function LogoMark({ size = 20, color = "#fff" }) {
   );
 }
 
-function TopBar({ online, session, page, onChangePage, onAddExpense, onOpenSettings, onOpenNotifications, unreadCount = 0 }) {
+function TopBar({ online, session, page, onChangePage, onAddExpense, onOpenSettings, onOpenOnboarding, onOpenNotifications, unreadCount = 0 }) {
   const [narrow, setNarrow] = useState(window.innerWidth < 560);
   useEffect(() => {
     const onResize = () => setNarrow(window.innerWidth < 560);
@@ -557,13 +565,7 @@ function TopBar({ online, session, page, onChangePage, onAddExpense, onOpenSetti
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <ConnectionPill online={online} />
           {onOpenNotifications && <button type="button" onClick={onOpenNotifications} title="Notifications" aria-label={unreadCount ? `Notifications, ${unreadCount} unread` : "Notifications"} style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 6, border: "1px solid rgba(255,255,255,0.22)", cursor: "pointer", background: "rgba(255,255,255,0.14)", color: "#fff" }}><Bell size={14} />{unreadCount > 0 && <span className="ft-notification-badge" aria-hidden="true">{unreadCount > 99 ? "99+" : unreadCount}</span>}</button>}
-          <button
-            onClick={onOpenSettings}
-            title="Settings"
-            style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 6, border: "1px solid rgba(255,255,255,0.22)", cursor: "pointer", background: "rgba(255,255,255,0.14)", color: "#fff" }}
-          >
-            <Settings size={14} />
-          </button>
+          <AppMenu signedIn={!!session} onSettings={onOpenSettings} onOnboarding={onOpenOnboarding} />
         </div>
       </div>
     </div>
@@ -717,7 +719,7 @@ function LoginScreen({ apiBase, online, onLoggedIn, onOpenSettings }) {
   );
 }
 
-function SettingsModal({ apiBase, onClose, onSave, onLogout, onOpenCrmSettings, canInstall, installed, promptInstall, push }) {
+function SettingsModal({ apiBase, onClose, onSave, onLogout, onOpenCrmSettings, onOpenOnboardingSettings, canInstall, installed, promptInstall, push }) {
   const [url, setUrl] = useState(apiBase || "");
   const isIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
   const [showIosHint, setShowIosHint] = useState(false);
@@ -751,6 +753,7 @@ function SettingsModal({ apiBase, onClose, onSave, onLogout, onOpenCrmSettings, 
         </div>
       )}
 
+      {onOpenOnboardingSettings && <button type="button" onClick={onOpenOnboardingSettings} style={{width:"100%",padding:11,borderRadius:11,border:`1px solid ${T.line}`,background:T.paperDeep,color:T.ink,fontWeight:700,fontSize:13.5,marginBottom:18,cursor:"pointer"}}>Edit onboarding checklist</button>}
       {onOpenCrmSettings && (
         <button
           onClick={onOpenCrmSettings}
