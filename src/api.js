@@ -121,6 +121,7 @@ async function request(path, { method = "GET", body, auth = true } = {}) {
 export const api = {
   tasks: (params = {}) => request(`/tasks?${new URLSearchParams(params)}`),
   createTask: body => request('/tasks', { method: 'POST', body }),
+  deleteTask: id => request(`/tasks/${id}`, { method: 'DELETE' }),
   completeTask: (id, note) => request(`/tasks/${id}/complete`, { method: 'PATCH', body: { note } }),
   taskNotifications: () => request('/tasks/notifications'),
   readTaskNotifications: ids => request('/tasks/notifications/read', { method: 'POST', body: { ids } }),
