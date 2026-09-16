@@ -38,6 +38,7 @@ import {
   Bell,
   Lock,
   LockOpen,
+  Sparkles,
 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -153,6 +154,77 @@ const STATUS_LABEL = {
   warm: "Warm", new: "New", contacted: "Contacted", follow_up: "Follow-up",
   demo_scheduled: "Demo Scheduled", proposal_sent: "Proposal Sent",
 };
+
+const STATUS_DESCRIPTOR = {
+  cold: "a cold lead", conversation: "in early conversation", hot: "a hot lead",
+  demo: "at the demo stage", negotiation: "in negotiation", won: "a won deal",
+  lost: "a lost deal", nurture: "being nurtured",
+};
+
+// Builds a short, human-readable summary and a recommended next action for a
+// lead, entirely from data already on the lead + its status history —
+// plain JS conditions and template strings, no AI model or external API.
+function buildLeadBrief(lead, history) {
+  const parts = [];
+  const today = new Date(new Date().toDateString());
+  const daysAgo = (d) => Math.floor((Date.now() - new Date(d).setHours(0, 0, 0, 0)) / 86400000);
+  const relativeDay = (d) => {
+    const n = daysAgo(d);
+    if (n <= 0) return "today";
+    if (n === 1) return "yesterday";
+    return `${n} days ago`;
+  };
+  const relativeDateLabel = (dateStr) => {
+    const d = new Date(dateStr);
+    d.setHours(0, 0, 0, 0);
+    const diff = Math.round((d - today) / 86400000);
+    if (diff < 0) return "overdue";
+    if (diff === 0) return "due today";
+    if (diff === 1) return "due tomorrow";
+    return `due ${d.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`;
+  };
+
+  let opening = `${lead.business} is ${STATUS_DESCRIPTOR[lead.status] || `at the ${STATUS_LABEL[lead.status] || lead.status} stage`}`;
+  if (lead.salesmanName) opening += `, assigned to ${lead.salesmanName}`;
+  parts.push(opening + ".");
+
+  if (lead.posName) parts.push(`They currently use ${lead.posName}.`);
+  if (lead.createdAt) parts.push(`First visited ${relativeDay(lead.createdAt)}.`);
+
+  const lastChange = history && history.length > 0 ? history[history.length - 1] : null;
+  if (lastChange) {
+    parts.push(`Moved to ${STATUS_LABEL[lastChange.new_status] || lastChange.new_status} ${relativeDay(lastChange.changed_at)}.`);
+  }
+  const demoDone = lead.status !== "demo" && history?.some((h) => h.new_status === "demo");
+  if (lead.status === "demo") parts.push("Demo is scheduled or underway.");
+  else if (demoDone) parts.push("Demo has already been completed.");
+
+  if (lead.nextFollowUpDate) parts.push(`Next follow-up is ${relativeDateLabel(lead.nextFollowUpDate)}.`);
+  if (lead.renewalDate) parts.push(`Renewal is ${relativeDateLabel(lead.renewalDate)}.`);
+  else if (lead.renewalMonth) parts.push(`Renewal expected in ${lead.renewalMonth}.`);
+
+  if (lead.dealValue) parts.push(`Expected deal value is ${fmtMoney(lead.dealValue)}.`);
+  if (lead.notes) parts.push(`Latest note: "${lead.notes.length > 110 ? lead.notes.slice(0, 110) + "…" : lead.notes}"`);
+
+  const summary = parts.join(" ");
+
+  // Recommended next action — simple priority rules, most urgent first.
+  let nextAction;
+  const fuOverdue = lead.nextFollowUpDate && new Date(lead.nextFollowUpDate) < today;
+  const fuToday = lead.nextFollowUpDate && new Date(new Date(lead.nextFollowUpDate).toDateString()).getTime() === today.getTime();
+  if (lead.status === "won") nextAction = "Deal is closed — no action needed.";
+  else if (lead.status === "lost") nextAction = "Deal is lost — consider re-engaging in a few months.";
+  else if (fuOverdue) nextAction = "Follow-up is overdue — contact them today.";
+  else if (fuToday) nextAction = "Follow-up is due today — call or visit to move this forward.";
+  else if (lead.status === "hot") nextAction = "This is a hot lead — prioritize a call or visit soon.";
+  else if (lead.status === "negotiation") nextAction = "Push to close — confirm terms and get a decision.";
+  else if (demoDone) nextAction = "Follow up after the demo to gauge interest and next steps.";
+  else if (lead.status === "demo") nextAction = "Prepare for the demo and confirm the appointment.";
+  else if (lead.status === "cold") nextAction = "Re-engage with a call to warm this lead up.";
+  else nextAction = "Check in to keep the conversation moving.";
+
+  return { summary, nextAction };
+}
 
 function useOnlineStatus() {
   const [online, setOnline] = useState(navigator.onLine);
@@ -478,7 +550,7 @@ function TopBar({ online, session, page, onChangePage, onAddExpense, onOpenSetti
 
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <ConnectionPill online={online} />
-          {onOpenNotifications && <button type="button" onClick={onOpenNotifications} title="Notifications" aria-label="Notifications" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 6, border: "1px solid rgba(255,255,255,0.22)", cursor: "pointer", background: "rgba(255,255,255,0.14)", color: "#fff" }}><Bell size={14} /></button>}
+          {onOpenNotifications && <button type="button" onClick={onOpenNotifications} title="Notifications" aria-label="Notifications" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 36, height: 44, borderRadius: 6, border: "1px solid rgba(255,255,255,0.22)", cursor: "pointer", background: "rgba(255,255,255,0.14)", color: "#fff" }}><Bell size={17} /></button>}
           <button
             onClick={onOpenSettings}
             title="Settings"
@@ -3267,6 +3339,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
   const [editing, setEditing] = useState(false);
   const [history, setHistory] = useState(null); // null = loading, [] = loaded & empty
   const [historyError, setHistoryError] = useState("");
+  const [showBrief, setShowBrief] = useState(false);
   const [form, setForm] = useState({
     subLocation: lead.subLocation || "", posName: lead.posName || "",
     renewalMonth: lead.renewalMonth || "", renewalDate: lead.renewalDate || "",
@@ -3338,10 +3411,41 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
           </div>
         </div>
         <div style={{ marginTop: 4, color: T.inkSoft, fontSize: 13 }}>{displayLead.owner} · {lead.category}</div>
-        <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
           {lead.hasLocation ? <VerificationStamp status={lead.verification} /> : <NoLocationBadge />}
           <SyncBadge syncStatus={lead.syncStatus} />
+          <button
+            onClick={() => setShowBrief(true)}
+            style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 999, border: "none", cursor: "pointer", background: "#F0EBFB", color: "#6B46C1", fontSize: 11.5, fontWeight: 700 }}
+          >
+            <Sparkles size={13} /> Brief
+          </button>
         </div>
+
+        {showBrief && (() => {
+          const brief = buildLeadBrief(displayLead, history || []);
+          return (
+            <div style={{ position: "fixed", inset: 0, background: "rgba(28,36,48,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 3000, padding: 20 }} onClick={() => setShowBrief(false)}>
+              <div style={{ background: "#fff", borderRadius: 16, padding: 20, maxWidth: 340, width: "100%" }} onClick={(e) => e.stopPropagation()}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                  <Sparkles size={17} color="#6B46C1" />
+                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 15.5 }}>Lead brief</div>
+                </div>
+                <div style={{ fontSize: 13.5, lineHeight: 1.55, color: T.ink, marginBottom: 14 }}>{brief.summary}</div>
+                <div style={{ background: T.verifiedSoft, borderRadius: 10, padding: "10px 12px" }}>
+                  <div style={{ fontSize: 10.5, fontWeight: 700, color: T.verified, textTransform: "uppercase", letterSpacing: 0.3, marginBottom: 3 }}>Recommended next action</div>
+                  <div style={{ fontSize: 13, color: T.ink }}>{brief.nextAction}</div>
+                </div>
+                <button
+                  onClick={() => setShowBrief(false)}
+                  style={{ width: "100%", marginTop: 16, padding: "10px", borderRadius: 10, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontWeight: 700, fontSize: 13, cursor: "pointer" }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          );
+        })()}
 
         {editing ? (
           <div style={{ marginTop: 16 }}>
