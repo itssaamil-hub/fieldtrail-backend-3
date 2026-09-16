@@ -1,0 +1,13 @@
+import React, { useEffect, useState } from 'react';
+import { api } from './api.js';
+const STAGES = [['cold','Cold'],['conversation','Conversation'],['hot','Hot'],['demo','Demo'],['negotiation','Negotiation'],['won','Won'],['lost','Lost'],['nurture','Nurture']];
+const money = value => new Intl.NumberFormat('en-IN', {style:'currency',currency:'INR',maximumFractionDigits:2}).format(Number(value));
+export default function DealValueReport() {
+ const [data,setData]=useState(null),[error,setError]=useState(''),[revision,setRevision]=useState(0);
+ useEffect(()=>{let cancelled=false;setData(null);setError('');api.dealValueReport().then(r=>{if(!cancelled)setData(r.stages)}).catch(e=>{if(!cancelled)setError(e.message)});return()=>{cancelled=true}},[revision]);
+ return <section><div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,marginBottom:16}}><p style={{fontSize:12,color:'#66737c',margin:0}}>All employees · All leads · Current stage</p><button type="button" onClick={()=>setRevision(v=>v+1)} style={{padding:'7px 12px',border:'1px solid #e2e6e8',borderRadius:8,background:'#fff',cursor:'pointer'}}>Refresh</button></div>
+ {error?<div role="alert"><p>{error}</p><button onClick={()=>setRevision(v=>v+1)}>Retry</button></div>:!data?<p role="status">Loading deal values…</p>:<>
+ <div style={{overflowX:'auto',background:'#fff',border:'1px solid #e5e8ed',borderRadius:12}}><table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}><caption style={{textAlign:'left',padding:14,fontWeight:700}}>Deal value by stage</caption><thead><tr>{['Stage','Leads','Deal value'].map(h=><th key={h} scope="col" style={{padding:'10px 12px',textAlign:h==='Stage'?'left':'right',borderBottom:'1px solid #e5e8ed',background:'#f6f8f8'}}>{h}</th>)}</tr></thead><tbody>{STAGES.map(([key,label])=>{const row=data.find(r=>r.status===key)||{lead_count:0,missing_count:0,total_value:'0'};return <tr key={key}><th scope="row" style={{padding:'12px',textAlign:'left',borderBottom:'1px solid #eef0f2',fontWeight:600}}>{label}{Number(row.missing_count)>0&&<div style={{fontSize:11,fontWeight:400,color:'#66737c'}}>{row.missing_count} without value</div>}</th><td style={{padding:12,textAlign:'right',borderBottom:'1px solid #eef0f2'}}>{row.lead_count}</td><td style={{padding:12,textAlign:'right',borderBottom:'1px solid #eef0f2',fontWeight:600,whiteSpace:'nowrap'}}>{money(row.total_value)}</td></tr>})}</tbody></table></div>
+ {!data.some(r=>Number(r.lead_count)>0)&&<p>No leads yet.</p>}<p style={{fontSize:12,color:'#66737c'}}>Values are the amounts entered on leads, not collected payments. Leads without a value are counted but do not add to the amount. Won and Lost are shown separately from open stages.</p></>}
+ </section>;
+}

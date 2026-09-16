@@ -1,3 +1,4 @@
+import DealValueReport from "./DealValueReport.jsx";
 import { TasksEntry } from "./Tasks.jsx";
 import LeadBriefPopup from "./LeadBriefPopup.jsx";
 import useUnreadNotifications from "./useUnreadNotifications.js";
@@ -1911,6 +1912,7 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
 // Tap a salesman's name to see just their leads, broken out by Hot/Warm/
 // Cold/Converted/Pending — instead of hunting through the main filtered list.
 const REPORT_CARDS = [
+  { key: "deal-values", title: "Deal Value", desc: "Total deal value for Cold, Hot, Negotiation and every stage.", icon: Wallet, color: "#145C5D" },
   { key: "performance", title: "Employee performance", desc: "Leads, conversion rate and target progress per employee.", icon: Contact2, color: "#145C5D" },
   { key: "funnel", title: "Funnel and conversion", desc: "Lead count and drop-off at each pipeline stage.", icon: Handshake, color: "#7B4FC9" },
   { key: "renewals", title: "Renewals due", desc: "Everything renewing in the next 30, 60 or 90 days.", icon: CalendarClock, color: "#B8791F" },
@@ -1962,6 +1964,7 @@ function ReportsPage({ salesmen, leads }) {
         {activeCard && <activeCard.icon size={18} color={activeCard.color} />}
         <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 17 }}>{activeCard?.title}</div>
       </div>
+      {active === "deal-values" && <DealValueReport />}
       {active === "performance" && <SalesmanPerformanceReport salesmen={salesmen} leads={leads} />}
       {active === "funnel" && <FunnelReport leads={leads} />}
       {active === "renewals" && <RenewalsReport leads={leads} />}

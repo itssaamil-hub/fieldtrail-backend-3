@@ -119,6 +119,7 @@ async function request(path, { method = "GET", body, auth = true } = {}) {
 }
 
 export const api = {
+  dealValueReport: () => request('/admin/reports/deal-values'),
   tasks: (params = {}) => request(`/tasks?${new URLSearchParams(params)}`),
   createTask: body => request('/tasks', { method: 'POST', body }),
   deleteTask: id => request(`/tasks/${id}`, { method: 'DELETE' }),
