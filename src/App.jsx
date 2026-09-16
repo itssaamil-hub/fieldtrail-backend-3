@@ -1,3 +1,5 @@
+import LeadBriefPopup from "./LeadBriefPopup.jsx";
+import useUnreadNotifications from "./useUnreadNotifications.js";
 import NotificationsPanel from "./NotificationsPanel.jsx";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
@@ -189,15 +191,15 @@ function buildLeadBrief(lead, history) {
   parts.push(opening + ".");
 
   if (lead.posName) parts.push(`They currently use ${lead.posName}.`);
-  if (lead.createdAt) parts.push(`First visited ${relativeDay(lead.createdAt)}.`);
+  if (lead.createdAt) parts.push(`Added ${relativeDay(lead.createdAt)}.`);
 
   const lastChange = history && history.length > 0 ? history[history.length - 1] : null;
   if (lastChange) {
     parts.push(`Moved to ${STATUS_LABEL[lastChange.new_status] || lastChange.new_status} ${relativeDay(lastChange.changed_at)}.`);
   }
   const demoDone = lead.status !== "demo" && history?.some((h) => h.new_status === "demo");
-  if (lead.status === "demo") parts.push("Demo is scheduled or underway.");
-  else if (demoDone) parts.push("Demo has already been completed.");
+  if (lead.status === "demo") parts.push("This lead is currently in the demo stage.");
+  else if (demoDone) parts.push("This lead was previously in the demo stage.");
 
   if (lead.nextFollowUpDate) parts.push(`Next follow-up is ${relativeDateLabel(lead.nextFollowUpDate)}.`);
   if (lead.renewalDate) parts.push(`Renewal is ${relativeDateLabel(lead.renewalDate)}.`);
@@ -218,8 +220,8 @@ function buildLeadBrief(lead, history) {
   else if (fuToday) nextAction = "Follow-up is due today — call or visit to move this forward.";
   else if (lead.status === "hot") nextAction = "This is a hot lead — prioritize a call or visit soon.";
   else if (lead.status === "negotiation") nextAction = "Push to close — confirm terms and get a decision.";
-  else if (demoDone) nextAction = "Follow up after the demo to gauge interest and next steps.";
-  else if (lead.status === "demo") nextAction = "Prepare for the demo and confirm the appointment.";
+  else if (demoDone) nextAction = "Confirm the demo outcome and agree on the next steps.";
+  else if (lead.status === "demo") nextAction = "Confirm the demo appointment and prepare the presentation.";
   else if (lead.status === "cold") nextAction = "Re-engage with a call to warm this lead up.";
   else nextAction = "Check in to keep the conversation moving.";
 
@@ -382,6 +384,7 @@ export default function App() {
   const online = useOnlineStatus();
   const { canInstall, installed, promptInstall } = useInstallPrompt();
   const pushNotifications = usePushNotifications(session);
+  const unreadCount = useUnreadNotifications(session, online);
 
   useEffect(() => {
     const openFromLocation = () => {
@@ -451,6 +454,7 @@ export default function App() {
         page={session ? topPage : undefined}
         onChangePage={session ? setTopPage : undefined}
         onAddExpense={session?.role === "admin" ? () => setShowAddExpense(true) : undefined}
+        unreadCount={unreadCount}
         onOpenNotifications={session ? () => { setShowSettings(false); setShowNotifications(true); } : undefined}
         onOpenSettings={() => { closeNotifications(); setShowSettings(true); }}
       />
@@ -493,7 +497,7 @@ function LogoMark({ size = 20, color = "#fff" }) {
   );
 }
 
-function TopBar({ online, session, page, onChangePage, onAddExpense, onOpenSettings, onOpenNotifications }) {
+function TopBar({ online, session, page, onChangePage, onAddExpense, onOpenSettings, onOpenNotifications, unreadCount = 0 }) {
   const [narrow, setNarrow] = useState(window.innerWidth < 560);
   useEffect(() => {
     const onResize = () => setNarrow(window.innerWidth < 560);
@@ -550,7 +554,7 @@ function TopBar({ online, session, page, onChangePage, onAddExpense, onOpenSetti
 
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <ConnectionPill online={online} />
-          {onOpenNotifications && <button type="button" onClick={onOpenNotifications} title="Notifications" aria-label="Notifications" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 36, height: 44, borderRadius: 6, border: "1px solid rgba(255,255,255,0.22)", cursor: "pointer", background: "rgba(255,255,255,0.14)", color: "#fff" }}><Bell size={17} /></button>}
+          {onOpenNotifications && <button type="button" onClick={onOpenNotifications} title="Notifications" aria-label={unreadCount ? `Notifications, ${unreadCount} unread` : "Notifications"} style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 6, border: "1px solid rgba(255,255,255,0.22)", cursor: "pointer", background: "rgba(255,255,255,0.14)", color: "#fff" }}><Bell size={14} />{unreadCount > 0 && <span className="ft-notification-badge" aria-hidden="true">{unreadCount > 99 ? "99+" : unreadCount}</span>}</button>}
           <button
             onClick={onOpenSettings}
             title="Settings"
@@ -2769,6 +2773,7 @@ function MyPerformanceReport({ leads, dailyTarget, monthlyTarget }) {
 }
 
 function SalesmanLeadsModal({ salesman, leads, onClose, onSelectLead }) {
+  const [briefLead, setBriefLead] = useState(null);
   const [tab, setTab] = useState("all");
   const mine = leads.filter((l) => l.salesmanId === salesman.id);
 
@@ -2813,9 +2818,9 @@ function SalesmanLeadsModal({ salesman, leads, onClose, onSelectLead }) {
         )}
         {shown.map((l) => (
           <div key={l.id} className="ft-row" onClick={() => onSelectLead(l)} style={{ border: `1px solid ${T.line}`, borderRadius: 11, padding: 10, background: "#fff", cursor: "pointer" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-              <div style={{ fontWeight: 600, fontSize: 13.5 }}>{l.business}</div>
-              {l.hasLocation ? <VerificationStamp status={l.verification} small /> : <NoLocationBadge small />}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+              <div style={{ fontWeight: 600, fontSize: 13.5, minWidth: 0, overflowWrap: "anywhere" }}>{l.business}</div>
+              <button type="button" className="ft-lead-brief-pill" aria-label={`Brief for ${l.business}`} onClick={event => { event.stopPropagation(); setBriefLead(l); }}><Sparkles size={13} /> Brief</button>
             </div>
             <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 3, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <span>{STATUS_LABEL[l.status]} · {fmtTime(l.createdAt)}{l.dealValue != null ? ` · ${fmtMoney(l.dealValue)}` : ""}</span>
@@ -2823,6 +2828,7 @@ function SalesmanLeadsModal({ salesman, leads, onClose, onSelectLead }) {
           </div>
         ))}
       </div>
+      {briefLead && <LeadBriefPopup key={briefLead.id} lead={briefLead} buildBrief={buildLeadBrief} onClose={() => setBriefLead(null)} />}
     </Overlay>
   );
 }
@@ -3422,30 +3428,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
           </button>
         </div>
 
-        {showBrief && (() => {
-          const brief = buildLeadBrief(displayLead, history || []);
-          return (
-            <div style={{ position: "fixed", inset: 0, background: "rgba(28,36,48,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 3000, padding: 20 }} onClick={() => setShowBrief(false)}>
-              <div style={{ background: "#fff", borderRadius: 16, padding: 20, maxWidth: 340, width: "100%" }} onClick={(e) => e.stopPropagation()}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                  <Sparkles size={17} color="#6B46C1" />
-                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 15.5 }}>Lead brief</div>
-                </div>
-                <div style={{ fontSize: 13.5, lineHeight: 1.55, color: T.ink, marginBottom: 14 }}>{brief.summary}</div>
-                <div style={{ background: T.verifiedSoft, borderRadius: 10, padding: "10px 12px" }}>
-                  <div style={{ fontSize: 10.5, fontWeight: 700, color: T.verified, textTransform: "uppercase", letterSpacing: 0.3, marginBottom: 3 }}>Recommended next action</div>
-                  <div style={{ fontSize: 13, color: T.ink }}>{brief.nextAction}</div>
-                </div>
-                <button
-                  onClick={() => setShowBrief(false)}
-                  style={{ width: "100%", marginTop: 16, padding: "10px", borderRadius: 10, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontWeight: 700, fontSize: 13, cursor: "pointer" }}
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          );
-        })()}
+        {showBrief && <LeadBriefPopup key={lead.id} lead={displayLead} buildBrief={buildLeadBrief} onClose={() => setShowBrief(false)} />}
 
         {editing ? (
           <div style={{ marginTop: 16 }}>
@@ -4402,6 +4385,7 @@ function GpsStatus({ gps, verification }) {
 }
 
 function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads", allowDateFilter = false }) {
+  const [briefLead, setBriefLead] = useState(null);
   const [filterDate, setFilterDate] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -4480,9 +4464,9 @@ function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads", allowD
         )}
         {shown.map((l) => (
           <div key={l.id} className="ft-row" onClick={() => onSelectLead(l)} style={{ border: `1px solid ${T.line}`, borderRadius: 11, padding: 10, background: "#fff", cursor: "pointer" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-              <div style={{ fontWeight: 600, fontSize: 13.5 }}>{l.business}</div>
-              {l.hasLocation ? <VerificationStamp status={l.verification} small /> : <NoLocationBadge small />}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+              <div style={{ fontWeight: 600, fontSize: 13.5, minWidth: 0, overflowWrap: "anywhere" }}>{l.business}</div>
+              <button type="button" className="ft-lead-brief-pill" aria-label={`Brief for ${l.business}`} onClick={event => { event.stopPropagation(); setBriefLead(l); }}><Sparkles size={13} /> Brief</button>
             </div>
             <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 3, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <span>{STATUS_LABEL[l.status]} · {fmtTime(l.createdAt)}</span>
@@ -4496,6 +4480,7 @@ function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads", allowD
           </div>
         ))}
       </div>
+      {briefLead && <LeadBriefPopup key={briefLead.id} lead={briefLead} buildBrief={buildLeadBrief} onClose={() => setBriefLead(null)} />}
     </Overlay>
   );
 }

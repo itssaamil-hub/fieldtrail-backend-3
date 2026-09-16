@@ -18,6 +18,11 @@ export default function ActivityFeed({ online }) {
       if (cancelled) return;
       setItems(previous => request.cursor ? [...new Map([...previous, ...res.activities].map(item => [item.id, item])).values()] : res.activities);
       setCursor(res.nextCursor || null); setLoaded(true);
+      if (!request.cursor && res.activities[0]) {
+        api.notificationsMarkRead({ kind: 'activity', throughId: res.activities[0].id })
+          .then(() => { if (!cancelled) window.dispatchEvent(new Event('fieldtrail:notifications-read')); })
+          .catch(() => { /* Keep the badge unread if saving read state fails. */ });
+      }
     }).catch(err => { if (!cancelled) setError(err.status === 401 ? 'Your session has expired. Sign in again.' : err.status === 403 ? 'Activity is available to admins only.' : err.status === 404 ? 'Activity is unavailable. Deploy the updated backend first.' : err.message || 'Could not load activity.'); })
       .finally(() => { if (!cancelled) { pending.current = false; setLoading(false); } });
     return () => { cancelled = true; pending.current = false; };

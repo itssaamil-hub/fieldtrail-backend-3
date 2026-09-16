@@ -61,6 +61,11 @@ export default function NotificationsPanel({ session, online, onClose, onOpenLea
       if (cancelled) return;
       if (!res?.briefing) throw new Error('The server returned an empty briefing.');
       setBriefing(res.briefing);
+      if (!admin && res.briefing.notificationDay) {
+        api.notificationsMarkRead({ kind: 'briefing', day: res.briefing.notificationDay })
+          .then(() => { if (!cancelled) window.dispatchEvent(new Event('fieldtrail:notifications-read')); })
+          .catch(() => { /* A failed read receipt must not hide the briefing. */ });
+      }
     }).catch(err => {
       if (!cancelled) setError(err.status === 404 ? 'Briefing unavailable. Check that the updated backend is deployed and this employee is active.' : err.status === 401 ? 'Your session has expired. Sign in again to view the briefing.' : err.message || 'Could not load the briefing. Please retry.');
     }).finally(() => { if (!cancelled) setLoading(false); });
