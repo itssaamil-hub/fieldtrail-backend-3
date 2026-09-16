@@ -158,6 +158,7 @@ export const api = {
   adminDeleteExpense: (id) => request(`/admin/expenses/${id}`, { method: "DELETE" }),
 
   // Push notifications — shared across both roles.
+  notificationsActivity: (cursor) => request(`/notifications/activity${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`),
   salesBriefing: (salesmanId) => request(`/notifications/sales-briefing${salesmanId ? `?salesmanId=${encodeURIComponent(salesmanId)}` : ""}`),
   notificationsVapidKey: () => request(`/notifications/vapid-public-key`),
   notificationsSubscribe: (subscription) => request(`/notifications/subscribe`, { method: "POST", body: subscription }),

@@ -18,3 +18,20 @@
 .ft-notifications-select{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;font-size:13px}.ft-notifications select{width:100%;padding:10px;border:1px solid #dbe5de;border-radius:8px;background:#fff;font:inherit;font-size:16px;color:inherit}
 .ft-notifications-error{background:#fff1ec;color:#8d3e24;padding:14px;border-radius:10px}.ft-notifications-error p{margin-top:0}
 @media(max-width:520px){.ft-notifications-backdrop{align-items:flex-end}.ft-notifications{max-width:none;max-height:92dvh;border-radius:18px 18px 0 0;padding:18px}.ft-briefing-story{padding:16px}.ft-briefing-story h3{font-size:22px}}
+
+/* Admin-only two-position control beside Close. */
+.ft-notifications-header-actions{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.ft-notifications .ft-notifications-slider{position:relative;isolation:isolate;display:grid;grid-template-columns:1fr 1fr;align-items:center;width:128px;min-height:36px;padding:3px;border:1px solid #dce6df;border-radius:18px;background:#edf2ee;color:#64766c;font-size:12px;line-height:1.4}
+.ft-notifications-slider>span:not(.ft-notifications-slider-thumb){position:relative;z-index:1;text-align:center}
+.ft-notifications-slider-thumb{position:absolute;left:3px;top:3px;bottom:3px;width:calc((100% - 6px)/2);border-radius:14px;background:#246442;transition:transform .18s ease}
+.ft-notifications-slider[aria-checked="true"] .ft-notifications-slider-thumb{transform:translateX(100%)}
+.ft-notifications-slider[aria-checked="false"]>span:nth-child(2),.ft-notifications-slider[aria-checked="true"]>span:nth-child(3){color:#fff}
+.ft-activity-list{list-style:none;padding:0;margin:12px 0}
+.ft-activity-list li{display:flex;gap:12px;padding:16px 0;border-bottom:1px solid #e7e9ee}
+.ft-activity-list li>div{min-width:0;overflow-wrap:anywhere}
+.ft-activity-list p{margin:0 0 5px}
+.ft-activity-symbol{display:flex;justify-content:center;align-items:center;flex-shrink:0;width:32px;height:32px;border-radius:10px;background:#edf5ef;color:#315e3b}
+.ft-activity-hot{background:#fff0e6;color:#ad4c1c}
+@media(max-width:390px){.ft-notifications-header{gap:4px}.ft-notifications-header h2{font-size:15px;gap:5px}.ft-notifications-header h2>svg{display:none}.ft-notifications .ft-notifications-slider{width:116px}}
+@media(pointer:coarse){.ft-notifications .ft-notifications-slider{min-height:44px}}
+@media(prefers-reduced-motion:reduce){.ft-notifications-slider-thumb{transition:none}}

@@ -2,8 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Bell, Sun, X, RefreshCw } from 'lucide-react';
 import { api } from './api.js';
 import './notifications.css';
+import ActivityFeed from './ActivityFeed.jsx';
 
 export default function NotificationsPanel({ session, online, onClose, onOpenLead }) {
+  const [view, setView] = useState('brief');
   const [employees, setEmployees] = useState([]);
   const [selected, setSelected] = useState('');
   const [briefing, setBriefing] = useState(null);
@@ -36,7 +38,7 @@ export default function NotificationsPanel({ session, online, onClose, onOpenLea
   }, []);
 
   useEffect(() => {
-    if (!admin) return;
+    if (!admin || view !== 'brief') return;
     let cancelled = false;
     setEmployeeError('');
     api.adminSalesmen().then(res => {
@@ -47,9 +49,10 @@ export default function NotificationsPanel({ session, online, onClose, onOpenLea
       setEmployeesLoaded(true);
     }).catch(err => { if (!cancelled) { setEmployeeError(err.message); setEmployeesLoaded(true); } });
     return () => { cancelled = true; };
-  }, [admin, retry, online]);
+  }, [admin, retry, online, view]);
 
   useEffect(() => {
+    if (admin && view !== 'brief') return;
     if (admin && !selected) { setLoading(!employeesLoaded); return; }
     let cancelled = false;
     setLoading(true); setError(''); setBriefing(null); setExpanded(false);
@@ -62,11 +65,17 @@ export default function NotificationsPanel({ session, online, onClose, onOpenLea
       if (!cancelled) setError(err.status === 404 ? 'Briefing unavailable. Check that the updated backend is deployed and this employee is active.' : err.status === 401 ? 'Your session has expired. Sign in again to view the briefing.' : err.message || 'Could not load the briefing. Please retry.');
     }).finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [admin, selected, retry, online, employeesLoaded]);
+  }, [admin, selected, retry, online, employeesLoaded, view]);
 
   return <div className="ft-notifications-backdrop" onClick={onClose}>
     <section className="ft-notifications" role="dialog" aria-modal="true" aria-labelledby="ft-notifications-title" ref={dialog} onClick={e => e.stopPropagation()}>
-      <header className="ft-notifications-header"><h2 id="ft-notifications-title"><Bell size={19} /> Notifications</h2><button type="button" aria-label="Close notifications" className="ft-notifications-icon" onClick={onClose}><X size={20} /></button></header>
+      <header className="ft-notifications-header"><h2 id="ft-notifications-title"><Bell size={19} /> Notifications</h2><div className="ft-notifications-header-actions">
+        {admin && <button type="button" className="ft-notifications-slider" role="switch" aria-label="Show activity instead of briefing" aria-checked={view === 'activity'} aria-controls="ft-notifications-content" onClick={() => setView(current => current === 'brief' ? 'activity' : 'brief')}>
+          <span className="ft-notifications-slider-thumb" aria-hidden="true" /><span>Brief</span><span>Activity</span>
+        </button>}
+        <button type="button" aria-label="Close notifications" className="ft-notifications-icon" onClick={onClose}><X size={20} /></button></div></header>
+      <div id="ft-notifications-content">
+      {admin && view === 'activity' ? <ActivityFeed online={online} /> : <>
       {admin && <label className="ft-notifications-select">Employee briefing<select value={selected} onChange={e => setSelected(e.target.value)} disabled={!employees.length}><option value="" disabled>Select an employee</option>{employees.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}</select></label>}
       <div className="ft-notifications-caption"><span><Sun size={17} /> Daily sales briefing</span><button type="button" className="ft-notifications-icon" onClick={() => setRetry(r => r + 1)} aria-label="Refresh briefing" disabled={loading}><RefreshCw size={16} /></button></div>
       {loading && <p role="status">Preparing your briefing…</p>}
@@ -82,6 +91,8 @@ export default function NotificationsPanel({ session, online, onClose, onOpenLea
           <ol id="ft-briefing-priorities" hidden={!expanded}>{briefing.priorityLeads.map(lead => <li key={lead.id}><div><strong>{lead.business_name}</strong><div className="ft-notifications-date">{lead.reasons.join(' · ')}</div>{admin && lead.phone && <a href={`tel:${lead.phone}`}>{lead.phone}</a>}</div>{!admin && <button type="button" onClick={() => onOpenLead(lead.id)}>View lead</button>}</li>)}</ol>
         </>}
       </article>}
+      </>}
+      </div>
     </section>
   </div>;
 }
