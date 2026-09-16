@@ -119,6 +119,11 @@ async function request(path, { method = "GET", body, auth = true } = {}) {
 }
 
 export const api = {
+  tasks: (params = {}) => request(`/tasks?${new URLSearchParams(params)}`),
+  createTask: body => request('/tasks', { method: 'POST', body }),
+  completeTask: (id, note) => request(`/tasks/${id}/complete`, { method: 'PATCH', body: { note } }),
+  taskNotifications: () => request('/tasks/notifications'),
+  readTaskNotifications: ids => request('/tasks/notifications/read', { method: 'POST', body: { ids } }),
   login: (phone, password) => request("/auth/login", { method: "POST", body: { phone, password }, auth: false }),
   health: () => request("/health", { auth: false }),
 

@@ -1,3 +1,4 @@
+import { TaskNotifications } from "./Tasks.jsx";
 import React, { useEffect, useRef, useState } from 'react';
 import { Bell, Sun, X, RefreshCw } from 'lucide-react';
 import { api } from './api.js';
@@ -80,6 +81,7 @@ export default function NotificationsPanel({ session, online, onClose, onOpenLea
         </button>}
         <button type="button" aria-label="Close notifications" className="ft-notifications-icon" onClick={onClose}><X size={20} /></button></div></header>
       <div id="ft-notifications-content">
+      {!admin && <TaskNotifications />}
       {admin && view === 'activity' ? <ActivityFeed online={online} /> : <>
       {admin && <label className="ft-notifications-select">Employee briefing<select value={selected} onChange={e => setSelected(e.target.value)} disabled={!employees.length}><option value="" disabled>Select an employee</option>{employees.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}</select></label>}
       <div className="ft-notifications-caption"><span><Sun size={17} /> Daily sales briefing</span><button type="button" className="ft-notifications-icon" onClick={() => setRetry(r => r + 1)} aria-label="Refresh briefing" disabled={loading}><RefreshCw size={16} /></button></div>

@@ -1,3 +1,4 @@
+import { TasksEntry } from "./Tasks.jsx";
 import LeadBriefPopup from "./LeadBriefPopup.jsx";
 import useUnreadNotifications from "./useUnreadNotifications.js";
 import NotificationsPanel from "./NotificationsPanel.jsx";
@@ -1656,6 +1657,7 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
         <StatCard label="Renewals Due" sub="next 30 days" value={upcomingRenewals.length} color={T.accent} onClick={() => setStatLeadsModal({ title: "Renewals Due (Next 30 Days)", leads: upcomingRenewals })} />
       </div>
 
+      <TasksEntry />
       <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
         <Tab active={mapView === "live"} onClick={() => setMapView("live")} label="Live Map" />
         <Tab active={mapView === "leads"} onClick={() => setMapView("leads")} label="Lead Locations" />
@@ -2820,7 +2822,7 @@ function SalesmanLeadsModal({ salesman, leads, onClose, onSelectLead }) {
           <div key={l.id} className="ft-row" onClick={() => onSelectLead(l)} style={{ border: `1px solid ${T.line}`, borderRadius: 11, padding: 10, background: "#fff", cursor: "pointer" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
               <div style={{ fontWeight: 600, fontSize: 13.5, minWidth: 0, overflowWrap: "anywhere" }}>{l.business}</div>
-              <button type="button" className="ft-lead-brief-pill" aria-label={`Brief for ${l.business}`} onClick={event => { event.stopPropagation(); setBriefLead(l); }}><Sparkles size={13} /> Brief</button>
+              <button type="button" className="ft-lead-brief-pill" aria-label={`Brief for ${l.business}`} onClick={event => { event.stopPropagation(); setBriefLead(l); }}><Sparkles size={11} /> Brief</button>
             </div>
             <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 3, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <span>{STATUS_LABEL[l.status]} · {fmtTime(l.createdAt)}{l.dealValue != null ? ` · ${fmtMoney(l.dealValue)}` : ""}</span>
@@ -3420,6 +3422,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
         <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
           {lead.hasLocation ? <VerificationStamp status={lead.verification} /> : <NoLocationBadge />}
           <SyncBadge syncStatus={lead.syncStatus} />
+          <TasksEntry lead={lead} compact />
           <button
             onClick={() => setShowBrief(true)}
             style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 999, border: "none", cursor: "pointer", background: "#F0EBFB", color: "#6B46C1", fontSize: 11.5, fontWeight: 700 }}
@@ -4013,6 +4016,7 @@ function SalesmanView({ notificationLead, session, leads, dayStarted, onToggleDa
       {!dayStarted && <div style={{ marginTop: 12, fontSize: 12, color: T.warn, background: T.warnSoft, padding: "8px 10px", borderRadius: 11 }}>Start your day to enable lead capture.</div>}
 
       <MessagesSection messages={messages} onMarkRead={onMarkMessageRead} onDelete={onDeleteMessage} />
+      <TasksEntry />
 
       {showAddLead && (
         <AddLeadModal
@@ -4466,7 +4470,7 @@ function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads", allowD
           <div key={l.id} className="ft-row" onClick={() => onSelectLead(l)} style={{ border: `1px solid ${T.line}`, borderRadius: 11, padding: 10, background: "#fff", cursor: "pointer" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
               <div style={{ fontWeight: 600, fontSize: 13.5, minWidth: 0, overflowWrap: "anywhere" }}>{l.business}</div>
-              <button type="button" className="ft-lead-brief-pill" aria-label={`Brief for ${l.business}`} onClick={event => { event.stopPropagation(); setBriefLead(l); }}><Sparkles size={13} /> Brief</button>
+              <button type="button" className="ft-lead-brief-pill" aria-label={`Brief for ${l.business}`} onClick={event => { event.stopPropagation(); setBriefLead(l); }}><Sparkles size={11} /> Brief</button>
             </div>
             <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 3, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <span>{STATUS_LABEL[l.status]} · {fmtTime(l.createdAt)}</span>
