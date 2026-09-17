@@ -119,6 +119,13 @@ async function request(path, { method = "GET", body, auth = true } = {}) {
 }
 
 export const api = {
+ employeeClosingPermissions: id=>request('/day-closing/permissions/'+id),
+ saveEmployeeClosingPermissions:(id,body)=>request('/day-closing/permissions/'+id,{method:'PUT',body}),
+ closingStatus:()=>request('/day-closing/status'),
+ currentClosing:()=>request('/day-closing/current'),
+ saveClosingDraft:body=>request('/day-closing/draft',{method:'PUT',body}),
+ closingReports:params=>request('/day-closing/reports?'+new URLSearchParams(params)),
+ endDayWithClosing:body=>request('/salesman/day/end',{method:'POST',body}),
   quoteSettings: () => request('/quotations/settings'),
   saveQuoteSettings: body => request('/quotations/settings',{method:'PUT',body}),
   quoteCustomers: search => request('/quotations/customers?'+new URLSearchParams({search})),

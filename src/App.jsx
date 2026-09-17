@@ -1,3 +1,4 @@
+import {EmployeeSettings, DayClosingForm, DayClosingReports, DayClosingReportsEntry} from "./DayClosing.jsx";
 import QuotationsPanel, { QuotationSettings } from "./Quotations.jsx";
 import OnboardingPanel, { AppMenu, OnboardingTemplateEditor } from "./Onboarding.jsx";
 import DealValueReport from "./DealValueReport.jsx";
@@ -381,6 +382,7 @@ export default function App() {
   const [session, setSessionState] = useState(getSession());
   const [showSettings, setShowSettings] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showDailyReports,setShowDailyReports] = useState(false);
   const [quotationView, setQuotationView] = useState(null);
   const [showOnboardingSettings, setShowOnboardingSettings] = useState(false);
   const [showCrmSettings, setShowCrmSettings] = useState(false);
@@ -440,7 +442,7 @@ export default function App() {
     setSessionState(null);
     closeNotifications();
     setNotificationLead(null);
-    setShowOnboarding(false); setShowOnboardingSettings(false); setQuotationView(null);
+    setShowOnboarding(false); setShowOnboardingSettings(false); setQuotationView(null); setShowDailyReports(false);
   };
 
   let body;
@@ -465,6 +467,7 @@ export default function App() {
         unreadCount={unreadCount}
         onOpenNotifications={session ? () => { setShowSettings(false); setShowNotifications(true); } : undefined}
         onOpenSettings={() => { closeNotifications(); setShowOnboarding(false); setShowSettings(true); }}
+        onOpenDailyReports={() => { closeNotifications(); setShowSettings(false); setShowOnboarding(false); setQuotationView(null); setShowDailyReports(true); }}
         onOpenOnboarding={() => { closeNotifications(); setQuotationView(null); setShowSettings(false); setShowOnboarding(true); }}
         onOpenQuotations={() => { closeNotifications(); setShowSettings(false); setShowOnboarding(false); setQuotationView({}); }}
         onOpenApprovals={session?.role === "admin" ? () => { closeNotifications(); setShowSettings(false); setShowOnboarding(false); setQuotationView({approvals:true}); } : undefined}
@@ -489,6 +492,7 @@ export default function App() {
         />
       )}
       {session && quotationView && (quotationView.settings ? session.role === "admin" && <QuotationSettings onClose={() => setQuotationView(null)} /> : <QuotationsPanel key={`${session.id}-${quotationView.initialId||"list"}-${!!quotationView.approvals}`} {...quotationView} onClose={() => setQuotationView(null)} />)}
+      {session && showDailyReports && <DayClosingReports onClose={()=>setShowDailyReports(false)}/>}
       {session && showOnboarding && <OnboardingPanel key={session.id} onClose={() => setShowOnboarding(false)} />}
       {session?.role === "admin" && showOnboardingSettings && <OnboardingTemplateEditor onClose={() => setShowOnboardingSettings(false)} />}
       {showCrmSettings && <CrmSettingsModal onClose={() => setShowCrmSettings(false)} />}
@@ -513,7 +517,7 @@ function LogoMark({ size = 20, color = "#fff" }) {
   );
 }
 
-function TopBar({ online, session, page, onChangePage, onAddExpense, onOpenSettings, onOpenOnboarding, onOpenQuotations, onOpenApprovals, onOpenNotifications, unreadCount = 0 }) {
+function TopBar({ online, session, page, onChangePage, onAddExpense, onOpenSettings, onOpenOnboarding, onOpenDailyReports, onOpenQuotations, onOpenApprovals, onOpenNotifications, unreadCount = 0 }) {
   const [narrow, setNarrow] = useState(window.innerWidth < 560);
   useEffect(() => {
     const onResize = () => setNarrow(window.innerWidth < 560);
@@ -571,7 +575,7 @@ function TopBar({ online, session, page, onChangePage, onAddExpense, onOpenSetti
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <ConnectionPill online={online} />
           {onOpenNotifications && <button type="button" onClick={onOpenNotifications} title="Notifications" aria-label={unreadCount ? `Notifications, ${unreadCount} unread` : "Notifications"} style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 6, border: "1px solid rgba(255,255,255,0.22)", cursor: "pointer", background: "rgba(255,255,255,0.14)", color: "#fff" }}><Bell size={14} />{unreadCount > 0 && <span className="ft-notification-badge" aria-hidden="true">{unreadCount > 99 ? "99+" : unreadCount}</span>}</button>}
-          <AppMenu signedIn={!!session} onSettings={onOpenSettings} onOnboarding={onOpenOnboarding} onQuotations={onOpenQuotations} onApprovals={onOpenApprovals} />
+          <AppMenu signedIn={!!session} onSettings={onOpenSettings} onOnboarding={onOpenOnboarding} onQuotations={onOpenQuotations} onApprovals={onOpenApprovals} onDailyReports={session?.role === "salesman" ? onOpenDailyReports : undefined} />
         </div>
       </div>
     </div>
@@ -1606,6 +1610,7 @@ function AdminView({ conversationCount, salesmen, leads, onStatusChange, onUpdat
   const [selectedLead, setSelectedLead] = useState(null);
   const [showAddSalesman, setShowAddSalesman] = useState(false);
   const [editSalesman, setEditSalesman] = useState(null);
+  const [employeeSettings,setEmployeeSettings]=useState(null);
   const [deleteSalesmanConfirm, setDeleteSalesmanConfirm] = useState(null);
   const [deleteSalesmanError, setDeleteSalesmanError] = useState("");
   const [messageTarget, setMessageTarget] = useState(null); // salesman object | "all" | null
@@ -1686,7 +1691,7 @@ function AdminView({ conversationCount, salesmen, leads, onStatusChange, onUpdat
             salesmen={salesmen}
             leads={leads}
             onAddClick={() => setShowAddSalesman(true)}
-            onEditClick={setEditSalesman}
+            onSettingsClick={setEmployeeSettings}
             onToggleActive={onToggleSalesmanActive}
             onDeleteClick={setDeleteSalesmanConfirm}
             onViewRoute={setRouteSalesman}
@@ -1867,6 +1872,7 @@ function AdminView({ conversationCount, salesmen, leads, onStatusChange, onUpdat
           onSubmit={async (s) => { await onAddSalesman(s); setShowAddSalesman(false); }}
         />
       )}
+      {employeeSettings && <EmployeeSettings employee={employeeSettings} onClose={()=>setEmployeeSettings(null)} onEdit={()=>{setEditSalesman(employeeSettings);setEmployeeSettings(null)}} onDelete={()=>{setDeleteSalesmanConfirm(employeeSettings);setEmployeeSettings(null)}} />}
       {editSalesman && (
         <SalesmanFormModal
           salesman={editSalesman}
@@ -1947,6 +1953,7 @@ function ReportsPage({ salesmen, leads }) {
       <div>
         <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 18, marginBottom: 4 }}>Reports</div>
         <div style={{ fontSize: 13, color: T.inkSoft, marginBottom: 16 }}>Choose a report to view</div>
+        <DayClosingReportsEntry />
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
           {REPORT_CARDS.map((c) => (
             <div
@@ -2714,6 +2721,7 @@ function SalesmanReportsPage({ leads, dailyTarget, monthlyTarget }) {
       <div>
         <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 18, marginBottom: 4 }}>Reports</div>
         <div style={{ fontSize: 13, color: T.inkSoft, marginBottom: 16 }}>Choose a report to view</div>
+        <DayClosingReportsEntry />
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {SALESMAN_REPORT_CARDS.map((c) => (
             <div
@@ -2881,7 +2889,7 @@ function MonthlyProgressBar({ salesmanId, target, leads }) {
   );
 }
 
-function SalesmenPanel({ salesmen, leads, onAddClick, onEditClick, onToggleActive, onDeleteClick, onViewRoute, onMessageClick, onOpenSalesmanLeads }) {
+function SalesmenPanel({ salesmen, leads, onAddClick, onSettingsClick, onToggleActive, onDeleteClick, onViewRoute, onMessageClick, onOpenSalesmanLeads }) {
   return (
     <div className="ft-card" style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, padding: 18, display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -2938,18 +2946,7 @@ function SalesmenPanel({ salesmen, leads, onAddClick, onEditClick, onToggleActiv
             >
               <MessageSquare size={12} /> Message
             </button>
-            <button
-              onClick={() => onEditClick(s)}
-              style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11.5, fontWeight: 700, color: T.inkSoft, background: "none", border: "none", cursor: "pointer", padding: 0 }}
-            >
-              <Pencil size={12} /> Edit
-            </button>
-            <button
-              onClick={() => onDeleteClick(s)}
-              style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11.5, fontWeight: 700, color: T.danger, background: "none", border: "none", cursor: "pointer", padding: 0 }}
-            >
-              <Trash2 size={12} /> Delete
-            </button>
+            <button onClick={()=>onSettingsClick(s)} style={{display:"flex",alignItems:"center",gap:5,fontSize:11.5,fontWeight:700,color:T.inkSoft,background:"none",border:"none",cursor:"pointer",padding:0}}><Settings size={12}/> Settings</button>
           </div>
         </div>
       ))}
@@ -3623,6 +3620,13 @@ function SalesmanApp({ session, online, page, notificationLead }) {
   const lastPingSentRef = useRef(0);
 
   useEffect(() => {
+    let live=true;
+    const sync=()=>api.closingStatus().then(v=>{if(live){setDayStartedState(v.active);setDayStartedFlag(session.id,v.active);}}).catch(()=>{});
+    sync();window.addEventListener('focus',sync);
+    return()=>{live=false;window.removeEventListener('focus',sync);};
+  },[session.id]);
+
+  useEffect(() => {
     api.salesmanGetProfile()
       .then((res) => {
         setDailyTarget(res.profile?.daily_target || 8);
@@ -3762,9 +3766,11 @@ function SalesmanApp({ session, online, page, notificationLead }) {
       navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 8000 });
     });
 
+  const [showClosing,setShowClosing]=useState(false);
   const [justToggled, setJustToggled] = useState(false); // brief "Started"/"Ended" confirmation flash
 
-  const handleToggleDay = async () => {
+  const handleToggleDay = async closing => {
+    if(dayStarted && !closing){setShowClosing(true);return;}
     if (togglingDay) return; // guard against double-taps while a request is already in flight
     setTogglingDay(true);
     try {
@@ -3772,7 +3778,8 @@ function SalesmanApp({ session, online, page, notificationLead }) {
       const lat = pos?.coords.latitude;
       const lng = pos?.coords.longitude;
       if (dayStarted) {
-        await api.salesmanDayEnd(lat, lng);
+        await api.endDayWithClosing({...closing,lat,lng});
+        setShowClosing(false);
         setDayStartedFlag(session.id, false);
         setDayStartedState(false);
       } else {
@@ -3783,6 +3790,7 @@ function SalesmanApp({ session, online, page, notificationLead }) {
       setJustToggled(true);
       setTimeout(() => setJustToggled(false), 1600);
     } catch (err) {
+      if(closing)throw err;
       setLoadError(err instanceof ApiError ? err.message : "Couldn't reach the server — try again.");
     } finally {
       setTogglingDay(false);
@@ -3849,12 +3857,14 @@ function SalesmanApp({ session, online, page, notificationLead }) {
   }
 
   return (
+    <>
+    {showClosing && <DayClosingForm onClose={()=>setShowClosing(false)} onEnd={handleToggleDay}/>}
     <SalesmanView
       notificationLead={notificationLead}
       session={session}
       leads={leads}
       dayStarted={dayStarted}
-      onToggleDay={handleToggleDay}
+      onToggleDay={()=>handleToggleDay()}
       togglingDay={togglingDay}
       justToggledDay={justToggled}
       onAddLead={handleAddLead}
@@ -3871,6 +3881,7 @@ function SalesmanApp({ session, online, page, notificationLead }) {
       monthlyTarget={monthlyTarget}
       page={page}
     />
+    </>
   );
 }
 
