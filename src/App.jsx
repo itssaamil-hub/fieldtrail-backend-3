@@ -1420,6 +1420,7 @@ function LiveMap({ salesmen, leads, onSelectLead, title = "Live Employees & Lead
 // back to a periodic refetch as a safety net if the socket drops.
 // ---------------------------------------------------------------------------
 function AdminApp({ session, online, page }) {
+  const [conversationCount, setConversationCount] = useState(null);
   const [salesmen, setSalesmen] = useState([]);
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1429,7 +1430,8 @@ function AdminApp({ session, online, page }) {
 
   const loadAll = useCallback(async () => {
     try {
-      const [salesmenRes, leadsRes] = await Promise.all([api.adminSalesmen(), api.adminLeads()]);
+      const [salesmenRes, leadsRes, summaryRes] = await Promise.all([api.adminSalesmen(), api.adminLeads(), api.adminSummary()]);
+      setConversationCount(summaryRes.conversationLeads ?? null);
       setSalesmen((salesmenRes.salesmen || []).map(mapSalesmanRow));
       setLeads((leadsRes.leads || []).map(mapLeadRow));
       setLoadError("");
@@ -1572,6 +1574,7 @@ function AdminApp({ session, online, page }) {
 
   return (
     <AdminView
+      conversationCount={conversationCount}
       salesmen={salesmen}
       leads={leads}
       onStatusChange={onStatusChange}
@@ -1590,7 +1593,8 @@ function AdminApp({ session, online, page }) {
   );
 }
 
-function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead, onAddLead, onAddSalesman, onEditSalesman, onDeleteSalesman, onToggleSalesmanActive, loadError, wsConnected, online, page }) {
+function AdminView({ conversationCount, salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead, onAddLead, onAddSalesman, onEditSalesman, onDeleteSalesman, onToggleSalesmanActive, loadError, wsConnected, online, page }) {
+  const [conversationError, setConversationError] = useState("");
   const [filterSalesman, setFilterSalesman] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterDate, setFilterDate] = useState("");
@@ -1657,8 +1661,8 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
       )}
 
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
-        <StatCard label="Total Employees" value={salesmen.length} />
-        <StatCard label="Active Now" value={activeSalesmen} color={T.verified} />
+        <StatCard label="Total Employees" value={salesmen.length} sub={<span style={{color:T.verified}}>{activeSalesmen} active now</span>} />
+        <StatCard label="Conversation" value={conversationCount ?? "—"} color={T.route} onClick={async () => { try { setConversationError(""); const result=await api.adminLeads({status:"conversation"}); setStatLeadsModal({title:conversationCount>500?"Conversation Leads · Latest 500":"Conversation Leads",leads:(result.leads||[]).map(mapLeadRow)}); } catch(e) { setConversationError(e.message); } }} />
         <StatCard label="Leads Today" value={todayLeads.length} onClick={() => setStatLeadsModal({ title: "Leads Today", leads: todayLeads })} />
         <StatCard label={<>Hot Leads <span style={{ fontSize: 8.5, opacity: 0.65 }}>TODAY</span></>} value={hotLeadsToday.length} color={T.danger} onClick={() => setStatLeadsModal({ title: "Hot Leads Today", leads: hotLeadsToday })} />
         <StatCard label="In Negotiation" value={inNegotiation.length} color={T.route} onClick={() => setStatLeadsModal({ title: "In Negotiation", leads: inNegotiation })} />
@@ -1668,6 +1672,7 @@ function AdminView({ salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead
         <StatCard label="Renewals Due" sub="next 30 days" value={upcomingRenewals.length} color={T.accent} onClick={() => setStatLeadsModal({ title: "Renewals Due (Next 30 Days)", leads: upcomingRenewals })} />
       </div>
 
+      {conversationError && <p role="alert" style={{color:T.danger}}>{conversationError}</p>}
       <TasksEntry />
       <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
         <Tab active={mapView === "live"} onClick={() => setMapView("live")} label="Live Map" />

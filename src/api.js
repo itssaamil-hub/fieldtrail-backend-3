@@ -123,6 +123,7 @@ export const api = {
   saveQuoteSettings: body => request('/quotations/settings',{method:'PUT',body}),
   quoteCustomers: search => request('/quotations/customers?'+new URLSearchParams({search})),
   quotes: params => request('/quotations?'+new URLSearchParams(params)),
+  deleteQuote: (id,body) => request('/quotations/'+id,{method:'DELETE',body}),
   quote: id => request('/quotations/'+id),
   createQuote: body => request('/quotations',{method:'POST',body}),
   reviseQuote: (id,body) => request('/quotations/'+id+'/revise',{method:'POST',body}),
