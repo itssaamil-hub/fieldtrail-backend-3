@@ -1,3 +1,4 @@
+import QuotationsPanel, { QuotationSettings } from "./Quotations.jsx";
 import OnboardingPanel, { AppMenu, OnboardingTemplateEditor } from "./Onboarding.jsx";
 import DealValueReport from "./DealValueReport.jsx";
 import { TasksEntry } from "./Tasks.jsx";
@@ -380,6 +381,7 @@ export default function App() {
   const [session, setSessionState] = useState(getSession());
   const [showSettings, setShowSettings] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [quotationView, setQuotationView] = useState(null);
   const [showOnboardingSettings, setShowOnboardingSettings] = useState(false);
   const [showCrmSettings, setShowCrmSettings] = useState(false);
   const [showAddExpense, setShowAddExpense] = useState(false);
@@ -438,7 +440,7 @@ export default function App() {
     setSessionState(null);
     closeNotifications();
     setNotificationLead(null);
-    setShowOnboarding(false); setShowOnboardingSettings(false);
+    setShowOnboarding(false); setShowOnboardingSettings(false); setQuotationView(null);
   };
 
   let body;
@@ -463,10 +465,12 @@ export default function App() {
         unreadCount={unreadCount}
         onOpenNotifications={session ? () => { setShowSettings(false); setShowNotifications(true); } : undefined}
         onOpenSettings={() => { closeNotifications(); setShowOnboarding(false); setShowSettings(true); }}
-        onOpenOnboarding={() => { closeNotifications(); setShowSettings(false); setShowOnboarding(true); }}
+        onOpenOnboarding={() => { closeNotifications(); setQuotationView(null); setShowSettings(false); setShowOnboarding(true); }}
+        onOpenQuotations={() => { closeNotifications(); setShowSettings(false); setShowOnboarding(false); setQuotationView({}); }}
+        onOpenApprovals={session?.role === "admin" ? () => { closeNotifications(); setShowSettings(false); setShowOnboarding(false); setQuotationView({approvals:true}); } : undefined}
       />
       {body}
-      {session && showNotifications && <NotificationsPanel key={`notifications-${session.id}`} session={session} online={online} onClose={closeNotifications} onOpenLead={id => {
+      {session && showNotifications && <NotificationsPanel key={`notifications-${session.id}`} session={session} online={online} onClose={closeNotifications} onOpenQuote={id => { closeNotifications(); setQuotationView({initialId:id}); }} onOpenLead={id => {
         closeNotifications(); setTopPage("dashboard"); setNotificationLead({ id, openedAt: Date.now() });
       }} />}
       {showSettings && (
@@ -476,6 +480,7 @@ export default function App() {
           onSave={(url) => { handleSaveApiBase(url); setShowSettings(false); }}
           onLogout={session ? () => { setShowSettings(false); handleLogout(); } : undefined}
           onOpenCrmSettings={session?.role === "admin" ? () => { setShowSettings(false); setShowCrmSettings(true); } : undefined}
+          onOpenQuotationSettings={session?.role === "admin" ? () => { setShowSettings(false); setQuotationView({settings:true}); } : undefined}
           onOpenOnboardingSettings={session?.role === "admin" ? () => { setShowSettings(false); setShowOnboardingSettings(true); } : undefined}
           canInstall={canInstall}
           installed={installed}
@@ -483,6 +488,7 @@ export default function App() {
           push={pushNotifications}
         />
       )}
+      {session && quotationView && (quotationView.settings ? session.role === "admin" && <QuotationSettings onClose={() => setQuotationView(null)} /> : <QuotationsPanel key={`${session.id}-${quotationView.initialId||"list"}-${!!quotationView.approvals}`} {...quotationView} onClose={() => setQuotationView(null)} />)}
       {session && showOnboarding && <OnboardingPanel key={session.id} onClose={() => setShowOnboarding(false)} />}
       {session?.role === "admin" && showOnboardingSettings && <OnboardingTemplateEditor onClose={() => setShowOnboardingSettings(false)} />}
       {showCrmSettings && <CrmSettingsModal onClose={() => setShowCrmSettings(false)} />}
@@ -507,7 +513,7 @@ function LogoMark({ size = 20, color = "#fff" }) {
   );
 }
 
-function TopBar({ online, session, page, onChangePage, onAddExpense, onOpenSettings, onOpenOnboarding, onOpenNotifications, unreadCount = 0 }) {
+function TopBar({ online, session, page, onChangePage, onAddExpense, onOpenSettings, onOpenOnboarding, onOpenQuotations, onOpenApprovals, onOpenNotifications, unreadCount = 0 }) {
   const [narrow, setNarrow] = useState(window.innerWidth < 560);
   useEffect(() => {
     const onResize = () => setNarrow(window.innerWidth < 560);
@@ -565,7 +571,7 @@ function TopBar({ online, session, page, onChangePage, onAddExpense, onOpenSetti
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <ConnectionPill online={online} />
           {onOpenNotifications && <button type="button" onClick={onOpenNotifications} title="Notifications" aria-label={unreadCount ? `Notifications, ${unreadCount} unread` : "Notifications"} style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 6, border: "1px solid rgba(255,255,255,0.22)", cursor: "pointer", background: "rgba(255,255,255,0.14)", color: "#fff" }}><Bell size={14} />{unreadCount > 0 && <span className="ft-notification-badge" aria-hidden="true">{unreadCount > 99 ? "99+" : unreadCount}</span>}</button>}
-          <AppMenu signedIn={!!session} onSettings={onOpenSettings} onOnboarding={onOpenOnboarding} />
+          <AppMenu signedIn={!!session} onSettings={onOpenSettings} onOnboarding={onOpenOnboarding} onQuotations={onOpenQuotations} onApprovals={onOpenApprovals} />
         </div>
       </div>
     </div>
@@ -719,7 +725,7 @@ function LoginScreen({ apiBase, online, onLoggedIn, onOpenSettings }) {
   );
 }
 
-function SettingsModal({ apiBase, onClose, onSave, onLogout, onOpenCrmSettings, onOpenOnboardingSettings, canInstall, installed, promptInstall, push }) {
+function SettingsModal({ apiBase, onClose, onSave, onLogout, onOpenCrmSettings, onOpenOnboardingSettings, onOpenQuotationSettings, canInstall, installed, promptInstall, push }) {
   const [url, setUrl] = useState(apiBase || "");
   const isIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
   const [showIosHint, setShowIosHint] = useState(false);
@@ -753,6 +759,7 @@ function SettingsModal({ apiBase, onClose, onSave, onLogout, onOpenCrmSettings, 
         </div>
       )}
 
+      {onOpenQuotationSettings && <button type="button" onClick={onOpenQuotationSettings} style={{width:"100%",padding:11,borderRadius:11,border:`1px solid ${T.line}`,background:T.paperDeep,color:T.ink,fontWeight:700,fontSize:13.5,marginBottom:12,cursor:"pointer"}}>Quotation settings</button>}
       {onOpenOnboardingSettings && <button type="button" onClick={onOpenOnboardingSettings} style={{width:"100%",padding:11,borderRadius:11,border:`1px solid ${T.line}`,background:T.paperDeep,color:T.ink,fontWeight:700,fontSize:13.5,marginBottom:18,cursor:"pointer"}}>Edit onboarding checklist</button>}
       {onOpenCrmSettings && (
         <button

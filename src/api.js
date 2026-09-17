@@ -119,6 +119,22 @@ async function request(path, { method = "GET", body, auth = true } = {}) {
 }
 
 export const api = {
+  quoteSettings: () => request('/quotations/settings'),
+  saveQuoteSettings: body => request('/quotations/settings',{method:'PUT',body}),
+  quoteCustomers: search => request('/quotations/customers?'+new URLSearchParams({search})),
+  quotes: params => request('/quotations?'+new URLSearchParams(params)),
+  quote: id => request('/quotations/'+id),
+  createQuote: body => request('/quotations',{method:'POST',body}),
+  reviseQuote: (id,body) => request('/quotations/'+id+'/revise',{method:'POST',body}),
+  quoteAction: (id,body) => request('/quotations/'+id+'/action',{method:'POST',body}),
+  quoteSummary: id => request('/quotations/'+id+'/summary'),
+  quoteAlerts: () => request('/quotations/alerts'),
+  readQuoteAlerts: ids => request('/quotations/alerts/read',{method:'POST',body:{ids}}),
+  quotePDF: async (id,revision) => {
+    const response=await fetch(`${getApiBase()}/quotations/${id}/pdf?revision=${revision}`,{headers:{Authorization:`Bearer ${getSession()?.token||''}`}});
+    if(!response.ok){let data;try{data=await response.json()}catch{}throw new ApiError(data?.error||'Could not download quotation',response.status)}
+    return response.blob();
+  },
   onboardingCustomers: params => request(`/onboarding/customers?${new URLSearchParams(params)}`),
   onboardingStart: id => request(`/onboarding/${id}/start`, {method:'POST'}),
   onboardingGet: id => request(`/onboarding/${id}`),
