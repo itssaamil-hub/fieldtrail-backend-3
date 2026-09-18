@@ -1078,6 +1078,12 @@ function CrmSettingsModal({ onClose }) {
             checked={locationSettings.continuousGpsTracking}
             onChange={toggleLocation("continuousGpsTracking")}
           />
+          <SettingToggle
+            label="Allow Multiple Day Starts"
+            description="If on, an employee can Start Day again after ending it, as many times as needed in one day. If off (default), once a day ends it can't be restarted until tomorrow."
+            checked={locationSettings.allowMultipleDayStarts}
+            onChange={toggleLocation("allowMultipleDayStarts")}
+          />
 
           <FieldOptionsSection />
 
@@ -4125,7 +4131,7 @@ const DEFAULT_LEAD_SETTINGS = {
   requireContactName: true, requireContactNumber: true, requireStatus: true, requireComments: false,
   requireDealValue: false, requireFollowUpDate: false,
 };
-const DEFAULT_LOCATION_SETTINGS = { gpsLocation: true, locationMandatoryForNewLead: true, continuousGpsTracking: true };
+const DEFAULT_LOCATION_SETTINGS = { gpsLocation: true, locationMandatoryForNewLead: true, continuousGpsTracking: true, allowMultipleDayStarts: false };
 
 // Tasks/messages sent by admin, shown right below the lead buttons on the
 // salesman's own dashboard. Unread ones are visually distinct; tapping one
