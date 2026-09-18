@@ -505,14 +505,9 @@ export default function App() {
 function LogoMark({ size = 20, color = "#fff" }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="6" cy="5" r="2" fill={color} />
-      <path d="M2.5 11c0-2 1.6-3.6 3.5-3.6S9.5 9 9.5 11" fill={color} />
-      <circle cx="18" cy="5" r="2" fill={color} />
-      <path d="M14.5 11c0-2 1.6-3.6 3.5-3.6s3.5 1.6 3.5 3.6" fill={color} />
-      <circle cx="6" cy="17" r="2" fill={color} />
-      <path d="M2.5 23c0-2 1.6-3.6 3.5-3.6s3.5 1.6 3.5 3.6" fill={color} />
-      <circle cx="18" cy="17" r="2" fill={color} />
-      <path d="M14.5 23c0-2 1.6-3.6 3.5-3.6s3.5 1.6 3.5 3.6" fill={color} />
+      <circle cx="12" cy="7.5" r="3.5" fill={color} />
+      <rect x="4" y="13.2" width="16" height="2.3" rx="1.15" fill={color} />
+      <rect x="4" y="17" width="16" height="2.3" rx="1.15" fill={color} />
     </svg>
   );
 }
@@ -529,8 +524,8 @@ function TopBar({ online, session, page, onChangePage, onAddExpense, onOpenSetti
     <div style={{ position: "sticky", top: 0, zIndex: 40 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", paddingTop: "calc(14px + env(safe-area-inset-top))", background: "linear-gradient(135deg, #0F3D3E 0%, #145C5D 100%)", color: "#fff", gap: 10, flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <div style={{ width: 30, height: 30, borderRadius: 7, background: T.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <LogoMark size={16} color={T.paper} />
+          <div style={{ width: 30, height: 30, borderRadius: 7, background: "#145C5D", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <LogoMark size={16} color="#fff" />
           </div>
           <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 17, letterSpacing: 0.2 }}>Engage</div>
           {!narrow && session && (
@@ -620,8 +615,8 @@ function ConnectBackendScreen({ onSave }) {
   return (
     <div style={{ maxWidth: 440, margin: "0 auto", padding: "60px 20px" }}>
       <div style={{ textAlign: "center", marginBottom: 24 }}>
-        <div style={{ width: 52, height: 52, borderRadius: 12, background: T.ink, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
-          <LogoMark size={26} color={T.paper} />
+        <div style={{ width: 52, height: 52, borderRadius: 12, background: "#145C5D", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+          <LogoMark size={26} color="#fff" />
         </div>
         <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 20 }}>Connect Engage</div>
         <div style={{ fontSize: 13, color: T.inkSoft, marginTop: 6 }}>Paste your backend's URL to get started. You only need to do this once per device.</div>
@@ -689,8 +684,8 @@ function LoginScreen({ apiBase, online, onLoggedIn, onOpenSettings }) {
   return (
     <div style={{ maxWidth: 400, margin: "0 auto", padding: "60px 20px" }}>
       <div style={{ textAlign: "center", marginBottom: 24 }}>
-        <div style={{ width: 52, height: 52, borderRadius: 12, background: T.ink, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
-          <LogoMark size={26} color={T.paper} />
+        <div style={{ width: 52, height: 52, borderRadius: 12, background: "#145C5D", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+          <LogoMark size={26} color="#fff" />
         </div>
         <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 20 }}>Sign in</div>
         <div style={{ fontSize: 12, color: T.inkSoft, marginTop: 6, fontFamily: "'IBM Plex Mono', monospace" }}>{apiBase}</div>
@@ -1077,12 +1072,6 @@ function CrmSettingsModal({ onClose }) {
             description="Live location pings while the employee's day is active."
             checked={locationSettings.continuousGpsTracking}
             onChange={toggleLocation("continuousGpsTracking")}
-          />
-          <SettingToggle
-            label="Allow Multiple Day Starts"
-            description="If on, an employee can Start Day again after ending it, as many times as needed in one day. If off (default), once a day ends it can't be restarted until tomorrow."
-            checked={locationSettings.allowMultipleDayStarts}
-            onChange={toggleLocation("allowMultipleDayStarts")}
           />
 
           <FieldOptionsSection />
@@ -4131,7 +4120,7 @@ const DEFAULT_LEAD_SETTINGS = {
   requireContactName: true, requireContactNumber: true, requireStatus: true, requireComments: false,
   requireDealValue: false, requireFollowUpDate: false,
 };
-const DEFAULT_LOCATION_SETTINGS = { gpsLocation: true, locationMandatoryForNewLead: true, continuousGpsTracking: true, allowMultipleDayStarts: false };
+const DEFAULT_LOCATION_SETTINGS = { gpsLocation: true, locationMandatoryForNewLead: true, continuousGpsTracking: true };
 
 // Tasks/messages sent by admin, shown right below the lead buttons on the
 // salesman's own dashboard. Unread ones are visually distinct; tapping one
