@@ -3597,6 +3597,7 @@ function SalesmanApp({ session, online, page, notificationLead }) {
   const [gpsStatus, setGpsStatus] = useState("idle"); // idle | tracking | denied | unavailable
   const [queuedCount, setQueuedCount] = useState(getQueuedLeads().length);
   const [continuousTracking, setContinuousTracking] = useState(true); // safe default until settings load
+  const [allowLeadWithoutStartDay, setAllowLeadWithoutStartDay] = useState(false);
   const [dailyTarget, setDailyTarget] = useState(8); // overwritten by the salesman's actual profile below
   const [monthlyTarget, setMonthlyTarget] = useState(200);
   const lastPingSentRef = useRef(0);
@@ -3619,8 +3620,14 @@ function SalesmanApp({ session, online, page, notificationLead }) {
 
   useEffect(() => {
     api.salesmanGetSettings()
-      .then((res) => setContinuousTracking(res.locationSettings?.continuousGpsTracking ?? true))
-      .catch(() => { /* keep default on failure */ });
+      .then((res) => {
+        setContinuousTracking(res.locationSettings?.continuousGpsTracking ?? true);
+        setAllowLeadWithoutStartDay(!!res.employeePermissions?.allowLeadWithoutStartDay);
+      })
+      .catch(() => {
+        // Fail closed: if settings cannot load, Start Day remains required.
+        setAllowLeadWithoutStartDay(false);
+      });
   }, []);
 
   const loadLeads = useCallback(async () => {
@@ -3846,6 +3853,7 @@ function SalesmanApp({ session, online, page, notificationLead }) {
       session={session}
       leads={leads}
       dayStarted={dayStarted}
+      allowLeadWithoutStartDay={allowLeadWithoutStartDay}
       onToggleDay={()=>handleToggleDay()}
       togglingDay={togglingDay}
       justToggledDay={justToggled}
@@ -3893,7 +3901,7 @@ function adHocLeadFromPayload(payload, session) {
   };
 }
 
-function SalesmanView({ notificationLead, session, leads, dayStarted, onToggleDay, togglingDay, justToggledDay, onAddLead, onUpdateLeadStatus, onUpdateLeadDetails, online, gpsStatus, queuedCount, loadError, messages, onMarkMessageRead, onDeleteMessage, dailyTarget, monthlyTarget, page }) {
+function SalesmanView({ notificationLead, session, leads, dayStarted, allowLeadWithoutStartDay, onToggleDay, togglingDay, justToggledDay, onAddLead, onUpdateLeadStatus, onUpdateLeadDetails, online, gpsStatus, queuedCount, loadError, messages, onMarkMessageRead, onDeleteMessage, dailyTarget, monthlyTarget, page }) {
   const [showAddLead, setShowAddLead] = useState(false);
   const [showMyLeads, setShowMyLeads] = useState(false);
   const [viewingLead, setViewingLead] = useState(null);
@@ -4020,11 +4028,11 @@ function SalesmanView({ notificationLead, session, leads, dayStarted, onToggleDa
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-        <BigButton icon={Plus} label="Add Lead" onClick={() => setShowAddLead(true)} primary disabled={!dayStarted} />
+        <BigButton icon={Plus} label="Add Lead" onClick={() => setShowAddLead(true)} primary disabled={!dayStarted && !allowLeadWithoutStartDay} />
         <BigButton icon={List} label="My Leads" onClick={() => setShowMyLeads(true)} />
       </div>
 
-      {!dayStarted && <div style={{ marginTop: 12, fontSize: 12, color: T.warn, background: T.warnSoft, padding: "8px 10px", borderRadius: 11 }}>Start your day to enable lead capture.</div>}
+      {!dayStarted && !allowLeadWithoutStartDay && <div style={{ marginTop: 12, fontSize: 12, color: T.warn, background: T.warnSoft, padding: "8px 10px", borderRadius: 11 }}>Start your day to enable lead capture.</div>}
 
       <MessagesSection messages={messages} onMarkRead={onMarkMessageRead} onDelete={onDeleteMessage} />
       <TasksEntry />
