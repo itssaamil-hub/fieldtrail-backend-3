@@ -108,7 +108,7 @@ export default function NotificationsPanel({ session, online, onClose, onOpenLea
               <button key={key} type="button" role="tab" aria-selected={followUpFilter === key} className={followUpFilter === key ? `is-active is-${key}` : ''} onClick={() => setFollowUpFilter(key)}><strong>{count}</strong><span>{label}</span></button>
             )}</div>
             <div className="ft-followup-list">
-              {items.length ? items.slice(0, 8).map(lead => <button type="button" className="ft-followup-row" key={`${followUpFilter}-${lead.id}`} onClick={() => onOpenLead?.(lead.id)}>
+              {items.length ? items.slice(0, 8).map(lead => <button type="button" className="ft-followup-row" key={`${followUpFilter}-${lead.id}`} onClick={() => !admin && onOpenLead?.(lead.id)} disabled={admin}>
                 <span><strong>{lead.business_name}</strong><small>{lead.status?.replaceAll('_', ' ') || 'Lead'} · {lead.next_follow_up_date}</small></span><span aria-hidden="true">›</span>
               </button>) : <div className="ft-followup-empty">No {followUpFilter === 'all' ? 'scheduled' : followUpFilter} follow-ups.</div>}
               {items.length > 8 && <div className="ft-followup-more">+{items.length - 8} more</div>}

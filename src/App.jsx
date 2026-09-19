@@ -172,6 +172,33 @@ const STATUS_DESCRIPTOR = {
 // Builds a short, human-readable summary and a recommended next action for a
 // lead, entirely from data already on the lead + its status history —
 // plain JS conditions and template strings, no AI model or external API.
+
+function leadInitials(name) {
+  const words = String(name || "").trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return "?";
+  return (words.length === 1 ? words[0][0] : words[0][0] + words[1][0]).toUpperCase();
+}
+
+function leadAvatarStyle(name) {
+  const palettes = [
+    ["#E8F5EF", "#147A5A"],
+    ["#EEF3FF", "#4967B2"],
+    ["#F4EEFF", "#7651A8"],
+    ["#FFF2E7", "#A45E24"],
+    ["#FDECEF", "#A84E63"],
+    ["#EAF6F8", "#287C88"],
+  ];
+  const value = String(name || "?");
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) hash = ((hash << 5) - hash + value.charCodeAt(i)) | 0;
+  const [background, color] = palettes[Math.abs(hash) % palettes.length];
+  return {
+    width: 30, height: 30, minWidth: 30, borderRadius: "50%",
+    display: "grid", placeItems: "center", background, color,
+    fontSize: 10.5, fontWeight: 800, letterSpacing: ".2px", flexShrink: 0
+  };
+}
+
 function buildLeadBrief(lead, history) {
   const parts = [];
   const today = new Date(new Date().toDateString());
@@ -2834,12 +2861,17 @@ function SalesmanLeadsModal({ salesman, leads, onClose, onSelectLead }) {
         )}
         {shown.map((l) => (
           <div key={l.id} className="ft-row" onClick={() => onSelectLead(l)} style={{ border: `1px solid ${T.line}`, borderRadius: 11, padding: 10, background: "#fff", cursor: "pointer" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-              <div style={{ fontWeight: 600, fontSize: 13.5, minWidth: 0, overflowWrap: "anywhere" }}>{l.business}</div>
-              <button type="button" className="ft-lead-brief-pill" aria-label={`Brief for ${l.business}`} onClick={event => { event.stopPropagation(); setBriefLead(l); }}><Sparkles size={11} /> Brief</button>
-            </div>
-            <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 3, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <span>{STATUS_LABEL[l.status]} · {fmtTime(l.createdAt)}{l.dealValue != null ? ` · ${fmtMoney(l.dealValue)}` : ""}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div aria-hidden="true" style={leadAvatarStyle(l.business)}>{leadInitials(l.business)}</div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                  <div style={{ fontWeight: 600, fontSize: 13.5, minWidth: 0, overflowWrap: "anywhere" }}>{l.business}</div>
+                  <button type="button" className="ft-lead-brief-pill" aria-label={`Brief for ${l.business}`} onClick={event => { event.stopPropagation(); setBriefLead(l); }}><Sparkles size={11} /> Brief</button>
+                </div>
+                <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 3, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <span>{STATUS_LABEL[l.status]} · {fmtTime(l.createdAt)}{l.dealValue != null ? ` · ${fmtMoney(l.dealValue)}` : ""}</span>
+                </div>
+              </div>
             </div>
           </div>
         ))}
@@ -4487,18 +4519,23 @@ function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads", allowD
         )}
         {shown.map((l) => (
           <div key={l.id} className="ft-row" onClick={() => onSelectLead(l)} style={{ border: `1px solid ${T.line}`, borderRadius: 11, padding: 10, background: "#fff", cursor: "pointer" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-              <div style={{ fontWeight: 600, fontSize: 13.5, minWidth: 0, overflowWrap: "anywhere" }}>{l.business}</div>
-              <button type="button" className="ft-lead-brief-pill" aria-label={`Brief for ${l.business}`} onClick={event => { event.stopPropagation(); setBriefLead(l); }}><Sparkles size={11} /> Brief</button>
-            </div>
-            <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 3, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <span>{STATUS_LABEL[l.status]} · {fmtTime(l.createdAt)}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div aria-hidden="true" style={leadAvatarStyle(l.business)}>{leadInitials(l.business)}</div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                  <div style={{ fontWeight: 600, fontSize: 13.5, minWidth: 0, overflowWrap: "anywhere" }}>{l.business}</div>
+                  <button type="button" className="ft-lead-brief-pill" aria-label={`Brief for ${l.business}`} onClick={event => { event.stopPropagation(); setBriefLead(l); }}><Sparkles size={11} /> Brief</button>
+                </div>
+                <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 3, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <span>{STATUS_LABEL[l.status]} · {fmtTime(l.createdAt)}</span>
               {l.renewalDate && (
                 <span style={{ fontWeight: 700, color: T.accent }}>
                   Renews {new Date(l.renewalDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
                 </span>
               )}
               <SyncBadge syncStatus={l.syncStatus} />
+                </div>
+              </div>
             </div>
           </div>
         ))}
