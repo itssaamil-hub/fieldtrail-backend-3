@@ -1933,7 +1933,7 @@ function AdminView({ conversationCount, salesmen, leads, onStatusChange, onUpdat
 // Cold/Converted/Pending — instead of hunting through the main filtered list.
 const REPORT_CARDS = [
   { key: "deal-values", title: "Deal Value", desc: "Total deal value for Cold, Hot, Negotiation and every stage.", icon: Wallet, color: "#145C5D" },
-  { key: "performance", title: "Employee performance", desc: "Leads, conversion rate and target progress per employee.", icon: Contact2, color: "#145C5D" },
+  { key: "performance", title: "Employee performance", desc: "Weekly/monthly leads, follow-ups, quotations, wins, sales and collections.", icon: Contact2, color: "#145C5D" },
   { key: "funnel", title: "Funnel and conversion", desc: "Lead count and drop-off at each pipeline stage.", icon: Handshake, color: "#7B4FC9" },
   { key: "renewals", title: "Renewals due", desc: "Everything renewing in the next 30, 60 or 90 days.", icon: CalendarClock, color: "#B8791F" },
   { key: "payments", title: "Payment due", desc: "Won deals — total, paid, and pending — with payments you can record.", icon: Wallet, color: "#C0392B" },
@@ -1998,49 +1998,35 @@ function ReportsPage({ salesmen, leads }) {
   );
 }
 
-function SalesmanPerformanceReport({ salesmen, leads }) {
-  const rows = salesmen.map((s) => {
-    const own = leads.filter((l) => l.salesmanId === s.id);
-    const thisMonth = own.filter((l) => isThisMonth(l.createdAt));
-    const won = own.filter((l) => l.status === "won");
-    const dealValue = won.reduce((sum, l) => sum + (l.dealValue || 0), 0);
-    const conversionPct = own.length ? Math.round((won.length / own.length) * 100) : 0;
-    const targetPct = s.monthlyTarget ? Math.round((thisMonth.length / s.monthlyTarget) * 100) : null;
-    return { salesman: s, total: own.length, thisMonth: thisMonth.length, won: won.length, dealValue, conversionPct, targetPct };
-  });
+function SalesmanPerformanceReport({ salesmen }) {
+  const now = new Date();
+  const localDay = new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
+  const [period,setPeriod]=useState('month');
+  const [anchor,setAnchor]=useState(localDay);
+  const [employee,setEmployee]=useState('');
+  const [data,setData]=useState(null);
+  const [loading,setLoading]=useState(true);
+  const [error,setError]=useState('');
+  const [detail,setDetail]=useState(null);
 
-  if (rows.length === 0) return <EmptyReportState text="No salesmen yet." />;
-
-  return (
-    <div style={{ overflowX: "auto" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-        <thead>
-          <tr style={{ borderBottom: `1px solid ${T.line}` }}>
-            {["Employee", "This month", "Total leads", "Won", "Conversion", "Target %", "Deal value"].map((h) => (
-              <th key={h} style={{ textAlign: "left", padding: "8px 10px", color: T.inkSoft, fontWeight: 600, fontSize: 11.5, textTransform: "uppercase", letterSpacing: 0.3, whiteSpace: "nowrap" }}>{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.salesman.id} style={{ borderBottom: `1px solid ${T.line}` }}>
-              <td style={{ padding: "9px 10px", fontWeight: 600 }}>{r.salesman.name}</td>
-              <td style={{ padding: "9px 10px" }}>{r.thisMonth}</td>
-              <td style={{ padding: "9px 10px" }}>{r.total}</td>
-              <td style={{ padding: "9px 10px" }}>{r.won}</td>
-              <td style={{ padding: "9px 10px", color: r.conversionPct >= 30 ? T.verified : T.ink }}>{r.conversionPct}%</td>
-              <td style={{ padding: "9px 10px" }}>
-                {r.targetPct == null ? "—" : (
-                  <span style={{ color: r.targetPct >= 100 ? T.verified : r.targetPct >= 60 ? T.warn : T.danger, fontWeight: 600 }}>{r.targetPct}%</span>
-                )}
-              </td>
-              <td style={{ padding: "9px 10px" }}>{r.dealValue > 0 ? fmtMoney(r.dealValue) : "—"}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+  useEffect(()=>{let live=true;setLoading(true);setError('');api.performanceReport({period,anchor,...(employee?{salesmanId:employee}:{})}).then(v=>{if(live)setData(v)}).catch(e=>{if(live)setError(e.message)}).finally(()=>{if(live)setLoading(false)});return()=>{live=false}},[period,anchor,employee]);
+  const money=n=>fmtMoney(Number(n||0));
+  const cards=data?[['Leads added',data.totals.leads],['Follow-ups',data.totals.followups],['Quotations',data.totals.quotes],['Deals won',data.totals.won],['Sales value',money(data.totals.sales_value)],['Collected',money(data.totals.collected)],['Outstanding',money(data.totals.outstanding)]]:[];
+  return <div>
+    <div style={{display:'flex',gap:10,flexWrap:'wrap',alignItems:'end',marginBottom:16}}>
+      <label style={{fontSize:12,color:T.inkSoft}}>Period<select value={period} onChange={e=>setPeriod(e.target.value)} style={{display:'block',marginTop:4,padding:'8px 10px',border:`1px solid ${T.line}`,borderRadius:8}}><option value="week">Weekly</option><option value="month">Monthly</option></select></label>
+      <label style={{fontSize:12,color:T.inkSoft}}>Date<input type="date" value={anchor} onChange={e=>setAnchor(e.target.value)} style={{display:'block',marginTop:4,padding:'7px 10px',border:`1px solid ${T.line}`,borderRadius:8}}/></label>
+      <label style={{fontSize:12,color:T.inkSoft}}>Employee<select value={employee} onChange={e=>{setEmployee(e.target.value);setDetail(null)}} style={{display:'block',marginTop:4,padding:'8px 10px',border:`1px solid ${T.line}`,borderRadius:8}}><option value="">All salesmen</option>{salesmen.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
     </div>
-  );
+    {data&&<div style={{fontSize:12,color:T.inkSoft,marginBottom:12}}>{data.start} → {data.end} · IST</div>}
+    {error&&<div style={{padding:12,borderRadius:10,background:'#fff3f0',color:T.danger,marginBottom:12}}>{error}</div>}
+    {loading?<div style={{padding:24,color:T.inkSoft}}>Loading performance…</div>:data&&<>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))',gap:10,marginBottom:18}}>{cards.map(([label,value])=><div key={label} style={{border:`1px solid ${T.line}`,borderRadius:12,padding:13,background:T.card}}><div style={{fontSize:11,color:T.inkSoft,marginBottom:5}}>{label}</div><div style={{fontSize:19,fontWeight:750}}>{value}</div></div>)}</div>
+      <div style={{fontWeight:700,fontSize:14,marginBottom:9}}>Employee comparison</div>
+      <div style={{overflowX:'auto',border:`1px solid ${T.line}`,borderRadius:12}}><table style={{width:'100%',borderCollapse:'collapse',fontSize:12.5}}><thead><tr style={{background:'#fafcfb'}}>{['Employee','Leads','Follow-ups','Quotes','Won','Sales value','Collected','Outstanding',''].map(h=><th key={h} style={{textAlign:'left',padding:'9px 10px',color:T.inkSoft,whiteSpace:'nowrap'}}>{h}</th>)}</tr></thead><tbody>{data.rows.map(r=><React.Fragment key={r.id}><tr style={{borderTop:`1px solid ${T.line}`}}><td style={{padding:'10px',fontWeight:700}}>{r.full_name}</td><td style={{padding:10}}>{r.leads}</td><td style={{padding:10}}>{r.followups}</td><td style={{padding:10}}>{r.quotes}</td><td style={{padding:10}}>{r.won}</td><td style={{padding:10,fontWeight:650}}>{money(r.sales_value)}</td><td style={{padding:10}}>{money(r.collected)}</td><td style={{padding:10}}>{money(r.outstanding)}</td><td style={{padding:10}}><button onClick={()=>setDetail(detail===r.id?null:r.id)} style={{border:`1px solid ${T.line}`,background:'#fff',borderRadius:7,padding:'5px 8px',cursor:'pointer'}}>Details</button></td></tr>{detail===r.id&&<tr><td colSpan="9" style={{padding:14,background:'#fbfdfc'}}><div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:10}}><div><strong>Activity</strong><div>{r.leads} leads · {r.followups} follow-ups</div><div>{r.tasks_completed} tasks completed</div></div><div><strong>Sales movement</strong><div>{r.quotes} quotations · {r.won} won</div><div>{r.leads?Math.round((r.won/r.leads)*100):0}% won vs leads added in period*</div></div><div><strong>Money</strong><div>{money(r.sales_value)} sales value</div><div>{money(r.collected)} collected</div><div>{money(r.outstanding)} current outstanding</div></div></div><div style={{fontSize:10.5,color:T.inkSoft,marginTop:10}}>*This is a period activity ratio, not a cohort conversion rate. Outstanding is the employee's current outstanding balance on won deals.</div></td></tr>}</React.Fragment>)}</tbody></table></div>
+      {!data.rows.length&&<EmptyReportState text="No employees found for this filter."/>}
+    </>}
+  </div>;
 }
 
 function FunnelReport({ leads }) {
