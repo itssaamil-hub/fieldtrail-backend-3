@@ -503,13 +503,16 @@ export default function App() {
 }
 
 // ---------------------------------------------------------------------------
-function LogoMark({ size = 20, color = "#fff" }) {
+function LogoMark({ size = 20 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="12" cy="7.5" r="3.5" fill={color} />
-      <rect x="4" y="13.2" width="16" height="2.3" rx="1.15" fill={color} />
-      <rect x="4" y="17" width="16" height="2.3" rx="1.15" fill={color} />
-    </svg>
+    <img
+      src="/engage-logo.png"
+      width={size}
+      height={size}
+      alt=""
+      aria-hidden="true"
+      style={{ display: "block", width: size, height: size, objectFit: "cover", borderRadius: Math.max(4, Math.round(size * 0.22)) }}
+    />
   );
 }
 
