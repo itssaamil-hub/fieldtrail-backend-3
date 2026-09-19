@@ -283,7 +283,7 @@ function urlBase64ToUint8Array(base64String) {
 
 const NOTIFICATION_PREF_DEFAULTS = {
   hotLead: true, statusConversation: true, statusNegotiation: true,
-  statusDemo: true, renewalDue: true, followUpDue: true, dayStartDigest: true, salesBriefing: true,
+  statusDemo: true, renewalDue: true, followUpDue: true, dayStartDigest: true, salesBriefing: true, dayActivity: true,
 };
 
 function usePushNotifications(session) {
@@ -737,6 +737,7 @@ function SettingsModal({ apiBase, onClose, onSave, onLogout, onOpenCrmSettings, 
     ["renewalDue", "Renewals due"],
     ["followUpDue", "Follow-ups due"],
     ["dayStartDigest", "Day-start report (~1pm)"],
+    ...(getSession()?.role === "admin" ? [["dayActivity", "Employee Start / End Day alerts"]] : []),
     ["salesBriefing", "Daily sales briefing"],
   ];
 
