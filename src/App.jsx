@@ -3391,6 +3391,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
   const [history, setHistory] = useState(null); // null = loading, [] = loaded & empty
   const [historyError, setHistoryError] = useState("");
   const [showBrief, setShowBrief] = useState(false);
+  const [detailTab, setDetailTab] = useState("overview");
   const [form, setForm] = useState({
     subLocation: lead.subLocation || "", posName: lead.posName || "",
     renewalMonth: lead.renewalMonth || "", renewalDate: lead.renewalDate || "",
@@ -3451,17 +3452,31 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(28,36,48,0.35)", display: "flex", justifyContent: "flex-end", zIndex: 2000 }} onClick={onClose}>
-      <div style={{ width: 380, maxWidth: "90vw", background: T.card, height: "100%", padding: 20, overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 19 }}>{lead.business}</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <div style={{ width: "min(680px, 100vw)", maxWidth: "100vw", background: "#F8FAF9", height: "100%", padding: "18px clamp(14px, 4vw, 24px) 28px", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 18 }}>
+          <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: T.route, fontSize: 13, fontWeight: 700, padding: 0 }}>← Back to Leads</button>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {onUpdate && !editing && (
-              <button onClick={() => setEditing(true)} style={{ border: "none", background: "none", cursor: "pointer", color: T.route, fontSize: 12.5, fontWeight: 700 }}>Edit</button>
+              <button onClick={() => setEditing(true)} style={{ border: `1px solid ${T.line}`, background: "#fff", borderRadius: 10, cursor: "pointer", color: T.ink, padding: "8px 12px", fontSize: 12.5, fontWeight: 700 }}>✎ Edit</button>
             )}
-            <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: T.inkSoft }}><X size={18} /></button>
+            <button onClick={onClose} aria-label="Close" style={{ border: `1px solid ${T.line}`, background: "#fff", borderRadius: 10, cursor: "pointer", color: T.inkSoft, width: 36, height: 36, display: "grid", placeItems: "center" }}><X size={17} /></button>
           </div>
         </div>
-        <div style={{ marginTop: 4, color: T.inkSoft, fontSize: 13 }}>{displayLead.owner} · {lead.category}</div>
+
+        <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ ...leadAvatarStyle(displayLead.business), width: 58, height: 58, minWidth: 58, fontSize: 18 }}>{leadInitials(displayLead.business)}</div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 20 }}>{displayLead.business}</div>
+                <span style={{ fontSize: 11.5, fontWeight: 700, color: T.route, background: "#EAF5F0", padding: "5px 9px", borderRadius: 999 }}>{STATUS_LABEL[lead.status]}</span>
+              </div>
+              {displayLead.subLocation && <div style={{ marginTop: 5, color: T.inkSoft, fontSize: 12.5 }}>⌖ {displayLead.subLocation}</div>}
+              {displayLead.phone && <a href={`tel:${displayLead.phone}`} style={{ display: "block", marginTop: 4, color: T.ink, fontSize: 12.5, textDecoration: "none" }}>☎ {displayLead.phone}</a>}
+            </div>
+          </div>
+        </div>
+
         <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
           {lead.hasLocation ? <VerificationStamp status={lead.verification} /> : <NoLocationBadge />}
           <SyncBadge syncStatus={lead.syncStatus} />
@@ -3475,6 +3490,14 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
         </div>
 
         {showBrief && <LeadBriefPopup key={lead.id} lead={displayLead} buildBrief={buildLeadBrief} onClose={() => setShowBrief(false)} />}
+
+        {!editing && (
+          <div style={{ display: "flex", borderBottom: `1px solid ${T.line}`, marginTop: 16, background: "#fff", borderRadius: "12px 12px 0 0" }}>
+            {["overview", "activity"].map((tab) => (
+              <button key={tab} onClick={() => setDetailTab(tab)} style={{ flex: 1, padding: "11px 8px", border: "none", borderBottom: detailTab === tab ? `2px solid ${T.route}` : "2px solid transparent", background: "transparent", color: detailTab === tab ? T.route : T.inkSoft, fontWeight: 700, cursor: "pointer", textTransform: "capitalize" }}>{tab}</button>
+            ))}
+          </div>
+        )}
 
         {editing ? (
           <div style={{ marginTop: 16 }}>
@@ -3501,9 +3524,10 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
               <button onClick={saveEdit} disabled={saving} style={{ flex: 1, padding: 10, borderRadius: 11, border: "none", background: T.route, color: "#fff", fontWeight: 700, cursor: "pointer" }}>{saving ? "Saving…" : "Save changes"}</button>
             </div>
           </div>
-        ) : (
+        ) : detailTab === "overview" ? (
           <>
-            <div style={{ marginTop: 16, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 11, padding: 12 }}>
+            <div style={{ marginTop: 12, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 14 }}>
+              <div style={{ fontSize: 13.5, fontWeight: 800, marginBottom: 8, color: T.ink }}>Lead Information</div>
               {detailRows.map(([label, value]) => (
                 <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "5px 0", fontSize: 13 }}>
                   <span style={{ color: T.inkSoft }}>{label}</span>
@@ -3523,14 +3547,34 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
             </div>
 
             {lead.hasLocation ? (
-              <div style={{ marginTop: 12, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 11, padding: 12, fontFamily: "'IBM Plex Mono', monospace", fontSize: 12.5 }}>
-                <div>lat: {lead.lat.toFixed(6)}</div>
-                <div>lng: {lead.lng.toFixed(6)}</div>
-                <div>accuracy: ±{lead.accuracy} m</div>
+              <div style={{ marginTop: 12, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 14, fontSize: 12.5 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                  <div>
+                    <div style={{ fontSize: 13.5, fontWeight: 800, marginBottom: 4 }}>Location</div>
+                    <div style={{ color: T.inkSoft }}>{displayLead.subLocation || `${lead.lat.toFixed(5)}, ${lead.lng.toFixed(5)}`}</div>
+                  </div>
+                  <a href={`https://www.google.com/maps?q=${lead.lat},${lead.lng}`} target="_blank" rel="noreferrer" style={{ border: `1px solid ${T.route}`, borderRadius: 9, padding: "7px 10px", color: T.route, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" }}>View on Map</a>
+                </div>
               </div>
             ) : (
               <div style={{ marginTop: 12, fontSize: 12, color: T.inkSoft, background: T.paperDeep, borderRadius: 11, padding: "8px 10px" }}>
                 No location captured for this lead.
+              </div>
+            )}
+
+            {(displayLead.owner || displayLead.phone) && (
+              <div style={{ marginTop: 12, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 14 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 800, marginBottom: 8 }}>Contact Details</div>
+                {displayLead.owner && <div style={{ fontSize: 13, fontWeight: 600 }}>{displayLead.owner}</div>}
+                {displayLead.phone && (
+                  <div style={{ marginTop: 8, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                    <a href={`tel:${displayLead.phone}`} style={{ color: T.ink, textDecoration: "none", fontSize: 13 }}>{displayLead.phone}</a>
+                    <div style={{ display: "flex", gap: 7 }}>
+                      <a href={`tel:${displayLead.phone}`} style={{ border: `1px solid ${T.route}`, borderRadius: 9, padding: "7px 10px", color: T.route, textDecoration: "none", fontWeight: 700 }}>Call</a>
+                      <a href={`https://wa.me/${String(displayLead.phone).replace(/\D/g, "")}`} target="_blank" rel="noreferrer" style={{ border: `1px solid ${T.route}`, borderRadius: 9, padding: "7px 10px", color: T.route, textDecoration: "none", fontWeight: 700 }}>WhatsApp</a>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -3541,9 +3585,9 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
               </div>
             )}
           </>
-        )}
+        ) : null}
 
-        {onStatusChange && !editing && (
+        {onStatusChange && !editing && detailTab === "overview" && (
           <div style={{ marginTop: 16 }}>
             <div style={{ fontSize: 11, textTransform: "uppercase", color: T.inkSoft, fontWeight: 600, letterSpacing: 0.3, marginBottom: 6 }}>Update status</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -3554,7 +3598,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
           </div>
         )}
 
-        {fetchHistory && !editing && (
+        {fetchHistory && !editing && detailTab === "activity" && (
           <div style={{ marginTop: 20, paddingTop: 16, borderTop: `1px solid ${T.line}` }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, textTransform: "uppercase", color: T.inkSoft, fontWeight: 600, letterSpacing: 0.3, marginBottom: 10 }}>
               <Clock size={12} /> Activity Log
