@@ -37,3 +37,17 @@
 @media(prefers-reduced-motion:reduce){.ft-notifications-slider-thumb{transition:none}}
 
 .ft-notification-badge{position:absolute;top:-7px;right:-7px;min-width:17px;height:17px;padding:0 4px;border-radius:10px;background:#d92d3a;color:#fff;border:1.5px solid #145c5d;font:600 10px/14px Inter,system-ui,sans-serif;text-align:center;pointer-events:none}
+
+/* Compact follow-up buckets inside Daily Brief */
+.ft-followup-brief{margin:12px 0 16px}
+.ft-followup-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:0 0 8px}
+.ft-followup-tabs button{min-width:0;padding:7px 4px 6px;border:1px solid #e2e8e4;border-radius:9px;background:#f8faf9;color:#526158;display:flex;align-items:center;justify-content:center;gap:4px;line-height:1;box-shadow:none}
+.ft-followup-tabs button strong{font-size:12px;font-weight:700}.ft-followup-tabs button span{font-size:10px;font-weight:600}
+.ft-followup-tabs button.is-active{border-color:#b8d3c1;background:#edf5ef;color:#246442}
+.ft-followup-tabs button.is-active.is-overdue{border-color:#f0c8c8;background:#fff2f2;color:#a23b3b}
+.ft-followup-tabs button.is-active.is-upcoming{border-color:#c8d8ee;background:#f1f6fd;color:#315d91}
+.ft-followup-list{border:1px solid #e7ece8;border-radius:10px;overflow:hidden;background:#fff}
+.ft-followup-row{width:100%;border:0;border-bottom:1px solid #edf0ee;background:#fff;color:#26352d;padding:9px 10px;display:flex;align-items:center;justify-content:space-between;text-align:left;box-shadow:none;border-radius:0}
+.ft-followup-row:last-child{border-bottom:0}.ft-followup-row:disabled{opacity:1;cursor:default}.ft-followup-row span:first-child{display:flex;flex-direction:column;gap:2px;min-width:0}.ft-followup-row strong{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ft-followup-row small{font-size:10px;color:#718078;text-transform:capitalize}.ft-followup-row>span:last-child{color:#8aa096;font-size:18px}
+.ft-followup-empty,.ft-followup-more{padding:9px 10px;font-size:11px;color:#718078;text-align:center}
+@media(max-width:390px){.ft-followup-tabs{gap:4px}.ft-followup-tabs button{padding:6px 2px}.ft-followup-tabs button strong{font-size:11px}.ft-followup-tabs button span{font-size:9px}}

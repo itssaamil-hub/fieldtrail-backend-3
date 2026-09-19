@@ -15,6 +15,7 @@ export default function NotificationsPanel({ session, online, onClose, onOpenLea
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
   const [expanded, setExpanded] = useState(false);
+  const [followUpFilter, setFollowUpFilter] = useState('today');
   const [employeeError, setEmployeeError] = useState('');
   const [employeesLoaded, setEmployeesLoaded] = useState(false);
   const dialog = useRef(null);
@@ -57,7 +58,7 @@ export default function NotificationsPanel({ session, online, onClose, onOpenLea
     if (admin && view !== 'brief') return;
     if (admin && !selected) { setLoading(!employeesLoaded); return; }
     let cancelled = false;
-    setLoading(true); setError(''); setBriefing(null); setExpanded(false);
+    setLoading(true); setError(''); setBriefing(null); setExpanded(false); setFollowUpFilter('today');
     if (!online) { setLoading(false); setError('You’re offline. Connect to load your latest briefing.'); return; }
     api.salesBriefing(admin ? selected : undefined).then(res => {
       if (cancelled) return;
@@ -94,6 +95,26 @@ export default function NotificationsPanel({ session, online, onClose, onOpenLea
         <div className="ft-notifications-date">{briefing.date} · {briefing.timeZone} · Latest CRM data</div>
         <h3>{briefing.greeting || `Hello, ${session.fullName?.split(' ')[0] || 'there'}!`}</h3>
         {(briefing.paragraphs || [briefing.summary]).map((paragraph, i) => <p key={i}>{paragraph}</p>)}
+        {briefing.followUps && (() => {
+          const tabs = [
+            ['all', 'All', briefing.followUps.all?.length || 0],
+            ['today', 'Today', briefing.followUps.today?.length || 0],
+            ['overdue', 'Overdue', briefing.followUps.overdue?.length || 0],
+            ['upcoming', 'Upcoming', briefing.followUps.upcoming?.length || 0],
+          ];
+          const items = briefing.followUps[followUpFilter] || [];
+          return <div className="ft-followup-brief">
+            <div className="ft-followup-tabs" role="tablist" aria-label="Follow-up filter">{tabs.map(([key, label, count]) =>
+              <button key={key} type="button" role="tab" aria-selected={followUpFilter === key} className={followUpFilter === key ? `is-active is-${key}` : ''} onClick={() => setFollowUpFilter(key)}><strong>{count}</strong><span>{label}</span></button>
+            )}</div>
+            <div className="ft-followup-list">
+              {items.length ? items.slice(0, 8).map(lead => <button type="button" className="ft-followup-row" key={`${followUpFilter}-${lead.id}`} onClick={() => !admin && onOpenLead?.(lead.id)} disabled={admin}>
+                <span><strong>{lead.business_name}</strong><small>{lead.status?.replaceAll('_', ' ') || 'Lead'} · {lead.next_follow_up_date}</small></span><span aria-hidden="true">›</span>
+              </button>) : <div className="ft-followup-empty">No {followUpFilter === 'all' ? 'scheduled' : followUpFilter} follow-ups.</div>}
+              {items.length > 8 && <div className="ft-followup-more">+{items.length - 8} more</div>}
+            </div>
+          </div>;
+        })()}
         <div className="ft-briefing-focus"><strong>Your focus today</strong><p>{briefing.focus || briefing.recommendation}</p></div>
         {!!briefing.priorityLeads?.length && <>
           <button type="button" className="ft-briefing-action" onClick={() => setExpanded(v => !v)} aria-expanded={expanded} aria-controls="ft-briefing-priorities">{expanded ? 'Hide' : 'View'} {briefing.priorityLeads.length} priority {briefing.priorityLeads.length === 1 ? 'lead' : 'leads'} {expanded ? '↑' : '→'}</button>
