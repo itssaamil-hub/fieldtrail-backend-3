@@ -1,3 +1,4 @@
+import SalesmanBriefPopup from "./SalesmanBrief.jsx";
 import {EmployeeSettings, DayClosingForm, DayClosingReports, DayClosingReportsEntry} from "./DayClosing.jsx";
 import QuotationsPanel, { QuotationSettings } from "./Quotations.jsx";
 import OnboardingPanel, { AppMenu, OnboardingTemplateEditor } from "./Onboarding.jsx";
@@ -1607,6 +1608,7 @@ function AdminView({ conversationCount, salesmen, leads, onStatusChange, onUpdat
   const [showAddSalesman, setShowAddSalesman] = useState(false);
   const [editSalesman, setEditSalesman] = useState(null);
   const [employeeSettings,setEmployeeSettings]=useState(null);
+  const [briefSalesman,setBriefSalesman]=useState(null);
   const [deleteSalesmanConfirm, setDeleteSalesmanConfirm] = useState(null);
   const [deleteSalesmanError, setDeleteSalesmanError] = useState("");
   const [messageTarget, setMessageTarget] = useState(null); // salesman object | "all" | null
@@ -1688,7 +1690,7 @@ function AdminView({ conversationCount, salesmen, leads, onStatusChange, onUpdat
             leads={leads}
             onAddClick={() => setShowAddSalesman(true)}
             onSettingsClick={setEmployeeSettings}
-            onToggleActive={onToggleSalesmanActive}
+            onBriefClick={setBriefSalesman}
             onDeleteClick={setDeleteSalesmanConfirm}
             onViewRoute={setRouteSalesman}
             onMessageClick={setMessageTarget}
@@ -1868,7 +1870,8 @@ function AdminView({ conversationCount, salesmen, leads, onStatusChange, onUpdat
           onSubmit={async (s) => { await onAddSalesman(s); setShowAddSalesman(false); }}
         />
       )}
-      {employeeSettings && <EmployeeSettings employee={employeeSettings} onClose={()=>setEmployeeSettings(null)} onEdit={()=>{setEditSalesman(employeeSettings);setEmployeeSettings(null)}} onDelete={()=>{setDeleteSalesmanConfirm(employeeSettings);setEmployeeSettings(null)}} />}
+      {briefSalesman && <SalesmanBriefPopup key={briefSalesman.id} salesman={briefSalesman} onClose={()=>setBriefSalesman(null)} />}
+      {employeeSettings && <EmployeeSettings employee={employeeSettings} isActive={salesmen.find(x=>x.id===employeeSettings.id)?.isActive!==false} onToggleActive={()=>onToggleSalesmanActive(employeeSettings.id, salesmen.find(x=>x.id===employeeSettings.id)?.isActive===false)} onClose={()=>setEmployeeSettings(null)} onEdit={()=>{setEditSalesman(employeeSettings);setEmployeeSettings(null)}} onDelete={()=>{setDeleteSalesmanConfirm(employeeSettings);setEmployeeSettings(null)}} />}
       {editSalesman && (
         <SalesmanFormModal
           salesman={editSalesman}
@@ -2885,7 +2888,7 @@ function MonthlyProgressBar({ salesmanId, target, leads }) {
   );
 }
 
-function SalesmenPanel({ salesmen, leads, onAddClick, onSettingsClick, onToggleActive, onDeleteClick, onViewRoute, onMessageClick, onOpenSalesmanLeads }) {
+function SalesmenPanel({ salesmen, leads, onAddClick, onSettingsClick, onBriefClick, onDeleteClick, onViewRoute, onMessageClick, onOpenSalesmanLeads }) {
   return (
     <div className="ft-card" style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, padding: 18, display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -2905,6 +2908,7 @@ function SalesmenPanel({ salesmen, leads, onAddClick, onSettingsClick, onToggleA
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div onClick={() => onOpenSalesmanLeads(s)} style={{ fontWeight: 700, fontSize: 13.5, cursor: "pointer", color: T.route }}>{s.name}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <button type="button" className="ft-lead-brief-pill" aria-label={`Brief for ${s.name}`} onClick={() => onBriefClick(s)}><Sparkles size={11} /> Brief</button>
               <span style={{
                 fontSize: 10.5, fontWeight: 700, padding: "3px 9px", borderRadius: 999,
                 background: s.isActive === false ? "#EEE" : s.status === "online" ? T.verifiedSoft : "#EEE",
@@ -2912,13 +2916,6 @@ function SalesmenPanel({ salesmen, leads, onAddClick, onSettingsClick, onToggleA
               }}>
                 {s.isActive === false ? "Deactivated" : s.status === "online" ? "Online" : "Offline"}
               </span>
-              <button
-                onClick={() => onToggleActive(s.id, s.isActive === false)}
-                title={s.isActive === false ? "Reactivate" : "Deactivate"}
-                style={{ fontSize: 10.5, fontWeight: 600, border: `1px solid ${T.line}`, background: "#fff", color: T.inkSoft, borderRadius: 4, padding: "2px 6px", cursor: "pointer" }}
-              >
-                {s.isActive === false ? "Reactivate" : "Deactivate"}
-              </button>
             </div>
           </div>
           <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 3 }}>{s.area}{s.employeeCode ? ` · ${s.employeeCode}` : ""}</div>
