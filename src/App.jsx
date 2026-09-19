@@ -479,7 +479,7 @@ export default function App() {
   } else if (!session) {
     body = <LoginScreen apiBase={apiBase} online={online} onLoggedIn={handleLoggedIn} onOpenSettings={() => setShowSettings(true)} />;
   } else if (session.role === "admin") {
-    body = <AdminApp session={session} online={online} onLogout={handleLogout} page={topPage} />;
+    body = <AdminApp notificationLead={notificationLead} session={session} online={online} onLogout={handleLogout} page={topPage} />;
   } else {
     body = <SalesmanApp key={`salesman-${session.id}`} notificationLead={notificationLead} session={session} online={online} onLogout={handleLogout} page={topPage} />;
   }
@@ -1450,7 +1450,7 @@ function LiveMap({ salesmen, leads, onSelectLead, title = "Live Employees & Lead
 // for instant pushes (new leads, live location, status changes), and falls
 // back to a periodic refetch as a safety net if the socket drops.
 // ---------------------------------------------------------------------------
-function AdminApp({ session, online, page }) {
+function AdminApp({ session, online, page, notificationLead }) {
   const [conversationCount, setConversationCount] = useState(null);
   const [salesmen, setSalesmen] = useState([]);
   const [leads, setLeads] = useState([]);
@@ -1620,21 +1620,27 @@ function AdminApp({ session, online, page }) {
       wsConnected={wsConnected}
       online={online}
       page={page}
+      notificationLead={notificationLead}
     />
   );
 }
 
-function AdminView({ conversationCount, salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead, onAddLead, onAddSalesman, onEditSalesman, onDeleteSalesman, onToggleSalesmanActive, loadError, wsConnected, online, page }) {
+function AdminView({ conversationCount, salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead, onAddLead, onAddSalesman, onEditSalesman, onDeleteSalesman, onToggleSalesmanActive, loadError, wsConnected, online, page, notificationLead }) {
   const [conversationError, setConversationError] = useState("");
   const [filterSalesman, setFilterSalesman] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterDate, setFilterDate] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [leadsViewMode, setLeadsViewMode] = useState("list"); // "list" | "board"
+  const [leadsViewMode, setLeadsViewMode] = useState("board"); // "list" | "board"
   const [showAdminAddLead, setShowAdminAddLead] = useState(false);
   const [leadsPage, setLeadsPage] = useState(1);
   const LEADS_PER_PAGE = 50;
   const [selectedLead, setSelectedLead] = useState(null);
+  useEffect(() => {
+    if (!notificationLead?.id) return;
+    const lead = leads.find((item) => item.id === notificationLead.id);
+    if (lead) setSelectedLead(lead);
+  }, [notificationLead, leads]);
   const [showAddSalesman, setShowAddSalesman] = useState(false);
   const [editSalesman, setEditSalesman] = useState(null);
   const [employeeSettings,setEmployeeSettings]=useState(null);
@@ -1823,10 +1829,13 @@ function AdminView({ conversationCount, salesmen, leads, onStatusChange, onUpdat
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {pagedLeads.map((l) => (
             <div key={l.id} className="ft-row" onClick={() => setSelectedLead(l)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "10px 12px", border: `1px solid ${T.line}`, borderRadius: 11, cursor: "pointer", background: "#fff" }}>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 600, fontSize: 14 }}>{l.business}</div>
-                <div style={{ fontSize: 12, color: T.inkSoft, fontFamily: "'IBM Plex Mono', monospace" }}>
-                  {l.salesmanName} · {fmtTime(l.createdAt)}{l.hasLocation ? ` · ${l.lat.toFixed(5)}, ${l.lng.toFixed(5)}` : ""}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                <div aria-hidden="true" style={leadAvatarStyle(l.business)}>{leadInitials(l.business)}</div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>{l.business}</div>
+                  <div style={{ fontSize: 12, color: T.inkSoft, fontFamily: "'IBM Plex Mono', monospace" }}>
+                    {l.salesmanName} · {fmtTime(l.createdAt)}{l.hasLocation ? ` · ${l.lat.toFixed(5)}, ${l.lng.toFixed(5)}` : ""}
+                  </div>
                 </div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
@@ -2701,10 +2710,15 @@ function LeadsBoardView({ leads, onStatusChange, onSelectLead }) {
                   opacity: draggingId === l.id ? 0.4 : 1, boxShadow: "0 1px 2px rgba(20,20,30,0.05)",
                 }}
               >
-                <div style={{ fontWeight: 700, fontSize: 12.5, marginBottom: 3 }}>{l.business}</div>
-                <div style={{ fontSize: 11, color: T.inkSoft }}>{l.salesmanName}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div aria-hidden="true" style={leadAvatarStyle(l.business)}>{leadInitials(l.business)}</div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: 12.5, marginBottom: 3 }}>{l.business}</div>
+                    <div style={{ fontSize: 11, color: T.inkSoft }}>{l.salesmanName}</div>
+                  </div>
+                </div>
                 {l.status === "won" && l.dealValue != null && (
-                  <div style={{ fontSize: 11, fontWeight: 700, color: T.verified, marginTop: 4 }}>{fmtMoney(l.dealValue)}</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: T.verified, marginTop: 4, paddingLeft: 38 }}>{fmtMoney(l.dealValue)}</div>
                 )}
               </div>
             ))}
