@@ -3448,11 +3448,12 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
     ["Contact Name", displayLead.owner],
     ["Contact Number", displayLead.phone],
     ["Expected Deal Value", displayLead.dealValue != null ? `₹${displayLead.dealValue.toLocaleString("en-IN")}` : null],
+    ["Comments", displayLead.notes],
   ].filter(([, v]) => v);
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(28,36,48,0.35)", display: "flex", justifyContent: "flex-end", zIndex: 2000 }} onClick={onClose}>
-      <div style={{ width: "min(680px, 100vw)", maxWidth: "100vw", background: "#F8FAF9", height: "100%", padding: "18px clamp(14px, 4vw, 24px) 28px", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+      <div className="ft-lead-detail-panel" style={{ width: "min(620px, 100vw)", maxWidth: "100vw", background: "#F8FAF9", height: "100%", padding: "18px clamp(14px, 4vw, 24px) 28px", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 18 }}>
           <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: T.route, fontSize: 13, fontWeight: 700, padding: 0 }}>← Back to Leads</button>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -3499,6 +3500,18 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
           </div>
         )}
 
+{onStatusChange && !editing && detailTab === "overview" && (
+          <div style={{ marginTop: 16 }}>
+            <div style={{ fontSize: 11, textTransform: "uppercase", color: T.inkSoft, fontWeight: 600, letterSpacing: 0.3, marginBottom: 6 }}>Update status</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {STATUSES.map((s) => (
+                <button key={s} onClick={() => onStatusChange(lead.id, s)} style={{ fontSize: 11.5, padding: "5px 9px", borderRadius: 6, cursor: "pointer", border: `1px solid ${lead.status === s ? T.route : T.line}`, background: lead.status === s ? T.route : "#fff", color: lead.status === s ? "#fff" : T.ink, fontWeight: 600 }}>{STATUS_LABEL[s]}</button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        
         {editing ? (
           <div style={{ marginTop: 16 }}>
             <Field label="Sub Location"><input style={inputStyle} value={form.subLocation} onChange={set("subLocation")} /></Field>
@@ -3546,22 +3559,6 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
               </div>
             </div>
 
-            {lead.hasLocation ? (
-              <div style={{ marginTop: 12, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 14, fontSize: 12.5 }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                  <div>
-                    <div style={{ fontSize: 13.5, fontWeight: 800, marginBottom: 4 }}>Location</div>
-                    <div style={{ color: T.inkSoft }}>{displayLead.subLocation || `${lead.lat.toFixed(5)}, ${lead.lng.toFixed(5)}`}</div>
-                  </div>
-                  <a href={`https://www.google.com/maps?q=${lead.lat},${lead.lng}`} target="_blank" rel="noreferrer" style={{ border: `1px solid ${T.route}`, borderRadius: 9, padding: "7px 10px", color: T.route, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" }}>View on Map</a>
-                </div>
-              </div>
-            ) : (
-              <div style={{ marginTop: 12, fontSize: 12, color: T.inkSoft, background: T.paperDeep, borderRadius: 11, padding: "8px 10px" }}>
-                No location captured for this lead.
-              </div>
-            )}
-
             {(displayLead.owner || displayLead.phone) && (
               <div style={{ marginTop: 12, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 14 }}>
                 <div style={{ fontSize: 13.5, fontWeight: 800, marginBottom: 8 }}>Contact Details</div>
@@ -3578,25 +3575,24 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
               </div>
             )}
 
-            {displayLead.notes && (
-              <div style={{ marginTop: 14 }}>
-                <div style={{ fontSize: 11, textTransform: "uppercase", color: T.inkSoft, fontWeight: 600, letterSpacing: 0.3 }}>Comments</div>
-                <div style={{ fontSize: 13.5, marginTop: 4 }}>{displayLead.notes}</div>
+            {lead.hasLocation ? (
+              <div style={{ marginTop: 12, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 14, fontSize: 12.5 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                  <div>
+                    <div style={{ fontSize: 13.5, fontWeight: 800, marginBottom: 4 }}>Location</div>
+                    <div style={{ color: T.inkSoft }}>{displayLead.subLocation || `${lead.lat.toFixed(5)}, ${lead.lng.toFixed(5)}`}</div>
+                  </div>
+                  <a href={`https://www.google.com/maps?q=${lead.lat},${lead.lng}`} target="_blank" rel="noreferrer" style={{ border: `1px solid ${T.route}`, borderRadius: 9, padding: "7px 10px", color: T.route, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" }}>View on Map</a>
+                </div>
+              </div>
+            ) : (
+              <div style={{ marginTop: 12, fontSize: 12, color: T.inkSoft, background: T.paperDeep, borderRadius: 11, padding: "8px 10px" }}>
+                No location captured for this lead.
               </div>
             )}
+
           </>
         ) : null}
-
-        {onStatusChange && !editing && detailTab === "overview" && (
-          <div style={{ marginTop: 16 }}>
-            <div style={{ fontSize: 11, textTransform: "uppercase", color: T.inkSoft, fontWeight: 600, letterSpacing: 0.3, marginBottom: 6 }}>Update status</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {STATUSES.map((s) => (
-                <button key={s} onClick={() => onStatusChange(lead.id, s)} style={{ fontSize: 11.5, padding: "5px 9px", borderRadius: 6, cursor: "pointer", border: `1px solid ${lead.status === s ? T.route : T.line}`, background: lead.status === s ? T.route : "#fff", color: lead.status === s ? "#fff" : T.ink, fontWeight: 600 }}>{STATUS_LABEL[s]}</button>
-              ))}
-            </div>
-          </div>
-        )}
 
         {fetchHistory && !editing && detailTab === "activity" && (
           <div style={{ marginTop: 20, paddingTop: 16, borderTop: `1px solid ${T.line}` }}>

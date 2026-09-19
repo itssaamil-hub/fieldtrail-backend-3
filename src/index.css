@@ -91,3 +91,11 @@ button:active:not(:disabled) {
 button:disabled {
   cursor: not-allowed;
 }
+
+.ft-lead-detail-panel{box-sizing:border-box}
+@media (min-width:900px){
+ .ft-lead-detail-panel{width:min(560px,48vw)!important;padding:16px 20px 24px!important}
+}
+@media (max-width:899px){
+ .ft-lead-detail-panel{width:100vw!important;max-width:100vw!important}
+}
