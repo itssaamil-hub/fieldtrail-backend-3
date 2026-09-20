@@ -47,6 +47,8 @@ import {
   Lock,
   LockOpen,
   Sparkles,
+  Phone as PhoneIcon,
+  MessageCircle as WhatsAppIcon,
 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -3385,6 +3387,21 @@ function SalesmanFormModal({ existingCount, salesman, onClose, onSubmit }) {
 // Shared between Admin and Salesman — the fields shown adapt automatically
 // to whatever the lead actually has (nullable GPS when Location Settings
 // have GPS off, optional sub-location/POS/renewal fields, etc).
+const FOLLOWUP_QUICK = [["Tomorrow", 1], ["+3 days", 3], ["Next week", 7]];
+function isoDaysFromToday(days) {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+// wa.me needs the country code. Indian numbers are often saved as 10 digits or with a leading 0.
+function whatsappLink(phone) {
+  let digits = String(phone || "").replace(/\D/g, "");
+  if (digits.length === 11 && digits.startsWith("0")) digits = digits.slice(1);
+  if (digits.length === 10) digits = "91" + digits;
+  return `https://wa.me/${digits}`;
+}
+
 function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, fetchHistory }) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -3395,6 +3412,8 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
   const [showReschedule, setShowReschedule] = useState(false);
   const [rescheduleDate, setRescheduleDate] = useState("");
   const [followUpSaving, setFollowUpSaving] = useState(false);
+  const [statusToast, setStatusToast] = useState(null);
+  const statusToastTimer = useRef(null);
   const [form, setForm] = useState({
     subLocation: lead.subLocation || "", posName: lead.posName || "",
     renewalMonth: lead.renewalMonth || "", renewalDate: lead.renewalDate || "",
@@ -3482,18 +3501,51 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
     }
   };
 
+  const applyFollowUp = async (iso) => {
+    if (!onUpdate || !iso || followUpSaving) return;
+    setFollowUpSaving(true);
+    try {
+      await onUpdate(lead.id, { nextFollowUpDate: iso });
+      setSavedOverrides((prev) => ({ ...prev, nextFollowUpDate: iso }));
+      setForm((prev) => ({ ...prev, nextFollowUpDate: iso }));
+      setShowReschedule(false);
+    } finally {
+      setFollowUpSaving(false);
+    }
+  };
+
+  const changeStatus = (next) => {
+    if (!onStatusChange || next === lead.status) return;
+    const previous = lead.status;
+    onStatusChange(lead.id, next);
+    setStatusToast({ label: STATUS_LABEL[next] || next, previous });
+    clearTimeout(statusToastTimer.current);
+    statusToastTimer.current = setTimeout(() => setStatusToast(null), 5000);
+  };
+
+  const undoStatus = () => {
+    if (!statusToast) return;
+    clearTimeout(statusToastTimer.current);
+    onStatusChange(lead.id, statusToast.previous);
+    setStatusToast(null);
+  };
+
+  useEffect(() => () => clearTimeout(statusToastTimer.current), []);
+
   const detailRows = [
-    ["Business Name", displayLead.business],
     ["Sub Location", displayLead.subLocation],
     ["POS Name", displayLead.posName],
     ["Renewal Month", displayLead.renewalMonth],
     ["Renewal Date", displayLead.renewalDate],
-    ["Next Follow-up", formattedFollowUp],
     ["Contact Name", displayLead.owner],
     ["Contact Number", displayLead.phone],
     ["Expected Deal Value", displayLead.dealValue != null ? `₹${displayLead.dealValue.toLocaleString("en-IN")}` : null],
-    ["Comments", displayLead.notes],
   ].filter(([, v]) => v);
+
+  let briefNext = null;
+  if (history !== null || historyError || !fetchHistory) {
+    try { briefNext = buildLeadBrief(displayLead, history || []).nextAction || null; } catch { briefNext = null; }
+  }
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(28,36,48,0.35)", display: "flex", justifyContent: "flex-end", zIndex: 2000 }} onClick={onClose}>
@@ -3504,7 +3556,6 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
             {onUpdate && !editing && (
               <button onClick={() => setEditing(true)} style={{ border: `1px solid ${T.line}`, background: "#fff", borderRadius: 10, cursor: "pointer", color: T.ink, padding: "8px 12px", fontSize: 12.5, fontWeight: 700 }}>✎ Edit</button>
             )}
-            <button onClick={onClose} aria-label="Close" style={{ border: `1px solid ${T.line}`, background: "#fff", borderRadius: 10, cursor: "pointer", color: T.inkSoft, width: 36, height: 36, display: "grid", placeItems: "center" }}><X size={17} /></button>
           </div>
         </div>
 
@@ -3517,15 +3568,18 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                 <span style={{ fontSize: 11.5, fontWeight: 700, color: T.route, background: "#EAF5F0", padding: "5px 9px", borderRadius: 999 }}>{STATUS_LABEL[lead.status]}</span>
               </div>
               {displayLead.subLocation && <div style={{ marginTop: 5, color: T.inkSoft, fontSize: 12.5 }}>⌖ {displayLead.subLocation}</div>}
-              {displayLead.phone && (
-                <div style={{ marginTop: 5, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <a href={`tel:${displayLead.phone}`} style={{ color: T.ink, fontSize: 12.5, textDecoration: "none" }}>☎ {displayLead.phone}</a>
-                  <a aria-label="Call lead" href={`tel:${displayLead.phone}`} style={{ width: 34, height: 34, borderRadius: 10, display: "grid", placeItems: "center", background: "#EAF5F0", color: T.route, textDecoration: "none", fontSize: 17 }}>☎</a>
-                  <a aria-label="WhatsApp lead" href={`https://wa.me/${String(displayLead.phone).replace(/\D/g, "")}`} target="_blank" rel="noreferrer" style={{ width: 34, height: 34, borderRadius: 10, display: "grid", placeItems: "center", background: "#EAF5F0", color: "#128C4A", textDecoration: "none", fontSize: 16, fontWeight: 800 }}>W</a>
-                </div>
-              )}
+              {displayLead.owner && <div style={{ marginTop: 5, color: T.inkSoft, fontSize: 12.5 }}>👤 {displayLead.owner}</div>}
             </div>
           </div>
+          {displayLead.phone && (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.line}` }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: T.ink, minWidth: 0, overflowWrap: "anywhere" }}>{displayLead.phone}</span>
+              <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                <a aria-label="Call lead" href={`tel:${displayLead.phone}`} style={{ minHeight: 40, padding: "0 14px", borderRadius: 10, background: T.route, color: "#fff", textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 13, fontWeight: 700 }}><PhoneIcon size={16} /> Call</a>
+                <a aria-label="WhatsApp lead" href={whatsappLink(displayLead.phone)} target="_blank" rel="noreferrer" style={{ minHeight: 40, padding: "0 14px", borderRadius: 10, background: "#25D366", color: "#053B1B", textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 13, fontWeight: 700 }}><WhatsAppIcon size={16} /> WhatsApp</a>
+              </div>
+            </div>
+          )}
         </div>
 
         <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
@@ -3542,6 +3596,17 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
 
         {showBrief && <LeadBriefPopup key={lead.id} lead={displayLead} buildBrief={buildLeadBrief} onClose={() => setShowBrief(false)} />}
 
+        {onStatusChange && !editing && (
+          <div style={{ marginTop: 12, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 14 }}>
+            <div style={{ fontSize: 11, textTransform: "uppercase", color: T.inkSoft, fontWeight: 600, letterSpacing: 0.3, marginBottom: 8 }}>Update status</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {STATUSES.map((s) => (
+                <button key={s} onClick={() => changeStatus(s)} aria-pressed={lead.status === s} style={{ minHeight: 44, fontSize: 13, padding: "0 14px", borderRadius: 999, cursor: "pointer", border: `1px solid ${lead.status === s ? T.route : T.line}`, background: lead.status === s ? T.route : "#fff", color: lead.status === s ? "#fff" : T.ink, fontWeight: 600 }}>{STATUS_LABEL[s]}</button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {!editing && (
           <div style={{ display: "flex", borderBottom: `1px solid ${T.line}`, marginTop: 16, background: "#fff", borderRadius: "12px 12px 0 0" }}>
             {["overview", "activity"].map((tab) => (
@@ -3550,16 +3615,6 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
           </div>
         )}
 
-{onStatusChange && !editing && detailTab === "overview" && (
-          <div style={{ marginTop: 16 }}>
-            <div style={{ fontSize: 11, textTransform: "uppercase", color: T.inkSoft, fontWeight: 600, letterSpacing: 0.3, marginBottom: 6 }}>Update status</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {STATUSES.map((s) => (
-                <button key={s} onClick={() => onStatusChange(lead.id, s)} style={{ fontSize: 11.5, padding: "5px 9px", borderRadius: 6, cursor: "pointer", border: `1px solid ${lead.status === s ? T.route : T.line}`, background: lead.status === s ? T.route : "#fff", color: lead.status === s ? "#fff" : T.ink, fontWeight: 600 }}>{STATUS_LABEL[s]}</button>
-              ))}
-            </div>
-          </div>
-        )}
 
         
         {editing ? (
@@ -3589,6 +3644,63 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
           </div>
         ) : detailTab === "overview" ? (
           <>
+            {formattedFollowUp && (
+              <div style={{ marginTop: 12, background: followUpDaysDiff < 0 ? "#FFF1F1" : followUpDaysDiff === 0 ? "#FFF8E8" : "#F0F7FF", border: `1px solid ${followUpDaysDiff < 0 ? "#F6B8B8" : followUpDaysDiff === 0 ? "#F0D89A" : "#C9DDF7"}`, borderRadius: 14, padding: 14 }}>
+                <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                  <div style={{ fontSize: 20, lineHeight: 1 }}>📅</div>
+                  <div>
+                    <div style={{ fontSize: 13.5, fontWeight: 800, color: followUpDaysDiff < 0 ? "#D92D20" : T.ink }}>Next Follow-up</div>
+                    <div style={{ marginTop: 3, fontSize: 13, fontWeight: 600, color: followUpDaysDiff < 0 ? "#D92D20" : T.ink }}>{formattedFollowUp}{followUpLabel ? ` · ${followUpLabel}` : ""}</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
+                  {FOLLOWUP_QUICK.map(([label, days]) => (
+                    <button key={label} disabled={followUpSaving} onClick={() => applyFollowUp(isoDaysFromToday(days))} style={{ minHeight: 40, padding: "0 13px", borderRadius: 999, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{label}</button>
+                  ))}
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 12 }}>
+                  <button disabled={followUpSaving} onClick={markFollowUpDone} style={{ border: "none", borderRadius: 10, padding: "10px 8px", background: T.route, color: "#fff", fontWeight: 800, cursor: "pointer" }}>{followUpSaving ? "Saving…" : "✓ Mark Done"}</button>
+                  <button disabled={followUpSaving} onClick={() => { setRescheduleDate(String(displayLead.nextFollowUpDate || "").slice(0, 10)); setShowReschedule(true); }} style={{ border: `1px solid ${T.line}`, borderRadius: 10, padding: "10px 8px", background: "#fff", color: T.ink, fontWeight: 800, cursor: "pointer" }}>▣ Reschedule</button>
+                </div>
+                {showReschedule && (
+                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.line}` }}>
+                    <div style={{ fontSize: 11.5, color: T.inkSoft, marginBottom: 6, fontWeight: 700 }}>New follow-up date</div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <input type="date" value={rescheduleDate} onChange={(e) => setRescheduleDate(e.target.value)} style={{ ...inputStyle, margin: 0, flex: 1 }} />
+                      <button disabled={!rescheduleDate || followUpSaving} onClick={saveReschedule} style={{ border: "none", borderRadius: 9, padding: "8px 12px", background: T.route, color: "#fff", fontWeight: 700, cursor: "pointer" }}>Save</button>
+                      <button onClick={() => setShowReschedule(false)} style={{ border: `1px solid ${T.line}`, borderRadius: 9, padding: "8px 10px", background: "#fff", color: T.inkSoft, fontWeight: 700, cursor: "pointer" }}>Cancel</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            {!formattedFollowUp && onUpdate && (
+              <div style={{ marginTop: 12, background: T.warnSoft, border: "1px solid #F0D89A", borderRadius: 14, padding: 14 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 800, color: T.ink }}>Next Follow-up</div>
+                <div style={{ marginTop: 3, fontSize: 12.5, color: T.inkSoft }}>Not set. Pick a quick date:</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
+                  {FOLLOWUP_QUICK.map(([label, days]) => (
+                    <button key={label} disabled={followUpSaving} onClick={() => applyFollowUp(isoDaysFromToday(days))} style={{ minHeight: 40, padding: "0 13px", borderRadius: 999, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{label}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {briefNext && (
+              <div onClick={() => setShowBrief(true)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setShowBrief(true); }} style={{ marginTop: 12, background: "#FAF8FE", border: "1px solid #E4DAF6", borderRadius: 14, padding: 14, cursor: "pointer" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 11.5, fontWeight: 700, color: "#6B46C1" }}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><Sparkles size={13} /> Lead brief</span>
+                  <span>Open ›</span>
+                </div>
+                <div style={{ marginTop: 5, fontSize: 13.5, color: T.ink, lineHeight: 1.5 }}><b>Next:</b> {briefNext}</div>
+              </div>
+            )}
+            {displayLead.notes && (
+              <div style={{ marginTop: 12, background: "#EAF5F0", border: "1px solid #CFE6DC", borderRadius: 14, padding: 14 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: T.route, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 6 }}>Comments</div>
+                <div style={{ fontSize: 13.5, color: T.ink, lineHeight: 1.55, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{displayLead.notes}</div>
+              </div>
+            )}
+
             <div style={{ marginTop: 12, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 14 }}>
               <div style={{ fontSize: 13.5, fontWeight: 800, marginBottom: 8, color: T.ink }}>Lead Information</div>
               {detailRows.map(([label, value]) => (
@@ -3609,32 +3721,6 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
               </div>
             </div>
 
-            {formattedFollowUp && (
-              <div style={{ marginTop: 12, background: followUpDaysDiff < 0 ? "#FFF1F1" : followUpDaysDiff === 0 ? "#FFF8E8" : "#F0F7FF", border: `1px solid ${followUpDaysDiff < 0 ? "#F6B8B8" : followUpDaysDiff === 0 ? "#F0D89A" : "#C9DDF7"}`, borderRadius: 14, padding: 14 }}>
-                <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                  <div style={{ fontSize: 20, lineHeight: 1 }}>📅</div>
-                  <div>
-                    <div style={{ fontSize: 13.5, fontWeight: 800, color: followUpDaysDiff < 0 ? "#D92D20" : T.ink }}>Next Follow-up</div>
-                    <div style={{ marginTop: 3, fontSize: 13, fontWeight: 600, color: followUpDaysDiff < 0 ? "#D92D20" : T.ink }}>{formattedFollowUp}{followUpLabel ? ` · ${followUpLabel}` : ""}</div>
-                  </div>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 12 }}>
-                  <button disabled={followUpSaving} onClick={markFollowUpDone} style={{ border: "none", borderRadius: 10, padding: "10px 8px", background: T.route, color: "#fff", fontWeight: 800, cursor: "pointer" }}>{followUpSaving ? "Saving…" : "✓ Mark Done"}</button>
-                  <button disabled={followUpSaving} onClick={() => { setRescheduleDate(String(displayLead.nextFollowUpDate || "").slice(0, 10)); setShowReschedule(true); }} style={{ border: `1px solid ${T.line}`, borderRadius: 10, padding: "10px 8px", background: "#fff", color: T.ink, fontWeight: 800, cursor: "pointer" }}>▣ Reschedule</button>
-                </div>
-                {showReschedule && (
-                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.line}` }}>
-                    <div style={{ fontSize: 11.5, color: T.inkSoft, marginBottom: 6, fontWeight: 700 }}>New follow-up date</div>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <input type="date" value={rescheduleDate} onChange={(e) => setRescheduleDate(e.target.value)} style={{ ...inputStyle, margin: 0, flex: 1 }} />
-                      <button disabled={!rescheduleDate || followUpSaving} onClick={saveReschedule} style={{ border: "none", borderRadius: 9, padding: "8px 12px", background: T.route, color: "#fff", fontWeight: 700, cursor: "pointer" }}>Save</button>
-                      <button onClick={() => setShowReschedule(false)} style={{ border: `1px solid ${T.line}`, borderRadius: 9, padding: "8px 10px", background: "#fff", color: T.inkSoft, fontWeight: 700, cursor: "pointer" }}>Cancel</button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
             {lead.hasLocation ? (
               <div style={{ marginTop: 12, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 14, fontSize: 12.5 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
@@ -3642,7 +3728,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                     <div style={{ fontSize: 13.5, fontWeight: 800, marginBottom: 4 }}>Location</div>
                     <div style={{ color: T.inkSoft }}>{displayLead.subLocation || `${lead.lat.toFixed(5)}, ${lead.lng.toFixed(5)}`}</div>
                   </div>
-                  <a href={`https://www.google.com/maps?q=${lead.lat},${lead.lng}`} target="_blank" rel="noreferrer" style={{ border: `1px solid ${T.route}`, borderRadius: 9, padding: "7px 10px", color: T.route, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" }}>View on Map</a>
+                  <a href={`https://www.google.com/maps/dir/?api=1&destination=${lead.lat},${lead.lng}`} target="_blank" rel="noreferrer" style={{ border: `1px solid ${T.route}`, borderRadius: 9, padding: "7px 10px", color: T.route, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" }}>Directions</a>
                 </div>
               </div>
             ) : (
@@ -3698,6 +3784,13 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {statusToast && (
+          <div role="status" style={{ position: "fixed", left: "50%", transform: "translateX(-50%)", bottom: "max(18px, env(safe-area-inset-bottom))", width: "min(420px, calc(100vw - 24px))", zIndex: 2200, background: T.ink, color: "#fff", borderRadius: 12, padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, fontSize: 13 }}>
+            <span>Status changed to {statusToast.label}</span>
+            <button onClick={undoStatus} style={{ minHeight: 36, border: "none", background: "none", color: "#fff", fontWeight: 800, textDecoration: "underline", cursor: "pointer" }}>Undo</button>
           </div>
         )}
 
