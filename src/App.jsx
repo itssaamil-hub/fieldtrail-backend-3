@@ -3413,6 +3413,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
   const [rescheduleDate, setRescheduleDate] = useState("");
   const [followUpSaving, setFollowUpSaving] = useState(false);
   const [followUpExpanded, setFollowUpExpanded] = useState(false);
+  const [statusExpanded, setStatusExpanded] = useState(false);
   const [statusToast, setStatusToast] = useState(null);
   const statusToastTimer = useRef(null);
   const [form, setForm] = useState({
@@ -3519,6 +3520,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
     if (!onStatusChange || next === lead.status) return;
     const previous = lead.status;
     onStatusChange(lead.id, next);
+    setStatusExpanded(false);
     setStatusToast({ label: STATUS_LABEL[next] || next, previous });
     clearTimeout(statusToastTimer.current);
     statusToastTimer.current = setTimeout(() => setStatusToast(null), 5000);
@@ -3577,8 +3579,8 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.line}` }}>
               <span style={{ fontSize: 13, fontWeight: 600, color: T.ink, minWidth: 0, overflowWrap: "anywhere" }}>{displayLead.phone}</span>
               <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                <a aria-label="Call lead" title="Call" href={`tel:${displayLead.phone}`} style={{ width: 32, height: 32, borderRadius: 8, background: T.route, color: "#fff", textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><PhoneIcon size={15} /></a>
-                <a aria-label="WhatsApp lead" title="WhatsApp" href={whatsappLink(displayLead.phone)} target="_blank" rel="noreferrer" style={{ width: 32, height: 32, borderRadius: 8, background: "#25D366", color: "#053B1B", textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><WhatsAppIcon size={15} /></a>
+                <a aria-label="Call lead" title="Call" href={`tel:${displayLead.phone}`} style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${T.line}`, background: "#fff", color: T.route, textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><PhoneIcon size={14} /></a>
+                <a aria-label="WhatsApp lead" title="WhatsApp" href={whatsappLink(displayLead.phone)} target="_blank" rel="noreferrer" style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${T.line}`, background: "#fff", color: T.route, textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><WhatsAppIcon size={14} /></a>
               </div>
             </div>
           )}
@@ -3599,17 +3601,25 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
         {showBrief && <LeadBriefPopup key={lead.id} lead={displayLead} buildBrief={buildLeadBrief} onClose={() => setShowBrief(false)} />}
 
         {onStatusChange && !editing && (
-          <div style={{ marginTop: 12, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 14 }}>
-            <div style={{ fontSize: 11, textTransform: "uppercase", color: T.inkSoft, fontWeight: 600, letterSpacing: 0.3, marginBottom: 8 }}>Update status</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {STATUSES.map((s) => (
-                <button key={s} onClick={() => changeStatus(s)} aria-pressed={lead.status === s} style={{fontSize: 11.5, padding: "5px 9px", borderRadius: 6, cursor: "pointer", border: `1px solid ${lead.status === s ? T.route : T.line}`, background: lead.status === s ? T.route : "#fff", color: lead.status === s ? "#fff" : T.ink, fontWeight: 600}}>{STATUS_LABEL[s]}</button>
-              ))}
+          <div style={{ marginTop: 12, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 12, padding: 13 }}>
+            <div role="button" tabIndex={0} aria-expanded={statusExpanded} onClick={() => setStatusExpanded((v) => !v)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setStatusExpanded((v) => !v); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer" }}>
+              <div>
+                <div style={{ fontSize: 11, textTransform: "uppercase", color: T.inkSoft, fontWeight: 600, letterSpacing: 0.3 }}>Update status</div>
+                <div style={{ marginTop: 5, fontSize: 13.5, fontWeight: 800, color: T.ink }}>{STATUS_LABEL[lead.status]}</div>
+              </div>
+              <span aria-hidden="true" style={{ fontSize: 18, color: T.inkSoft }}>{statusExpanded ? "⌃" : "›"}</span>
             </div>
+            {statusExpanded && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 11, paddingTop: 10, borderTop: `1px solid ${T.line}` }}>
+                {STATUSES.map((s) => (
+                  <button key={s} onClick={(e) => { e.stopPropagation(); changeStatus(s); }} style={{ fontSize: 11.5, padding: "5px 9px", borderRadius: 6, cursor: "pointer", border: `1px solid ${lead.status === s ? T.route : T.line}`, background: lead.status === s ? T.route : "#fff", color: lead.status === s ? "#fff" : T.ink, fontWeight: 600 }}>{STATUS_LABEL[s]}</button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
-        {!editing && (
+                {!editing && (
           <div style={{ display: "flex", borderBottom: `1px solid ${T.line}`, marginTop: 16, background: "#fff", borderRadius: "12px 12px 0 0" }}>
             {["overview", "activity"].map((tab) => (
               <button key={tab} onClick={() => setDetailTab(tab)} style={{ flex: 1, padding: "11px 8px", border: "none", borderBottom: detailTab === tab ? `2px solid ${T.route}` : "2px solid transparent", background: "transparent", color: detailTab === tab ? T.route : T.inkSoft, fontWeight: 700, cursor: "pointer", textTransform: "capitalize" }}>{tab}</button>
