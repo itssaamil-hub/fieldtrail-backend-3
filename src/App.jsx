@@ -3412,6 +3412,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
   const [showReschedule, setShowReschedule] = useState(false);
   const [rescheduleDate, setRescheduleDate] = useState("");
   const [followUpSaving, setFollowUpSaving] = useState(false);
+  const [followUpExpanded, setFollowUpExpanded] = useState(false);
   const [statusToast, setStatusToast] = useState(null);
   const statusToastTimer = useRef(null);
   const [form, setForm] = useState({
@@ -3647,37 +3648,35 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
           <>
             {formattedFollowUp && (
               <div style={{ marginTop: 12, background: followUpDaysDiff < 0 ? "#FFF1F1" : followUpDaysDiff === 0 ? "#FFF8E8" : "#F0F7FF", border: `1px solid ${followUpDaysDiff < 0 ? "#F6B8B8" : followUpDaysDiff === 0 ? "#F0D89A" : "#C9DDF7"}`, borderRadius: 14, padding: 14 }}>
-                <div style={{ display: "flex", gap: 10, alignItems: "flex-start", justifyContent: "space-between" }}>
-                  <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                <div role="button" tabIndex={0} aria-expanded={followUpExpanded} onClick={() => setFollowUpExpanded((v) => !v)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setFollowUpExpanded((v) => !v); }} style={{ display: "flex", gap: 10, alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
+                  <div style={{ display: "flex", gap: 10, alignItems: "flex-start", minWidth: 0 }}>
                     <div style={{ fontSize: 20, lineHeight: 1 }}>📅</div>
-                    <div>
+                    <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: 13.5, fontWeight: 800, color: followUpDaysDiff < 0 ? "#D92D20" : T.ink }}>Next Follow-up</div>
                       <div style={{ marginTop: 3, fontSize: 13, fontWeight: 600, color: followUpDaysDiff < 0 ? "#D92D20" : T.ink }}>{formattedFollowUp}{followUpLabel ? ` · ${followUpLabel}` : ""}</div>
                     </div>
                   </div>
-                  <button disabled={followUpSaving} onClick={markFollowUpDone} style={{ minHeight: 30, padding: "0 9px", border: `1px solid ${T.route}`, borderRadius: 8, background: "#fff", color: T.route, fontSize: 11.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>{followUpSaving ? "Saving…" : "✓ Mark Done"}</button>
+                  <span aria-hidden="true" style={{ fontSize: 18, color: T.inkSoft }}>{followUpExpanded ? "⌃" : "›"}</span>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 8, marginTop: 12 }}>
-                  {FOLLOWUP_QUICK.map(([label, days]) => (
-                    <button key={label} disabled={followUpSaving} onClick={() => { const date = isoDaysFromToday(days); if (window.confirm(`Set next follow-up to ${label.toLowerCase()}?`)) applyFollowUp(date); }} style={{ minHeight: 36, padding: "0 11px", borderRadius: 8, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{label}</button>
-                  ))}
-                  <label aria-label="Reschedule follow-up" title="Reschedule" style={{ minWidth: 40, minHeight: 36, padding: "0 10px", border: `1px solid ${T.line}`, borderRadius: 10, background: "#fff", color: T.ink, fontSize: 17, fontWeight: 700, cursor: followUpSaving ? "default" : "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", position: "relative", boxSizing: "border-box" }}>
-                    📅
-                    <input type="date" disabled={followUpSaving} value="" onChange={(e) => { if (e.target.value) applyFollowUp(e.target.value); }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer" }} />
-                  </label>
-                </div>
-                {showReschedule && (
-                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.line}` }}>
-                    <div style={{ fontSize: 11.5, color: T.inkSoft, marginBottom: 6, fontWeight: 700 }}>New follow-up date</div>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <input type="date" value={rescheduleDate} onChange={(e) => setRescheduleDate(e.target.value)} style={{ ...inputStyle, margin: 0, flex: 1 }} />
-                      <button disabled={!rescheduleDate || followUpSaving} onClick={saveReschedule} style={{ border: "none", borderRadius: 9, padding: "8px 12px", background: T.route, color: "#fff", fontWeight: 700, cursor: "pointer" }}>Save</button>
-                      <button onClick={() => setShowReschedule(false)} style={{ border: `1px solid ${T.line}`, borderRadius: 9, padding: "8px 10px", background: "#fff", color: T.inkSoft, fontWeight: 700, cursor: "pointer" }}>Cancel</button>
+                {followUpExpanded && (
+                  <div style={{ marginTop: 12, paddingTop: 10, borderTop: `1px solid ${T.line}` }}>
+                    <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 9 }}>
+                      <button disabled={followUpSaving} onClick={markFollowUpDone} style={{ minHeight: 30, padding: "0 9px", border: `1px solid ${T.route}`, borderRadius: 8, background: "#fff", color: T.route, fontSize: 11.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>{followUpSaving ? "Saving…" : "✓ Mark Done"}</button>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 8 }}>
+                      {FOLLOWUP_QUICK.map(([label, days]) => (
+                        <button key={label} disabled={followUpSaving} onClick={() => { const date = isoDaysFromToday(days); if (window.confirm(`Set next follow-up to ${label.toLowerCase()}?`)) applyFollowUp(date); }} style={{ minHeight: 36, padding: "0 11px", borderRadius: 8, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{label}</button>
+                      ))}
+                      <label aria-label="Reschedule follow-up" title="Reschedule" style={{ minWidth: 40, minHeight: 36, padding: "0 10px", border: `1px solid ${T.line}`, borderRadius: 10, background: "#fff", color: T.ink, fontSize: 17, fontWeight: 700, cursor: followUpSaving ? "default" : "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", position: "relative", boxSizing: "border-box" }}>
+                        📅
+                        <input type="date" disabled={followUpSaving} value="" onChange={(e) => { if (e.target.value) applyFollowUp(e.target.value); }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer" }} />
+                      </label>
                     </div>
                   </div>
                 )}
               </div>
             )}
+
             {!formattedFollowUp && onUpdate && (
               <div style={{ marginTop: 12, background: T.warnSoft, border: "1px solid #F0D89A", borderRadius: 14, padding: 14 }}>
                 <div style={{ fontSize: 13.5, fontWeight: 800, color: T.ink }}>Next Follow-up</div>
