@@ -3749,49 +3749,113 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
         ) : null}
 
         {fetchHistory && !editing && detailTab === "activity" && (
-          <div style={{ marginTop: 20, paddingTop: 16, borderTop: `1px solid ${T.line}` }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, textTransform: "uppercase", color: T.inkSoft, fontWeight: 600, letterSpacing: 0.3, marginBottom: 10 }}>
-              <Clock size={12} /> Activity Log
-            </div>
+          <div style={{ marginTop: 14 }}>
             {history === null && !historyError && (
-              <div style={{ fontSize: 12.5, color: T.inkSoft, display: "flex", alignItems: "center", gap: 6 }}>
-                <Loader2 size={13} className="spin" /> Loading history…
+              <div style={{ fontSize: 12.5, color: T.inkSoft, display: "flex", alignItems: "center", gap: 6, padding: "12px 2px" }}>
+                <Loader2 size={13} className="spin" /> Loading activity…
               </div>
             )}
             {historyError && (
-              <div style={{ fontSize: 12.5, color: T.danger }}>{historyError}</div>
+              <div style={{ fontSize: 12.5, color: T.danger, padding: "12px 2px" }}>{historyError}</div>
             )}
             {history && history.length === 0 && (
-              <div style={{ fontSize: 12.5, color: T.inkSoft }}>No status changes yet — still at {STATUS_LABEL[lead.status]}.</div>
-            )}
-            {history && history.length > 0 && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-                {[...history].reverse().map((h, i) => (
-                  <div key={h.id} style={{ display: "flex", gap: 10, paddingBottom: i === history.length - 1 ? 0 : 12 }}>
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 8 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: 99, background: T.route, marginTop: 4, flexShrink: 0 }} />
-                      {i !== history.length - 1 && <div style={{ width: 1.5, flex: 1, background: T.line, marginTop: 2 }} />}
-                    </div>
-                    <div style={{ paddingBottom: 4 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
-                        {h.old_status ? (
-                          <>
-                            <span style={{ color: T.inkSoft, fontWeight: 500 }}>{STATUS_LABEL[h.old_status] || h.old_status}</span>
-                            <span style={{ color: T.inkSoft }}>→</span>
-                            <span>{STATUS_LABEL[h.new_status] || h.new_status}</span>
-                          </>
-                        ) : (
-                          <span>Set to {STATUS_LABEL[h.new_status] || h.new_status}</span>
-                        )}
-                      </div>
-                      <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 2 }}>
-                        {h.changed_by_name} · {new Date(h.changed_at).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
-                      </div>
-                    </div>
-                  </div>
-                ))}
+              <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 12, padding: 14, fontSize: 12.5, color: T.inkSoft }}>
+                No status activity yet — current status is {STATUS_LABEL[lead.status]}.
               </div>
             )}
+            {history && history.length > 0 && (() => {
+              const now = new Date();
+              const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+              const yesterday = new Date(now);
+              yesterday.setDate(now.getDate() - 1);
+              const yesterdayKey = `${yesterday.getFullYear()}-${yesterday.getMonth()}-${yesterday.getDate()}`;
+
+              const sorted = [...history].sort((a, b) => new Date(b.changed_at) - new Date(a.changed_at));
+              const groups = [];
+              sorted.forEach((h) => {
+                const d = new Date(h.changed_at);
+                const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+                let group = groups.find((g) => g.key === key);
+                if (!group) {
+                  const label = key === todayKey
+                    ? "Today"
+                    : key === yesterdayKey
+                      ? "Yesterday"
+                      : d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+                  group = { key, label, items: [] };
+                  groups.push(group);
+                }
+                group.items.push(h);
+              });
+
+              return (
+                <div>
+                  {groups.map((group, groupIndex) => (
+                    <div key={group.key} style={{ marginTop: groupIndex === 0 ? 0 : 18 }}>
+                      <div style={{ fontSize: 10.5, textTransform: "uppercase", letterSpacing: 0.55, color: T.inkSoft, fontWeight: 800, marginBottom: 10 }}>
+                        {group.label}
+                      </div>
+                      <div style={{ position: "relative" }}>
+                        {group.items.map((h, i) => (
+                          <div key={h.id || `${group.key}-${i}`} style={{ display: "flex", gap: 12, minHeight: 58 }}>
+                            <div style={{ width: 12, display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
+                              <div style={{ width: 9, height: 9, borderRadius: 99, background: T.route, marginTop: 5, boxShadow: "0 0 0 3px #EAF5F0", zIndex: 1 }} />
+                              {i !== group.items.length - 1 && <div style={{ width: 1.5, flex: 1, background: T.line, marginTop: 4 }} />}
+                            </div>
+                            <div style={{ flex: 1, paddingBottom: i === group.items.length - 1 ? 2 : 14 }}>
+                              {(() => {
+                                const action = h.action || "lead.status_changed";
+                                const oldValue = h.old_value ?? h.old_status;
+                                const newValue = h.new_value ?? h.new_status;
+                                const titles = {
+                                  "lead.created": "Lead created",
+                                  "lead.created_by_admin": "Lead created",
+                                  "lead.status_changed": "Status changed",
+                                  "lead.follow_up_scheduled": "Follow-up scheduled",
+                                  "lead.follow_up_rescheduled": "Follow-up rescheduled",
+                                  "lead.follow_up_done": "Follow-up completed",
+                                  "lead.comment_updated": "Comment updated",
+                                  "lead.edited": "Lead information updated",
+                                };
+                                const fmtDate = (v) => {
+                                  if (!v) return "";
+                                  const d = new Date(`${String(v).slice(0,10)}T00:00:00`);
+                                  return Number.isNaN(d.getTime()) ? String(v) : d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+                                };
+                                let detail = null;
+                                if (action === "lead.status_changed") {
+                                  detail = <>{oldValue && <><span style={{ color: T.inkSoft }}>{STATUS_LABEL[oldValue] || oldValue}</span><span style={{ color: T.inkSoft }}> → </span></>}<span style={{ fontWeight: 700, color: T.route }}>{STATUS_LABEL[newValue] || newValue}</span></>;
+                                } else if (action === "lead.follow_up_scheduled") {
+                                  detail = <span style={{ fontWeight: 700, color: T.route }}>{fmtDate(newValue)}</span>;
+                                } else if (action === "lead.follow_up_rescheduled") {
+                                  detail = <><span style={{ color: T.inkSoft }}>{fmtDate(oldValue)}</span><span style={{ color: T.inkSoft }}> → </span><span style={{ fontWeight: 700, color: T.route }}>{fmtDate(newValue)}</span></>;
+                                } else if (action === "lead.follow_up_done") {
+                                  detail = <span style={{ color: T.inkSoft }}>{oldValue ? `Completed follow-up for ${fmtDate(oldValue)}` : "Marked done"}</span>;
+                                } else if (action === "lead.comment_updated") {
+                                  const text = String(newValue || "").trim();
+                                  detail = text ? <span style={{ color: T.inkSoft }}>“{text.length > 90 ? `${text.slice(0, 90)}…` : text}”</span> : <span style={{ color: T.inkSoft }}>Comment cleared</span>;
+                                } else if (action === "lead.edited" && h.changes) {
+                                  const names = { subLocation:"Sub Location", posName:"POS Name", renewalMonth:"Renewal Month", renewalDate:"Renewal Date", contactName:"Contact Name", phone:"Contact Number", dealValue:"Deal Value" };
+                                  const fields = Object.keys(h.changes).map((k) => names[k] || k);
+                                  detail = <span style={{ color: T.inkSoft }}>{fields.length ? fields.join(", ") : "Lead details updated"}</span>;
+                                }
+                                return <>
+                                  <div style={{ fontSize: 13, fontWeight: 750, color: T.ink }}>{titles[action] || "Lead updated"}</div>
+                                  {detail && <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 3, fontSize: 13 }}>{detail}</div>}
+                                </>;
+                              })()}
+                              <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 4 }}>
+                                {h.changed_by_name || "User"} · {new Date(h.changed_at).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         )}
 
