@@ -3387,7 +3387,7 @@ function SalesmanFormModal({ existingCount, salesman, onClose, onSubmit }) {
 // Shared between Admin and Salesman — the fields shown adapt automatically
 // to whatever the lead actually has (nullable GPS when Location Settings
 // have GPS off, optional sub-location/POS/renewal fields, etc).
-const FOLLOWUP_QUICK = [["Tomorrow", 1], ["+3 days", 3], ["Next week", 7]];
+const FOLLOWUP_QUICK = [["Tomorrow", 1], ["+3 days", 3]];
 function isoDaysFromToday(days) {
   const d = new Date();
   d.setDate(d.getDate() + days);
@@ -3533,6 +3533,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
   useEffect(() => () => clearTimeout(statusToastTimer.current), []);
 
   const detailRows = [
+    ["Business Name", displayLead.business],
     ["Sub Location", displayLead.subLocation],
     ["POS Name", displayLead.posName],
     ["Renewal Month", displayLead.renewalMonth],
@@ -3601,7 +3602,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
             <div style={{ fontSize: 11, textTransform: "uppercase", color: T.inkSoft, fontWeight: 600, letterSpacing: 0.3, marginBottom: 8 }}>Update status</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {STATUSES.map((s) => (
-                <button key={s} onClick={() => changeStatus(s)} aria-pressed={lead.status === s} style={{ minHeight: 44, fontSize: 13, padding: "0 14px", borderRadius: 999, cursor: "pointer", border: `1px solid ${lead.status === s ? T.route : T.line}`, background: lead.status === s ? T.route : "#fff", color: lead.status === s ? "#fff" : T.ink, fontWeight: 600 }}>{STATUS_LABEL[s]}</button>
+                <button key={s} onClick={() => changeStatus(s)} aria-pressed={lead.status === s} style={{ fontSize: 12.5, padding: "7px 11px", borderRadius: 8, cursor: "pointer", border: `1px solid ${lead.status === s ? T.route : T.line}`, background: lead.status === s ? T.route : "#fff", color: lead.status === s ? "#fff" : T.ink, fontWeight: 600 }}>{STATUS_LABEL[s]}</button>
               ))}
             </div>
           </div>
@@ -3646,21 +3647,21 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
           <>
             {formattedFollowUp && (
               <div style={{ marginTop: 12, background: followUpDaysDiff < 0 ? "#FFF1F1" : followUpDaysDiff === 0 ? "#FFF8E8" : "#F0F7FF", border: `1px solid ${followUpDaysDiff < 0 ? "#F6B8B8" : followUpDaysDiff === 0 ? "#F0D89A" : "#C9DDF7"}`, borderRadius: 14, padding: 14 }}>
-                <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                  <div style={{ fontSize: 20, lineHeight: 1 }}>📅</div>
-                  <div>
-                    <div style={{ fontSize: 13.5, fontWeight: 800, color: followUpDaysDiff < 0 ? "#D92D20" : T.ink }}>Next Follow-up</div>
-                    <div style={{ marginTop: 3, fontSize: 13, fontWeight: 600, color: followUpDaysDiff < 0 ? "#D92D20" : T.ink }}>{formattedFollowUp}{followUpLabel ? ` · ${followUpLabel}` : ""}</div>
+                <div style={{ display: "flex", gap: 10, alignItems: "flex-start", justifyContent: "space-between" }}>
+                  <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                    <div style={{ fontSize: 20, lineHeight: 1 }}>📅</div>
+                    <div>
+                      <div style={{ fontSize: 13.5, fontWeight: 800, color: followUpDaysDiff < 0 ? "#D92D20" : T.ink }}>Next Follow-up</div>
+                      <div style={{ marginTop: 3, fontSize: 13, fontWeight: 600, color: followUpDaysDiff < 0 ? "#D92D20" : T.ink }}>{formattedFollowUp}{followUpLabel ? ` · ${followUpLabel}` : ""}</div>
+                    </div>
                   </div>
+                  <button disabled={followUpSaving} onClick={markFollowUpDone} style={{ minHeight: 32, padding: "0 10px", border: `1px solid ${T.route}`, borderRadius: 8, background: "#fff", color: T.route, fontSize: 11.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>{followUpSaving ? "Saving…" : "✓ Done"}</button>
                 </div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 8, marginTop: 12 }}>
                   {FOLLOWUP_QUICK.map(([label, days]) => (
-                    <button key={label} disabled={followUpSaving} onClick={() => applyFollowUp(isoDaysFromToday(days))} style={{ minHeight: 40, padding: "0 13px", borderRadius: 999, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{label}</button>
+                    <button key={label} disabled={followUpSaving} onClick={() => applyFollowUp(isoDaysFromToday(days))} style={{ minHeight: 40, padding: "0 13px", borderRadius: 10, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{label}</button>
                   ))}
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 12 }}>
-                  <button disabled={followUpSaving} onClick={markFollowUpDone} style={{ border: "none", borderRadius: 10, padding: "10px 8px", background: T.route, color: "#fff", fontWeight: 800, cursor: "pointer" }}>{followUpSaving ? "Saving…" : "✓ Mark Done"}</button>
-                  <button disabled={followUpSaving} onClick={() => { setRescheduleDate(String(displayLead.nextFollowUpDate || "").slice(0, 10)); setShowReschedule(true); }} style={{ border: `1px solid ${T.line}`, borderRadius: 10, padding: "10px 8px", background: "#fff", color: T.ink, fontWeight: 800, cursor: "pointer" }}>▣ Reschedule</button>
+                  <button aria-label="Reschedule follow-up" title="Reschedule" disabled={followUpSaving} onClick={() => { setRescheduleDate(String(displayLead.nextFollowUpDate || "").slice(0, 10)); setShowReschedule(true); }} style={{ minWidth: 44, minHeight: 40, padding: "0 12px", border: `1px solid ${T.line}`, borderRadius: 10, background: "#fff", color: T.ink, fontSize: 17, fontWeight: 700, cursor: "pointer" }}>📅</button>
                 </div>
                 {showReschedule && (
                   <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.line}` }}>
@@ -3683,15 +3684,6 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                     <button key={label} disabled={followUpSaving} onClick={() => applyFollowUp(isoDaysFromToday(days))} style={{ minHeight: 40, padding: "0 13px", borderRadius: 999, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{label}</button>
                   ))}
                 </div>
-              </div>
-            )}
-            {briefNext && (
-              <div onClick={() => setShowBrief(true)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setShowBrief(true); }} style={{ marginTop: 12, background: "#FAF8FE", border: "1px solid #E4DAF6", borderRadius: 14, padding: 14, cursor: "pointer" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 11.5, fontWeight: 700, color: "#6B46C1" }}>
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><Sparkles size={13} /> Lead brief</span>
-                  <span>Open ›</span>
-                </div>
-                <div style={{ marginTop: 5, fontSize: 13.5, color: T.ink, lineHeight: 1.5 }}><b>Next:</b> {briefNext}</div>
               </div>
             )}
             {displayLead.notes && (
