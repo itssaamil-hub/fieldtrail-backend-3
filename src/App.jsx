@@ -3560,7 +3560,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
           </div>
         </div>
 
-        <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 16 }}>
+        <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 14 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <div style={{ ...leadAvatarStyle(displayLead.business), width: 58, height: 58, minWidth: 58, fontSize: 18 }}>{leadInitials(displayLead.business)}</div>
             <div style={{ minWidth: 0, flex: 1 }}>
@@ -3655,13 +3655,13 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                       <div style={{ marginTop: 3, fontSize: 13, fontWeight: 600, color: followUpDaysDiff < 0 ? "#D92D20" : T.ink }}>{formattedFollowUp}{followUpLabel ? ` · ${followUpLabel}` : ""}</div>
                     </div>
                   </div>
-                  <button disabled={followUpSaving} onClick={markFollowUpDone} style={{ minHeight: 32, padding: "0 10px", border: `1px solid ${T.route}`, borderRadius: 8, background: "#fff", color: T.route, fontSize: 11.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>{followUpSaving ? "Saving…" : "✓ Mark Done"}</button>
+                  <button disabled={followUpSaving} onClick={markFollowUpDone} style={{ minHeight: 30, padding: "0 9px", border: `1px solid ${T.route}`, borderRadius: 8, background: "#fff", color: T.route, fontSize: 11.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>{followUpSaving ? "Saving…" : "✓ Mark Done"}</button>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 8, marginTop: 12 }}>
                   {FOLLOWUP_QUICK.map(([label, days]) => (
-                    <button key={label} disabled={followUpSaving} onClick={() => { const date = isoDaysFromToday(days); if (window.confirm(`Set next follow-up to ${label.toLowerCase()}?`)) applyFollowUp(date); }} style={{ minHeight: 40, padding: "0 13px", borderRadius: 10, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{label}</button>
+                    <button key={label} disabled={followUpSaving} onClick={() => { const date = isoDaysFromToday(days); if (window.confirm(`Set next follow-up to ${label.toLowerCase()}?`)) applyFollowUp(date); }} style={{ minHeight: 36, padding: "0 11px", borderRadius: 8, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{label}</button>
                   ))}
-                  <label aria-label="Reschedule follow-up" title="Reschedule" style={{ minWidth: 44, minHeight: 40, padding: "0 12px", border: `1px solid ${T.line}`, borderRadius: 10, background: "#fff", color: T.ink, fontSize: 17, fontWeight: 700, cursor: followUpSaving ? "default" : "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", position: "relative", boxSizing: "border-box" }}>
+                  <label aria-label="Reschedule follow-up" title="Reschedule" style={{ minWidth: 40, minHeight: 36, padding: "0 10px", border: `1px solid ${T.line}`, borderRadius: 10, background: "#fff", color: T.ink, fontSize: 17, fontWeight: 700, cursor: followUpSaving ? "default" : "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", position: "relative", boxSizing: "border-box" }}>
                     📅
                     <input type="date" disabled={followUpSaving} value="" onChange={(e) => { if (e.target.value) applyFollowUp(e.target.value); }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer" }} />
                   </label>
@@ -3690,7 +3690,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
               </div>
             )}
             {displayLead.notes && (
-              <div style={{ marginTop: 12, background: "#EAF5F0", border: "1px solid #CFE6DC", borderRadius: 14, padding: 14 }}>
+              <div style={{ marginTop: 12, background: "#EAF5F0", border: "1px solid #CFE6DC", borderRadius: 12, padding: 13 }}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: T.route, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 6 }}>Comments</div>
                 <div style={{ fontSize: 13.5, color: T.ink, lineHeight: 1.55, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{displayLead.notes}</div>
               </div>
