@@ -3392,6 +3392,9 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
   const [historyError, setHistoryError] = useState("");
   const [showBrief, setShowBrief] = useState(false);
   const [detailTab, setDetailTab] = useState("overview");
+  const [showReschedule, setShowReschedule] = useState(false);
+  const [rescheduleDate, setRescheduleDate] = useState("");
+  const [followUpSaving, setFollowUpSaving] = useState(false);
   const [form, setForm] = useState({
     subLocation: lead.subLocation || "", posName: lead.posName || "",
     renewalMonth: lead.renewalMonth || "", renewalDate: lead.renewalDate || "",
@@ -3438,13 +3441,54 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
     setEditing(false);
   };
 
+  const followUpDate = displayLead.nextFollowUpDate ? new Date(displayLead.nextFollowUpDate) : null;
+  const followUpDay = followUpDate && !Number.isNaN(followUpDate.getTime())
+    ? new Date(followUpDate.getFullYear(), followUpDate.getMonth(), followUpDate.getDate())
+    : null;
+  const todayDay = new Date();
+  todayDay.setHours(0, 0, 0, 0);
+  const followUpDaysDiff = followUpDay ? Math.round((followUpDay - todayDay) / 86400000) : null;
+  const followUpLabel = followUpDaysDiff == null ? "" : followUpDaysDiff < 0
+    ? `${Math.abs(followUpDaysDiff)} day${Math.abs(followUpDaysDiff) === 1 ? "" : "s"} overdue`
+    : followUpDaysDiff === 0 ? "Due today"
+    : `In ${followUpDaysDiff} day${followUpDaysDiff === 1 ? "" : "s"}`;
+  const formattedFollowUp = followUpDate && !Number.isNaN(followUpDate.getTime())
+    ? followUpDate.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+    : "";
+
+  const markFollowUpDone = async () => {
+    if (!onUpdate || followUpSaving) return;
+    setFollowUpSaving(true);
+    try {
+      await onUpdate(lead.id, { nextFollowUpDate: null });
+      setSavedOverrides((prev) => ({ ...prev, nextFollowUpDate: "" }));
+      setForm((prev) => ({ ...prev, nextFollowUpDate: "" }));
+    } finally {
+      setFollowUpSaving(false);
+    }
+  };
+
+  const saveReschedule = async () => {
+    if (!onUpdate || !rescheduleDate || followUpSaving) return;
+    setFollowUpSaving(true);
+    try {
+      await onUpdate(lead.id, { nextFollowUpDate: rescheduleDate });
+      setSavedOverrides((prev) => ({ ...prev, nextFollowUpDate: rescheduleDate }));
+      setForm((prev) => ({ ...prev, nextFollowUpDate: rescheduleDate }));
+      setShowReschedule(false);
+      setRescheduleDate("");
+    } finally {
+      setFollowUpSaving(false);
+    }
+  };
+
   const detailRows = [
     ["Business Name", displayLead.business],
     ["Sub Location", displayLead.subLocation],
     ["POS Name", displayLead.posName],
     ["Renewal Month", displayLead.renewalMonth],
     ["Renewal Date", displayLead.renewalDate],
-    ["Next Follow-up", displayLead.nextFollowUpDate],
+    ["Next Follow-up", formattedFollowUp],
     ["Contact Name", displayLead.owner],
     ["Contact Number", displayLead.phone],
     ["Expected Deal Value", displayLead.dealValue != null ? `₹${displayLead.dealValue.toLocaleString("en-IN")}` : null],
@@ -3473,7 +3517,13 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                 <span style={{ fontSize: 11.5, fontWeight: 700, color: T.route, background: "#EAF5F0", padding: "5px 9px", borderRadius: 999 }}>{STATUS_LABEL[lead.status]}</span>
               </div>
               {displayLead.subLocation && <div style={{ marginTop: 5, color: T.inkSoft, fontSize: 12.5 }}>⌖ {displayLead.subLocation}</div>}
-              {displayLead.phone && <a href={`tel:${displayLead.phone}`} style={{ display: "block", marginTop: 4, color: T.ink, fontSize: 12.5, textDecoration: "none" }}>☎ {displayLead.phone}</a>}
+              {displayLead.phone && (
+                <div style={{ marginTop: 5, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <a href={`tel:${displayLead.phone}`} style={{ color: T.ink, fontSize: 12.5, textDecoration: "none" }}>☎ {displayLead.phone}</a>
+                  <a aria-label="Call lead" href={`tel:${displayLead.phone}`} style={{ width: 34, height: 34, borderRadius: 10, display: "grid", placeItems: "center", background: "#EAF5F0", color: T.route, textDecoration: "none", fontSize: 17 }}>☎</a>
+                  <a aria-label="WhatsApp lead" href={`https://wa.me/${String(displayLead.phone).replace(/\D/g, "")}`} target="_blank" rel="noreferrer" style={{ width: 34, height: 34, borderRadius: 10, display: "grid", placeItems: "center", background: "#EAF5F0", color: "#128C4A", textDecoration: "none", fontSize: 16, fontWeight: 800 }}>W</a>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -3559,16 +3609,26 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
               </div>
             </div>
 
-            {(displayLead.owner || displayLead.phone) && (
-              <div style={{ marginTop: 12, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 14 }}>
-                <div style={{ fontSize: 13.5, fontWeight: 800, marginBottom: 8 }}>Contact Details</div>
-                {displayLead.owner && <div style={{ fontSize: 13, fontWeight: 600 }}>{displayLead.owner}</div>}
-                {displayLead.phone && (
-                  <div style={{ marginTop: 8, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                    <a href={`tel:${displayLead.phone}`} style={{ color: T.ink, textDecoration: "none", fontSize: 13 }}>{displayLead.phone}</a>
-                    <div style={{ display: "flex", gap: 7 }}>
-                      <a href={`tel:${displayLead.phone}`} style={{ border: `1px solid ${T.route}`, borderRadius: 9, padding: "7px 10px", color: T.route, textDecoration: "none", fontWeight: 700 }}>Call</a>
-                      <a href={`https://wa.me/${String(displayLead.phone).replace(/\D/g, "")}`} target="_blank" rel="noreferrer" style={{ border: `1px solid ${T.route}`, borderRadius: 9, padding: "7px 10px", color: T.route, textDecoration: "none", fontWeight: 700 }}>WhatsApp</a>
+            {formattedFollowUp && (
+              <div style={{ marginTop: 12, background: followUpDaysDiff < 0 ? "#FFF1F1" : followUpDaysDiff === 0 ? "#FFF8E8" : "#F0F7FF", border: `1px solid ${followUpDaysDiff < 0 ? "#F6B8B8" : followUpDaysDiff === 0 ? "#F0D89A" : "#C9DDF7"}`, borderRadius: 14, padding: 14 }}>
+                <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                  <div style={{ fontSize: 20, lineHeight: 1 }}>📅</div>
+                  <div>
+                    <div style={{ fontSize: 13.5, fontWeight: 800, color: followUpDaysDiff < 0 ? "#D92D20" : T.ink }}>Next Follow-up</div>
+                    <div style={{ marginTop: 3, fontSize: 13, fontWeight: 600, color: followUpDaysDiff < 0 ? "#D92D20" : T.ink }}>{formattedFollowUp}{followUpLabel ? ` · ${followUpLabel}` : ""}</div>
+                  </div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 12 }}>
+                  <button disabled={followUpSaving} onClick={markFollowUpDone} style={{ border: "none", borderRadius: 10, padding: "10px 8px", background: T.route, color: "#fff", fontWeight: 800, cursor: "pointer" }}>{followUpSaving ? "Saving…" : "✓ Mark Done"}</button>
+                  <button disabled={followUpSaving} onClick={() => { setRescheduleDate(String(displayLead.nextFollowUpDate || "").slice(0, 10)); setShowReschedule(true); }} style={{ border: `1px solid ${T.line}`, borderRadius: 10, padding: "10px 8px", background: "#fff", color: T.ink, fontWeight: 800, cursor: "pointer" }}>▣ Reschedule</button>
+                </div>
+                {showReschedule && (
+                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.line}` }}>
+                    <div style={{ fontSize: 11.5, color: T.inkSoft, marginBottom: 6, fontWeight: 700 }}>New follow-up date</div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <input type="date" value={rescheduleDate} onChange={(e) => setRescheduleDate(e.target.value)} style={{ ...inputStyle, margin: 0, flex: 1 }} />
+                      <button disabled={!rescheduleDate || followUpSaving} onClick={saveReschedule} style={{ border: "none", borderRadius: 9, padding: "8px 12px", background: T.route, color: "#fff", fontWeight: 700, cursor: "pointer" }}>Save</button>
+                      <button onClick={() => setShowReschedule(false)} style={{ border: `1px solid ${T.line}`, borderRadius: 9, padding: "8px 10px", background: "#fff", color: T.inkSoft, fontWeight: 700, cursor: "pointer" }}>Cancel</button>
                     </div>
                   </div>
                 )}
