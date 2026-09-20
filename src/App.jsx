@@ -3577,8 +3577,8 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.line}` }}>
               <span style={{ fontSize: 13, fontWeight: 600, color: T.ink, minWidth: 0, overflowWrap: "anywhere" }}>{displayLead.phone}</span>
               <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                <a aria-label="Call lead" href={`tel:${displayLead.phone}`} style={{ minHeight: 34, padding: "0 10px", borderRadius: 8, background: T.route, color: "#fff", textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 13, fontWeight: 700 }}><PhoneIcon size={16} /> Call</a>
-                <a aria-label="WhatsApp lead" href={whatsappLink(displayLead.phone)} target="_blank" rel="noreferrer" style={{ minHeight: 34, padding: "0 10px", borderRadius: 8, background: "#25D366", color: "#053B1B", textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 13, fontWeight: 700 }}><WhatsAppIcon size={16} /> WhatsApp</a>
+                <a aria-label="Call lead" title="Call" href={`tel:${displayLead.phone}`} style={{ width: 32, height: 32, borderRadius: 8, background: T.route, color: "#fff", textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><PhoneIcon size={15} /></a>
+                <a aria-label="WhatsApp lead" title="WhatsApp" href={whatsappLink(displayLead.phone)} target="_blank" rel="noreferrer" style={{ width: 32, height: 32, borderRadius: 8, background: "#25D366", color: "#053B1B", textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><WhatsAppIcon size={15} /></a>
               </div>
             </div>
           )}
