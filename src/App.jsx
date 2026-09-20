@@ -3576,8 +3576,8 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.line}` }}>
               <span style={{ fontSize: 13, fontWeight: 600, color: T.ink, minWidth: 0, overflowWrap: "anywhere" }}>{displayLead.phone}</span>
               <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                <a aria-label="Call lead" href={`tel:${displayLead.phone}`} style={{ minHeight: 40, padding: "0 14px", borderRadius: 10, background: T.route, color: "#fff", textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 13, fontWeight: 700 }}><PhoneIcon size={16} /> Call</a>
-                <a aria-label="WhatsApp lead" href={whatsappLink(displayLead.phone)} target="_blank" rel="noreferrer" style={{ minHeight: 40, padding: "0 14px", borderRadius: 10, background: "#25D366", color: "#053B1B", textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 13, fontWeight: 700 }}><WhatsAppIcon size={16} /> WhatsApp</a>
+                <a aria-label="Call lead" href={`tel:${displayLead.phone}`} style={{ minHeight: 34, padding: "0 10px", borderRadius: 8, background: T.route, color: "#fff", textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 13, fontWeight: 700 }}><PhoneIcon size={16} /> Call</a>
+                <a aria-label="WhatsApp lead" href={whatsappLink(displayLead.phone)} target="_blank" rel="noreferrer" style={{ minHeight: 34, padding: "0 10px", borderRadius: 8, background: "#25D366", color: "#053B1B", textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 13, fontWeight: 700 }}><WhatsAppIcon size={16} /> WhatsApp</a>
               </div>
             </div>
           )}
@@ -3602,7 +3602,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
             <div style={{ fontSize: 11, textTransform: "uppercase", color: T.inkSoft, fontWeight: 600, letterSpacing: 0.3, marginBottom: 8 }}>Update status</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {STATUSES.map((s) => (
-                <button key={s} onClick={() => changeStatus(s)} aria-pressed={lead.status === s} style={{ fontSize: 12.5, padding: "7px 11px", borderRadius: 8, cursor: "pointer", border: `1px solid ${lead.status === s ? T.route : T.line}`, background: lead.status === s ? T.route : "#fff", color: lead.status === s ? "#fff" : T.ink, fontWeight: 600 }}>{STATUS_LABEL[s]}</button>
+                <button key={s} onClick={() => changeStatus(s)} aria-pressed={lead.status === s} style={{fontSize: 11.5, padding: "5px 9px", borderRadius: 6, cursor: "pointer", border: `1px solid ${lead.status === s ? T.route : T.line}`, background: lead.status === s ? T.route : "#fff", color: lead.status === s ? "#fff" : T.ink, fontWeight: 600}}>{STATUS_LABEL[s]}</button>
               ))}
             </div>
           </div>
@@ -3655,13 +3655,16 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                       <div style={{ marginTop: 3, fontSize: 13, fontWeight: 600, color: followUpDaysDiff < 0 ? "#D92D20" : T.ink }}>{formattedFollowUp}{followUpLabel ? ` · ${followUpLabel}` : ""}</div>
                     </div>
                   </div>
-                  <button disabled={followUpSaving} onClick={markFollowUpDone} style={{ minHeight: 32, padding: "0 10px", border: `1px solid ${T.route}`, borderRadius: 8, background: "#fff", color: T.route, fontSize: 11.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>{followUpSaving ? "Saving…" : "✓ Done"}</button>
+                  <button disabled={followUpSaving} onClick={markFollowUpDone} style={{ minHeight: 32, padding: "0 10px", border: `1px solid ${T.route}`, borderRadius: 8, background: "#fff", color: T.route, fontSize: 11.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>{followUpSaving ? "Saving…" : "✓ Mark Done"}</button>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 8, marginTop: 12 }}>
                   {FOLLOWUP_QUICK.map(([label, days]) => (
-                    <button key={label} disabled={followUpSaving} onClick={() => applyFollowUp(isoDaysFromToday(days))} style={{ minHeight: 40, padding: "0 13px", borderRadius: 10, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{label}</button>
+                    <button key={label} disabled={followUpSaving} onClick={() => { const date = isoDaysFromToday(days); if (window.confirm(`Set next follow-up to ${label.toLowerCase()}?`)) applyFollowUp(date); }} style={{ minHeight: 40, padding: "0 13px", borderRadius: 10, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{label}</button>
                   ))}
-                  <button aria-label="Reschedule follow-up" title="Reschedule" disabled={followUpSaving} onClick={() => { setRescheduleDate(String(displayLead.nextFollowUpDate || "").slice(0, 10)); setShowReschedule(true); }} style={{ minWidth: 44, minHeight: 40, padding: "0 12px", border: `1px solid ${T.line}`, borderRadius: 10, background: "#fff", color: T.ink, fontSize: 17, fontWeight: 700, cursor: "pointer" }}>📅</button>
+                  <label aria-label="Reschedule follow-up" title="Reschedule" style={{ minWidth: 44, minHeight: 40, padding: "0 12px", border: `1px solid ${T.line}`, borderRadius: 10, background: "#fff", color: T.ink, fontSize: 17, fontWeight: 700, cursor: followUpSaving ? "default" : "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", position: "relative", boxSizing: "border-box" }}>
+                    📅
+                    <input type="date" disabled={followUpSaving} value="" onChange={(e) => { if (e.target.value) applyFollowUp(e.target.value); }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer" }} />
+                  </label>
                 </div>
                 {showReschedule && (
                   <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.line}` }}>
@@ -3681,7 +3684,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                 <div style={{ marginTop: 3, fontSize: 12.5, color: T.inkSoft }}>Not set. Pick a quick date:</div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
                   {FOLLOWUP_QUICK.map(([label, days]) => (
-                    <button key={label} disabled={followUpSaving} onClick={() => applyFollowUp(isoDaysFromToday(days))} style={{ minHeight: 40, padding: "0 13px", borderRadius: 999, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{label}</button>
+                    <button key={label} disabled={followUpSaving} onClick={() => { const date = isoDaysFromToday(days); if (window.confirm(`Set next follow-up to ${label.toLowerCase()}?`)) applyFollowUp(date); }} style={{ minHeight: 40, padding: "0 13px", borderRadius: 999, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{label}</button>
                   ))}
                 </div>
               </div>
