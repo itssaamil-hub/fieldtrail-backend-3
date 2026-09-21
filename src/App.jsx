@@ -3428,6 +3428,23 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const displayLead = { ...lead, ...savedOverrides };
 
+  // Compact sales-age indicators for the header.
+  const ageInDays = (value) => {
+    if (!value) return null;
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return null;
+    const now = new Date();
+    const start = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return Math.max(0, Math.floor((today - start) / 86400000));
+  };
+  const dealAgeDays = ageInDays(displayLead.createdAt || displayLead.created_at);
+  const latestStatusChange = history && history.length
+    ? [...history].filter((h) => (h.action || "lead.status_changed") === "lead.status_changed" && h.changed_at)
+        .sort((a, b) => new Date(b.changed_at) - new Date(a.changed_at))[0]
+    : null;
+  const statusAgeDays = ageInDays(latestStatusChange?.changed_at || displayLead.createdAt || displayLead.created_at);
+
   useEffect(() => {
     if (!fetchHistory) return;
     let cancelled = false;
@@ -3571,19 +3588,22 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                 <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 20 }}>{displayLead.business}</div>
                 <span style={{ fontSize: 11.5, fontWeight: 700, color: T.route, background: "#EAF5F0", padding: "5px 9px", borderRadius: 999 }}>{STATUS_LABEL[lead.status]}</span>
               </div>
-              {displayLead.subLocation && <div style={{ marginTop: 5, color: T.inkSoft, fontSize: 12.5 }}>⌖ {displayLead.subLocation}</div>}
-              {displayLead.owner && <div style={{ marginTop: 5, color: T.inkSoft, fontSize: 12.5 }}>👤 {displayLead.owner}</div>}
+
             </div>
           </div>
-          {displayLead.phone && (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.line}` }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: T.ink, minWidth: 0, overflowWrap: "anywhere" }}>{displayLead.phone}</span>
-              <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.line}` }}>
+            <div style={{ fontSize: 11.5, color: T.inkSoft, fontWeight: 650, minWidth: 0, whiteSpace: "nowrap" }}>
+              {dealAgeDays != null ? <>Deal <span style={{ color: T.ink, fontWeight: 800 }}>{dealAgeDays}d</span></> : <>Deal <span style={{ color: T.inkSoft }}>—</span></>}
+              <span style={{ margin: "0 6px", color: T.line }}>·</span>
+              {statusAgeDays != null ? <>Status Age <span style={{ color: statusAgeDays >= 14 ? T.danger : statusAgeDays >= 7 ? "#B7791F" : T.ink, fontWeight: 800 }}>{statusAgeDays}d</span></> : <>Status Age <span style={{ color: T.inkSoft }}>—</span></>}
+            </div>
+            {displayLead.phone && (
+              <div style={{ display: "flex", gap: 7, flexShrink: 0 }}>
                 <a aria-label="Call lead" title="Call" href={`tel:${displayLead.phone}`} style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${T.line}`, background: "#fff", color: T.route, textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><PhoneIcon size={14} /></a>
                 <a aria-label="WhatsApp lead" title="WhatsApp" href={whatsappLink(displayLead.phone)} target="_blank" rel="noreferrer" style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${T.line}`, background: "#fff", color: T.route, textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><WhatsAppIcon size={14} /></a>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
