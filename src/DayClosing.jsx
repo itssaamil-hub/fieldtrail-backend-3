@@ -29,26 +29,25 @@ export function EmployeeSettings({employee,isActive=true,onClose,onEdit,onDelete
 
 <div className="ft-q-box" style={{marginTop:18}}>
 <h3>Incentive Settings</h3>
-<p className="ft-ob-muted">Annual incentive plan. Incentives apply only to Deals Won and Sales Value, and only above the configured target.</p>
-<label className="ft-ob-field">Plan year<select value={planYear} onChange={e=>setPlanYear(Number(e.target.value))}>{[currentYear-1,currentYear,currentYear+1,currentYear+2].map(y=><option key={y} value={y}>{y}</option>)}</select></label>
+<p className="ft-ob-muted">Set once for the year. These rules automatically apply every month to that month's Deals Won and Sales Value targets.</p>
+<label className="ft-ob-field">Effective year<select value={planYear} onChange={e=>setPlanYear(Number(e.target.value))}>{[currentYear-1,currentYear,currentYear+1,currentYear+2].map(y=><option key={y} value={y}>{y}</option>)}</select></label>
 {incentiveError&&<p role="alert">{incentiveError}</p>}
 {incentive&&<div>
- <div style={{padding:'10px 0',borderBottom:'1px solid #e6ece9'}}>
-  <strong>Deals Won</strong>
-  <div className="ft-q-grid" style={{marginTop:6}}>
-   <label className="ft-ob-field">Annual target<input type="number" min="0" value={incentive.deals_target} onChange={e=>setIncentive(v=>({...v,deals_target:e.target.value}))}/></label>
-   <label className="ft-ob-field">₹ per deal above target<input type="number" min="0" value={incentive.deal_extra_amount} onChange={e=>setIncentive(v=>({...v,deal_extra_amount:e.target.value}))}/></label>
-  </div>
-  <div className="ft-ob-muted">Example: target 120, actual 125 → incentive on 5 extra deals.</div>
+ <div style={{padding:'12px 0',borderBottom:'1px solid #e6ece9'}}>
+  <label className="ft-q-check"><input type="checkbox" role="switch" checked={!!incentive.deals_enabled} onChange={e=>setIncentive(v=>({...v,deals_enabled:e.target.checked}))}/><span><strong>Deals Won incentive</strong> — {incentive.deals_enabled?'ON':'OFF'}</span></label>
+  <p className="ft-ob-muted">Uses the Deals Won target configured for each month.</p>
+  {incentive.deals_enabled&&<label className="ft-ob-field">₹ per additional deal above monthly target<input type="number" min="0" value={incentive.deal_extra_amount||0} onChange={e=>setIncentive(v=>({...v,deal_extra_amount:e.target.value}))}/></label>}
  </div>
- <div style={{padding:'10px 0'}}>
-  <strong>Sales Value</strong>
-  <div className="ft-q-grid" style={{marginTop:6}}>
-   <label className="ft-ob-field">Annual target ₹<input type="number" min="0" value={incentive.sales_value_target} onChange={e=>setIncentive(v=>({...v,sales_value_target:e.target.value}))}/></label>
-   <label className="ft-ob-field">% on value above target<input type="number" min="0" step="0.1" value={incentive.sales_value_extra_pct} onChange={e=>setIncentive(v=>({...v,sales_value_extra_pct:e.target.value}))}/></label>
-  </div>
+ <div style={{padding:'12px 0'}}>
+  <label className="ft-q-check"><input type="checkbox" role="switch" checked={!!incentive.sales_enabled} onChange={e=>setIncentive(v=>({...v,sales_enabled:e.target.checked}))}/><span><strong>Sales Value incentive</strong> — {incentive.sales_enabled?'ON':'OFF'}</span></label>
+  <p className="ft-ob-muted">Uses the Sales Value target configured for each month.</p>
+  {incentive.sales_enabled&&<label className="ft-ob-field">% on sales above monthly target<input type="number" min="0" step="0.1" value={incentive.sales_value_extra_pct||0} onChange={e=>setIncentive(v=>({...v,sales_value_extra_pct:e.target.value}))}/></label>}
  </div>
- <button className="ft-ob-primary" disabled={busy} onClick={async()=>{setBusy(true);setIncentiveError('');try{await api.saveIncentivePlan(employee.id,{...incentive,plan_year:planYear});setIncentiveSaved('Incentive plan saved.')}catch(e){setIncentiveError(e.message)}finally{setBusy(false)}}}>Save incentive plan</button>
+ <div style={{padding:'10px 12px',background:'#f5f8f7',borderRadius:10,fontSize:12,lineHeight:1.6}}>
+  <strong>How it works</strong><br/>
+  Monthly targets may change from month to month. The incentive rate stays the same for the selected year and is calculated only on performance above that month's target.
+ </div>
+ <button className="ft-ob-primary" style={{marginTop:12}} disabled={busy} onClick={async()=>{setBusy(true);setIncentiveError('');try{await api.saveIncentivePlan(employee.id,{...incentive,plan_year:planYear});setIncentiveSaved('Incentive settings saved for all months in '+planYear+'.')}catch(e){setIncentiveError(e.message)}finally{setBusy(false)}}}>Save incentive settings</button>
  {incentiveSaved&&<p role="status">{incentiveSaved}</p>}
 </div>}
 </div>

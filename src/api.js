@@ -169,6 +169,7 @@ export const api = {
   taskNotifications: () => request('/tasks/notifications'),
   readTaskNotifications: ids => request('/tasks/notifications/read', { method: 'POST', body: { ids } }),
   login: (phone, password) => request("/auth/login", { method: "POST", body: { phone, password }, auth: false }),
+  myPerformance: (month) => request(`/salesman/my-performance?month=${month}`),
   health: () => request("/health", { auth: false }),
 
   adminSummary: () => request("/admin/dashboard/summary"),

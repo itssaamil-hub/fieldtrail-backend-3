@@ -2950,45 +2950,74 @@ function SalesmanReportsPage({ leads, dailyTarget, monthlyTarget }) {
   );
 }
 
-function MyPerformanceReport({ leads, dailyTarget, monthlyTarget }) {
-  const todayLeads = leads.filter((l) => isToday(l.createdAt));
-  const monthLeads = leads.filter((l) => isThisMonth(l.createdAt));
-  const won = leads.filter((l) => l.status === "won");
-  const dealValue = won.reduce((sum, l) => sum + (l.dealValue || 0), 0);
-  const conversionPct = leads.length ? Math.round((won.length / leads.length) * 100) : 0;
+function MyPerformanceReport({ leads = [] }) {
+  const now = new Date();
+  const monthKey = new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit"}).format(now) + "-01";
+  const [data,setData]=useState(null);
+  const [error,setError]=useState("");
+  useEffect(()=>{let live=true;api.myPerformance(monthKey).then(v=>{if(live){setData(v);setError("")}}).catch(e=>{if(live)setError(e.message||"Couldn't load performance.")});return()=>{live=false}},[monthKey]);
 
-  return (
-    <div>
-      <div
-        className="ft-card"
-        style={{ background: `linear-gradient(155deg, ${T.card} 0%, ${T.paperDeep} 100%)`, border: `1px solid ${T.line}`, borderRadius: 16, padding: "18px 18px 16px", marginBottom: 16, boxShadow: "0 1px 3px rgba(20,20,30,0.05)" }}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 12, color: T.inkSoft, marginBottom: 6 }}>
-          <span>Today</span>
-          <span style={{ fontWeight: 700, fontSize: 13.5, color: T.ink }}>{Math.min(todayLeads.length, dailyTarget)} / {dailyTarget}</span>
-        </div>
-        <div style={{ height: 7, background: T.paperDeep, borderRadius: 11, overflow: "hidden" }}>
-          <div style={{ height: "100%", width: `${Math.min(100, (todayLeads.length / dailyTarget) * 100)}%`, background: T.route, borderRadius: 11 }} />
-        </div>
-        <div style={{ height: 1, background: T.line, margin: "16px 0 14px" }} />
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 12, color: T.inkSoft, marginBottom: 6 }}>
-          <span>This month</span>
-          <span style={{ fontWeight: 700, fontSize: 13.5, color: T.ink }}>{monthLeads.length} / {monthlyTarget}</span>
-        </div>
-        <div style={{ height: 7, background: T.paperDeep, borderRadius: 11, overflow: "hidden" }}>
-          <div style={{ height: "100%", width: `${Math.min(100, (monthLeads.length / monthlyTarget) * 100)}%`, background: T.accent, borderRadius: 11 }} />
-        </div>
+  const monthLabel = now.toLocaleDateString("en-IN",{month:"long",year:"numeric",timeZone:"Asia/Kolkata"});
+  const end = data?.end_day ? new Date(`${String(data.end_day).slice(0,10)}T23:59:59+05:30`) : new Date(now.getFullYear(),now.getMonth()+1,0);
+  const daysLeft = Math.max(0,Math.ceil((end-now)/86400000));
+  const pct=(v,t)=>t>0?Math.round((Number(v||0)/Number(t))*100):0;
+  const bar=(v,t)=>Math.min(100,pct(v,t));
+  const won=Number(data?.won||0), wonTarget=Number(data?.won_target||0);
+  const sales=Number(data?.sales_value||0), salesTarget=Number(data?.sales_value_target||0);
+  const monthLeads=leads.filter(l=>isThisMonth(l.createdAt));
+  const monthWon=monthLeads.filter(l=>l.status==="won").length;
+  const conversion=monthLeads.length?Math.round((monthWon/monthLeads.length)*100):0;
+  const wonRemaining=Math.max(0,wonTarget-won), salesRemaining=Math.max(0,salesTarget-sales);
+
+  if(error) return <div style={{padding:14,border:`1px solid ${T.line}`,borderRadius:12,color:T.danger,fontSize:13}}>{error}</div>;
+  if(!data) return <div style={{padding:18,color:T.inkSoft,fontSize:13}}>Loading your performance…</div>;
+
+  const Progress=({label,value,target,remaining,money=false})=><div style={{marginTop:label==="Deals Won"?0:22}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",gap:12,marginBottom:8}}>
+      <div>
+        <div style={{fontSize:12,color:"rgba(255,255,255,.72)",marginBottom:3}}>{label}</div>
+        <div style={{fontSize:22,fontWeight:800,letterSpacing:"-.3px"}}>{money?fmtMoney(value):value} <span style={{fontSize:13,fontWeight:600,opacity:.7}}>/ {money?fmtMoney(target):target}</span></div>
       </div>
+      <div style={{fontSize:17,fontWeight:800}}>{pct(value,target)}%</div>
+    </div>
+    <div style={{height:8,borderRadius:99,background:"rgba(255,255,255,.16)",overflow:"hidden"}}>
+      <div style={{height:"100%",width:`${bar(value,target)}%`,borderRadius:99,background:"#fff",transition:"width .3s ease"}}/>
+    </div>
+    <div style={{fontSize:11.5,marginTop:7,color:"rgba(255,255,255,.78)"}}>
+      {target<=0 ? "No target set for this month" : remaining<=0 ? "Target achieved ✓" : money ? `${fmtMoney(remaining)} remaining` : `${remaining} more ${remaining===1?"deal":"deals"} to reach your target`}
+    </div>
+  </div>;
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-        <StatCard label="Total leads" value={leads.length} icon={Contact2} color={T.route} />
-        <StatCard label="Won" value={won.length} sub={dealValue > 0 ? fmtMoney(dealValue) : undefined} icon={CheckCircle2} color={T.verified} />
-        <StatCard label="Conversion" value={`${conversionPct}%`} icon={TargetIcon} color={conversionPct >= 30 ? T.verified : T.warn} />
-        <StatCard label="Deal value" value={dealValue > 0 ? fmtMoney(dealValue) : "—"} icon={Handshake} color={T.accent} />
+  return <div>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",gap:10,marginBottom:12}}>
+      <div>
+        <div style={{fontFamily:"'Space Grotesk', sans-serif",fontSize:17,fontWeight:800,color:T.ink}}>MY PERFORMANCE</div>
+        <div style={{fontSize:12.5,color:T.inkSoft,marginTop:2}}>{monthLabel}</div>
+      </div>
+      <div style={{fontSize:11.5,fontWeight:700,color:T.route,background:"#EAF5F0",borderRadius:999,padding:"5px 9px"}}>{daysLeft} days left</div>
+    </div>
+    <div className="ft-card" style={{background:"linear-gradient(145deg,#123F3D 0%,#17635C 100%)",color:"#fff",borderRadius:17,padding:"18px 17px 17px",boxShadow:"0 10px 26px rgba(18,63,61,.16)"}}>
+      <div style={{fontSize:10.5,fontWeight:800,letterSpacing:.8,opacity:.65,marginBottom:16}}>YOUR MONTH</div>
+      <Progress label="Deals Won" value={won} target={wonTarget} remaining={wonRemaining}/>
+      <Progress label="Sales" value={sales} target={salesTarget} remaining={salesRemaining} money/>
+    </div>
+
+    <div style={{marginTop:16}}>
+      <div style={{fontSize:10.5,fontWeight:800,letterSpacing:.65,color:T.inkSoft,marginBottom:8}}>THIS MONTH</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",background:"#fff",border:`1px solid ${T.line}`,borderRadius:13,overflow:"hidden"}}>
+        {[
+          ["Leads",monthLeads.length],
+          ["Won",monthWon],
+          ["Conversion",`${conversion}%`]
+        ].map(([label,value],i)=><div key={label} style={{padding:"13px 8px",textAlign:"center",borderLeft:i?`1px solid ${T.line}`:"none"}}>
+          <div style={{fontSize:18,fontWeight:800,color:T.ink}}>{value}</div>
+          <div style={{fontSize:10.5,color:T.inkSoft,marginTop:3}}>{label}</div>
+        </div>)}
       </div>
     </div>
-  );
+  </div>;
 }
+
 
 function SalesmanLeadsModal({ salesman, leads, onClose, onSelectLead }) {
   const [briefLead, setBriefLead] = useState(null);
