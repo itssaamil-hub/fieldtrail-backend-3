@@ -3593,9 +3593,9 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
           </div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.line}` }}>
             <div style={{ fontSize: 11.5, color: T.inkSoft, fontWeight: 650, minWidth: 0, whiteSpace: "nowrap" }}>
-              {dealAgeDays != null ? <>Deal <span style={{ color: T.ink, fontWeight: 800 }}>{dealAgeDays}d</span></> : <>Deal <span style={{ color: T.inkSoft }}>—</span></>}
+              {dealAgeDays != null ? <span style={{ color: T.ink, fontWeight: 750 }}>{dealAgeDays} day{dealAgeDays === 1 ? "" : "s"} old</span> : <span style={{ color: T.inkSoft }}>Age —</span>}
               <span style={{ margin: "0 6px", color: T.line }}>·</span>
-              {statusAgeDays != null ? <>Status Age <span style={{ color: statusAgeDays >= 14 ? T.danger : statusAgeDays >= 7 ? "#B7791F" : T.ink, fontWeight: 800 }}>{statusAgeDays}d</span></> : <>Status Age <span style={{ color: T.inkSoft }}>—</span></>}
+              {statusAgeDays != null ? <span style={{ color: statusAgeDays >= 14 ? T.danger : statusAgeDays >= 7 ? "#B7791F" : T.inkSoft, fontWeight: statusAgeDays >= 7 ? 750 : 650 }}>{statusAgeDays >= 7 ? "⚠ " : ""}{statusAgeDays} day{statusAgeDays === 1 ? "" : "s"} in stage</span> : <span style={{ color: T.inkSoft }}>Stage age —</span>}
             </div>
             {displayLead.phone && (
               <div style={{ display: "flex", gap: 7, flexShrink: 0 }}>
