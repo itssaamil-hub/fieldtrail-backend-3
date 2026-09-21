@@ -1981,6 +1981,7 @@ const REPORT_CARDS = [
   { key: "expenses", title: "Expenses", desc: "Salary and other spending, broken down by category.", icon: Receipt, color: "#993C1D" },
   { key: "daily", title: "Daily activity", desc: "Visits, leads touched and distance travelled per day.", icon: MapPin, color: "#12805C" },
   { key: "stage", title: "Time in stage", desc: "Average days a lead spends at each status.", icon: Clock, color: "#8B5E00" },
+  { key: "quality", title: "Data quality", desc: "Find leads missing important sales information and fix them.", icon: AlertTriangle, color: "#B8791F" },
   { key: "export", title: "Lead export", desc: "Download leads as CSV, Excel, or push to Google Sheets.", icon: Download, color: "#1D7A8C" },
 ];
 
@@ -2034,9 +2035,67 @@ function ReportsPage({ salesmen, leads }) {
       {active === "expenses" && <ExpensesReport salesmen={salesmen} />}
       {active === "daily" && <DailyActivityReport salesmen={salesmen} />}
       {active === "stage" && <TimeInStageReport />}
+      {active === "quality" && <DataQualityReport salesmen={salesmen} />}
       {active === "export" && <LeadExportReport salesmen={salesmen} />}
     </div>
   );
+}
+
+
+function DataQualityReport({ salesmen }) {
+  const [employee, setEmployee] = useState("");
+  const [issue, setIssue] = useState("all");
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const load = useCallback(() => {
+    setLoading(true); setError("");
+    api.dataQualityReport({ ...(employee ? { salesmanId: employee } : {}), ...(issue !== "all" ? { issue } : {}) })
+      .then(setData).catch((e) => setError(e.message || "Couldn't load data quality.")).finally(() => setLoading(false));
+  }, [employee, issue]);
+  useEffect(() => { load(); }, [load]);
+
+  const labels = { followup:"No follow-up", contact:"Missing contact", location:"Missing location", pos:"Missing POS", deal_value:"Missing deal value" };
+  const filters = [["all","All issues"],["followup","Follow-up"],["contact","Contact"],["location","Location"],["pos","POS"],["deal_value","Deal value"]];
+
+  return <div>
+    <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:14 }}>
+      <select value={employee} onChange={e=>setEmployee(e.target.value)} style={{ minHeight:38, border:`1px solid ${T.line}`, borderRadius:9, padding:"0 10px", background:"#fff", color:T.ink }}>
+        <option value="">All employees</option>
+        {salesmen.map(x=><option key={x.id} value={x.id}>{x.name || x.fullName || x.full_name}</option>)}
+      </select>
+      <select value={issue} onChange={e=>setIssue(e.target.value)} style={{ minHeight:38, border:`1px solid ${T.line}`, borderRadius:9, padding:"0 10px", background:"#fff", color:T.ink }}>
+        {filters.map(([v,l])=><option key={v} value={v}>{l}</option>)}
+      </select>
+    </div>
+
+    {loading && <div style={{fontSize:13,color:T.inkSoft}}><Loader2 size={14} className="spin"/> Loading…</div>}
+    {error && <div style={{fontSize:13,color:T.danger}}>{error}</div>}
+    {data && !loading && <>
+      <div style={{ background:"#FFF9ED", border:"1px solid #F0D9A8", borderRadius:12, padding:14, marginBottom:14 }}>
+        <div style={{fontSize:22,fontWeight:800,color:T.ink}}>{data.counts?.total || 0}</div>
+        <div style={{fontSize:12.5,color:T.inkSoft}}>leads need fixing</div>
+      </div>
+      <div style={{display:"flex",gap:7,flexWrap:"wrap",marginBottom:14}}>
+        {Object.entries(labels).map(([k,l])=><span key={k} style={{fontSize:11.5,padding:"6px 9px",borderRadius:999,background:"#fff",border:`1px solid ${T.line}`,color:T.inkSoft}}>{l} · {data.counts?.[k] || 0}</span>)}
+      </div>
+      <div style={{display:"grid",gap:9}}>
+        {(data.leads||[]).map(lead=><div key={lead.id} style={{background:"#fff",border:`1px solid ${T.line}`,borderRadius:12,padding:13}}>
+          <div style={{display:"flex",justifyContent:"space-between",gap:10}}>
+            <div>
+              <div style={{fontSize:13.5,fontWeight:750,color:T.ink}}>{lead.business_name}</div>
+              <div style={{fontSize:11.5,color:T.inkSoft,marginTop:3}}>{STATUS_LABEL[lead.status] || lead.status} · {lead.salesman_name}</div>
+            </div>
+          </div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:9}}>
+            {lead.issues.map(k=><span key={k} style={{fontSize:11,padding:"4px 7px",borderRadius:6,background:"#FFF5E5",color:"#8B5E00",fontWeight:650}}>⚠ {labels[k]}</span>)}
+          </div>
+        </div>)}
+        {!data.leads?.length && <div style={{padding:18,textAlign:"center",color:T.inkSoft,fontSize:13}}>No data-quality issues found.</div>}
+      </div>
+    </>}
+  </div>;
 }
 
 function SalesmanPerformanceReport({ salesmen }) {

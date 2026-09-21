@@ -157,6 +157,7 @@ export const api = {
   },
   dealValueReport: () => request('/admin/reports/deal-values'),
   performanceReport: (params = {}) => request(`/admin/reports/performance?${new URLSearchParams(params)}`),
+  dataQualityReport: (params = {}) => request(`/admin/reports/data-quality?${new URLSearchParams(params)}`),
   tasks: (params = {}) => request(`/tasks?${new URLSearchParams(params)}`),
   createTask: body => request('/tasks', { method: 'POST', body }),
   deleteTask: id => request(`/tasks/${id}`, { method: 'DELETE' }),
