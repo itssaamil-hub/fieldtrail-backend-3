@@ -157,6 +157,8 @@ export const api = {
   },
   dealValueReport: () => request('/admin/reports/deal-values'),
   performanceReport: (params = {}) => request(`/admin/reports/performance?${new URLSearchParams(params)}`),
+  performanceTargets: (params = {}) => request(`/admin/reports/performance-targets?${new URLSearchParams(params)}`),
+  savePerformanceTarget: (salesmanId, body) => request(`/admin/reports/performance-targets/${salesmanId}`, { method: 'PUT', body }),
   dataQualityReport: (params = {}) => request(`/admin/reports/data-quality?${new URLSearchParams(params)}`),
   tasks: (params = {}) => request(`/tasks?${new URLSearchParams(params)}`),
   createTask: body => request('/tasks', { method: 'POST', body }),

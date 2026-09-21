@@ -2143,34 +2143,96 @@ function DataQualityReport({ salesmen }) {
 
 function SalesmanPerformanceReport({ salesmen }) {
   const now = new Date();
-  const localDay = new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
-  const [period,setPeriod]=useState('month');
+  const localDay = new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"}).format(now);
   const [anchor,setAnchor]=useState(localDay);
-  const [employee,setEmployee]=useState('');
+  const [employee,setEmployee]=useState("");
   const [data,setData]=useState(null);
+  const [targets,setTargets]=useState([]);
   const [loading,setLoading]=useState(true);
-  const [error,setError]=useState('');
-  const [detail,setDetail]=useState(null);
-
-  useEffect(()=>{let live=true;setLoading(true);setError('');api.performanceReport({period,anchor,...(employee?{salesmanId:employee}:{})}).then(v=>{if(live)setData(v)}).catch(e=>{if(live)setError(e.message)}).finally(()=>{if(live)setLoading(false)});return()=>{live=false}},[period,anchor,employee]);
+  const [error,setError]=useState("");
+  const [editing,setEditing]=useState(null);
+  const [draft,setDraft]=useState({});
   const money=n=>fmtMoney(Number(n||0));
-  const cards=data?[['Leads added',data.totals.leads],['Follow-ups',data.totals.followups],['Quotations',data.totals.quotes],['Deals won',data.totals.won],['Sales value',money(data.totals.sales_value)],['Collected',money(data.totals.collected)],['Outstanding',money(data.totals.outstanding)]]:[];
-  return <div>
-    <div style={{display:'flex',gap:10,flexWrap:'wrap',alignItems:'end',marginBottom:16}}>
-      <label style={{fontSize:12,color:T.inkSoft}}>Period<select value={period} onChange={e=>setPeriod(e.target.value)} style={{display:'block',marginTop:4,padding:'8px 10px',border:`1px solid ${T.line}`,borderRadius:8}}><option value="week">Weekly</option><option value="month">Monthly</option></select></label>
-      <label style={{fontSize:12,color:T.inkSoft}}>Date<input type="date" value={anchor} onChange={e=>setAnchor(e.target.value)} style={{display:'block',marginTop:4,padding:'7px 10px',border:`1px solid ${T.line}`,borderRadius:8}}/></label>
-      <label style={{fontSize:12,color:T.inkSoft}}>Employee<select value={employee} onChange={e=>{setEmployee(e.target.value);setDetail(null)}} style={{display:'block',marginTop:4,padding:'8px 10px',border:`1px solid ${T.line}`,borderRadius:8}}><option value="">All salesmen</option>{salesmen.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
+
+  const load=useCallback(()=>{
+    setLoading(true);setError("");
+    Promise.all([
+      api.performanceReport({period:"month",anchor,...(employee?{salesmanId:employee}:{})}),
+      api.performanceTargets({month:anchor})
+    ]).then(([p,t])=>{setData(p);setTargets(t.targets||[])}).catch(e=>setError(e.message||"Couldn't load performance.")).finally(()=>setLoading(false));
+  },[anchor,employee]);
+  useEffect(()=>{load()},[load]);
+
+  const targetFor=id=>targets.find(t=>t.salesman_id===id)||{};
+  const pct=(value,target)=>target>0?Math.min(100,Math.round((Number(value||0)/Number(target))*100)):null;
+  const monthLabel=new Date(`${anchor.slice(0,7)}-01T00:00:00`).toLocaleDateString("en-IN",{month:"long",year:"numeric"});
+  const startEdit=r=>{const x=targetFor(r.id);setEditing(r.id);setDraft({
+    leads_target:x.leads_target||0,visits_target:x.visits_target||0,demos_target:x.demos_target||0,
+    won_target:x.won_target||0,sales_value_target:x.sales_value_target||0
+  })};
+  const saveTarget=async(id)=>{
+    try{await api.savePerformanceTarget(id,{month:anchor,...draft});setEditing(null);load()}
+    catch(e){setError(e.message||"Couldn't save targets.")}
+  };
+  const metric=(label,value,target,format=false)=>{
+    const progress=pct(value,target);
+    return <div style={{marginTop:10}}>
+      <div style={{display:"flex",justifyContent:"space-between",gap:8,fontSize:11.5}}>
+        <span style={{color:T.inkSoft}}>{label}</span>
+        <span style={{fontWeight:750,color:T.ink}}>{format?money(value):value}{target>0?` / ${format?money(target):target}`:""}</span>
+      </div>
+      {target>0&&<><div style={{height:5,borderRadius:99,background:"#E9EFEC",overflow:"hidden",marginTop:5}}><div style={{height:"100%",width:`${progress}%`,background:T.route,borderRadius:99}}/></div><div style={{fontSize:10,color:T.inkSoft,textAlign:"right",marginTop:2}}>{progress}%</div></>}
     </div>
-    {data&&<div style={{fontSize:12,color:T.inkSoft,marginBottom:12}}>{data.start} → {data.end} · IST</div>}
-    {error&&<div style={{padding:12,borderRadius:10,background:'#fff3f0',color:T.danger,marginBottom:12}}>{error}</div>}
+  };
+
+  return <div>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",gap:10,flexWrap:"wrap",marginBottom:15}}>
+      <div><div style={{fontSize:15,fontWeight:750,color:T.ink}}>Monthly performance & targets</div><div style={{fontSize:12,color:T.inkSoft,marginTop:3}}>{monthLabel} · Restaurant visits → Leads → Demos → Won → Sales value.</div></div>
+      <div style={{display:"flex",gap:7}}>
+        <input type="month" value={anchor.slice(0,7)} onChange={e=>setAnchor(`${e.target.value}-01`)} style={{height:36,border:`1px solid ${T.line}`,borderRadius:9,padding:"0 9px",background:"#fff",color:T.ink}}/>
+        <select value={employee} onChange={e=>setEmployee(e.target.value)} style={{height:36,border:`1px solid ${T.line}`,borderRadius:9,padding:"0 9px",background:"#fff",color:T.ink}}>
+          <option value="">All employees</option>{salesmen.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}
+        </select>
+      </div>
+    </div>
+    {error&&<div style={{padding:11,borderRadius:10,background:"#fff3f0",color:T.danger,marginBottom:12,fontSize:12.5}}>{error}</div>}
     {loading?<div style={{padding:24,color:T.inkSoft}}>Loading performance…</div>:data&&<>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))',gap:10,marginBottom:18}}>{cards.map(([label,value])=><div key={label} style={{border:`1px solid ${T.line}`,borderRadius:12,padding:13,background:T.card}}><div style={{fontSize:11,color:T.inkSoft,marginBottom:5}}>{label}</div><div style={{fontSize:19,fontWeight:750}}>{value}</div></div>)}</div>
-      <div style={{fontWeight:700,fontSize:14,marginBottom:9}}>Employee comparison</div>
-      <div style={{overflowX:'auto',border:`1px solid ${T.line}`,borderRadius:12}}><table style={{width:'100%',borderCollapse:'collapse',fontSize:12.5}}><thead><tr style={{background:'#fafcfb'}}>{['Employee','Leads','Follow-ups','Quotes','Won','Sales value','Collected','Outstanding',''].map(h=><th key={h} style={{textAlign:'left',padding:'9px 10px',color:T.inkSoft,whiteSpace:'nowrap'}}>{h}</th>)}</tr></thead><tbody>{data.rows.map(r=><React.Fragment key={r.id}><tr style={{borderTop:`1px solid ${T.line}`}}><td style={{padding:'10px',fontWeight:700}}>{r.full_name}</td><td style={{padding:10}}>{r.leads}</td><td style={{padding:10}}>{r.followups}</td><td style={{padding:10}}>{r.quotes}</td><td style={{padding:10}}>{r.won}</td><td style={{padding:10,fontWeight:650}}>{money(r.sales_value)}</td><td style={{padding:10}}>{money(r.collected)}</td><td style={{padding:10}}>{money(r.outstanding)}</td><td style={{padding:10}}><button onClick={()=>setDetail(detail===r.id?null:r.id)} style={{border:`1px solid ${T.line}`,background:'#fff',borderRadius:7,padding:'5px 8px',cursor:'pointer'}}>Details</button></td></tr>{detail===r.id&&<tr><td colSpan="9" style={{padding:14,background:'#fbfdfc'}}><div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:10}}><div><strong>Activity</strong><div>{r.leads} leads · {r.followups} follow-ups</div><div>{r.tasks_completed} tasks completed</div></div><div><strong>Sales movement</strong><div>{r.quotes} quotations · {r.won} won</div><div>{r.leads?Math.round((r.won/r.leads)*100):0}% won vs leads added in period*</div></div><div><strong>Money</strong><div>{money(r.sales_value)} sales value</div><div>{money(r.collected)} collected</div><div>{money(r.outstanding)} current outstanding</div></div></div><div style={{fontSize:10.5,color:T.inkSoft,marginTop:10}}>*This is a period activity ratio, not a cohort conversion rate. Outstanding is the employee's current outstanding balance on won deals.</div></td></tr>}</React.Fragment>)}</tbody></table></div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(135px,1fr))",gap:8,marginBottom:17}}>
+        {[
+          ["Leads",data.totals.leads],
+          ["Restaurant visits",data.totals.visits],
+          ["Demos",data.totals.demos],
+          ["Won",data.totals.won],
+          ["Sales value",money(data.totals.sales_value)]
+        ].map(([l,v])=><div key={l} style={{background:"#fff",border:`1px solid ${T.line}`,borderRadius:12,padding:"12px 13px"}}><div style={{fontSize:10.5,color:T.inkSoft,textTransform:"uppercase",letterSpacing:.4,fontWeight:700}}>{l}</div><div style={{fontSize:20,fontWeight:800,color:T.ink,marginTop:4}}>{v}</div></div>)}
+      </div>
+
+      <div style={{fontSize:11,textTransform:"uppercase",letterSpacing:.55,color:T.inkSoft,fontWeight:800,marginBottom:9}}>Employee progress</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(270px,1fr))",gap:10}}>
+        {data.rows.map(r=>{const tg=targetFor(r.id);return <div key={r.id} style={{background:"#fff",border:`1px solid ${T.line}`,borderRadius:14,padding:14,boxShadow:"0 1px 2px rgba(20,20,30,.03)"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
+            <div><div style={{fontSize:14,fontWeight:800,color:T.ink}}>{r.full_name}</div><div style={{fontSize:11.5,color:T.inkSoft,marginTop:2}}>{r.won} won · {money(r.sales_value)} sales</div></div>
+            <button onClick={()=>editing===r.id?setEditing(null):startEdit(r)} style={{border:`1px solid ${T.line}`,background:"#fff",borderRadius:8,padding:"6px 9px",fontSize:11.5,fontWeight:700,color:T.route,cursor:"pointer"}}>{editing===r.id?"Cancel":"Set targets"}</button>
+          </div>
+          {editing===r.id?<div style={{marginTop:12,paddingTop:11,borderTop:`1px solid ${T.line}`}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              {[["Restaurant visits","visits_target"],["New leads","leads_target"],["Demos","demos_target"],["Deals won","won_target"],["Sales value","sales_value_target"]].map(([label,key])=><label key={key} style={{fontSize:10.5,color:T.inkSoft}}>{label}<input type="number" min="0" value={draft[key]??0} onChange={e=>setDraft(d=>({...d,[key]:e.target.value}))} style={{display:"block",width:"100%",boxSizing:"border-box",height:34,marginTop:4,border:`1px solid ${T.line}`,borderRadius:8,padding:"0 8px"}}/></label>)}
+            </div>
+            <button onClick={()=>saveTarget(r.id)} style={{width:"100%",height:35,marginTop:10,border:0,borderRadius:8,background:T.route,color:"#fff",fontWeight:750,cursor:"pointer"}}>Save monthly targets</button>
+          </div>:<>
+            {metric("Restaurant visits",r.visits,tg.visits_target)}
+            {metric("New leads",r.leads,tg.leads_target)}
+            {metric("Demos",r.demos,tg.demos_target)}
+            {metric("Deals won",r.won,tg.won_target)}
+            {metric("Sales value",r.sales_value,tg.sales_value_target,true)}
+          </>}
+        </div>})}
+      </div>
       {!data.rows.length&&<EmptyReportState text="No employees found for this filter."/>}
     </>}
   </div>;
 }
+
 
 function FunnelReport({ leads }) {
   const total = leads.length;
