@@ -2150,8 +2150,7 @@ function SalesmanPerformanceReport({ salesmen }) {
   const [targets,setTargets]=useState([]);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
-  const [editing,setEditing]=useState(null);
-  const [draft,setDraft]=useState({});
+
   const money=n=>fmtMoney(Number(n||0));
 
   const load=useCallback(()=>{
@@ -2166,14 +2165,6 @@ function SalesmanPerformanceReport({ salesmen }) {
   const targetFor=id=>targets.find(t=>t.salesman_id===id)||{};
   const pct=(value,target)=>target>0?Math.min(100,Math.round((Number(value||0)/Number(target))*100)):null;
   const monthLabel=new Date(`${anchor.slice(0,7)}-01T00:00:00`).toLocaleDateString("en-IN",{month:"long",year:"numeric"});
-  const startEdit=r=>{const x=targetFor(r.id);setEditing(r.id);setDraft({
-    leads_target:x.leads_target||0,visits_target:x.visits_target||0,demos_target:x.demos_target||0,
-    won_target:x.won_target||0,sales_value_target:x.sales_value_target||0
-  })};
-  const saveTarget=async(id)=>{
-    try{await api.savePerformanceTarget(id,{month:anchor,...draft});setEditing(null);load()}
-    catch(e){setError(e.message||"Couldn't save targets.")}
-  };
   const metric=(label,value,target,format=false)=>{
     const progress=pct(value,target);
     return <div style={{marginTop:10}}>
@@ -2212,20 +2203,24 @@ function SalesmanPerformanceReport({ salesmen }) {
         {data.rows.map(r=>{const tg=targetFor(r.id);return <div key={r.id} style={{background:"#fff",border:`1px solid ${T.line}`,borderRadius:14,padding:14,boxShadow:"0 1px 2px rgba(20,20,30,.03)"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
             <div><div style={{fontSize:14,fontWeight:800,color:T.ink}}>{r.full_name}</div><div style={{fontSize:11.5,color:T.inkSoft,marginTop:2}}>{r.won} won · {money(r.sales_value)} sales</div></div>
-            <button onClick={()=>editing===r.id?setEditing(null):startEdit(r)} style={{border:`1px solid ${T.line}`,background:"#fff",borderRadius:8,padding:"6px 9px",fontSize:11.5,fontWeight:700,color:T.route,cursor:"pointer"}}>{editing===r.id?"Cancel":"Set targets"}</button>
+            <span style={{fontSize:10.5,color:T.inkSoft}}>Targets set in Employee Settings</span>
           </div>
-          {editing===r.id?<div style={{marginTop:12,paddingTop:11,borderTop:`1px solid ${T.line}`}}>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              {[["Restaurant visits","visits_target"],["New leads","leads_target"],["Demos","demos_target"],["Deals won","won_target"],["Sales value","sales_value_target"]].map(([label,key])=><label key={key} style={{fontSize:10.5,color:T.inkSoft}}>{label}<input type="number" min="0" value={draft[key]??0} onChange={e=>setDraft(d=>({...d,[key]:e.target.value}))} style={{display:"block",width:"100%",boxSizing:"border-box",height:34,marginTop:4,border:`1px solid ${T.line}`,borderRadius:8,padding:"0 8px"}}/></label>)}
-            </div>
-            <button onClick={()=>saveTarget(r.id)} style={{width:"100%",height:35,marginTop:10,border:0,borderRadius:8,background:T.route,color:"#fff",fontWeight:750,cursor:"pointer"}}>Save monthly targets</button>
-          </div>:<>
+          <>
             {metric("Restaurant visits",r.visits,tg.visits_target)}
             {metric("New leads",r.leads,tg.leads_target)}
             {metric("Demos",r.demos,tg.demos_target)}
             {metric("Deals won",r.won,tg.won_target)}
             {metric("Sales value",r.sales_value,tg.sales_value_target,true)}
-          </>}
+            {(()=>{
+              const earned =
+                Math.max(0,Number(r.visits||0)-Number(tg.visits_target||0))*Number(tg.visits_incentive||0) +
+                Math.max(0,Number(r.leads||0)-Number(tg.leads_target||0))*Number(tg.leads_incentive||0) +
+                Math.max(0,Number(r.demos||0)-Number(tg.demos_target||0))*Number(tg.demos_incentive||0) +
+                Math.max(0,Number(r.won||0)-Number(tg.won_target||0))*Number(tg.won_incentive||0) +
+                Math.max(0,Number(r.sales_value||0)-Number(tg.sales_value_target||0))*Number(tg.sales_value_incentive_pct||0)/100;
+              return earned>0?<div style={{marginTop:12,padding:"9px 10px",borderRadius:9,background:"#F0F8F4",color:T.route,fontSize:12,fontWeight:750}}>Calculated incentive · {money(earned)}</div>:null;
+            })()}
+          </>
         </div>})}
       </div>
       {!data.rows.length&&<EmptyReportState text="No employees found for this filter."/>}
