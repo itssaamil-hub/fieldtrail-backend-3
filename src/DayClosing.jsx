@@ -7,34 +7,49 @@ export function EmployeeSettings({employee,isActive=true,onClose,onEdit,onDelete
  const [p,setP]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[saved,setSaved]=useState(''),[reload,setReload]=useState(0);
  const month=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit'}).format(new Date())+'-01';
  const [targetMonth,setTargetMonth]=useState(month()),[target,setTarget]=useState(null),[targetSaved,setTargetSaved]=useState(''),[targetError,setTargetError]=useState('');
+ const currentYear=new Date().getFullYear();
+ const [planYear,setPlanYear]=useState(currentYear),[incentive,setIncentive]=useState(null),[incentiveSaved,setIncentiveSaved]=useState(''),[incentiveError,setIncentiveError]=useState('');
  useEffect(()=>{let live=true;api.employeeClosingPermissions(employee.id).then(v=>{if(live){setP(v);setError('')}}).catch(e=>{if(live)setError(e.message)});return()=>{live=false}},[employee.id,reload]);
  useEffect(()=>{let live=true;setTargetError('');api.performanceTargets({month:targetMonth}).then(v=>{if(!live)return;const x=(v.targets||[]).find(t=>t.salesman_id===employee.id)||{};setTarget({visits_target:x.visits_target||0,leads_target:x.leads_target||0,demos_target:x.demos_target||0,won_target:x.won_target||0,sales_value_target:x.sales_value_target||0,visits_incentive:x.visits_incentive||0,leads_incentive:x.leads_incentive||0,demos_incentive:x.demos_incentive||0,won_incentive:x.won_incentive||0,sales_value_incentive_pct:x.sales_value_incentive_pct||0});setTargetSaved('')}).catch(e=>{if(live)setTargetError(e.message||"Couldn't load targets.")});return()=>{live=false}},[employee.id,targetMonth]);
+ useEffect(()=>{let live=true;setIncentiveError('');api.incentivePlan(employee.id,planYear).then(v=>{if(live){setIncentive(v.plan);setIncentiveSaved('')}}).catch(e=>{if(live)setIncentiveError(e.message||"Couldn't load incentive plan.")});return()=>{live=false}},[employee.id,planYear]);
  return <OnboardingDialog title={`Employee Settings — ${employee.name||employee.fullName||'Employee'}`} onClose={onClose} busy={busy}><div className="ft-q"><div style={{display:'flex',gap:8,flexWrap:'wrap'}}><button disabled={busy} onClick={onEdit}>Edit employee</button>{onToggleActive&&<button disabled={busy} onClick={onToggleActive}>{isActive?'Deactivate employee':'Reactivate employee'}</button>}</div><h3>Day Closing permissions</h3>{error&&<p role="alert">{error} <button onClick={()=>setReload(v=>v+1)}>Reload</button></p>}{p?<><p className="ft-ob-muted">These permissions apply only to this employee.</p>{[['require_closing','Require Day Closing before End Day'],['allow_skip','Allow salesman to skip Day Closing'],['require_skip_reason','Require reason when skipped'],['allow_multiple_starts','Allow multiple Start Day / End Day cycles per day'],['allow_lead_without_start_day','Allow lead entry without Start Day / GPS']].map(([k,label])=><label className="ft-q-check" key={k}><input type="checkbox" role="switch" checked={!!p[k]} disabled={busy} onChange={e=>{setP(v=>({...v,[k]:e.target.checked}));setSaved('')}}/><span>{label} — <strong>{p[k]?'ON':'OFF'}</strong></span></label>)}<p className="ft-ob-muted">When closing is optional, the employee can end their day without a report. Skip permission controls whether Skip Day Closing is available. If Allow skip is ON and Require reason is ON, the salesman must enter a reason before Skip & End Day can succeed. Multiple starts lets this employee begin a new day after ending one, as many times as needed — useful for split shifts. Lead entry without Start Day / GPS is intended for trusted employees: when ON, this employee can add leads without starting the day and the lead does not require GPS.</p><button className="ft-ob-primary" disabled={busy} onClick={async()=>{setBusy(true);setError('');try{setP(await api.saveEmployeeClosingPermissions(employee.id,p));setSaved('Permissions saved.')}catch(e){setError(e.message)}finally{setBusy(false)}}}>Save permissions</button>{saved&&<p role="status">{saved}</p>}</>:!error&&<p>Loading permissions…</p>}<div className="ft-q-box" style={{marginTop:18}}>
-<h3>Targets &amp; Incentives</h3>
-<p className="ft-ob-muted">Monthly targets are admin-only. Incentive is calculated only on achievement above the target.</p>{targetError&&<p role="alert">{targetError} <button onClick={()=>setTargetMonth(v=>v)}>Retry</button></p>}
+<h3>Monthly Targets</h3>
+<p className="ft-ob-muted">Performance targets only. Visits, leads and demos do not earn incentives.</p>
 <label className="ft-ob-field">Month<input type="month" value={targetMonth.slice(0,7)} onChange={e=>setTargetMonth(e.target.value+'-01')}/></label>
+{targetError&&<p role="alert">{targetError}</p>}
 {target&&<div>
-{[
- ['Restaurant visits','visits_target','visits_incentive','₹ per extra visit'],
- ['New leads','leads_target','leads_incentive','₹ per extra lead'],
- ['Demos','demos_target','demos_incentive','₹ per extra demo'],
- ['Deals won','won_target','won_incentive','₹ per extra deal']
-].map(([label,tk,ik,il])=><div key={tk} style={{padding:'10px 0',borderBottom:'1px solid #e6ece9'}}>
- <strong>{label}</strong>
- <div className="ft-q-grid" style={{marginTop:6}}>
-  <label className="ft-ob-field">Monthly target<input type="number" min="0" value={target[tk]} onChange={e=>setTarget(v=>({...v,[tk]:e.target.value}))}/></label>
-  <label className="ft-ob-field">{il}<input type="number" min="0" value={target[ik]} onChange={e=>setTarget(v=>({...v,[ik]:e.target.value}))}/></label>
+ <div className="ft-q-grid">
+  {[['Restaurant visits','visits_target'],['New leads','leads_target'],['Demos','demos_target'],['Deals won','won_target'],['Sales value ₹','sales_value_target']].map(([label,key])=>
+   <label className="ft-ob-field" key={key}>{label}<input type="number" min="0" value={target[key]} onChange={e=>setTarget(v=>({...v,[key]:e.target.value}))}/></label>)}
  </div>
-</div>)}
-<div style={{padding:'10px 0'}}>
- <strong>Sales value</strong>
- <div className="ft-q-grid" style={{marginTop:6}}>
-  <label className="ft-ob-field">Monthly target ₹<input type="number" min="0" value={target.sales_value_target} onChange={e=>setTarget(v=>({...v,sales_value_target:e.target.value}))}/></label>
-  <label className="ft-ob-field">% on value above target<input type="number" min="0" step="0.1" value={target.sales_value_incentive_pct} onChange={e=>setTarget(v=>({...v,sales_value_incentive_pct:e.target.value}))}/></label>
- </div>
+ <button className="ft-ob-primary" disabled={busy} onClick={async()=>{setBusy(true);setError('');try{await api.savePerformanceTarget(employee.id,{month:targetMonth,...target,visits_incentive:0,leads_incentive:0,demos_incentive:0,won_incentive:0,sales_value_incentive_pct:0});setTargetSaved('Monthly targets saved.')}catch(e){setTargetError(e.message)}finally{setBusy(false)}}}>Save monthly targets</button>
+ {targetSaved&&<p role="status">{targetSaved}</p>}
+</div>}
 </div>
-<button className="ft-ob-primary" disabled={busy} onClick={async()=>{setBusy(true);setError('');try{await api.savePerformanceTarget(employee.id,{month:targetMonth,...target});setTargetSaved('Targets & incentives saved.')}catch(e){setError(e.message)}finally{setBusy(false)}}}>Save targets &amp; incentives</button>
-{targetSaved&&<p role="status">{targetSaved}</p>}
+
+<div className="ft-q-box" style={{marginTop:18}}>
+<h3>Incentive Settings</h3>
+<p className="ft-ob-muted">Annual incentive plan. Incentives apply only to Deals Won and Sales Value, and only above the configured target.</p>
+<label className="ft-ob-field">Plan year<select value={planYear} onChange={e=>setPlanYear(Number(e.target.value))}>{[currentYear-1,currentYear,currentYear+1,currentYear+2].map(y=><option key={y} value={y}>{y}</option>)}</select></label>
+{incentiveError&&<p role="alert">{incentiveError}</p>}
+{incentive&&<div>
+ <div style={{padding:'10px 0',borderBottom:'1px solid #e6ece9'}}>
+  <strong>Deals Won</strong>
+  <div className="ft-q-grid" style={{marginTop:6}}>
+   <label className="ft-ob-field">Annual target<input type="number" min="0" value={incentive.deals_target} onChange={e=>setIncentive(v=>({...v,deals_target:e.target.value}))}/></label>
+   <label className="ft-ob-field">₹ per deal above target<input type="number" min="0" value={incentive.deal_extra_amount} onChange={e=>setIncentive(v=>({...v,deal_extra_amount:e.target.value}))}/></label>
+  </div>
+  <div className="ft-ob-muted">Example: target 120, actual 125 → incentive on 5 extra deals.</div>
+ </div>
+ <div style={{padding:'10px 0'}}>
+  <strong>Sales Value</strong>
+  <div className="ft-q-grid" style={{marginTop:6}}>
+   <label className="ft-ob-field">Annual target ₹<input type="number" min="0" value={incentive.sales_value_target} onChange={e=>setIncentive(v=>({...v,sales_value_target:e.target.value}))}/></label>
+   <label className="ft-ob-field">% on value above target<input type="number" min="0" step="0.1" value={incentive.sales_value_extra_pct} onChange={e=>setIncentive(v=>({...v,sales_value_extra_pct:e.target.value}))}/></label>
+  </div>
+ </div>
+ <button className="ft-ob-primary" disabled={busy} onClick={async()=>{setBusy(true);setIncentiveError('');try{await api.saveIncentivePlan(employee.id,{...incentive,plan_year:planYear});setIncentiveSaved('Incentive plan saved.')}catch(e){setIncentiveError(e.message)}finally{setBusy(false)}}}>Save incentive plan</button>
+ {incentiveSaved&&<p role="status">{incentiveSaved}</p>}
 </div>}
 </div>
 <div className="ft-q-box"><button className="ft-q-danger" disabled={busy} onClick={onDelete}>Delete employee</button></div></div></OnboardingDialog>
