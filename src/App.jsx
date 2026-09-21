@@ -313,7 +313,7 @@ function urlBase64ToUint8Array(base64String) {
 
 const NOTIFICATION_PREF_DEFAULTS = {
   hotLead: true, statusConversation: true, statusNegotiation: true,
-  statusDemo: true, renewalDue: true, followUpDue: true, dayStartDigest: true, salesBriefing: true, dayActivity: true,
+  statusDemo: true, renewalDue: true, followUpDue: true, dayStartDigest: true, salesBriefing: true, dayActivity: true, dealWon: true, targetMilestone: true, dayStartedEnded: true, dayClosingMissing: true, dayActivitySummary: true,
 };
 
 function usePushNotifications(session) {
@@ -762,17 +762,13 @@ function SettingsModal({ apiBase, onClose, onSave, onLogout, onOpenCrmSettings, 
   const isIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
   const [showIosHint, setShowIosHint] = useState(false);
 
-  const PREF_ROWS = [
-    ["hotLead", "🔥 Hot leads"],
-    ["statusConversation", "Deal moves to Conversation"],
-    ["statusNegotiation", "Deal moves to Negotiation"],
-    ["statusDemo", "Deal moves to Demo"],
-    ["renewalDue", "Renewals due"],
-    ["followUpDue", "Follow-ups due"],
-    ["dayStartDigest", "Day-start report (~1pm)"],
-    ...(getSession()?.role === "admin" ? [["dayActivity", "Employee Start / End Day alerts"]] : []),
-    ["salesBriefing", "Daily sales briefing"],
-  ];
+  const isAdmin = getSession()?.role === "admin";
+  const PREF_GROUPS = isAdmin ? [
+    ["Lead Activity", [["hotLead","🔥 Hot leads"],["statusConversation","Conversation status"],["statusDemo","Demo status"],["statusNegotiation","Negotiation status"]]],
+    ["Sales", [["dealWon","Deal Won"],["targetMilestone","Target Milestone"]]],
+    ["Team Activity", [["dayStartedEnded","Day Started / Ended"],["dayClosingMissing","Day Closing Missing"],["dayActivitySummary","Day Activity Summary"]]],
+    ["Reminders", [["renewalDue","Renewals due"],["followUpDue","Follow-ups due"],["dayStartDigest","Day-start report (~1pm)"],["salesBriefing","Daily sales briefing"]]],
+  ] : [["Notifications", [["hotLead","🔥 Hot leads"],["statusConversation","Conversation status"],["statusNegotiation","Negotiation status"],["statusDemo","Demo status"],["renewalDue","Renewals due"],["followUpDue","Follow-ups due"],["dayStartDigest","Day-start report (~1pm)"],["salesBriefing","Daily sales briefing"]]]];
 
   return (
     <Overlay onClose={onClose} title="Settings">
@@ -822,17 +818,17 @@ function SettingsModal({ apiBase, onClose, onSave, onLogout, onOpenCrmSettings, 
             </button>
           ) : (
             <>
-              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                {PREF_ROWS.map(([key, label]) => (
-                  <label key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 2px", cursor: "pointer" }}>
-                    <span style={{ fontSize: 13 }}>{label}</span>
-                    <input
-                      type="checkbox"
-                      checked={!!push.preferences[key]}
-                      onChange={(e) => push.setPreference(key, e.target.checked)}
-                      style={{ width: 18, height: 18, accentColor: T.route, cursor: "pointer" }}
-                    />
-                  </label>
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                {PREF_GROUPS.map(([group, rows]) => (
+                  <div key={group}>
+                    {isAdmin && <div style={{fontSize:10.5,fontWeight:800,color:T.inkSoft,textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>{group}</div>}
+                    {rows.map(([key,label]) => (
+                      <label key={key} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 2px",cursor:"pointer"}}>
+                        <span style={{fontSize:13}}>{label}</span>
+                        <input type="checkbox" checked={!!push.preferences[key]} onChange={(e)=>push.setPreference(key,e.target.checked)} style={{width:18,height:18,accentColor:T.route,cursor:"pointer"}} />
+                      </label>
+                    ))}
+                  </div>
                 ))}
               </div>
               <button
