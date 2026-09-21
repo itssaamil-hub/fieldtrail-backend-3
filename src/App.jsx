@@ -2056,43 +2056,86 @@ function DataQualityReport({ salesmen }) {
   }, [employee, issue]);
   useEffect(() => { load(); }, [load]);
 
-  const labels = { followup:"No follow-up", contact:"Missing contact", location:"Missing location", pos:"Missing POS", deal_value:"Missing deal value" };
-  const filters = [["all","All issues"],["followup","Follow-up"],["contact","Contact"],["location","Location"],["pos","POS"],["deal_value","Deal value"]];
+  const labels = { followup:"No follow-up", contact:"No contact", location:"No location", pos:"Missing POS", deal_value:"Deal value" };
+  const issueCards = [
+    ["followup","No follow-up",CalendarClock],
+    ["contact","No contact",PhoneIcon],
+    ["location","No location",MapPin],
+    ["pos","Missing POS",Receipt],
+    ["deal_value","Deal value",Wallet],
+  ];
+  const totalIssues = data ? Object.keys(labels).reduce((n,k)=>n+Number(data.counts?.[k]||0),0) : 0;
+  const affected = Number(data?.counts?.total || 0);
 
   return <div>
-    <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:14 }}>
-      <select value={employee} onChange={e=>setEmployee(e.target.value)} style={{ minHeight:38, border:`1px solid ${T.line}`, borderRadius:9, padding:"0 10px", background:"#fff", color:T.ink }}>
-        <option value="">All employees</option>
-        {salesmen.map(x=><option key={x.id} value={x.id}>{x.name || x.fullName || x.full_name}</option>)}
-      </select>
-      <select value={issue} onChange={e=>setIssue(e.target.value)} style={{ minHeight:38, border:`1px solid ${T.line}`, borderRadius:9, padding:"0 10px", background:"#fff", color:T.ink }}>
-        {filters.map(([v,l])=><option key={v} value={v}>{l}</option>)}
-      </select>
+    <div style={{marginBottom:16}}>
+      <div style={{fontFamily:"'Space Grotesk', sans-serif",fontWeight:750,fontSize:19,color:T.ink}}>Data quality</div>
+      <div style={{fontSize:12.5,color:T.inkSoft,marginTop:3}}>Keep your CRM complete and sales-ready.</div>
     </div>
 
-    {loading && <div style={{fontSize:13,color:T.inkSoft}}><Loader2 size={14} className="spin"/> Loading…</div>}
+    {loading && <div style={{fontSize:13,color:T.inkSoft,display:"flex",gap:7,alignItems:"center"}}><Loader2 size={14} className="spin"/> Checking CRM data…</div>}
     {error && <div style={{fontSize:13,color:T.danger}}>{error}</div>}
     {data && !loading && <>
-      <div style={{ background:"#FFF9ED", border:"1px solid #F0D9A8", borderRadius:12, padding:14, marginBottom:14 }}>
-        <div style={{fontSize:22,fontWeight:800,color:T.ink}}>{data.counts?.total || 0}</div>
-        <div style={{fontSize:12.5,color:T.inkSoft}}>leads need fixing</div>
-      </div>
-      <div style={{display:"flex",gap:7,flexWrap:"wrap",marginBottom:14}}>
-        {Object.entries(labels).map(([k,l])=><span key={k} style={{fontSize:11.5,padding:"6px 9px",borderRadius:999,background:"#fff",border:`1px solid ${T.line}`,color:T.inkSoft}}>{l} · {data.counts?.[k] || 0}</span>)}
-      </div>
-      <div style={{display:"grid",gap:9}}>
-        {(data.leads||[]).map(lead=><div key={lead.id} style={{background:"#fff",border:`1px solid ${T.line}`,borderRadius:12,padding:13}}>
-          <div style={{display:"flex",justifyContent:"space-between",gap:10}}>
-            <div>
-              <div style={{fontSize:13.5,fontWeight:750,color:T.ink}}>{lead.business_name}</div>
-              <div style={{fontSize:11.5,color:T.inkSoft,marginTop:3}}>{STATUS_LABEL[lead.status] || lead.status} · {lead.salesman_name}</div>
-            </div>
+      <div style={{background:"linear-gradient(135deg, #123F3D 0%, #17635C 100%)",borderRadius:16,padding:"18px 18px 16px",color:"#fff",marginBottom:14,boxShadow:"0 8px 24px rgba(18,63,61,.12)"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",gap:12,flexWrap:"wrap"}}>
+          <div>
+            <div style={{fontSize:11,textTransform:"uppercase",letterSpacing:.7,opacity:.72,fontWeight:700}}>CRM DATA CHECK</div>
+            <div style={{fontSize:28,fontWeight:800,marginTop:5,lineHeight:1}}>{affected}</div>
+            <div style={{fontSize:13,opacity:.9,marginTop:5}}>{affected === 1 ? "lead needs fixing" : "leads need fixing"}</div>
           </div>
-          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:9}}>
-            {lead.issues.map(k=><span key={k} style={{fontSize:11,padding:"4px 7px",borderRadius:6,background:"#FFF5E5",color:"#8B5E00",fontWeight:650}}>⚠ {labels[k]}</span>)}
+          <div style={{textAlign:"right"}}>
+            <div style={{fontSize:22,fontWeight:800}}>{totalIssues}</div>
+            <div style={{fontSize:11.5,opacity:.75}}>missing items</div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{fontSize:11,textTransform:"uppercase",letterSpacing:.55,color:T.inkSoft,fontWeight:800,margin:"16px 0 9px"}}>Issues</div>
+      <div className="dq-issue-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(125px,1fr))",gap:8,marginBottom:15}}>
+        {issueCards.map(([key,label,Icon])=>{
+          const selected=issue===key;
+          return <button key={key} onClick={()=>setIssue(selected?"all":key)} style={{textAlign:"left",background:selected?"#EAF5F0":"#fff",border:`1px solid ${selected?T.route:T.line}`,borderRadius:12,padding:"11px 12px",cursor:"pointer",color:T.ink,minHeight:76}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
+              <span style={{width:27,height:27,borderRadius:8,background:selected?T.route:"#F3F7F5",color:selected?"#fff":T.route,display:"inline-flex",alignItems:"center",justifyContent:"center"}}><Icon size={14}/></span>
+              <span style={{fontSize:18,fontWeight:800}}>{data.counts?.[key]||0}</span>
+            </div>
+            <div style={{fontSize:11.5,fontWeight:700,marginTop:7,color:selected?T.route:T.inkSoft}}>{label}</div>
+          </button>
+        })}
+      </div>
+
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:11}}>
+        <div style={{fontSize:11,textTransform:"uppercase",letterSpacing:.55,color:T.inkSoft,fontWeight:800}}>Leads to fix · {affected}</div>
+        <div style={{display:"flex",gap:7}}>
+          <select value={employee} onChange={e=>setEmployee(e.target.value)} style={{height:34,border:`1px solid ${T.line}`,borderRadius:9,padding:"0 9px",background:"#fff",color:T.ink,fontSize:12}}>
+            <option value="">All employees</option>
+            {salesmen.map(x=><option key={x.id} value={x.id}>{x.name || x.fullName || x.full_name}</option>)}
+          </select>
+          {issue!=="all" && <button onClick={()=>setIssue("all")} style={{height:34,border:`1px solid ${T.line}`,borderRadius:9,padding:"0 10px",background:"#fff",color:T.inkSoft,fontSize:12,cursor:"pointer"}}>Clear</button>}
+        </div>
+      </div>
+
+      <div style={{display:"grid",gap:8}}>
+        {(data.leads||[]).map(lead=><div key={lead.id} style={{background:"#fff",border:`1px solid ${T.line}`,borderRadius:13,padding:"12px 13px",boxShadow:"0 1px 2px rgba(20,20,30,.025)"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10}}>
+            <div style={{display:"flex",gap:10,minWidth:0}}>
+              <div style={{...leadAvatarStyle(lead.business_name),width:34,height:34,minWidth:34,fontSize:11}}>{leadInitials(lead.business_name)}</div>
+              <div style={{minWidth:0}}>
+                <div style={{fontSize:13.5,fontWeight:750,color:T.ink,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{lead.business_name}</div>
+                <div style={{fontSize:11.5,color:T.inkSoft,marginTop:2}}>{STATUS_LABEL[lead.status]||lead.status} · {lead.salesman_name}</div>
+              </div>
+            </div>
+            <span style={{fontSize:17,color:T.inkSoft}}>›</span>
+          </div>
+          <div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:9,paddingLeft:44}}>
+            {lead.issues.map(k=><span key={k} style={{fontSize:10.5,padding:"4px 7px",borderRadius:999,background:"#FFF7E8",border:"1px solid #F3DFC0",color:"#8B5E00",fontWeight:650}}>⚠ {labels[k]}</span>)}
           </div>
         </div>)}
-        {!data.leads?.length && <div style={{padding:18,textAlign:"center",color:T.inkSoft,fontSize:13}}>No data-quality issues found.</div>}
+        {!data.leads?.length && <div style={{padding:"28px 18px",textAlign:"center",background:"#fff",border:`1px solid ${T.line}`,borderRadius:13}}>
+          <CheckCircle2 size={24} color={T.route}/>
+          <div style={{fontSize:13.5,fontWeight:700,color:T.ink,marginTop:8}}>Everything looks clean</div>
+          <div style={{fontSize:12,color:T.inkSoft,marginTop:3}}>No data-quality issues for this filter.</div>
+        </div>}
       </div>
     </>}
   </div>;
