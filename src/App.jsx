@@ -1888,7 +1888,7 @@ function AdminView({ conversationCount, salesmen, leads, onStatusChange, onUpdat
         )}
       </div>
 
-      {selectedLead && <LeadDetailDrawer lead={leads.find((l) => l.id === selectedLead.id) || selectedLead} onClose={() => setSelectedLead(null)} onStatusChange={onStatusChange} onUpdate={onUpdateLead} onDelete={onDeleteLead} fetchHistory={api.adminLeadHistory} />}
+      {selectedLead && <LeadDetailDrawer lead={leads.find((l) => l.id === selectedLead.id) || selectedLead} onClose={() => setSelectedLead(null)} onStatusChange={onStatusChange} onUpdate={onUpdateLead} onDelete={onDeleteLead} fetchHistory={api.adminLeadHistory} isAdmin />}
       {routeSalesman && <SalesmanRouteModal salesman={routeSalesman} onClose={() => setRouteSalesman(null)} />}
       {showAdminAddLead && (
         <AdminAddLeadModal
@@ -3594,7 +3594,7 @@ function whatsappLink(phone) {
   return `https://wa.me/${digits}`;
 }
 
-function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, fetchHistory }) {
+function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, fetchHistory, isAdmin = false }) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [editing, setEditing] = useState(false);
   const [history, setHistory] = useState(null); // null = loading, [] = loaded & empty
@@ -3655,7 +3655,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
 
 
   const sendLeadMention = async () => {
-    if (!onDelete || mentionSending) return;
+    if (!isAdmin || mentionSending) return;
     const body = mentionText.trim();
     if (!body) return;
     setMentionSending(true); setMentionError(""); setMentionSaved("");
@@ -3981,7 +3981,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
 
         {fetchHistory && !editing && detailTab === "activity" && (
           <div style={{ marginTop: 14 }}>
-            {onDelete && (
+            {isAdmin && (
               <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 14, marginBottom: 14 }}>
                 <div style={{ fontSize: 13.5, fontWeight: 800, color: T.ink, marginBottom: 4 }}>Send instruction</div>
                 <div style={{ fontSize: 11.5, color: T.inkSoft, marginBottom: 9 }}>This note stays in the lead activity and is also sent to {lead.salesmanName || "the assigned salesman"} in Messages.</div>
