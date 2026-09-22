@@ -3606,7 +3606,7 @@ function whatsappLink(phone) {
   return `https://wa.me/${digits}`;
 }
 
-function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, fetchHistory, isAdmin = false }) {
+function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, fetchHistory, isAdmin = false, onReplyMessage, employeeRepliesEnabled = true }) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [editing, setEditing] = useState(false);
   const [history, setHistory] = useState(null); // null = loading, [] = loaded & empty
@@ -3627,6 +3627,9 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
   const [historyRefresh, setHistoryRefresh] = useState(0);
   const [showLeadConversation, setShowLeadConversation] = useState(false);
   const [deletingMessageId, setDeletingMessageId] = useState(null);
+  const [employeeChatText, setEmployeeChatText] = useState("");
+  const [employeeChatSending, setEmployeeChatSending] = useState(false);
+  const [employeeChatError, setEmployeeChatError] = useState("");
   const [form, setForm] = useState({
     subLocation: lead.subLocation || "", posName: lead.posName || "",
     renewalMonth: lead.renewalMonth || "", renewalDate: lead.renewalDate || "",
@@ -3694,6 +3697,21 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
     } finally {
       setDeletingMessageId(null);
     }
+  };
+
+  const sendEmployeeChatReply = async () => {
+    if (isAdmin || !onReplyMessage || employeeChatSending || !employeeChatText.trim()) return;
+    const parent = [...(history || [])]
+      .filter(h => h.action === "lead.admin_mention" && h.message_id)
+      .sort((a,b) => new Date(b.changed_at) - new Date(a.changed_at))[0];
+    if (!parent) { setEmployeeChatError("Admin needs to send the first message before you can reply."); return; }
+    setEmployeeChatSending(true); setEmployeeChatError("");
+    try {
+      await onReplyMessage(parent.message_id, employeeChatText.trim());
+      setEmployeeChatText("");
+      setHistoryRefresh(v => v + 1);
+    } catch (err) { setEmployeeChatError(err.message || "Could not send reply."); }
+    finally { setEmployeeChatSending(false); }
   };
 
   const saveEdit = async () => {
@@ -3855,7 +3873,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
           >
             <Sparkles size={13} /> Brief
           </button>
-          {isAdmin && (
+          {(isAdmin || onReplyMessage) && (
             <button
               onClick={() => setShowLeadConversation(true)}
               aria-label={`Open chat for ${displayLead.business}`}
@@ -4199,12 +4217,20 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                     </div>;
                   })}
                 </div>
-                {isAdmin && <div style={{ padding: 12, background: "#fff", borderTop: `1px solid ${T.line}` }}>
+                {isAdmin ? <div style={{ padding: 12, background: "#fff", borderTop: `1px solid ${T.line}` }}>
                   <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
                     <textarea value={mentionText} onChange={e => { setMentionText(e.target.value); setMentionError(""); }} rows={2} maxLength={2000} placeholder="Write a message…" style={{ flex: 1, resize: "none", border: `1px solid ${T.line}`, borderRadius: 10, padding: "9px 10px", font: "inherit", fontSize: 13 }} />
                     <button disabled={mentionSending || !mentionText.trim()} onClick={sendLeadMention} style={{ border: "none", borderRadius: 9, background: T.route, color: "#fff", padding: "10px 13px", fontWeight: 800, cursor: "pointer", opacity: mentionSending || !mentionText.trim() ? .55 : 1 }}>{mentionSending ? "…" : "Send"}</button>
                   </div>
                   {mentionError && <div style={{ color: T.danger, fontSize: 11.5, marginTop: 5 }}>{mentionError}</div>}
+                </div> : <div style={{ padding: 12, background: "#fff", borderTop: `1px solid ${T.line}` }}>
+                  {employeeRepliesEnabled ? <>
+                    <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+                      <textarea value={employeeChatText} onChange={e => { setEmployeeChatText(e.target.value); setEmployeeChatError(""); }} rows={2} maxLength={2000} placeholder="Write a reply…" style={{ flex: 1, resize: "none", border: `1px solid ${T.line}`, borderRadius: 10, padding: "9px 10px", font: "inherit", fontSize: 13 }} />
+                      <button disabled={employeeChatSending || !employeeChatText.trim()} onClick={sendEmployeeChatReply} style={{ border: "none", borderRadius: 9, background: T.route, color: "#fff", padding: "10px 13px", fontWeight: 800, cursor: "pointer", opacity: employeeChatSending || !employeeChatText.trim() ? .55 : 1 }}>{employeeChatSending ? "…" : "Send"}</button>
+                    </div>
+                    {employeeChatError && <div style={{ color: T.danger, fontSize: 11.5, marginTop: 5 }}>{employeeChatError}</div>}
+                  </> : <div style={{ fontSize: 12, color: T.inkSoft, textAlign: "center", padding: 4 }}>Replies disabled by Admin</div>}
                 </div>}
               </div>
             </div>
@@ -4768,7 +4794,7 @@ function SalesmanView({ notificationLead, session, leads, dayStarted, allowLeadW
           onSelectLead={(l) => { setShowRenewals(false); setViewingLead(l); }}
         />
       )}
-      {viewingLead && <LeadDetailDrawer lead={leads.find((l) => l.id === viewingLead.id) || viewingLead} onClose={() => setViewingLead(null)} onStatusChange={onUpdateLeadStatus} onUpdate={onUpdateLeadDetails} fetchHistory={api.salesmanLeadHistory} />}
+      {viewingLead && <LeadDetailDrawer lead={leads.find((l) => l.id === viewingLead.id) || viewingLead} onClose={() => setViewingLead(null)} onStatusChange={onUpdateLeadStatus} onUpdate={onUpdateLeadDetails} fetchHistory={api.salesmanLeadHistory} onReplyMessage={onReplyMessage} employeeRepliesEnabled={employeeRepliesEnabled} />}
       </>
       )}
     </div>
