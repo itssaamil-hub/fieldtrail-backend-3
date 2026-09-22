@@ -183,6 +183,7 @@ export const api = {
     return request(`/admin/leads${qs ? `?${qs}` : ""}`);
   },
   adminCreateLead: (payload) => request(`/admin/leads`, { method: "POST", body: payload }),
+  adminCheckDuplicateLead: (payload) => request(`/admin/leads/duplicate-check`, { method: "POST", body: payload }),
   adminUpdateLeadStatus: (id, status) => request(`/admin/leads/${id}/status`, { method: "PATCH", body: { status } }),
   adminUpdateLead: (id, payload) => request(`/admin/leads/${id}`, { method: "PATCH", body: payload }),
   adminDeleteLead: (id) => request(`/admin/leads/${id}`, { method: "DELETE" }),
@@ -247,6 +248,7 @@ export const api = {
   salesmanLead: (id) => request(`/salesman/leads/${id}`),
   salesmanLeadHistory: (id) => request(`/salesman/leads/${id}/history`),
   salesmanCreateLead: (payload) => request("/salesman/leads", { method: "POST", body: payload }),
+  salesmanCheckDuplicateLead: (payload) => request("/salesman/leads/duplicate-check", { method: "POST", body: payload }),
   salesmanUpdateLead: (id, payload) => request(`/salesman/leads/${id}`, { method: "PATCH", body: payload }),
   salesmanGetSettings: () => request("/salesman/settings"),
   salesmanGetProfile: () => request("/salesman/profile"),

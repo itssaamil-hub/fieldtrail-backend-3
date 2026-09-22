@@ -1095,6 +1095,13 @@ function CrmSettingsModal({ onClose }) {
           <SettingToggle label="Require Expected Deal Value" checked={leadSettings.requireDealValue} onChange={toggleLead("requireDealValue")} />
           <SettingToggle label="Require Next Follow-up Date" checked={leadSettings.requireFollowUpDate} onChange={toggleLead("requireFollowUpDate")} />
 
+          <div style={{ fontSize: 11, textTransform: "uppercase", color: T.inkSoft, fontWeight: 700, letterSpacing: 0.4, marginTop: 22, marginBottom: 4 }}>Duplicate Protection</div>
+          <div style={{ fontSize: 12, color: T.inkSoft, marginBottom: 8 }}>Warns before the same restaurant is entered twice. Exact contact-number matches can be blocked.</div>
+          <SettingToggle label="Duplicate Lead Check" checked={leadSettings.duplicateProtectionEnabled !== false} onChange={toggleLead("duplicateProtectionEnabled")} />
+          <SettingToggle label="Check Contact Number" checked={leadSettings.duplicateCheckPhone !== false} onChange={toggleLead("duplicateCheckPhone")} />
+          <SettingToggle label="Check Business Name + Sub Location" checked={leadSettings.duplicateCheckBusinessLocation !== false} onChange={toggleLead("duplicateCheckBusinessLocation")} />
+          <SettingToggle label="Allow employee to add anyway" description="When off, an exact contact-number match is blocked." checked={leadSettings.allowDuplicateOverride === true} onChange={toggleLead("allowDuplicateOverride")} />
+
           <div style={{ fontSize: 11, textTransform: "uppercase", color: T.inkSoft, fontWeight: 700, letterSpacing: 0.4, marginTop: 22, marginBottom: 4 }}>Location Settings</div>
           <SettingToggle
             label="GPS Location"
@@ -3428,6 +3435,20 @@ function MessageComposeModal({ salesman, onClose, onSend }) {
 }
 
 
+function DuplicateLeadWarning({ result }) {
+  if (!result?.matches?.length) return null;
+  const m = result.matches[0];
+  const exact = m.matchType === "phone";
+  return (
+    <div style={{ border: `1px solid ${exact ? "#F4B8B8" : "#F0D69A"}`, background: exact ? "#FFF5F5" : "#FFFBEB", borderRadius: 11, padding: "10px 11px", margin: "-2px 0 12px" }}>
+      <div style={{ display: "flex", gap: 7, alignItems: "center", fontSize: 12.5, fontWeight: 800, color: exact ? T.danger : T.warn }}><AlertTriangle size={14} /> {exact ? "Lead already exists" : "Possible duplicate found"}</div>
+      <div style={{ fontSize: 13, fontWeight: 700, marginTop: 6 }}>{m.business_name}</div>
+      <div style={{ fontSize: 12, color: T.inkSoft, marginTop: 2 }}>{[m.sub_location, m.salesman_name ? `Assigned to ${m.salesman_name}` : null, m.phone].filter(Boolean).join(" · ")}</div>
+      {result.blocking && <div style={{ fontSize: 11.5, color: T.danger, marginTop: 6 }}>This contact number is already in Engage, so a second lead cannot be saved.</div>}
+    </div>
+  );
+}
+
 function AdminAddLeadModal({ salesmen, onClose, onSubmit }) {
   const activeSalesmen = salesmen.filter((s) => s.isActive);
   const [form, setForm] = useState({
@@ -3438,11 +3459,22 @@ function AdminAddLeadModal({ salesmen, onClose, onSubmit }) {
   const [leadSettings, setLeadSettings] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [duplicateResult, setDuplicateResult] = useState(null);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
   useEffect(() => {
     api.adminGetSettings().then((res) => setLeadSettings(res.leadSettings || null)).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!leadSettings || leadSettings.duplicateProtectionEnabled === false) { setDuplicateResult(null); return; }
+    if (!form.phone.trim() && !(form.business.trim() && form.subLocation.trim())) { setDuplicateResult(null); return; }
+    const timer = setTimeout(() => {
+      api.adminCheckDuplicateLead({ phone: form.phone, businessName: form.business, subLocation: form.subLocation })
+        .then(setDuplicateResult).catch(() => setDuplicateResult(null));
+    }, 450);
+    return () => clearTimeout(timer);
+  }, [form.phone, form.business, form.subLocation, leadSettings]);
 
   const canSubmit =
     form.salesmanId && form.business.trim().length > 0 &&
@@ -3466,6 +3498,7 @@ function AdminAddLeadModal({ salesmen, onClose, onSubmit }) {
         notes: form.notes || null,
         dealValue: form.dealValue ? Number(form.dealValue) : null,
         nextFollowUpDate: form.nextFollowUpDate || null,
+        allowDuplicate: duplicateResult?.allowOverride === true,
       });
     } catch (err) {
       setError(err.message || "Couldn't create that lead.");
@@ -3489,6 +3522,7 @@ function AdminAddLeadModal({ salesmen, onClose, onSubmit }) {
           <Field label="POS Name"><input style={inputStyle} value={form.posName} onChange={set("posName")} /></Field>
           <Field label="Contact Name"><input style={inputStyle} value={form.owner} onChange={set("owner")} /></Field>
           <Field label="Contact Number"><input style={inputStyle} value={form.phone} onChange={set("phone")} /></Field>
+          <DuplicateLeadWarning result={duplicateResult} />
           <div style={{ display: "flex", gap: 10 }}>
             <div style={{ flex: 1 }}><Field label="Renewal Month">
               <select style={inputStyle} value={form.renewalMonth} onChange={set("renewalMonth")}>
@@ -3512,8 +3546,8 @@ function AdminAddLeadModal({ salesmen, onClose, onSubmit }) {
           {error && <div style={{ fontSize: 12.5, color: T.danger, marginBottom: 10 }}>{error}</div>}
           <button
             onClick={handleSubmit}
-            disabled={!canSubmit || submitting}
-            style={{ width: "100%", padding: "12px", borderRadius: 11, border: "none", cursor: canSubmit && !submitting ? "pointer" : "not-allowed", background: canSubmit ? T.route : "#C7CDD6", color: "#fff", fontWeight: 700, fontSize: 14.5 }}
+            disabled={!canSubmit || submitting || duplicateResult?.blocking}
+            style={{ width: "100%", padding: "12px", borderRadius: 11, border: "none", cursor: canSubmit && !submitting && !duplicateResult?.blocking ? "pointer" : "not-allowed", background: canSubmit && !duplicateResult?.blocking ? T.route : "#C7CDD6", color: "#fff", fontWeight: 700, fontSize: 14.5 }}
           >
             {submitting ? "Adding…" : "Add Lead"}
           </button>
@@ -3606,7 +3640,7 @@ function whatsappLink(phone) {
   return `https://wa.me/${digits}`;
 }
 
-function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, fetchHistory, isAdmin = false, onReplyMessage, employeeRepliesEnabled = true }) {
+function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, fetchHistory, isAdmin = false }) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [editing, setEditing] = useState(false);
   const [history, setHistory] = useState(null); // null = loading, [] = loaded & empty
@@ -3627,9 +3661,6 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
   const [historyRefresh, setHistoryRefresh] = useState(0);
   const [showLeadConversation, setShowLeadConversation] = useState(false);
   const [deletingMessageId, setDeletingMessageId] = useState(null);
-  const [employeeChatText, setEmployeeChatText] = useState("");
-  const [employeeChatSending, setEmployeeChatSending] = useState(false);
-  const [employeeChatError, setEmployeeChatError] = useState("");
   const [form, setForm] = useState({
     subLocation: lead.subLocation || "", posName: lead.posName || "",
     renewalMonth: lead.renewalMonth || "", renewalDate: lead.renewalDate || "",
@@ -3697,21 +3728,6 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
     } finally {
       setDeletingMessageId(null);
     }
-  };
-
-  const sendEmployeeChatReply = async () => {
-    if (isAdmin || !onReplyMessage || employeeChatSending || !employeeChatText.trim()) return;
-    const parent = [...(history || [])]
-      .filter(h => h.action === "lead.admin_mention" && h.message_id)
-      .sort((a,b) => new Date(b.changed_at) - new Date(a.changed_at))[0];
-    if (!parent) { setEmployeeChatError("Admin needs to send the first message before you can reply."); return; }
-    setEmployeeChatSending(true); setEmployeeChatError("");
-    try {
-      await onReplyMessage(parent.message_id, employeeChatText.trim());
-      setEmployeeChatText("");
-      setHistoryRefresh(v => v + 1);
-    } catch (err) { setEmployeeChatError(err.message || "Could not send reply."); }
-    finally { setEmployeeChatSending(false); }
   };
 
   const saveEdit = async () => {
@@ -3873,7 +3889,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
           >
             <Sparkles size={13} /> Brief
           </button>
-          {(isAdmin || onReplyMessage) && (
+          {isAdmin && (
             <button
               onClick={() => setShowLeadConversation(true)}
               aria-label={`Open chat for ${displayLead.business}`}
@@ -4217,20 +4233,12 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                     </div>;
                   })}
                 </div>
-                {isAdmin ? <div style={{ padding: 12, background: "#fff", borderTop: `1px solid ${T.line}` }}>
+                {isAdmin && <div style={{ padding: 12, background: "#fff", borderTop: `1px solid ${T.line}` }}>
                   <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
                     <textarea value={mentionText} onChange={e => { setMentionText(e.target.value); setMentionError(""); }} rows={2} maxLength={2000} placeholder="Write a message…" style={{ flex: 1, resize: "none", border: `1px solid ${T.line}`, borderRadius: 10, padding: "9px 10px", font: "inherit", fontSize: 13 }} />
                     <button disabled={mentionSending || !mentionText.trim()} onClick={sendLeadMention} style={{ border: "none", borderRadius: 9, background: T.route, color: "#fff", padding: "10px 13px", fontWeight: 800, cursor: "pointer", opacity: mentionSending || !mentionText.trim() ? .55 : 1 }}>{mentionSending ? "…" : "Send"}</button>
                   </div>
                   {mentionError && <div style={{ color: T.danger, fontSize: 11.5, marginTop: 5 }}>{mentionError}</div>}
-                </div> : <div style={{ padding: 12, background: "#fff", borderTop: `1px solid ${T.line}` }}>
-                  {employeeRepliesEnabled ? <>
-                    <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
-                      <textarea value={employeeChatText} onChange={e => { setEmployeeChatText(e.target.value); setEmployeeChatError(""); }} rows={2} maxLength={2000} placeholder="Write a reply…" style={{ flex: 1, resize: "none", border: `1px solid ${T.line}`, borderRadius: 10, padding: "9px 10px", font: "inherit", fontSize: 13 }} />
-                      <button disabled={employeeChatSending || !employeeChatText.trim()} onClick={sendEmployeeChatReply} style={{ border: "none", borderRadius: 9, background: T.route, color: "#fff", padding: "10px 13px", fontWeight: 800, cursor: "pointer", opacity: employeeChatSending || !employeeChatText.trim() ? .55 : 1 }}>{employeeChatSending ? "…" : "Send"}</button>
-                    </div>
-                    {employeeChatError && <div style={{ color: T.danger, fontSize: 11.5, marginTop: 5 }}>{employeeChatError}</div>}
-                  </> : <div style={{ fontSize: 12, color: T.inkSoft, textAlign: "center", padding: 4 }}>Replies disabled by Admin</div>}
                 </div>}
               </div>
             </div>
@@ -4794,7 +4802,7 @@ function SalesmanView({ notificationLead, session, leads, dayStarted, allowLeadW
           onSelectLead={(l) => { setShowRenewals(false); setViewingLead(l); }}
         />
       )}
-      {viewingLead && <LeadDetailDrawer lead={leads.find((l) => l.id === viewingLead.id) || viewingLead} onClose={() => setViewingLead(null)} onStatusChange={onUpdateLeadStatus} onUpdate={onUpdateLeadDetails} fetchHistory={api.salesmanLeadHistory} onReplyMessage={onReplyMessage} employeeRepliesEnabled={employeeRepliesEnabled} />}
+      {viewingLead && <LeadDetailDrawer lead={leads.find((l) => l.id === viewingLead.id) || viewingLead} onClose={() => setViewingLead(null)} onStatusChange={onUpdateLeadStatus} onUpdate={onUpdateLeadDetails} fetchHistory={api.salesmanLeadHistory} />}
       </>
       )}
     </div>
@@ -4813,6 +4821,7 @@ const DEFAULT_LEAD_SETTINGS = {
   requireBusinessName: true, requireSubLocation: true, requirePosName: true,
   requireContactName: true, requireContactNumber: true, requireStatus: true, requireComments: false,
   requireDealValue: false, requireFollowUpDate: false,
+  duplicateProtectionEnabled: true, duplicateCheckPhone: true, duplicateCheckBusinessLocation: true, allowDuplicateOverride: false,
 };
 const DEFAULT_LOCATION_SETTINGS = { gpsLocation: true, locationMandatoryForNewLead: true, continuousGpsTracking: true };
 
@@ -4901,6 +4910,7 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
   const [gps, setGps] = useState({ state: "locating" });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [duplicateResult, setDuplicateResult] = useState(null);
   const [contactPickerSupported] = useState(() => typeof navigator !== "undefined" && "contacts" in navigator && "ContactsManager" in window);
 
   const pickContact = async () => {
@@ -4934,6 +4944,16 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
       })
       .catch(() => { /* dropdowns just show empty if this fails — not fatal */ });
   }, []);
+
+  useEffect(() => {
+    if (!online || leadSettings.duplicateProtectionEnabled === false) { setDuplicateResult(null); return; }
+    if (!form.phone.trim() && !(form.business.trim() && form.subLocation.trim())) { setDuplicateResult(null); return; }
+    const timer = setTimeout(() => {
+      api.salesmanCheckDuplicateLead({ phone: form.phone, businessName: form.business, subLocation: form.subLocation })
+        .then(setDuplicateResult).catch(() => setDuplicateResult(null));
+    }, 450);
+    return () => clearTimeout(timer);
+  }, [online, form.phone, form.business, form.subLocation, leadSettings]);
 
   useEffect(() => {
     if (!locationSettings.gpsLocation) return; // respect Location Settings: GPS Location = OFF
@@ -4988,6 +5008,7 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
       isMockSuspected: false,
       capturedAt: hasGps ? new Date().toISOString() : null,
       deviceId: getDeviceId(),
+      allowDuplicate: duplicateResult?.allowOverride === true,
     };
     const result = await onSubmit(payload);
     setSubmitting(false);
@@ -5042,6 +5063,7 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
           )}
         </div>
       </Field>
+      <DuplicateLeadWarning result={duplicateResult} />
       <Field label="Category">
         <input style={inputStyle} value={form.category} onChange={set("category")} placeholder="e.g. Cafe" list="category-options" />
         <datalist id="category-options">
@@ -5091,9 +5113,9 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
       {error && <div style={{ fontSize: 12.5, color: T.danger, background: T.dangerSoft, borderRadius: 11, padding: "8px 10px", marginBottom: 12 }}>{error}</div>}
 
       <button
-        disabled={!canSubmit || submitting}
+        disabled={!canSubmit || submitting || duplicateResult?.blocking}
         onClick={handleSubmit}
-        style={{ width: "100%", padding: "12px", borderRadius: 11, border: "none", cursor: canSubmit ? "pointer" : "not-allowed", background: canSubmit ? T.route : "#C7CDD6", color: "#fff", fontWeight: 700, fontSize: 14.5, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+        style={{ width: "100%", padding: "12px", borderRadius: 11, border: "none", cursor: canSubmit && !duplicateResult?.blocking ? "pointer" : "not-allowed", background: canSubmit && !duplicateResult?.blocking ? T.route : "#C7CDD6", color: "#fff", fontWeight: 700, fontSize: 14.5, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
       >
         {submitting && <Loader2 size={16} className="spin" />}
         {submitting ? "Saving…" : online ? "Save Lead" : "Save Lead (offline)"}
