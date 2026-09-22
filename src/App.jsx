@@ -3625,6 +3625,8 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
   const [mentionError, setMentionError] = useState("");
   const [mentionSaved, setMentionSaved] = useState("");
   const [historyRefresh, setHistoryRefresh] = useState(0);
+  const [showLeadConversation, setShowLeadConversation] = useState(false);
+  const [deletingMessageId, setDeletingMessageId] = useState(null);
   const [form, setForm] = useState({
     subLocation: lead.subLocation || "", posName: lead.posName || "",
     renewalMonth: lead.renewalMonth || "", renewalDate: lead.renewalDate || "",
@@ -3666,18 +3668,6 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
   }, [lead.id, lead.status, fetchHistory, historyRefresh]);
 
 
-  const deleteLeadMessage = async (messageId) => {
-    if (!isAdmin || !messageId) return;
-    if (!window.confirm("Delete this message?")) return;
-    try {
-      await api.adminDeleteMessage(messageId);
-      setHistory((prev) => Array.isArray(prev) ? prev.filter((h) => h.message_id !== messageId) : prev);
-    } catch (err) {
-      setHistoryError(err.message || "Couldn't delete message.");
-      setHistoryRefresh(v => v + 1);
-    }
-  };
-
   const sendLeadMention = async () => {
     if (!isAdmin || mentionSending) return;
     const body = mentionText.trim();
@@ -3690,6 +3680,20 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
       setHistoryRefresh(v => v + 1);
     } catch (err) { setMentionError(err.message || "Couldn't send instruction."); }
     finally { setMentionSending(false); }
+  };
+
+  const deleteLeadConversationMessage = async (messageId) => {
+    if (!isAdmin || !messageId || deletingMessageId) return;
+    if (!window.confirm("Delete this message?")) return;
+    setDeletingMessageId(messageId);
+    try {
+      await api.adminDeleteMessage(messageId);
+      setHistoryRefresh(v => v + 1);
+    } catch (err) {
+      setMentionError(err.message || "Couldn't delete message.");
+    } finally {
+      setDeletingMessageId(null);
+    }
   };
 
   const saveEdit = async () => {
@@ -4005,7 +4009,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
 
         {fetchHistory && !editing && detailTab === "activity" && (
           <div style={{ marginTop: 14 }}>
-            {isAdmin && (
+            {isAdmin && !(history || []).some(h => h.action === "lead.admin_mention" || h.action === "lead.employee_reply") && (
               <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 14, marginBottom: 14 }}>
                 <div style={{ fontSize: 13.5, fontWeight: 800, color: T.ink, marginBottom: 4 }}>Send instruction</div>
                 <div style={{ fontSize: 11.5, color: T.inkSoft, marginBottom: 9 }}>This note stays in the lead activity and is also sent to {lead.salesmanName || "the assigned salesman"} in Messages.</div>
@@ -4037,7 +4041,24 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
               yesterday.setDate(now.getDate() - 1);
               const yesterdayKey = `${yesterday.getFullYear()}-${yesterday.getMonth()}-${yesterday.getDate()}`;
 
-              const sorted = [...history].sort((a, b) => new Date(b.changed_at) - new Date(a.changed_at));
+              const rawSorted = [...history].sort((a, b) => new Date(b.changed_at) - new Date(a.changed_at));
+              const conversationMessages = rawSorted
+                .filter(h => h.action === "lead.admin_mention" || h.action === "lead.employee_reply")
+                .sort((a, b) => new Date(a.changed_at) - new Date(b.changed_at));
+              const nonConversation = rawSorted.filter(h => h.action !== "lead.admin_mention" && h.action !== "lead.employee_reply");
+              const sorted = conversationMessages.length
+                ? [
+                    ...nonConversation,
+                    {
+                      id: `lead-conversation-${lead.id}`,
+                      action: "lead.conversation",
+                      changed_at: conversationMessages[conversationMessages.length - 1].changed_at,
+                      changed_by_name: conversationMessages[conversationMessages.length - 1].changed_by_name,
+                      message_body: conversationMessages[conversationMessages.length - 1].message_body,
+                      conversation_messages: conversationMessages,
+                    },
+                  ].sort((a, b) => new Date(b.changed_at) - new Date(a.changed_at))
+                : nonConversation;
               const groups = [];
               sorted.forEach((h) => {
                 const d = new Date(h.changed_at);
@@ -4085,6 +4106,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                                   "lead.edited": "Lead information updated",
                                   "lead.admin_mention": "Admin instruction",
                                   "lead.employee_reply": "Employee reply",
+                                  "lead.conversation": "Lead Conversation",
                                 };
                                 const fmtDate = (v) => {
                                   if (!v) return "";
@@ -4100,6 +4122,15 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                                   detail = <><span style={{ color: T.inkSoft }}>{fmtDate(oldValue)}</span><span style={{ color: T.inkSoft }}> → </span><span style={{ fontWeight: 700, color: T.route }}>{fmtDate(newValue)}</span></>;
                                 } else if (action === "lead.follow_up_done") {
                                   detail = <span style={{ color: T.inkSoft }}>{oldValue ? `Completed follow-up for ${fmtDate(oldValue)}` : "Marked done"}</span>;
+                                } else if (action === "lead.conversation") {
+                                  const msgs = h.conversation_messages || [];
+                                  const latest = msgs[msgs.length - 1];
+                                  detail = <button onClick={() => setShowLeadConversation(true)} style={{ width: "100%", textAlign: "left", border: "none", background: "transparent", padding: 0, cursor: "pointer", color: T.ink }}>
+                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                                      <span style={{ color: T.inkSoft }}>{latest?.changed_by_name || "User"} · “{String(latest?.message_body || "").slice(0, 95)}{String(latest?.message_body || "").length > 95 ? "…" : ""}”</span>
+                                      <span style={{ flexShrink: 0, fontWeight: 800, color: T.route }}>{msgs.length} ›</span>
+                                    </div>
+                                  </button>;
                                 } else if (action === "lead.admin_mention") {
                                   detail = <div><span style={{ fontWeight: 800, color: T.route }}>{h.recipient_name ? `@${h.recipient_name}` : "Salesman"}</span><div style={{ marginTop: 4, color: T.ink, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{h.message_body || "Instruction sent"}</div></div>;
                                 } else if (action === "lead.employee_reply") {
@@ -4113,20 +4144,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                                   detail = <span style={{ color: T.inkSoft }}>{fields.length ? fields.join(", ") : "Lead details updated"}</span>;
                                 }
                                 return <>
-                                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                                    <div style={{ fontSize: 13, fontWeight: 750, color: T.ink }}>{titles[action] || "Lead updated"}</div>
-                                    {isAdmin && h.message_id && (action === "lead.admin_mention" || action === "lead.employee_reply") && (
-                                      <button
-                                        type="button"
-                                        onClick={() => deleteLeadMessage(h.message_id)}
-                                        title="Delete message"
-                                        aria-label="Delete message"
-                                        style={{ border: "none", background: "transparent", color: T.inkSoft, padding: 3, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
-                                      >
-                                        <Trash2 size={14} />
-                                      </button>
-                                    )}
-                                  </div>
+                                  <div style={{ fontSize: 13, fontWeight: 750, color: T.ink }}>{titles[action] || "Lead updated"}</div>
                                   {detail && <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 3, fontSize: 13 }}>{detail}</div>}
                                 </>;
                               })()}
@@ -4144,6 +4162,44 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
             })()}
           </div>
         )}
+
+        {showLeadConversation && (() => {
+          const messages = (history || [])
+            .filter(h => h.action === "lead.admin_mention" || h.action === "lead.employee_reply")
+            .sort((a,b) => new Date(a.changed_at) - new Date(b.changed_at));
+          return (
+            <div style={{ position: "fixed", inset: 0, zIndex: 2300, background: "rgba(28,36,48,.28)", display: "flex", justifyContent: "flex-end" }} onClick={() => setShowLeadConversation(false)}>
+              <div style={{ width: "min(500px,100vw)", height: "100%", background: "#F8FAF9", display: "flex", flexDirection: "column", boxShadow: "-12px 0 30px rgba(0,0,0,.12)" }} onClick={e => e.stopPropagation()}>
+                <div style={{ padding: "16px 16px 12px", background: "#fff", borderBottom: `1px solid ${T.line}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div><div style={{ fontWeight: 850, fontSize: 16 }}>{displayLead.business}</div><div style={{ fontSize: 11.5, color: T.inkSoft }}>Conversation with {lead.salesmanName || "salesman"}</div></div>
+                  <button onClick={() => setShowLeadConversation(false)} style={{ border: "none", background: "transparent", cursor: "pointer", padding: 6 }}><X size={19}/></button>
+                </div>
+                <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
+                  {messages.map(m => {
+                    const adminMessage = m.action === "lead.admin_mention";
+                    return <div key={m.message_id || m.id} style={{ display: "flex", justifyContent: adminMessage ? "flex-start" : "flex-end", marginBottom: 14 }}>
+                      <div style={{ maxWidth: "82%" }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: adminMessage ? "flex-start" : "flex-end", gap: 6, marginBottom: 4 }}>
+                          <span style={{ fontSize: 10.5, fontWeight: 800, color: T.inkSoft }}>{adminMessage ? "Admin" : (m.changed_by_name || lead.salesmanName || "Employee")}</span>
+                          {isAdmin && m.message_id && <button title="Delete message" disabled={deletingMessageId === m.message_id} onClick={() => deleteLeadConversationMessage(m.message_id)} style={{ border: "none", background: "transparent", color: T.danger, padding: 2, cursor: "pointer", opacity: deletingMessageId === m.message_id ? .45 : .8 }}><Trash2 size={13}/></button>}
+                        </div>
+                        <div style={{ background: adminMessage ? "#fff" : T.paperDeep, border: `1px solid ${T.line}`, borderRadius: 12, padding: "9px 11px", fontSize: 13, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{m.message_body}</div>
+                        <div style={{ marginTop: 3, fontSize: 10.5, color: T.inkSoft, textAlign: adminMessage ? "left" : "right" }}>{new Date(m.changed_at).toLocaleTimeString("en-IN",{hour:"numeric",minute:"2-digit"})}</div>
+                      </div>
+                    </div>;
+                  })}
+                </div>
+                {isAdmin && <div style={{ padding: 12, background: "#fff", borderTop: `1px solid ${T.line}` }}>
+                  <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+                    <textarea value={mentionText} onChange={e => { setMentionText(e.target.value); setMentionError(""); }} rows={2} maxLength={2000} placeholder="Write a message…" style={{ flex: 1, resize: "none", border: `1px solid ${T.line}`, borderRadius: 10, padding: "9px 10px", font: "inherit", fontSize: 13 }} />
+                    <button disabled={mentionSending || !mentionText.trim()} onClick={sendLeadMention} style={{ border: "none", borderRadius: 9, background: T.route, color: "#fff", padding: "10px 13px", fontWeight: 800, cursor: "pointer", opacity: mentionSending || !mentionText.trim() ? .55 : 1 }}>{mentionSending ? "…" : "Send"}</button>
+                  </div>
+                  {mentionError && <div style={{ color: T.danger, fontSize: 11.5, marginTop: 5 }}>{mentionError}</div>}
+                </div>}
+              </div>
+            </div>
+          );
+        })()}
 
         {statusToast && (
           <div role="status" style={{ position: "fixed", left: "50%", transform: "translateX(-50%)", bottom: "max(18px, env(safe-area-inset-bottom))", width: "min(420px, calc(100vw - 24px))", zIndex: 2200, background: T.ink, color: "#fff", borderRadius: 12, padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, fontSize: 13 }}>
