@@ -427,16 +427,24 @@ export default function App() {
 
   useEffect(() => {
     const openFromLocation = () => {
-      if (session && window.location.hash === "#sales-briefing") {
+      if (!session) return;
+      if (window.location.hash === "#sales-briefing") {
         setShowSettings(false); setShowCrmSettings(false); setShowAddExpense(false);
         setShowNotifications(true);
+        return;
+      }
+      const leadMatch = window.location.hash.match(/^#lead=([0-9a-f-]+)$/i);
+      if (leadMatch) {
+        setShowSettings(false); setShowCrmSettings(false); setShowAddExpense(false); setShowNotifications(false);
+        setTopPage("dashboard"); setNotificationLead({ id: leadMatch[1], openedAt: Date.now() });
       }
     };
     const onNotification = event => {
       if (event.data?.type !== "OPEN_NOTIFICATION") return;
       try {
         const url = new URL(event.data.url, window.location.origin);
-        if (url.origin !== window.location.origin || url.hash !== "#sales-briefing") return;
+        if (url.origin !== window.location.origin) return;
+        if (url.hash !== "#sales-briefing" && !/^#lead=[0-9a-f-]+$/i.test(url.hash)) return;
         if (window.location.hash !== url.hash) window.location.hash = url.hash;
         openFromLocation();
       } catch { /* Ignore malformed messages. */ }
@@ -3600,6 +3608,11 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
   const [statusExpanded, setStatusExpanded] = useState(false);
   const [statusToast, setStatusToast] = useState(null);
   const statusToastTimer = useRef(null);
+  const [mentionText, setMentionText] = useState(lead.salesmanName ? `@${lead.salesmanName} ` : "");
+  const [mentionSending, setMentionSending] = useState(false);
+  const [mentionError, setMentionError] = useState("");
+  const [mentionSaved, setMentionSaved] = useState("");
+  const [historyRefresh, setHistoryRefresh] = useState(0);
   const [form, setForm] = useState({
     subLocation: lead.subLocation || "", posName: lead.posName || "",
     renewalMonth: lead.renewalMonth || "", renewalDate: lead.renewalDate || "",
@@ -3638,8 +3651,22 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
       .then((res) => { if (!cancelled) setHistory(res.history || []); })
       .catch((err) => { if (!cancelled) setHistoryError(err.message || "Couldn't load status history."); });
     return () => { cancelled = true; };
-  }, [lead.id, lead.status, fetchHistory]);
+  }, [lead.id, lead.status, fetchHistory, historyRefresh]);
 
+
+  const sendLeadMention = async () => {
+    if (!onDelete || mentionSending) return;
+    const body = mentionText.trim();
+    if (!body) return;
+    setMentionSending(true); setMentionError(""); setMentionSaved("");
+    try {
+      await api.adminSendLeadMention(lead.id, body);
+      setMentionSaved(`Sent to ${lead.salesmanName || "salesman"}.`);
+      setMentionText(lead.salesmanName ? `@${lead.salesmanName} ` : "");
+      setHistoryRefresh(v => v + 1);
+    } catch (err) { setMentionError(err.message || "Couldn't send instruction."); }
+    finally { setMentionSending(false); }
+  };
 
   const saveEdit = async () => {
     setSaving(true);
@@ -3954,6 +3981,18 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
 
         {fetchHistory && !editing && detailTab === "activity" && (
           <div style={{ marginTop: 14 }}>
+            {onDelete && (
+              <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 14, marginBottom: 14 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 800, color: T.ink, marginBottom: 4 }}>Send instruction</div>
+                <div style={{ fontSize: 11.5, color: T.inkSoft, marginBottom: 9 }}>This note stays in the lead activity and is also sent to {lead.salesmanName || "the assigned salesman"} in Messages.</div>
+                <textarea value={mentionText} onChange={e => { setMentionText(e.target.value); setMentionSaved(""); }} maxLength={2000} rows={3} placeholder={lead.salesmanName ? `@${lead.salesmanName} Type an instruction…` : "Type an instruction…"} style={{ width: "100%", boxSizing: "border-box", resize: "vertical", border: `1px solid ${T.line}`, borderRadius: 10, padding: "10px 11px", font: "inherit", fontSize: 13, color: T.ink, outline: "none" }} />
+                {mentionError && <div style={{ color: T.danger, fontSize: 11.5, marginTop: 6 }}>{mentionError}</div>}
+                {mentionSaved && <div style={{ color: T.route, fontSize: 11.5, marginTop: 6 }}>{mentionSaved}</div>}
+                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 9 }}>
+                  <button disabled={mentionSending || !mentionText.trim()} onClick={sendLeadMention} style={{ border: "none", borderRadius: 9, background: T.route, color: "#fff", padding: "8px 13px", fontSize: 12.5, fontWeight: 800, cursor: mentionSending ? "default" : "pointer", opacity: mentionSending ? .65 : 1 }}>{mentionSending ? "Sending…" : "Send instruction"}</button>
+                </div>
+              </div>
+            )}
             {history === null && !historyError && (
               <div style={{ fontSize: 12.5, color: T.inkSoft, display: "flex", alignItems: "center", gap: 6, padding: "12px 2px" }}>
                 <Loader2 size={13} className="spin" /> Loading activity…
@@ -4020,6 +4059,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                                   "lead.follow_up_done": "Follow-up completed",
                                   "lead.comment_updated": "Comment updated",
                                   "lead.edited": "Lead information updated",
+                                  "lead.admin_mention": "Admin instruction",
                                 };
                                 const fmtDate = (v) => {
                                   if (!v) return "";
@@ -4035,6 +4075,8 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                                   detail = <><span style={{ color: T.inkSoft }}>{fmtDate(oldValue)}</span><span style={{ color: T.inkSoft }}> → </span><span style={{ fontWeight: 700, color: T.route }}>{fmtDate(newValue)}</span></>;
                                 } else if (action === "lead.follow_up_done") {
                                   detail = <span style={{ color: T.inkSoft }}>{oldValue ? `Completed follow-up for ${fmtDate(oldValue)}` : "Marked done"}</span>;
+                                } else if (action === "lead.admin_mention") {
+                                  detail = <div><span style={{ fontWeight: 800, color: T.route }}>{h.recipient_name ? `@${h.recipient_name}` : "Salesman"}</span><div style={{ marginTop: 4, color: T.ink, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{h.message_body || "Instruction sent"}</div></div>;
                                 } else if (action === "lead.comment_updated") {
                                   const text = String(newValue || "").trim();
                                   detail = text ? <span style={{ color: T.inkSoft }}>“{text.length > 90 ? `${text.slice(0, 90)}…` : text}”</span> : <span style={{ color: T.inkSoft }}>Comment cleared</span>;
@@ -4549,7 +4591,7 @@ function SalesmanView({ notificationLead, session, leads, dayStarted, allowLeadW
 
       {!dayStarted && !allowLeadWithoutStartDay && <div style={{ marginTop: 12, fontSize: 12, color: T.warn, background: T.warnSoft, padding: "8px 10px", borderRadius: 11 }}>Start your day to enable lead capture.</div>}
 
-      <MessagesSection messages={messages} onMarkRead={onMarkMessageRead} onDelete={onDeleteMessage} />
+      <MessagesSection messages={messages} onMarkRead={onMarkMessageRead} onDelete={onDeleteMessage} onOpenLead={(id) => { const found = leads.find(l => l.id === id); if (found) setViewingLead(found); else api.salesmanLead(id).then(r => setViewingLead(mapLeadRow(r.lead))).catch(() => setNotificationLeadError("Couldn't open this lead.")); }} />
       <TasksEntry />
 
       {showAddLead && (
@@ -4635,7 +4677,7 @@ const DEFAULT_LOCATION_SETTINGS = { gpsLocation: true, locationMandatoryForNewLe
 // Tasks/messages sent by admin, shown right below the lead buttons on the
 // salesman's own dashboard. Unread ones are visually distinct; tapping one
 // marks it read.
-function MessagesSection({ messages, onMarkRead, onDelete }) {
+function MessagesSection({ messages, onMarkRead, onDelete, onOpenLead }) {
   const unreadCount = messages.filter((m) => !m.read_at).length;
 
   return (
@@ -4661,7 +4703,9 @@ function MessagesSection({ messages, onMarkRead, onDelete }) {
                 border: `1px solid ${m.read_at ? T.line : "transparent"}`,
               }}
             >
+              {m.message_type === "lead_mention" && <div style={{ fontSize: 10.5, fontWeight: 800, color: T.route, textTransform: "uppercase", letterSpacing: .4, marginBottom: 4 }}>Admin · Lead message{m.business_name ? ` · ${m.business_name}` : ""}</div>}
               <div onClick={() => !m.read_at && onMarkRead(m.id)} style={{ fontSize: 13, color: T.ink, whiteSpace: "pre-wrap", cursor: m.read_at ? "default" : "pointer" }}>{m.body}</div>
+              {m.lead_id && onOpenLead && <button onClick={() => { if (!m.read_at) onMarkRead(m.id); onOpenLead(m.lead_id); }} style={{ marginTop: 8, border: `1px solid ${T.route}`, background: "#fff", color: T.route, borderRadius: 8, padding: "6px 10px", fontSize: 11.5, fontWeight: 800, cursor: "pointer" }}>Open Lead →</button>}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
                 <span style={{ fontSize: 10.5, color: T.inkSoft }}>{fmtTime(new Date(m.created_at))}</span>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>

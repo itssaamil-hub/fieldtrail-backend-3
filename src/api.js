@@ -233,6 +233,7 @@ export const api = {
   adminSalesmanHistory: (id, date) => request(`/admin/salesmen/${id}/history?date=${date}`),
   adminSalesmanBrief: (id, date) => request(`/admin/salesmen/${id}/brief?date=${date}`),
   adminSendMessage: (payload) => request("/admin/messages", { method: "POST", body: payload }),
+  adminSendLeadMention: (id, body) => request(`/admin/leads/${id}/mention`, { method: "POST", body: { body } }),
   adminGetMessages: (salesmanId) => request(`/admin/messages${salesmanId ? `?salesmanId=${salesmanId}` : ""}`),
   adminDeleteMessage: (id) => request(`/admin/messages/${id}`, { method: "DELETE" }),
   adminGetLeadOptions: () => request("/admin/lead-options"),
