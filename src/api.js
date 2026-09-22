@@ -253,6 +253,7 @@ export const api = {
   salesmanGetLeadOptions: () => request("/salesman/lead-options"),
   salesmanGetMessages: () => request("/salesman/messages"),
   salesmanMarkMessageRead: (id) => request(`/salesman/messages/${id}/read`, { method: "PATCH" }),
+  salesmanReplyMessage: (id, body) => request(`/salesman/messages/${id}/reply`, { method: "POST", body: { body } }),
   salesmanDeleteMessage: (id) => request(`/salesman/messages/${id}`, { method: "DELETE" }),
 };
 

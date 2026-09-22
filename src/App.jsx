@@ -1044,22 +1044,24 @@ function AddExpenseModal({ onClose }) {
 function CrmSettingsModal({ onClose }) {
   const [leadSettings, setLeadSettings] = useState(null);
   const [locationSettings, setLocationSettings] = useState(null);
+  const [messageSettings, setMessageSettings] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
     api.adminGetSettings()
-      .then((res) => { setLeadSettings(res.leadSettings); setLocationSettings(res.locationSettings); })
+      .then((res) => { setLeadSettings(res.leadSettings); setLocationSettings(res.locationSettings); setMessageSettings(res.messageSettings || { employeeRepliesEnabled: true }); })
       .catch((err) => setError(err.message || "Couldn't load settings."));
   }, []);
 
-  const save = async (nextLead, nextLocation) => {
+  const save = async (nextLead, nextLocation, nextMessage = messageSettings) => {
     setSaving(true);
     setError("");
     try {
-      const res = await api.adminUpdateSettings({ leadSettings: nextLead, locationSettings: nextLocation });
+      const res = await api.adminUpdateSettings({ leadSettings: nextLead, locationSettings: nextLocation, messageSettings: nextMessage });
       setLeadSettings(res.leadSettings);
       setLocationSettings(res.locationSettings);
+      setMessageSettings(res.messageSettings || nextMessage);
     } catch (err) {
       setError(err.message || "Couldn't save — try again.");
     } finally {
@@ -1068,11 +1070,12 @@ function CrmSettingsModal({ onClose }) {
   };
 
   const toggleLead = (key) => (val) => save({ ...leadSettings, [key]: val }, locationSettings);
-  const toggleLocation = (key) => (val) => save(leadSettings, { ...locationSettings, [key]: val });
+  const toggleLocation = (key) => (val) => save(leadSettings, { ...locationSettings, [key]: val }, messageSettings);
+  const toggleMessage = (key) => (val) => save(leadSettings, locationSettings, { ...messageSettings, [key]: val });
 
   return (
     <Overlay onClose={onClose} title="CRM Settings">
-      {!leadSettings || !locationSettings ? (
+      {!leadSettings || !locationSettings || !messageSettings ? (
         <div style={{ display: "flex", alignItems: "center", gap: 8, color: T.inkSoft, fontSize: 13, padding: 20 }}>
           <Loader2 size={16} className="spin" /> Loading settings…
         </div>
@@ -1113,6 +1116,15 @@ function CrmSettingsModal({ onClose }) {
           />
 
           <FieldOptionsSection />
+
+          <div style={{ fontSize: 11, textTransform: "uppercase", color: T.inkSoft, fontWeight: 700, letterSpacing: 0.4, marginTop: 22, marginBottom: 4 }}>Message Settings</div>
+          <div style={{ fontSize: 12, color: T.inkSoft, marginBottom: 8 }}>Controls whether employees can reply to Admin messages attached to their leads.</div>
+          <SettingToggle
+            label="Employee Replies"
+            description="When off, employees can still read lead messages but cannot reply."
+            checked={messageSettings.employeeRepliesEnabled !== false}
+            onChange={toggleMessage("employeeRepliesEnabled")}
+          />
 
           {saving && <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 12, display: "flex", alignItems: "center", gap: 6 }}><Loader2 size={12} className="spin" /> Saving…</div>}
         </>
@@ -4060,6 +4072,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                                   "lead.comment_updated": "Comment updated",
                                   "lead.edited": "Lead information updated",
                                   "lead.admin_mention": "Admin instruction",
+                                  "lead.employee_reply": "Employee reply",
                                 };
                                 const fmtDate = (v) => {
                                   if (!v) return "";
@@ -4077,6 +4090,8 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                                   detail = <span style={{ color: T.inkSoft }}>{oldValue ? `Completed follow-up for ${fmtDate(oldValue)}` : "Marked done"}</span>;
                                 } else if (action === "lead.admin_mention") {
                                   detail = <div><span style={{ fontWeight: 800, color: T.route }}>{h.recipient_name ? `@${h.recipient_name}` : "Salesman"}</span><div style={{ marginTop: 4, color: T.ink, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{h.message_body || "Instruction sent"}</div></div>;
+                                } else if (action === "lead.employee_reply") {
+                                  detail = <div style={{ color: T.ink, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{h.message_body || "Reply sent"}</div>;
                                 } else if (action === "lead.comment_updated") {
                                   const text = String(newValue || "").trim();
                                   detail = text ? <span style={{ color: T.inkSoft }}>“{text.length > 90 ? `${text.slice(0, 90)}…` : text}”</span> : <span style={{ color: T.inkSoft }}>Comment cleared</span>;
@@ -4180,6 +4195,7 @@ function SalesmanApp({ session, online, page, notificationLead }) {
       .then((res) => {
         setContinuousTracking(res.locationSettings?.continuousGpsTracking ?? true);
         setAllowLeadWithoutStartDay(!!res.employeePermissions?.allowLeadWithoutStartDay);
+        setEmployeeRepliesEnabled(res.messageSettings?.employeeRepliesEnabled !== false);
       })
       .catch(() => {
         // Fail closed: if settings cannot load, Start Day remains required.
@@ -4202,6 +4218,7 @@ function SalesmanApp({ session, online, page, notificationLead }) {
   useEffect(() => { loadLeads(); }, [loadLeads]);
 
   const [messages, setMessages] = useState([]);
+  const [employeeRepliesEnabled, setEmployeeRepliesEnabled] = useState(true);
   const loadMessages = useCallback(async () => {
     try {
       const res = await api.salesmanGetMessages();
@@ -4232,6 +4249,12 @@ function SalesmanApp({ session, online, page, notificationLead }) {
     } catch {
       loadMessages(); // reconcile if it actually failed
     }
+  };
+
+  const replyToMessage = async (id, body) => {
+    const res = await api.salesmanReplyMessage(id, body);
+    await loadMessages();
+    return res;
   };
 
   const getBatteryPct = useCallback(async () => {
@@ -4591,7 +4614,7 @@ function SalesmanView({ notificationLead, session, leads, dayStarted, allowLeadW
 
       {!dayStarted && !allowLeadWithoutStartDay && <div style={{ marginTop: 12, fontSize: 12, color: T.warn, background: T.warnSoft, padding: "8px 10px", borderRadius: 11 }}>Start your day to enable lead capture.</div>}
 
-      <MessagesSection messages={messages} onMarkRead={onMarkMessageRead} onDelete={onDeleteMessage} onOpenLead={(id) => { const found = leads.find(l => l.id === id); if (found) setViewingLead(found); else api.salesmanLead(id).then(r => setViewingLead(mapLeadRow(r.lead))).catch(() => setNotificationLeadError("Couldn't open this lead.")); }} />
+      <MessagesSection messages={messages} onMarkRead={onMarkMessageRead} onDelete={onDeleteMessage} onReply={replyToMessage} employeeRepliesEnabled={employeeRepliesEnabled} onOpenLead={(id) => { const found = leads.find(l => l.id === id); if (found) setViewingLead(found); else api.salesmanLead(id).then(r => setViewingLead(mapLeadRow(r.lead))).catch(() => setNotificationLeadError("Couldn't open this lead.")); }} />
       <TasksEntry />
 
       {showAddLead && (
@@ -4677,8 +4700,19 @@ const DEFAULT_LOCATION_SETTINGS = { gpsLocation: true, locationMandatoryForNewLe
 // Tasks/messages sent by admin, shown right below the lead buttons on the
 // salesman's own dashboard. Unread ones are visually distinct; tapping one
 // marks it read.
-function MessagesSection({ messages, onMarkRead, onDelete, onOpenLead }) {
+function MessagesSection({ messages, onMarkRead, onDelete, onReply, employeeRepliesEnabled = true, onOpenLead }) {
   const unreadCount = messages.filter((m) => !m.read_at).length;
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [replyText, setReplyText] = useState("");
+  const [replyBusy, setReplyBusy] = useState(false);
+  const [replyError, setReplyError] = useState("");
+  const sendReply = async () => {
+    if (!replyingTo || !replyText.trim() || replyBusy) return;
+    setReplyBusy(true); setReplyError("");
+    try { await onReply(replyingTo.id, replyText.trim()); setReplyingTo(null); setReplyText(""); }
+    catch (e) { setReplyError(e.message || "Could not send reply."); }
+    finally { setReplyBusy(false); }
+  };
 
   return (
     <div className="ft-card" style={{ marginTop: 16, background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, padding: 16 }}>
@@ -4706,11 +4740,18 @@ function MessagesSection({ messages, onMarkRead, onDelete, onOpenLead }) {
               {m.message_type === "lead_mention" && <div style={{ fontSize: 10.5, fontWeight: 800, color: T.route, textTransform: "uppercase", letterSpacing: .4, marginBottom: 4 }}>Admin · Lead message{m.business_name ? ` · ${m.business_name}` : ""}</div>}
               <div onClick={() => !m.read_at && onMarkRead(m.id)} style={{ fontSize: 13, color: T.ink, whiteSpace: "pre-wrap", cursor: m.read_at ? "default" : "pointer" }}>{m.body}</div>
               {m.lead_id && onOpenLead && <button onClick={() => { if (!m.read_at) onMarkRead(m.id); onOpenLead(m.lead_id); }} style={{ marginTop: 8, border: `1px solid ${T.route}`, background: "#fff", color: T.route, borderRadius: 8, padding: "6px 10px", fontSize: 11.5, fontWeight: 800, cursor: "pointer" }}>Open Lead →</button>}
+              {m.message_type === "lead_mention" && employeeRepliesEnabled && onReply && <button onClick={() => { if (!m.read_at) onMarkRead(m.id); setReplyingTo(m); setReplyText(""); setReplyError(""); }} style={{ marginTop: 8, marginLeft: 7, border: `1px solid ${T.line}`, background: T.paperDeep, color: T.ink, borderRadius: 8, padding: "6px 10px", fontSize: 11.5, fontWeight: 800, cursor: "pointer" }}>Reply</button>}
+              {m.message_type === "lead_mention" && !employeeRepliesEnabled && <div style={{ marginTop: 7, fontSize: 10.5, color: T.inkSoft }}>Replies disabled by Admin</div>}
+              {replyingTo?.id === m.id && <div style={{ marginTop: 9, paddingTop: 9, borderTop: `1px solid ${T.line}` }}>
+                <textarea autoFocus rows={3} maxLength={2000} value={replyText} onChange={e=>setReplyText(e.target.value)} placeholder="Reply to Admin…" style={{ width:"100%", boxSizing:"border-box", resize:"vertical", border:`1px solid ${T.line}`, borderRadius:9, padding:"8px 9px", font:"inherit", fontSize:12.5, outline:"none" }} />
+                {replyError && <div style={{fontSize:11,color:T.danger,marginTop:4}}>{replyError}</div>}
+                <div style={{display:"flex",justifyContent:"flex-end",gap:7,marginTop:7}}><button disabled={replyBusy} onClick={()=>{setReplyingTo(null);setReplyText("");setReplyError("");}} style={{border:`1px solid ${T.line}`,background:"#fff",borderRadius:8,padding:"6px 9px",fontSize:11.5}}>Cancel</button><button disabled={replyBusy||!replyText.trim()} onClick={sendReply} style={{border:"none",background:T.route,color:"#fff",borderRadius:8,padding:"6px 10px",fontSize:11.5,fontWeight:800,opacity:replyBusy?.65:1}}>{replyBusy?"Sending…":"Send Reply"}</button></div>
+              </div>}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
                 <span style={{ fontSize: 10.5, color: T.inkSoft }}>{fmtTime(new Date(m.created_at))}</span>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   {!m.read_at && <span style={{ fontSize: 10, fontWeight: 700, color: T.warn }}>Tap to mark read</span>}
-                  {onDelete && (
+                  {onDelete && !m.lead_id && (
                     <button
                       onClick={(e) => { e.stopPropagation(); onDelete(m.id); }}
                       style={{ border: "none", background: "none", cursor: "pointer", color: T.inkSoft, padding: 0, display: "flex", alignItems: "center" }}
