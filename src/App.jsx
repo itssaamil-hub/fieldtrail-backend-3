@@ -3666,6 +3666,18 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
   }, [lead.id, lead.status, fetchHistory, historyRefresh]);
 
 
+  const deleteLeadMessage = async (messageId) => {
+    if (!isAdmin || !messageId) return;
+    if (!window.confirm("Delete this message?")) return;
+    try {
+      await api.adminDeleteMessage(messageId);
+      setHistory((prev) => Array.isArray(prev) ? prev.filter((h) => h.message_id !== messageId) : prev);
+    } catch (err) {
+      setHistoryError(err.message || "Couldn't delete message.");
+      setHistoryRefresh(v => v + 1);
+    }
+  };
+
   const sendLeadMention = async () => {
     if (!isAdmin || mentionSending) return;
     const body = mentionText.trim();
@@ -4101,7 +4113,20 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                                   detail = <span style={{ color: T.inkSoft }}>{fields.length ? fields.join(", ") : "Lead details updated"}</span>;
                                 }
                                 return <>
-                                  <div style={{ fontSize: 13, fontWeight: 750, color: T.ink }}>{titles[action] || "Lead updated"}</div>
+                                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                                    <div style={{ fontSize: 13, fontWeight: 750, color: T.ink }}>{titles[action] || "Lead updated"}</div>
+                                    {isAdmin && h.message_id && (action === "lead.admin_mention" || action === "lead.employee_reply") && (
+                                      <button
+                                        type="button"
+                                        onClick={() => deleteLeadMessage(h.message_id)}
+                                        title="Delete message"
+                                        aria-label="Delete message"
+                                        style={{ border: "none", background: "transparent", color: T.inkSoft, padding: 3, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+                                      >
+                                        <Trash2 size={14} />
+                                      </button>
+                                    )}
+                                  </div>
                                   {detail && <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 3, fontSize: 13 }}>{detail}</div>}
                                 </>;
                               })()}
