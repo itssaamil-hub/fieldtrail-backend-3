@@ -3855,6 +3855,16 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
           >
             <Sparkles size={13} /> Brief
           </button>
+          {isAdmin && (
+            <button
+              onClick={() => setShowLeadConversation(true)}
+              aria-label={`Open chat for ${displayLead.business}`}
+              title="Open lead chat"
+              style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 999, border: "none", cursor: "pointer", background: "#EAF5F0", color: T.route, fontSize: 11.5, fontWeight: 700 }}
+            >
+              <MessageSquare size={13} /> Chat
+            </button>
+          )}
         </div>
 
         {showBrief && <LeadBriefPopup key={lead.id} lead={displayLead} buildBrief={buildLeadBrief} onClose={() => setShowBrief(false)} />}
