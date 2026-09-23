@@ -19,6 +19,7 @@ const ALL_COMPARISON_CARDS = [
 let latest = null;
 let observer = null;
 let renderQueued = false;
+let observing = false;
 
 function settings() {
   try {
@@ -103,18 +104,35 @@ function appendLine(card, comparison, period) {
   card.appendChild(line);
 }
 
+function startObserving() {
+  if (!observer || observing) return;
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+  observing = true;
+}
+
+function stopObserving() {
+  if (!observer || !observing) return;
+  observer.disconnect();
+  observing = false;
+}
+
 function render() {
   renderQueued = false;
-  cleanAllComparisonCards();
+  stopObserving();
+  try {
+    cleanAllComparisonCards();
 
-  const display = settings();
-  if (display.showComparisons === false || !latest) return;
-  if (latest.period !== (display.comparisonPeriod || "weekly")) return;
-  if (latest.salesmanId !== dashboardEmployee()) return;
+    const display = settings();
+    if (display.showComparisons === false || !latest) return;
+    if (latest.period !== (display.comparisonPeriod || "weekly")) return;
+    if (latest.salesmanId !== dashboardEmployee()) return;
 
-  Object.entries(TARGETS).forEach(([label, key]) => {
-    appendLine(visibleCard(label), latest.comparisons?.[key], latest.period);
-  });
+    Object.entries(TARGETS).forEach(([label, key]) => {
+      appendLine(visibleCard(label), latest.comparisons?.[key], latest.period);
+    });
+  } finally {
+    startObserving();
+  }
 }
 
 function queueRender() {
@@ -125,7 +143,13 @@ function queueRender() {
 
 async function refresh() {
   const display = settings();
-  cleanAllComparisonCards();
+  stopObserving();
+  try {
+    cleanAllComparisonCards();
+  } finally {
+    startObserving();
+  }
+
   if (display.showComparisons === false) {
     latest = null;
     return;
@@ -157,7 +181,7 @@ function install() {
   if (observer) return;
 
   observer = new MutationObserver(queueRender);
-  observer.observe(document.documentElement, { childList: true, subtree: true });
+  startObserving();
 
   window.addEventListener("engage-display-settings", refresh);
   document.addEventListener("change", (event) => {
