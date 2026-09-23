@@ -1784,14 +1784,14 @@ function AdminView({ conversationCount, salesmen, leads, onStatusChange, onUpdat
 
       {conversationError && <p role="alert" style={{color:T.danger}}>{conversationError}</p>}
       <TasksEntry />
-      <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap", alignItems: "center" }}>
-        <Tab active={mapView === "live"} onClick={() => setMapView("live")} label="Live Map" />
-        <Tab active={mapView === "leads"} onClick={() => setMapView("leads")} label="Lead Locations" />
+      <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: phone ? "nowrap" : "wrap", alignItems: "center", width: phone ? "100%" : "auto" }}>
+        <div style={{ flex: phone ? "1 1 0" : "0 0 auto", minWidth: 0 }}><Tab active={mapView === "live"} onClick={() => setMapView("live")} label="Live Map" /></div>
+        <div style={{ flex: phone ? "1.25 1 0" : "0 0 auto", minWidth: 0 }}><Tab active={mapView === "leads"} onClick={() => setMapView("leads")} label="Lead Locations" /></div>
         <select
           aria-label="Dashboard employee"
           value={dashboardSalesman}
           onChange={(e) => setDashboardSalesman(e.target.value)}
-          style={{ fontSize: 12.5, fontWeight: 600, padding: "6px 10px", borderRadius: 8, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, cursor: "pointer" }}
+          style={{ flex: phone ? "1.15 1 0" : "0 0 auto", minWidth: 0, width: phone ? 0 : "auto", fontSize: 12.5, fontWeight: 600, padding: "6px 8px", borderRadius: 8, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, cursor: "pointer" }}
         >
           <option value="all">👥 All Team</option>
           {salesmen.map((s) => <option key={s.id} value={s.id}>👤 {s.name}</option>)}
