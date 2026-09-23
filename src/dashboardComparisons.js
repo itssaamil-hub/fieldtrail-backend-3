@@ -115,9 +115,6 @@ function applyExactMetrics() {
 
 function removeComparisonLines(card) {
   if (!card) return;
-  // Only remove nodes created by this helper. Never delete untagged comparison
-  // nodes because those may be owned by React's StatCard tree; manually
-  // removing React-managed children can break reconciliation and blank the app.
   card.querySelectorAll(".engage-db-comparison").forEach((node) => node.remove());
 }
 
@@ -138,8 +135,18 @@ function lineColor(comparison) {
   return "#6B7280";
 }
 
+function hasReactComparison(card, period) {
+  if (!card) return false;
+  const suffix = `vs last ${period === "monthly" ? "month" : "week"}`;
+  return [...card.children].some((node) => {
+    if (node.classList?.contains("engage-db-comparison")) return false;
+    const text = (node.textContent || "").replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
+    return text.includes(suffix) && /^(↑ New|↑ \d+%|↓ \d+%|— Same)/.test(text);
+  });
+}
+
 function appendLine(card, comparison, period) {
-  if (!card || !comparison) return;
+  if (!card || !comparison || hasReactComparison(card, period)) return;
   const line = document.createElement("div");
   line.className = "engage-db-comparison";
   line.style.fontSize = "9.8px";
