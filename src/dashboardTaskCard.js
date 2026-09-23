@@ -19,6 +19,18 @@ function findCard(label) {
   }) || null;
 }
 
+function hideLegacyTeamTasksEntry() {
+  [...document.querySelectorAll("button.ft-task-entry")].forEach((button) => {
+    const text = (button.textContent || "").replace(/\s+/g, " ").trim();
+    if (!text.startsWith("Team Tasks")) return;
+    button.style.display = "none";
+    const error = button.nextElementSibling;
+    if (error?.classList?.contains("ft-task-muted") && /could not refresh tasks/i.test(error.textContent || "")) {
+      error.style.display = "none";
+    }
+  });
+}
+
 function taskCard() {
   return document.querySelector(".engage-task-kpi");
 }
@@ -107,6 +119,7 @@ function createCard() {
 
 function render() {
   queued = false;
+  hideLegacyTeamTasksEntry();
   const won = findCard("Won");
   if (!won?.parentElement) return;
 
