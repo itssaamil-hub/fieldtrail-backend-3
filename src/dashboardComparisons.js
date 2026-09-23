@@ -222,6 +222,12 @@ function scheduleRefresh(delay = 700) {
 
 async function refresh() {
   const display = settings();
+
+  // Apply display-setting changes immediately. In particular, turning KPI
+  // comparisons off must remove the old comparison lines without waiting for
+  // Render to wake up or for the API request below to succeed.
+  queueRender();
+
   const base = getApiBase();
   const token = getSession()?.token;
   if (!base || !token) return;
