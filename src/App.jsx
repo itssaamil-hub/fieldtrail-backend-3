@@ -345,11 +345,32 @@ function usePushNotifications(session) {
   useEffect(() => {
     if (!supported || !session) { setChecking(false); return; }
     let cancelled = false;
-    navigator.serviceWorker.register("/push/push-sw.js", { scope: "/push/" })
-      .then((reg) => reg.pushManager.getSubscription())
-      .then((sub) => { if (!cancelled) setSubscribed(!!sub); })
-      .catch(() => {})
-      .finally(() => { if (!cancelled) setChecking(false); });
+    (async () => {
+      try {
+        const reg = await navigator.serviceWorker.register("/push/push-sw.js", { scope: "/push/" });
+        const sub = await reg.pushManager.getSubscription();
+        if (cancelled) return;
+        setSubscribed(!!sub);
+
+        // Self-heal an existing browser subscription by re-syncing its current
+        // endpoint/keys with the logged-in account. This is idempotent on the
+        // backend and repairs stale server-side subscription rows without
+        // prompting the user or creating a second browser subscription.
+        if (sub && Notification.permission === "granted") {
+          try {
+            await api.notificationsSubscribe(sub.toJSON());
+          } catch {
+            // Keep the existing local subscription usable; a temporary API
+            // failure should not turn notifications off in the UI.
+          }
+        }
+      } catch {
+        // Existing behaviour: unsupported/registration failures are surfaced
+        // by the explicit Enable action rather than breaking app startup.
+      } finally {
+        if (!cancelled) setChecking(false);
+      }
+    })();
     return () => { cancelled = true; };
   }, [supported, session]);
 
