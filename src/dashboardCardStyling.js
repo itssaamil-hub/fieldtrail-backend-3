@@ -64,9 +64,9 @@ function ensureIcon(header, label) {
   const wrap = document.createElement("span");
   wrap.className = "engage-kpi-card-icon";
   wrap.setAttribute("aria-hidden", "true");
-  wrap.style.width = "30px";
-  wrap.style.height = "30px";
-  wrap.style.borderRadius = "9px";
+  wrap.style.width = "26px";
+  wrap.style.height = "26px";
+  wrap.style.borderRadius = "8px";
   wrap.style.display = "inline-flex";
   wrap.style.alignItems = "center";
   wrap.style.justifyContent = "center";
@@ -76,8 +76,8 @@ function ensureIcon(header, label) {
 
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("viewBox", "0 0 24 24");
-  svg.setAttribute("width", "19");
-  svg.setAttribute("height", "19");
+  svg.setAttribute("width", "17");
+  svg.setAttribute("height", "17");
   svg.setAttribute("fill", "none");
   svg.setAttribute("stroke", "currentColor");
   svg.setAttribute("stroke-width", "1.9");
@@ -91,22 +91,22 @@ function ensureIcon(header, label) {
 function applyDesktop(card, label) {
   if (!card) return;
   card.classList.add("engage-kpi-desktop-card");
-  card.style.flex = "1 1 230px";
-  card.style.minWidth = "230px";
-  card.style.minHeight = "154px";
-  card.style.padding = "22px 24px 20px";
-  card.style.borderRadius = "18px";
+  card.style.flex = "1 1 205px";
+  card.style.minWidth = "205px";
+  card.style.minHeight = "132px";
+  card.style.padding = "18px 20px 16px";
+  card.style.borderRadius = "16px";
   card.style.boxSizing = "border-box";
   card.style.overflow = "hidden";
 
   const header = card.children[0];
   if (header) {
-    header.style.marginBottom = "14px";
-    header.style.gap = "12px";
+    header.style.marginBottom = "11px";
+    header.style.gap = "9px";
     const title = header.children[0];
     if (title) {
-      title.style.fontSize = "11.5px";
-      title.style.letterSpacing = ".35px";
+      title.style.fontSize = "10.5px";
+      title.style.letterSpacing = ".3px";
       title.style.fontWeight = "750";
     }
     ensureIcon(header, label);
@@ -115,21 +115,21 @@ function applyDesktop(card, label) {
   const value = findValueNode(card);
   if (value) {
     value.classList.add("engage-db-value");
-    value.style.fontSize = "34px";
+    value.style.fontSize = "30px";
     value.style.lineHeight = "1.08";
-    value.style.letterSpacing = "-.4px";
+    value.style.letterSpacing = "-.3px";
   }
 
   [...card.children].forEach((node) => {
     if (node === header || node === value) return;
     if (node.classList?.contains("engage-db-comparison")) {
-      node.style.marginTop = "8px";
-      node.style.fontSize = "10.5px";
+      node.style.marginTop = "6px";
+      node.style.fontSize = "10px";
       return;
     }
     if (node.tagName === "DIV") {
-      node.style.fontSize = node.style.fontSize === "9.8px" ? "10.5px" : "13px";
-      node.style.marginTop = "7px";
+      node.style.fontSize = node.style.fontSize === "9.8px" ? "10px" : "12px";
+      node.style.marginTop = "5px";
     }
   });
 }
