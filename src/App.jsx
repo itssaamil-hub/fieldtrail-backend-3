@@ -1827,7 +1827,13 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
       )}
 
       <div hidden={!showDashboard}>
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
+      {!phone && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 22, color: T.ink }}>Dashboard</div>
+          <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 3 }}>Here’s what’s happening with your sales and team today.</div>
+        </div>
+      )}
+      <div className="engage-dashboard-stats">
         <StatCard label="Total Employees" value={salesmen.length} sub={<span style={{color:T.verified}}>{activeSalesmen} active now</span>} />
         <StatCard label="Conversation" value={conversationCount ?? "—"} color={T.route} onClick={async () => { try { setConversationError(""); const result=await api.adminLeads({status:"conversation"}); setStatLeadsModal({title:conversationCount>500?"Conversation Leads · Latest 500":"Conversation Leads",leads:(result.leads||[]).map(mapLeadRow)}); } catch(e) { setConversationError(e.message); } }} />
         <StatCard label="Leads Today" value={todayLeads.length} onClick={() => setStatLeadsModal({ title: "Leads Today", leads: todayLeads })} />
@@ -1840,8 +1846,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
       </div>
 
       {conversationError && <p role="alert" style={{color:T.danger}}>{conversationError}</p>}
-      <TasksEntry />
-      <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: phone ? "nowrap" : "wrap", alignItems: "center", width: phone ? "100%" : "auto" }}>
+      <div className="engage-dashboard-map-controls" style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: phone ? "nowrap" : "wrap", alignItems: "center", width: phone ? "100%" : "auto" }}>
         <div style={{ flex: phone ? "1 1 0" : "0 0 auto", minWidth: 0 }}><Tab active={mapView === "live"} onClick={() => setMapView("live")} label="Live Map" /></div>
         <div style={{ flex: phone ? "1.25 1 0" : "0 0 auto", minWidth: 0 }}><Tab active={mapView === "leads"} onClick={() => setMapView("leads")} label="Lead Locations" /></div>
         <select
@@ -1877,6 +1882,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
       )}
 
       </div>
+      {showDashboard && <div className="engage-dashboard-tasks"><TasksEntry /></div>}
       <div hidden={!showLeads}>
       <div className="ft-card" style={{ marginTop: 20, background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, padding: 18 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
