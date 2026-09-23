@@ -2353,9 +2353,7 @@ function PaymentDueReport({ salesmen }) {
 
   return (
     <div>
-      <div style={{ marginBottom: 16 }}>
-        <CollectionsEntry label="Open Payments" />
-      </div>
+
       {summary && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10, marginBottom: 16 }}>
           <StatCard label="Pending" value={fmtMoney(summary.pendingTotal)} icon={Wallet} color={T.danger} />
