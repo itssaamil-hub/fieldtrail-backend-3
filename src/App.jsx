@@ -617,7 +617,7 @@ function TopBar({ online, session, page, onChangePage, onAddExpense, onOpenSetti
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <ConnectionPill online={online} />
           {onOpenNotifications && <button type="button" onClick={onOpenNotifications} title="Notifications" aria-label={unreadCount ? `Notifications, ${unreadCount} unread` : "Notifications"} style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 6, border: "1px solid rgba(255,255,255,0.22)", cursor: "pointer", background: "rgba(255,255,255,0.14)", color: "#fff" }}><Bell size={14} />{unreadCount > 0 && <span className="ft-notification-badge" aria-hidden="true">{unreadCount > 99 ? "99+" : unreadCount}</span>}</button>}
-          <AppMenu onCollections={onOpenCollections} signedIn={!!session} onSettings={onOpenSettings} onOnboarding={onOpenOnboarding} onQuotations={onOpenQuotations} onApprovals={onOpenApprovals} onDailyReports={session?.role === "salesman" ? onOpenDailyReports : undefined} />
+          <AppMenu onCollections={onOpenCollections} signedIn={!!session} role={session?.role} onSettings={onOpenSettings} onOnboarding={onOpenOnboarding} onQuotations={onOpenQuotations} onApprovals={onOpenApprovals} onDailyReports={session?.role === "salesman" ? onOpenDailyReports : undefined} />
         </div>
       </div>
     </div>
@@ -2006,7 +2006,7 @@ const REPORT_CARDS = [
   { key: "performance", title: "Employee performance", desc: "Weekly/monthly leads, follow-ups, quotations, wins, sales and collections.", icon: Contact2, color: "#145C5D" },
   { key: "funnel", title: "Funnel and conversion", desc: "Lead count and drop-off at each pipeline stage.", icon: Handshake, color: "#7B4FC9" },
   { key: "renewals", title: "Renewals due", desc: "Everything renewing in the next 30, 60 or 90 days.", icon: CalendarClock, color: "#B8791F" },
-  { key: "payments", title: "Payment due", desc: "Won deals — total, paid, and pending — with payments you can record.", icon: Wallet, color: "#C0392B" },
+  { key: "payments", title: "Payments", desc: "Collections, pending balances, overdue payments and receipts in one place.", icon: Wallet, color: "#C0392B" },
   { key: "expenses", title: "Expenses", desc: "Salary and other spending, broken down by category.", icon: Receipt, color: "#993C1D" },
   { key: "daily", title: "Daily activity", desc: "Visits, leads touched and distance travelled per day.", icon: MapPin, color: "#12805C" },
   { key: "stage", title: "Time in stage", desc: "Average days a lead spends at each status.", icon: Clock, color: "#8B5E00" },
