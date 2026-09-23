@@ -1,0 +1,6 @@
+.engage-save-feedback { position: fixed; top: calc(12px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100% - 24px); z-index: 20000; pointer-events: none; }
+.engage-save-feedback-message { display: flex; align-items: center; gap: 9px; padding: 10px 12px; border: 1px solid #c4dfd3; border-radius: 11px; background: #edf8f1; color: #18583e; font: 600 13px Inter, sans-serif; box-shadow: 0 4px 18px #102d1820; }
+.engage-save-feedback-message span { overflow-wrap: anywhere; }
+.engage-save-feedback-message button { display: grid; place-items: center; border: 0; border-radius: 5px; padding: 5px; background: transparent; color: inherit; pointer-events: auto; cursor: pointer; }
+.engage-admin-bottom-nav .engage-nav-icon { position: relative; display: inline-flex; }
+.engage-admin-bottom-nav .engage-nav-count { position: absolute; top: -6px; left: 13px; min-width: 15px; height: 15px; padding: 0 3px; border-radius: 9px; background: #c83838; color: #fff; font: 700 9px/15px Inter, sans-serif; text-align: center; box-shadow: 0 0 0 2px #fff; }

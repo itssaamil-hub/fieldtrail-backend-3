@@ -6,10 +6,10 @@ import './tasks.css';
 const changed = () => { window.dispatchEvent(new Event('fieldtrail:tasks')); window.dispatchEvent(new Event('fieldtrail:notifications-read')); };
 const time = value => new Date(value).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
-export function TasksEntry({ lead, compact = false }) {
+export function TasksEntry({ lead, compact = false, onPendingChange }) {
  const [open,setOpen]=useState(false),[count,setCount]=useState(null),[error,setError]=useState('');
  const admin=getSession()?.role==='admin';
- const refresh=useCallback(()=>{ if(lead)return; api.tasks({filter:'all'}).then(r=>{setCount(r.pending);setError('')}).catch(()=>setError('Could not refresh tasks')); },[lead]);
+ const refresh=useCallback(()=>{ if(lead)return; api.tasks({filter:'all'}).then(r=>{setCount(r.pending);onPendingChange?.(r.pending);setError('')}).catch(()=>{onPendingChange?.(null);setError('Could not refresh tasks')}); },[lead,onPendingChange]);
  useEffect(()=>{let alive=true;const load=()=>{if(alive)refresh()};load();const timer=setInterval(load,60000);window.addEventListener('fieldtrail:tasks',load);return()=>{alive=false;clearInterval(timer);window.removeEventListener('fieldtrail:tasks',load)}},[refresh]);
  return <><button className={compact?'ft-task-link':'ft-task-entry'} type="button" onClick={()=>setOpen(true)} disabled={lead?.syncStatus==='queued'}>
  <span><ClipboardList size={compact?13:16}/>{compact?'+ Add task':admin?'Team Tasks':'My Tasks'}{!compact&&count!==null&&<span className="ft-task-count">{count} pending</span>}</span>{!compact&&<ChevronRight size={16}/>}</button>{error&&!compact&&<div className="ft-task-muted">{error}. Open to retry.</div>}

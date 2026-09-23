@@ -1,3 +1,5 @@
+import SaveFeedback from "./SaveFeedback.jsx";
+import { showSaveFeedback } from "./saveFeedback.js";
 import AdminMobileNav, { useAdminPhone, salesmanTabs } from "./AdminMobileNav.jsx";
 import CollectionsPanel, {CollectionsEntry} from "./Collections.jsx";
 import SalesmanBriefPopup from "./SalesmanBrief.jsx";
@@ -534,6 +536,7 @@ export default function App() {
         onOpenApprovals={session?.role === "admin" ? () => { closeNotifications(); setShowSettings(false); setShowOnboarding(false); setQuotationView({approvals:true}); } : undefined}
       />
       {body}
+      {session && <SaveFeedback key={session.id} />}
       {session && showNotifications && <NotificationsPanel key={`notifications-${session.id}`} session={session} online={online} onClose={closeNotifications} onOpenQuote={id => { closeNotifications(); setQuotationView({initialId:id}); }} onOpenLead={id => {
         closeNotifications(); setTopPage("dashboard"); setNotificationLead({ id, openedAt: Date.now() });
       }} />}
@@ -1964,6 +1967,7 @@ function AdminView({ conversationCount, salesmen, leads, onStatusChange, onUpdat
           onClose={() => setShowAdminAddLead(false)}
           onSubmit={async (payload) => {
             await onAddLead(payload);
+            showSaveFeedback("Lead saved");
             setShowAdminAddLead(false);
           }}
         />
@@ -4671,6 +4675,7 @@ function adHocLeadFromPayload(payload, session) {
 }
 
 function SalesmanView({ notificationLead, session, leads, dayStarted, allowLeadWithoutStartDay, onToggleDay, togglingDay, justToggledDay, onAddLead, onUpdateLeadStatus, onUpdateLeadDetails, online, gpsStatus, queuedCount, loadError, messages, onMarkMessageRead, onDeleteMessage, onReplyMessage, employeeRepliesEnabled = true, dailyTarget, monthlyTarget, page }) {
+  const [pendingTasks, setPendingTasks] = useState(null);
   const phone = useAdminPhone();
   const [mobileTab, setMobileTab] = useState("dashboard");
   const [visited, setVisited] = useState({});
@@ -4823,7 +4828,7 @@ function SalesmanView({ notificationLead, session, leads, dayStarted, allowLeadW
       <div hidden={!dashboard && mobileTab !== "messages"}>
       <MessagesSection messages={messages} onMarkRead={onMarkMessageRead} onDelete={onDeleteMessage} onReply={onReplyMessage} employeeRepliesEnabled={employeeRepliesEnabled} onOpenLead={(id) => { const found = leads.find(l => l.id === id); if (found) setViewingLead(found); else api.salesmanLead(id).then(r => setViewingLead(mapLeadRow(r.lead))).catch(() => setNotificationLeadError("Couldn't open this lead.")); }} />
       </div>
-      <div hidden={!dashboard}><TasksEntry /></div>
+      <div hidden={!dashboard}><TasksEntry onPendingChange={setPendingTasks} /></div>
       {visited.leads && <div hidden={!phone || mobileTab !== "leads"}>
         <MyLeadsModal embedded leads={leads} onSelectLead={setViewingLead} allowDateFilter />
       </div>}
@@ -4831,7 +4836,7 @@ function SalesmanView({ notificationLead, session, leads, dayStarted, allowLeadW
       {phone && mobileTab === "more" && <section className="engage-salesman-more"><h2>More</h2>
         {[["quotations", "Quotations"], ["onboarding", "Onboarding checklist"], ["payments", "Payment due"], ["daily", "My Daily Reports"], ["settings", "Settings"]].map(([key, label]) => <button type="button" key={key} onClick={() => window.dispatchEvent(new CustomEvent("engage:salesman-more", { detail: key }))}>{label}<span aria-hidden="true">›</span></button>)}
       </section>}
-      <AdminMobileNav active={mobileTab} onChange={switchTab} items={salesmanTabs} label="Salesman navigation" />
+      <AdminMobileNav active={mobileTab} onChange={switchTab} items={salesmanTabs} counts={{ tasks: pendingTasks, messages: messages.filter(message => !message.read_at).length }} label="Salesman navigation" />
 
       {showAddLead && (
         <AddLeadModal
@@ -4839,7 +4844,7 @@ function SalesmanView({ notificationLead, session, leads, dayStarted, allowLeadW
           online={online}
           onClose={() => setShowAddLead(false)}
           onSubmit={onAddLead}
-          onSaved={(lead) => { setShowAddLead(false); setViewingLead(lead); }}
+          onSaved={(lead) => { showSaveFeedback(lead.syncStatus === "queued" ? "Lead saved on device · Sync pending" : "Lead saved"); setShowAddLead(false); setViewingLead(lead); }}
         />
       )}
       {showMyLeads && <MyLeadsModal leads={leads} onClose={() => setShowMyLeads(false)} onSelectLead={setViewingLead} allowDateFilter />}

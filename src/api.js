@@ -1,3 +1,4 @@
+import { showSaveFeedback, savedActionMessage } from "./saveFeedback.js";
 // ---------------------------------------------------------------------------
 // Talks to the real FieldTrail backend (Express + Postgres, from the
 // architecture doc). No mock data lives here — if the backend URL isn't
@@ -115,6 +116,8 @@ async function request(path, { method = "GET", body, auth = true } = {}) {
   if (!res.ok) {
     throw new ApiError(data?.error || `Request failed (${res.status})`, res.status);
   }
+  const message = savedActionMessage(path, method, body);
+  if (message) showSaveFeedback(message);
   return data;
 }
 

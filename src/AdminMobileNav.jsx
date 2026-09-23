@@ -15,7 +15,7 @@ export function useAdminPhone() {
 
 const tabs = [["dashboard", "Dashboard", Gauge], ["leads", "Leads", Contact2], ["deals", "Deals", Handshake], ["employees", "Employees", Users], ["expenses", "Expenses", Wallet]];
 export const salesmanTabs = [["dashboard", "Dashboard", Gauge], ["leads", "My Leads", List], ["tasks", "Tasks", ClipboardList], ["messages", "Messages", MessageSquare], ["more", "More", Menu]];
-export default function AdminMobileNav({ active, onChange, items = tabs, label = "Admin navigation" }) {
+export default function AdminMobileNav({ active, onChange, items = tabs, counts = {}, label = "Admin navigation" }) {
   const phone = useAdminPhone();
   const [hidden, setHidden] = useState(false);
   const [blocked, setBlocked] = useState(false);
@@ -33,7 +33,7 @@ export default function AdminMobileNav({ active, onChange, items = tabs, label =
         const editing = document.activeElement?.matches('input, textarea, select, [contenteditable="true"]');
         const overlay = [...document.querySelectorAll('[role="dialog"], [style*="position: fixed"]')].some(el => {
           const style = getComputedStyle(el);
-          return style.display !== "none" && style.visibility !== "hidden" && Number(style.zIndex) >= 1000 && el.getClientRects().length > 0;
+          return !el.classList.contains("engage-save-feedback") && style.display !== "none" && style.visibility !== "hidden" && Number(style.zIndex) >= 1000 && el.getClientRects().length > 0;
         });
         setBlocked(Boolean(editing || overlay));
       });
@@ -54,6 +54,6 @@ export default function AdminMobileNav({ active, onChange, items = tabs, label =
   useEffect(() => setHidden(false), [active]);
   if (!phone) return null;
   return <nav className={`engage-admin-bottom-nav${hidden || blocked ? " is-hidden" : ""}`} aria-label={label} aria-hidden={hidden || blocked}>
-    {items.map(([key, label, Icon]) => <button key={key} type="button" aria-current={active === key ? "page" : undefined} tabIndex={hidden || blocked ? -1 : 0} onClick={() => onChange(key)}><Icon size={21} strokeWidth={1.8} /><span>{label}</span></button>)}
+    {items.map(([key, label, Icon]) => <button key={key} type="button" aria-label={counts[key] > 0 ? `${label}, ${counts[key]} ${key === "messages" ? "unread" : "pending"}` : label} aria-current={active === key ? "page" : undefined} tabIndex={hidden || blocked ? -1 : 0} onClick={() => onChange(key)}><span className="engage-nav-icon"><Icon size={21} strokeWidth={1.8} />{counts[key] > 0 && <span className="engage-nav-count" aria-hidden="true">{counts[key] > 99 ? "99+" : counts[key]}</span>}</span><span>{label}</span></button>)}
   </nav>;
 }
