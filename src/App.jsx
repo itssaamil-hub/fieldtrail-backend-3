@@ -1719,21 +1719,23 @@ function AdminView({ conversationCount, salesmen, leads, onStatusChange, onUpdat
   const [routeSalesman, setRouteSalesman] = useState(null);
   const [viewingSalesmanLeads, setViewingSalesmanLeads] = useState(null);
   const [mapView, setMapView] = useState("live"); // "live" | "leads"
+  const [dashboardSalesman, setDashboardSalesman] = useState("all");
   const [sheetsInfo, setSheetsInfo] = useState(null);
   const [sheetsError, setSheetsError] = useState("");
   const [statLeadsModal, setStatLeadsModal] = useState(null); // { title, leads } | null
 
-  const todayLeads = leads.filter((l) => isToday(l.createdAt));
+  const dashboardLeads = dashboardSalesman === "all" ? leads : leads.filter((l) => l.salesmanId === dashboardSalesman);
+  const todayLeads = dashboardLeads.filter((l) => isToday(l.createdAt));
   const hotLeadsToday = todayLeads.filter((l) => l.status === "hot");
-  const inNegotiation = leads.filter((l) => l.status === "negotiation");
-  const upcomingRenewals = leads.filter((l) =>
+  const inNegotiation = dashboardLeads.filter((l) => l.status === "negotiation");
+  const upcomingRenewals = dashboardLeads.filter((l) =>
     (l.renewalDate && isWithinDays(new Date(l.renewalDate), 30)) ||
     (!l.renewalDate && isUpcomingRenewalMonth(l.renewalMonth))
   );
-  const converted = leads.filter((l) => l.status === "won").length;
-  const convertedValue = leads.filter((l) => l.status === "won" && l.dealValue != null).reduce((sum, l) => sum + l.dealValue, 0);
-  const pending = leads.filter((l) => !["won", "lost"].includes(l.status)).length;
-  const upcomingFollowUps = leads.filter((l) => l.nextFollowUpDate && new Date(l.nextFollowUpDate) >= new Date(new Date().toDateString()));
+  const converted = dashboardLeads.filter((l) => l.status === "won").length;
+  const convertedValue = dashboardLeads.filter((l) => l.status === "won" && l.dealValue != null).reduce((sum, l) => sum + l.dealValue, 0);
+  const pending = dashboardLeads.filter((l) => !["won", "lost"].includes(l.status)).length;
+  const upcomingFollowUps = dashboardLeads.filter((l) => l.nextFollowUpDate && new Date(l.nextFollowUpDate) >= new Date(new Date().toDateString()));
   const activeSalesmen = salesmen.filter((s) => s.status === "online").length;
 
   const filteredLeads = leads.filter(
@@ -1774,17 +1776,26 @@ function AdminView({ conversationCount, salesmen, leads, onStatusChange, onUpdat
         <StatCard label="Leads Today" value={todayLeads.length} onClick={() => setStatLeadsModal({ title: "Leads Today", leads: todayLeads })} />
         <StatCard label={<>Hot Leads <span style={{ fontSize: 8.5, opacity: 0.65 }}>TODAY</span></>} value={hotLeadsToday.length} color={T.danger} onClick={() => setStatLeadsModal({ title: "Hot Leads Today", leads: hotLeadsToday })} />
         <StatCard label="In Negotiation" value={inNegotiation.length} color={T.route} onClick={() => setStatLeadsModal({ title: "In Negotiation", leads: inNegotiation })} />
-        <StatCard label="Total Leads" value={leads.length} sub={`${pending} pending`} />
-        <StatCard label="Won" value={converted} sub={convertedValue > 0 ? `${fmtMoney(convertedValue)} closed` : undefined} color={T.verified} onClick={() => setStatLeadsModal({ title: "Won Leads", leads: leads.filter((l) => l.status === "won") })} />
+        <StatCard label="Total Leads" value={dashboardLeads.length} sub={`${pending} pending`} />
+        <StatCard label="Won" value={converted} sub={convertedValue > 0 ? `${fmtMoney(convertedValue)} closed` : undefined} color={T.verified} onClick={() => setStatLeadsModal({ title: "Won Leads", leads: dashboardLeads.filter((l) => l.status === "won") })} />
         <StatCard label="Upcoming Follow-up" value={upcomingFollowUps.length} color={T.warn} onClick={() => setStatLeadsModal({ title: "Upcoming Follow-ups", leads: upcomingFollowUps })} />
         <StatCard label="Renewals Due" sub="next 30 days" value={upcomingRenewals.length} color={T.accent} onClick={() => setStatLeadsModal({ title: "Renewals Due (Next 30 Days)", leads: upcomingRenewals })} />
       </div>
 
       {conversationError && <p role="alert" style={{color:T.danger}}>{conversationError}</p>}
       <TasksEntry />
-      <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+      <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap", alignItems: "center" }}>
         <Tab active={mapView === "live"} onClick={() => setMapView("live")} label="Live Map" />
         <Tab active={mapView === "leads"} onClick={() => setMapView("leads")} label="Lead Locations" />
+        <select
+          aria-label="Dashboard employee"
+          value={dashboardSalesman}
+          onChange={(e) => setDashboardSalesman(e.target.value)}
+          style={{ fontSize: 12.5, fontWeight: 600, padding: "6px 10px", borderRadius: 8, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, cursor: "pointer" }}
+        >
+          <option value="all">👥 All Team</option>
+          {salesmen.map((s) => <option key={s.id} value={s.id}>👤 {s.name}</option>)}
+        </select>
       </div>
 
       </div>
