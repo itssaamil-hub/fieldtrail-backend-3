@@ -54,7 +54,6 @@ import {
   Sparkles,
   Phone as PhoneIcon,
   MessageCircle as WhatsAppIcon,
-  Users,
 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -1828,13 +1827,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
       )}
 
       <div hidden={!showDashboard}>
-      {!phone && (
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 22, color: T.ink }}>Dashboard</div>
-          <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 3 }}>Here’s what’s happening with your sales and team today.</div>
-        </div>
-      )}
-      <div className="engage-dashboard-stats">
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
         <StatCard label="Total Employees" value={salesmen.length} sub={<span style={{color:T.verified}}>{activeSalesmen} active now</span>} />
         <StatCard label="Conversation" value={conversationCount ?? "—"} color={T.route} onClick={async () => { try { setConversationError(""); const result=await api.adminLeads({status:"conversation"}); setStatLeadsModal({title:conversationCount>500?"Conversation Leads · Latest 500":"Conversation Leads",leads:(result.leads||[]).map(mapLeadRow)}); } catch(e) { setConversationError(e.message); } }} />
         <StatCard label="Leads Today" value={todayLeads.length} onClick={() => setStatLeadsModal({ title: "Leads Today", leads: todayLeads })} />
@@ -1847,7 +1840,8 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
       </div>
 
       {conversationError && <p role="alert" style={{color:T.danger}}>{conversationError}</p>}
-      <div className="engage-dashboard-map-controls" style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: phone ? "nowrap" : "wrap", alignItems: "center", width: phone ? "100%" : "auto" }}>
+      <TasksEntry />
+      <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: phone ? "nowrap" : "wrap", alignItems: "center", width: phone ? "100%" : "auto" }}>
         <div style={{ flex: phone ? "1 1 0" : "0 0 auto", minWidth: 0 }}><Tab active={mapView === "live"} onClick={() => setMapView("live")} label="Live Map" /></div>
         <div style={{ flex: phone ? "1.25 1 0" : "0 0 auto", minWidth: 0 }}><Tab active={mapView === "leads"} onClick={() => setMapView("leads")} label="Lead Locations" /></div>
         <select
@@ -1883,7 +1877,6 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
       )}
 
       </div>
-      {showDashboard && <div className="engage-dashboard-tasks"><TasksEntry /></div>}
       <div hidden={!showLeads}>
       <div className="ft-card" style={{ marginTop: 20, background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, padding: 18 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
@@ -3268,45 +3261,63 @@ function MonthlyProgressBar({ salesmanId, target, leads }) {
 
 function SalesmenPanel({ salesmen, leads, onAddClick, onSettingsClick, onBriefClick, onDeleteClick, onViewRoute, onMessageClick, onOpenSalesmanLeads }) {
   return (
-    <div className="ft-card engage-employee-table" style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, padding: 16 }}>
-      <div className="engage-employee-table-head" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, paddingBottom: 12, borderBottom: `1px solid ${T.line}` }}>
-        <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 17 }}>Employees</div>
-        <div style={{ display: "flex", gap: 7 }}>
-          <button className="engage-employee-secondary" onClick={() => onMessageClick("all")}><MessageSquare size={13} /> Message all</button>
-          <button className="engage-employee-primary" onClick={onAddClick}><Plus size={13} /> Add Employee</button>
+    <div className="ft-card" style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, padding: 18, display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16 }}>Employees</div>
+        <div style={{ display: "flex", gap: 6 }}>
+          <button onClick={() => onMessageClick("all")} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 6, border: `1px solid ${T.line}`, cursor: "pointer", background: "#fff", color: T.ink, fontWeight: 700, fontSize: 12 }}>
+            <MessageSquare size={13} /> Message all
+          </button>
+          <button onClick={onAddClick} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 6, border: "none", cursor: "pointer", background: T.route, color: "#fff", fontWeight: 700, fontSize: 12 }}>
+            <Plus size={13} /> Add Employee
+          </button>
         </div>
       </div>
-      {salesmen.length === 0 && <div style={{ fontSize: 12.5, color: T.inkSoft, padding: "24px 0" }}>No salesmen yet — add your first one.</div>}
-      <div className="engage-employee-columns" aria-hidden="true">
-        <span>Name</span><span>Location</span><span>Status</span><span>Last active</span><span>Actions</span>
-      </div>
+      {salesmen.length === 0 && <div style={{ fontSize: 12.5, color: T.inkSoft }}>No salesmen yet — add your first one.</div>}
       {salesmen.map((s) => (
-        <div key={s.id} className="engage-employee-row" style={{ opacity: s.isActive === false ? 0.55 : 1 }}>
-          <div className="engage-employee-person" onClick={() => onOpenSalesmanLeads(s)}>
-            <span className="engage-employee-avatar">{leadInitials(s.name).slice(0,1)}</span>
-            <span><strong>{s.name}</strong><small>{s.employeeCode || "Employee"}</small></span>
+        <div key={s.id} className="ft-row" style={{ border: `1px solid ${T.line}`, borderRadius: 12, padding: 12, background: "#fff", opacity: s.isActive === false ? 0.55 : 1 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div onClick={() => onOpenSalesmanLeads(s)} style={{ fontWeight: 700, fontSize: 13.5, cursor: "pointer", color: T.route }}>{s.name}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <button type="button" className="ft-lead-brief-pill" aria-label={`Brief for ${s.name}`} onClick={() => onBriefClick(s)}><Sparkles size={11} /> Brief</button>
+              <span style={{
+                fontSize: 10.5, fontWeight: 700, padding: "3px 9px", borderRadius: 999,
+                background: s.isActive === false ? "#EEE" : s.status === "online" ? T.verifiedSoft : "#EEE",
+                color: s.isActive === false ? "#888" : s.status === "online" ? T.verified : "#888",
+              }}>
+                {s.isActive === false ? "Deactivated" : s.status === "online" ? "Online" : "Offline"}
+              </span>
+            </div>
           </div>
-          <div className="engage-employee-location"><MapPin size={13}/><span>{s.area || "Unassigned"}<small>{(s.distanceM / 1000).toFixed(1)} km today</small></span></div>
-          <div><span className={`engage-status-dot ${s.status === "online" && s.isActive !== false ? "online" : ""}`}></span><span className="engage-status-text">{s.isActive === false ? "Deactivated" : s.status === "online" ? "Online" : "Offline"}</span></div>
-          <div className="engage-last-active">{fmtTime(s.lastUpdate)}<small>{s.battery != null ? `${Math.round(s.battery)}% battery` : "No battery data"}</small></div>
-          <div className="engage-employee-actions">
-            <button title="Message" onClick={() => onMessageClick(s)}><MessageSquare size={15}/></button>
-            <button title="View route" onClick={() => onViewRoute(s)}><Route size={15}/></button>
-            <button title="Brief" onClick={() => onBriefClick(s)}><Sparkles size={15}/></button>
-            <button title="Settings" onClick={() => onSettingsClick(s)}><Settings size={15}/></button>
+          <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 3 }}>{s.area}{s.employeeCode ? ` · ${s.employeeCode}` : ""}</div>
+          <div style={{ display: "flex", gap: 12, marginTop: 6, fontSize: 11, color: T.inkSoft, fontFamily: "'IBM Plex Mono', monospace" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 3 }}><Battery size={12} /> {s.battery != null ? `${Math.round(s.battery)}%` : "—"}</span>
+            <span style={{ display: "flex", alignItems: "center", gap: 3 }}><Gauge size={12} /> {s.speed.toFixed(1)} km/h</span>
+            <span style={{ display: "flex", alignItems: "center", gap: 3 }}><Clock size={12} /> {fmtTime(s.lastUpdate)}</span>
           </div>
-          <div className="engage-employee-mobile-progress"><MonthlyProgressBar salesmanId={s.id} target={s.monthlyTarget} leads={leads} /></div>
+          <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 3 }}>{(s.distanceM / 1000).toFixed(1)} km travelled today</div>
+          <MonthlyProgressBar salesmanId={s.id} target={s.monthlyTarget} leads={leads} />
+          <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 8, flexWrap: "wrap" }}>
+            <button
+              onClick={() => onViewRoute(s)}
+              style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11.5, fontWeight: 700, color: T.route, background: "none", border: "none", cursor: "pointer", padding: 0 }}
+            >
+              <Route size={12} /> View route
+            </button>
+            <button
+              onClick={() => onMessageClick(s)}
+              style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11.5, fontWeight: 700, color: T.route, background: "none", border: "none", cursor: "pointer", padding: 0 }}
+            >
+              <MessageSquare size={12} /> Message
+            </button>
+            <button onClick={()=>onSettingsClick(s)} style={{display:"flex",alignItems:"center",gap:5,fontSize:11.5,fontWeight:700,color:T.inkSoft,background:"none",border:"none",cursor:"pointer",padding:0}}><Settings size={12}/> Settings</button>
+          </div>
         </div>
       ))}
-      {salesmen.length > 0 && (
-        <div className="engage-employee-footer">
-          <span><Users size={14}/> {salesmen.filter(s => s.status === "online" && s.isActive !== false).length} employee{salesmen.filter(s => s.status === "online" && s.isActive !== false).length === 1 ? "" : "s"} active in the field right now</span>
-          <button onClick={() => salesmen[0] && onOpenSalesmanLeads(salesmen[0])}>View employees <span>→</span></button>
-        </div>
-      )}
     </div>
   );
 }
+
 // Draws a salesman's GPS trail for a chosen day: a polyline through every
 // location ping, start/end markers, and that day's lead pins along the way.
 function SalesmanRouteModal({ salesman, onClose }) {
