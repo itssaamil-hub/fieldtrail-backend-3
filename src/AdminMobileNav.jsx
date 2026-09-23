@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Gauge, Contact2, Handshake, Users, Wallet } from "lucide-react";
+import { Gauge, Contact2, Handshake, Users, Wallet, List, ClipboardList, MessageSquare, Menu } from "lucide-react";
 import "./admin-mobile-nav.css";
 
 export function useAdminPhone() {
@@ -14,7 +14,8 @@ export function useAdminPhone() {
 }
 
 const tabs = [["dashboard", "Dashboard", Gauge], ["leads", "Leads", Contact2], ["deals", "Deals", Handshake], ["employees", "Employees", Users], ["expenses", "Expenses", Wallet]];
-export default function AdminMobileNav({ active, onChange }) {
+export const salesmanTabs = [["dashboard", "Dashboard", Gauge], ["leads", "My Leads", List], ["tasks", "Tasks", ClipboardList], ["messages", "Messages", MessageSquare], ["more", "More", Menu]];
+export default function AdminMobileNav({ active, onChange, items = tabs, label = "Admin navigation" }) {
   const phone = useAdminPhone();
   const [hidden, setHidden] = useState(false);
   const [blocked, setBlocked] = useState(false);
@@ -52,7 +53,7 @@ export default function AdminMobileNav({ active, onChange }) {
   }, [phone]);
   useEffect(() => setHidden(false), [active]);
   if (!phone) return null;
-  return <nav className={`engage-admin-bottom-nav${hidden || blocked ? " is-hidden" : ""}`} aria-label="Admin navigation" aria-hidden={hidden || blocked}>
-    {tabs.map(([key, label, Icon]) => <button key={key} type="button" aria-current={active === key ? "page" : undefined} tabIndex={hidden || blocked ? -1 : 0} onClick={() => onChange(key)}><Icon size={21} strokeWidth={1.8} /><span>{label}</span></button>)}
+  return <nav className={`engage-admin-bottom-nav${hidden || blocked ? " is-hidden" : ""}`} aria-label={label} aria-hidden={hidden || blocked}>
+    {items.map(([key, label, Icon]) => <button key={key} type="button" aria-current={active === key ? "page" : undefined} tabIndex={hidden || blocked ? -1 : 0} onClick={() => onChange(key)}><Icon size={21} strokeWidth={1.8} /><span>{label}</span></button>)}
   </nav>;
 }

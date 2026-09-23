@@ -1,11 +1,11 @@
-import AdminMobileNav, { useAdminPhone } from "./AdminMobileNav.jsx";
+import AdminMobileNav, { useAdminPhone, salesmanTabs } from "./AdminMobileNav.jsx";
 import CollectionsPanel, {CollectionsEntry} from "./Collections.jsx";
 import SalesmanBriefPopup from "./SalesmanBrief.jsx";
 import {EmployeeSettings, DayClosingForm, DayClosingReports, DayClosingReportsEntry} from "./DayClosing.jsx";
 import QuotationsPanel, { QuotationSettings } from "./Quotations.jsx";
 import OnboardingPanel, { AppMenu, OnboardingTemplateEditor } from "./Onboarding.jsx";
 import DealValueReport from "./DealValueReport.jsx";
-import { TasksEntry } from "./Tasks.jsx";
+import { TasksEntry, TasksModal } from "./Tasks.jsx";
 import LeadBriefPopup from "./LeadBriefPopup.jsx";
 import useUnreadNotifications from "./useUnreadNotifications.js";
 import NotificationsPanel from "./NotificationsPanel.jsx";
@@ -487,6 +487,23 @@ export default function App() {
     setNotificationLead(null);
     setShowOnboarding(false); setShowOnboardingSettings(false); setQuotationView(null); setShowDailyReports(false); setCollectionView(null);
   };
+
+  useEffect(() => {
+    if (session?.role !== "salesman") return;
+    const open = event => {
+      const action = event.detail;
+      if (!["quotations", "onboarding", "payments", "daily", "settings"].includes(action)) return;
+      closeNotifications(); setShowSettings(false); setShowOnboarding(false);
+      setQuotationView(null); setCollectionView(null); setShowDailyReports(false);
+      if (action === "quotations") setQuotationView({});
+      if (action === "onboarding") setShowOnboarding(true);
+      if (action === "payments") setCollectionView({});
+      if (action === "daily") setShowDailyReports(true);
+      if (action === "settings") setShowSettings(true);
+    };
+    window.addEventListener("engage:salesman-more", open);
+    return () => window.removeEventListener("engage:salesman-more", open);
+  }, [session?.role]);
 
   let body;
   if (!apiBase) {
@@ -4654,6 +4671,21 @@ function adHocLeadFromPayload(payload, session) {
 }
 
 function SalesmanView({ notificationLead, session, leads, dayStarted, allowLeadWithoutStartDay, onToggleDay, togglingDay, justToggledDay, onAddLead, onUpdateLeadStatus, onUpdateLeadDetails, online, gpsStatus, queuedCount, loadError, messages, onMarkMessageRead, onDeleteMessage, onReplyMessage, employeeRepliesEnabled = true, dailyTarget, monthlyTarget, page }) {
+  const phone = useAdminPhone();
+  const [mobileTab, setMobileTab] = useState("dashboard");
+  const [visited, setVisited] = useState({});
+  const positions = useRef({});
+  const switchTab = tab => {
+    positions.current[mobileTab] = window.scrollY;
+    setVisited(current => ({ ...current, [tab]: true }));
+    setMobileTab(tab);
+  };
+  useEffect(() => {
+    if (!phone) return;
+    const frame = requestAnimationFrame(() => window.scrollTo({ top: positions.current[mobileTab] || 0, behavior: "instant" }));
+    return () => cancelAnimationFrame(frame);
+  }, [phone, mobileTab]);
+  const dashboard = !phone || mobileTab === "dashboard";
   const [showAddLead, setShowAddLead] = useState(false);
   const [showMyLeads, setShowMyLeads] = useState(false);
   const [viewingLead, setViewingLead] = useState(null);
@@ -4694,11 +4726,12 @@ function SalesmanView({ notificationLead, session, leads, dayStarted, allowLeadW
   const monthTarget = monthlyTarget || 200;
 
   return (
-    <div style={{ maxWidth: 480, margin: "0 auto", padding: "18px 16px 40px" }}>
+    <div className={phone && page !== "reports" ? "engage-admin-mobile-content" : undefined} style={{ maxWidth: 480, margin: "0 auto", padding: "18px 16px 40px" }}>
       {page === "reports" ? (
         <SalesmanReportsPage leads={leads} dailyTarget={target} monthlyTarget={monthTarget} />
       ) : (
         <>
+      <div hidden={!dashboard}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <div>
           <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 18 }}>{session.fullName}</div>
@@ -4786,8 +4819,19 @@ function SalesmanView({ notificationLead, session, leads, dayStarted, allowLeadW
 
       {!dayStarted && !allowLeadWithoutStartDay && <div style={{ marginTop: 12, fontSize: 12, color: T.warn, background: T.warnSoft, padding: "8px 10px", borderRadius: 11 }}>Start your day to enable lead capture.</div>}
 
+      </div>
+      <div hidden={!dashboard && mobileTab !== "messages"}>
       <MessagesSection messages={messages} onMarkRead={onMarkMessageRead} onDelete={onDeleteMessage} onReply={onReplyMessage} employeeRepliesEnabled={employeeRepliesEnabled} onOpenLead={(id) => { const found = leads.find(l => l.id === id); if (found) setViewingLead(found); else api.salesmanLead(id).then(r => setViewingLead(mapLeadRow(r.lead))).catch(() => setNotificationLeadError("Couldn't open this lead.")); }} />
-      <TasksEntry />
+      </div>
+      <div hidden={!dashboard}><TasksEntry /></div>
+      {visited.leads && <div hidden={!phone || mobileTab !== "leads"}>
+        <MyLeadsModal embedded leads={leads} onSelectLead={setViewingLead} allowDateFilter />
+      </div>}
+      {visited.tasks && <div hidden={!phone || mobileTab !== "tasks"}><TasksModal embedded active={phone && mobileTab === "tasks"} /></div>}
+      {phone && mobileTab === "more" && <section className="engage-salesman-more"><h2>More</h2>
+        {[["quotations", "Quotations"], ["onboarding", "Onboarding checklist"], ["payments", "Payment due"], ["daily", "My Daily Reports"], ["settings", "Settings"]].map(([key, label]) => <button type="button" key={key} onClick={() => window.dispatchEvent(new CustomEvent("engage:salesman-more", { detail: key }))}>{label}<span aria-hidden="true">›</span></button>)}
+      </section>}
+      <AdminMobileNav active={mobileTab} onChange={switchTab} items={salesmanTabs} label="Salesman navigation" />
 
       {showAddLead && (
         <AddLeadModal
@@ -5192,7 +5236,7 @@ function GpsStatus({ gps, verification }) {
   );
 }
 
-function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads", allowDateFilter = false }) {
+function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads", allowDateFilter = false, embedded = false }) {
   const [briefLead, setBriefLead] = useState(null);
   const [filterDate, setFilterDate] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -5210,8 +5254,9 @@ function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads", allowD
 
   const totalRevenue = isWonModal ? shown.reduce((sum, l) => sum + (l.dealValue || 0), 0) : 0;
 
+  const Frame = embedded ? EmbeddedLeads : Overlay;
   return (
-    <Overlay onClose={onClose} title={title}>
+    <Frame onClose={onClose} title={title}>
       {isWonModal && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 12, padding: "10px 12px", background: T.paperDeep, borderRadius: 11 }}>
           <div>
@@ -5294,7 +5339,11 @@ function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads", allowD
         ))}
       </div>
       {briefLead && <LeadBriefPopup key={briefLead.id} lead={briefLead} buildBrief={buildLeadBrief} onClose={() => setBriefLead(null)} />}
-    </Overlay>
+    </Frame>
   );
 }
 
+
+function EmbeddedLeads({ title, children }) {
+  return <section><h2 style={{ fontSize: 18, margin: "0 0 14px" }}>{title}</h2>{children}</section>;
+}
