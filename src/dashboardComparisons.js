@@ -16,14 +16,7 @@ const METRIC_TARGETS = {
   "Total Leads": "total",
   Won: "won",
 };
-const ALL_COMPARISON_CARDS = [
-  "Conversation",
-  "Leads Today",
-  "Hot Leads",
-  "In Negotiation",
-  "Total Leads",
-  "Won",
-];
+const ALL_COMPARISON_CARDS = ["Conversation", "Leads Today", "Hot Leads", "In Negotiation", "Total Leads", "Won"];
 
 let latest = null;
 let observer = null;
@@ -34,11 +27,7 @@ let requestId = 0;
 
 function settings() {
   try {
-    return {
-      showComparisons: true,
-      comparisonPeriod: "weekly",
-      ...JSON.parse(localStorage.getItem(DISPLAY_KEY) || "{}"),
-    };
+    return { showComparisons: true, comparisonPeriod: "weekly", ...JSON.parse(localStorage.getItem(DISPLAY_KEY) || "{}") };
   } catch {
     return { showComparisons: true, comparisonPeriod: "weekly" };
   }
@@ -47,19 +36,14 @@ function settings() {
 function readCachedLatest() {
   try {
     const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
-    if (!cached || !cached.metrics || !cached.comparisons || !cached.period) return null;
-    return cached;
+    return cached && cached.comparisons && cached.period ? cached : null;
   } catch {
     return null;
   }
 }
 
 function writeCachedLatest(data) {
-  try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(data));
-  } catch {
-    // Cache is only a fast-display fallback; dashboard still works without it.
-  }
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(data)); } catch {}
 }
 
 function dashboardEmployee() {
@@ -67,16 +51,13 @@ function dashboardEmployee() {
 }
 
 function isActuallyVisible(node) {
-  if (!node || !node.isConnected) return false;
-  if (node.closest('[hidden]')) return false;
+  if (!node || !node.isConnected || node.closest('[hidden]')) return false;
   const style = window.getComputedStyle(node);
-  if (style.display === "none" || style.visibility === "hidden") return false;
-  return node.getClientRects().length > 0;
+  return style.display !== "none" && style.visibility !== "hidden" && node.getClientRects().length > 0;
 }
 
 function visibleCard(label) {
-  const cards = [...document.querySelectorAll(".ft-card")].filter(isActuallyVisible);
-  return cards.find((card) => {
+  return [...document.querySelectorAll(".ft-card")].filter(isActuallyVisible).find((card) => {
     const text = (card.textContent || "").replace(/\s+/g, " ").trim();
     if (label === "Hot Leads") return text.startsWith("Hot Leads");
     return text.startsWith(label);
@@ -105,21 +86,14 @@ function setCardSub(label, text) {
   const card = visibleCard(label);
   const value = valueNode(card);
   if (!card || !value) return;
-
   const children = [...card.children];
   const valueIndex = children.indexOf(value);
-  let sub = children.slice(valueIndex + 1).find((node) =>
-    node.tagName === "DIV" &&
-    !node.classList.contains("engage-db-comparison") &&
-    !node.classList.contains("engage-db-sub")
-  );
-
+  let sub = children.slice(valueIndex + 1).find((node) => node.tagName === "DIV" && !node.classList.contains("engage-db-comparison") && !node.classList.contains("engage-db-sub"));
   if (!text) {
     card.querySelectorAll(".engage-db-sub").forEach((node) => node.remove());
     if (sub) sub.textContent = "";
     return;
   }
-
   if (!sub) sub = card.querySelector(":scope > .engage-db-sub");
   if (!sub) {
     sub = document.createElement("div");
@@ -133,13 +107,8 @@ function setCardSub(label, text) {
 }
 
 function applyExactMetrics() {
-  if (!latest?.metrics) return;
-  if (latest.salesmanId !== dashboardEmployee()) return;
-
-  Object.entries(METRIC_TARGETS).forEach(([label, key]) => {
-    setCardValue(label, latest.metrics[key]);
-  });
-
+  if (!latest?.metrics || latest.salesmanId !== dashboardEmployee()) return;
+  Object.entries(METRIC_TARGETS).forEach(([label, key]) => setCardValue(label, latest.metrics[key]));
   setCardSub("Total Leads", `${latest.metrics.pending} pending`);
   setCardSub("Won", latest.metrics.wonValue > 0 ? `${formatMoney(latest.metrics.wonValue)} closed` : "");
 }
@@ -160,13 +129,7 @@ function cleanAllComparisonCards() {
 
 function lineText(comparison, period) {
   const pct = comparison?.pct;
-  const prefix = pct == null
-    ? "↑ New"
-    : pct > 0
-      ? `↑ ${pct}%`
-      : pct < 0
-        ? `↓ ${Math.abs(pct)}%`
-        : "— Same";
+  const prefix = pct == null ? "↑ New" : pct > 0 ? `↑ ${pct}%` : pct < 0 ? `↓ ${Math.abs(pct)}%` : "— Same";
   return `${prefix} vs last ${period === "monthly" ? "month" : "week"}`;
 }
 
@@ -186,12 +149,10 @@ function appendLine(card, comparison, period) {
   line.style.fontWeight = "700";
   line.style.color = lineColor(comparison);
   line.style.whiteSpace = "nowrap";
-
   const text = lineText(comparison, period);
   const suffix = `vs last ${period === "monthly" ? "month" : "week"}`;
   const prefix = text.slice(0, text.length - suffix.length).trimEnd();
   line.append(document.createTextNode(`${prefix} `));
-
   const sub = document.createElement("span");
   sub.style.fontWeight = "500";
   sub.style.color = "#6B7280";
@@ -205,7 +166,6 @@ function startObserving() {
   observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
   observing = true;
 }
-
 function stopObserving() {
   if (!observer || !observing) return;
   observer.disconnect();
@@ -217,25 +177,15 @@ function render() {
   stopObserving();
   try {
     const display = settings();
-
-    // OFF must always remove comparisons immediately.
     if (display.showComparisons === false) {
       cleanAllComparisonCards();
       applyExactMetrics();
       return;
     }
-
-    // Keep existing comparison lines while fresh data is unavailable. Once we
-    // have a matching cached/fresh payload, replace them with the exact values.
     applyExactMetrics();
-    if (!latest) return;
-    if (latest.period !== (display.comparisonPeriod || "weekly")) return;
-    if (latest.salesmanId !== dashboardEmployee()) return;
-
+    if (!latest || latest.period !== (display.comparisonPeriod || "weekly") || latest.salesmanId !== dashboardEmployee()) return;
     cleanAllComparisonCards();
-    Object.entries(COMPARISON_TARGETS).forEach(([label, key]) => {
-      appendLine(visibleCard(label), latest.comparisons?.[key], latest.period);
-    });
+    Object.entries(COMPARISON_TARGETS).forEach(([label, key]) => appendLine(visibleCard(label), latest.comparisons?.[key], latest.period));
   } finally {
     startObserving();
   }
@@ -246,20 +196,72 @@ function queueRender() {
   renderQueued = true;
   requestAnimationFrame(render);
 }
-
 function scheduleRefresh(delay = 700) {
   clearTimeout(refreshTimer);
   refreshTimer = setTimeout(refresh, delay);
 }
 
+function periodBounds(period, previous = false) {
+  const now = new Date();
+  if (period === "monthly") {
+    const y = now.getFullYear();
+    const m = now.getMonth() - (previous ? 1 : 0);
+    const start = new Date(y, m, 1);
+    const maxDay = new Date(y, m + 1, 0).getDate();
+    const end = previous ? new Date(y, m, Math.min(now.getDate(), maxDay), now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds()) : now;
+    return [start, end];
+  }
+  const weekday = (now.getDay() + 6) % 7;
+  const currentStart = new Date(now); currentStart.setHours(0, 0, 0, 0); currentStart.setDate(currentStart.getDate() - weekday);
+  const start = new Date(currentStart); if (previous) start.setDate(start.getDate() - 7);
+  const end = previous ? new Date(start.getTime() + (now.getTime() - currentStart.getTime())) : now;
+  return [start, end];
+}
+
+function pct(current, previous) {
+  if (previous === 0) return current === 0 ? 0 : null;
+  return Math.round(((current - previous) / previous) * 100);
+}
+
+async function fallbackFromLeads(base, token, period, salesmanId) {
+  const response = await fetch(`${base}/admin/leads`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!response.ok) return null;
+  const data = await response.json();
+  let leads = data.leads || [];
+  if (salesmanId !== "all") leads = leads.filter((l) => (l.salesmanId || l.salesman_id) === salesmanId);
+  const [cs, ce] = periodBounds(period, false);
+  const [ps, pe] = periodBounds(period, true);
+  const createdAt = (l) => new Date(l.createdAt || l.created_at);
+  const count = (start, end, status) => leads.filter((l) => {
+    const d = createdAt(l);
+    return d >= start && d <= end && (!status || l.status === status);
+  }).length;
+  const currentTotal = count(cs, ce);
+  const previousTotal = count(ps, pe);
+  const currentConversation = count(cs, ce, "conversation");
+  const previousConversation = count(ps, pe, "conversation");
+  const currentNegotiation = count(cs, ce, "negotiation");
+  const previousNegotiation = count(ps, pe, "negotiation");
+  const currentWon = count(cs, ce, "won");
+  const previousWon = count(ps, pe, "won");
+  return {
+    period,
+    salesmanId,
+    comparisons: {
+      conversation: { current: currentConversation, previous: previousConversation, pct: pct(currentConversation, previousConversation) },
+      negotiation: { current: currentNegotiation, previous: previousNegotiation, pct: pct(currentNegotiation, previousNegotiation) },
+      total: { current: currentTotal, previous: previousTotal, pct: pct(currentTotal, previousTotal) },
+      won: { current: currentWon, previous: previousWon, pct: pct(currentWon, previousWon) },
+    },
+  };
+}
+
 async function refresh() {
   const display = settings();
   queueRender();
-
   const base = getApiBase();
   const token = getSession()?.token;
   if (!base || !token) return;
-
   const period = display.comparisonPeriod === "monthly" ? "monthly" : "weekly";
   const salesmanId = dashboardEmployee();
   const params = new URLSearchParams({ period });
@@ -267,41 +269,34 @@ async function refresh() {
   const thisRequest = ++requestId;
 
   try {
-    const response = await fetch(`${base}/admin/dashboard-comparisons?${params}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!response.ok) return;
-    const data = await response.json();
-    if (thisRequest !== requestId) return;
-    latest = { ...data, salesmanId };
+    const response = await fetch(`${base}/admin/dashboard-comparisons?${params}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (response.ok) {
+      const data = await response.json();
+      if (thisRequest !== requestId) return;
+      latest = { ...data, salesmanId };
+      writeCachedLatest(latest);
+      queueRender();
+      return;
+    }
+  } catch {}
+
+  try {
+    const fallback = await fallbackFromLeads(base, token, period, salesmanId);
+    if (!fallback || thisRequest !== requestId) return;
+    latest = fallback;
     writeCachedLatest(latest);
     queueRender();
-  } catch {
-    // Cached data remains visible while Render wakes up or is temporarily down.
-  }
+  } catch {}
 }
 
 function install() {
   if (observer) return;
-
   const cached = readCachedLatest();
   if (cached) latest = cached;
-
-  observer = new MutationObserver(() => {
-    queueRender();
-    scheduleRefresh();
-  });
+  observer = new MutationObserver(() => { queueRender(); scheduleRefresh(); });
   startObserving();
-
-  window.addEventListener("engage-display-settings", () => {
-    const display = settings();
-    const cachedNow = readCachedLatest();
-    if (cachedNow && cachedNow.period === (display.comparisonPeriod || "weekly") && cachedNow.salesmanId === dashboardEmployee()) {
-      latest = cachedNow;
-    }
-    refresh();
-  });
-  window.addEventListener("focus", () => refresh());
+  window.addEventListener("engage-display-settings", refresh);
+  window.addEventListener("focus", refresh);
   document.addEventListener("change", (event) => {
     if (event.target?.matches?.('select[aria-label="Dashboard employee"]')) {
       const cachedNow = readCachedLatest();
@@ -309,11 +304,7 @@ function install() {
       refresh();
     }
   });
-
-  setTimeout(() => {
-    queueRender();
-    refresh();
-  }, 0);
+  setTimeout(() => { queueRender(); refresh(); }, 0);
   setInterval(refresh, 60000);
 }
 
