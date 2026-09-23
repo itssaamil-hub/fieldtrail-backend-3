@@ -1,8 +1,16 @@
 import { getApiBase, getSession } from "./api.js";
 
 const DISPLAY_KEY = "engage_dashboard_display_settings";
-const TARGETS = {
+const COMPARISON_TARGETS = {
   Conversation: "conversation",
+  "In Negotiation": "negotiation",
+  "Total Leads": "total",
+  Won: "won",
+};
+const METRIC_TARGETS = {
+  Conversation: "conversation",
+  "Leads Today": "leadsToday",
+  "Hot Leads": "hotToday",
   "In Negotiation": "negotiation",
   "Total Leads": "total",
   Won: "won",
@@ -20,6 +28,8 @@ let latest = null;
 let observer = null;
 let renderQueued = false;
 let observing = false;
+let refreshTimer = null;
+let requestId = 0;
 
 function settings() {
   try {
@@ -44,6 +54,69 @@ function visibleCard(label) {
     if (label === "Hot Leads") return text.startsWith("Hot Leads");
     return text.startsWith(label);
   }) || null;
+}
+
+function valueNode(card) {
+  if (!card) return null;
+  return [...card.children].find((node) => node?.style?.fontSize === "24px") || null;
+}
+
+function setCardValue(label, value) {
+  const node = valueNode(visibleCard(label));
+  if (node && value != null) node.textContent = String(value);
+}
+
+function formatMoney(n) {
+  const value = Number(n || 0);
+  if (value >= 1e7) return `₹${(value / 1e7).toFixed(1)}Cr`;
+  if (value >= 1e5) return `₹${(value / 1e5).toFixed(1)}L`;
+  if (value >= 1e3) return `₹${(value / 1e3).toFixed(1)}K`;
+  return `₹${value.toLocaleString("en-IN")}`;
+}
+
+function setCardSub(label, text) {
+  const card = visibleCard(label);
+  const value = valueNode(card);
+  if (!card || !value) return;
+
+  const children = [...card.children];
+  const valueIndex = children.indexOf(value);
+  let sub = children.slice(valueIndex + 1).find((node) =>
+    node.tagName === "DIV" &&
+    !node.classList.contains("engage-db-comparison") &&
+    !node.classList.contains("engage-db-sub")
+  );
+
+  if (!text) {
+    card.querySelectorAll(".engage-db-sub").forEach((node) => node.remove());
+    if (sub) sub.textContent = "";
+    return;
+  }
+
+  if (!sub) {
+    sub = card.querySelector(":scope > .engage-db-sub");
+  }
+  if (!sub) {
+    sub = document.createElement("div");
+    sub.className = "engage-db-sub";
+    sub.style.fontSize = "11px";
+    sub.style.color = "#6B7280";
+    sub.style.marginTop = "2px";
+    value.insertAdjacentElement("afterend", sub);
+  }
+  sub.textContent = text;
+}
+
+function applyExactMetrics() {
+  if (!latest?.metrics) return;
+  if (latest.salesmanId !== dashboardEmployee()) return;
+
+  Object.entries(METRIC_TARGETS).forEach(([label, key]) => {
+    setCardValue(label, latest.metrics[key]);
+  });
+
+  setCardSub("Total Leads", `${latest.metrics.pending} pending`);
+  setCardSub("Won", latest.metrics.wonValue > 0 ? `${formatMoney(latest.metrics.wonValue)} closed` : "");
 }
 
 function removeComparisonLines(card) {
@@ -106,7 +179,7 @@ function appendLine(card, comparison, period) {
 
 function startObserving() {
   if (!observer || observing) return;
-  observer.observe(document.documentElement, { childList: true, subtree: true });
+  observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
   observing = true;
 }
 
@@ -121,13 +194,14 @@ function render() {
   stopObserving();
   try {
     cleanAllComparisonCards();
+    applyExactMetrics();
 
     const display = settings();
     if (display.showComparisons === false || !latest) return;
     if (latest.period !== (display.comparisonPeriod || "weekly")) return;
     if (latest.salesmanId !== dashboardEmployee()) return;
 
-    Object.entries(TARGETS).forEach(([label, key]) => {
+    Object.entries(COMPARISON_TARGETS).forEach(([label, key]) => {
       appendLine(visibleCard(label), latest.comparisons?.[key], latest.period);
     });
   } finally {
@@ -141,20 +215,13 @@ function queueRender() {
   requestAnimationFrame(render);
 }
 
+function scheduleRefresh(delay = 700) {
+  clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(refresh, delay);
+}
+
 async function refresh() {
   const display = settings();
-  stopObserving();
-  try {
-    cleanAllComparisonCards();
-  } finally {
-    startObserving();
-  }
-
-  if (display.showComparisons === false) {
-    latest = null;
-    return;
-  }
-
   const base = getApiBase();
   const token = getSession()?.token;
   if (!base || !token) return;
@@ -163,6 +230,7 @@ async function refresh() {
   const salesmanId = dashboardEmployee();
   const params = new URLSearchParams({ period });
   if (salesmanId !== "all") params.set("salesmanId", salesmanId);
+  const thisRequest = ++requestId;
 
   try {
     const response = await fetch(`${base}/admin/dashboard-comparisons?${params}`, {
@@ -170,26 +238,34 @@ async function refresh() {
     });
     if (!response.ok) return;
     const data = await response.json();
+    if (thisRequest !== requestId) return;
     latest = { ...data, salesmanId };
     queueRender();
   } catch {
-    // Keep the dashboard usable if the comparison request is unavailable.
+    // Exact dashboard metrics are an enhancement; keep the existing dashboard
+    // usable if Render is temporarily unavailable or still redeploying.
   }
 }
 
 function install() {
   if (observer) return;
 
-  observer = new MutationObserver(queueRender);
+  observer = new MutationObserver(() => {
+    queueRender();
+    scheduleRefresh();
+  });
   startObserving();
 
-  window.addEventListener("engage-display-settings", refresh);
+  window.addEventListener("engage-display-settings", () => refresh());
+  window.addEventListener("focus", () => refresh());
   document.addEventListener("change", (event) => {
     if (event.target?.matches?.('select[aria-label="Dashboard employee"]')) refresh();
   });
 
-  // Initial render after the app has mounted and restored its session.
+  // Initial fetch after the app mounts, plus a low-frequency safety refresh
+  // so exact counts stay current even if no visible React mutation occurs.
   setTimeout(refresh, 0);
+  setInterval(refresh, 60000);
 }
 
 install();
