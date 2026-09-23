@@ -120,6 +120,13 @@ function createCard() {
 function render() {
   queued = false;
   hideLegacyTeamTasksEntry();
+
+  const desktop = window.matchMedia("(min-width: 900px)").matches;
+  if (!desktop) {
+    taskCard()?.remove();
+    return;
+  }
+
   const won = findCard("Won");
   if (!won?.parentElement) return;
 
