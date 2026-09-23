@@ -1,3 +1,4 @@
+import AdminMobileNav, { useAdminPhone } from "./AdminMobileNav.jsx";
 import CollectionsPanel, {CollectionsEntry} from "./Collections.jsx";
 import SalesmanBriefPopup from "./SalesmanBrief.jsx";
 import {EmployeeSettings, DayClosingForm, DayClosingReports, DayClosingReportsEntry} from "./DayClosing.jsx";
@@ -1657,6 +1658,22 @@ function AdminApp({ session, online, page, notificationLead }) {
 }
 
 function AdminView({ conversationCount, salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead, onAddLead, onAddSalesman, onEditSalesman, onDeleteSalesman, onToggleSalesmanActive, loadError, wsConnected, online, page, notificationLead }) {
+  const phone = useAdminPhone();
+  const [mobileTab, setMobileTab] = useState("dashboard");
+  const [expensesVisited, setExpensesVisited] = useState(false);
+  const scrollPositions = useRef({});
+  const switchMobileTab = (tab) => {
+    scrollPositions.current[mobileTab] = window.scrollY;
+    if (tab === "expenses") setExpensesVisited(true);
+    setMobileTab(tab);
+  };
+  useEffect(() => {
+    if (!phone) return;
+    const frame = requestAnimationFrame(() => window.scrollTo({ top: scrollPositions.current[mobileTab] || 0, behavior: "instant" }));
+    return () => cancelAnimationFrame(frame);
+  }, [mobileTab, phone]);
+  const showDashboard = !phone || mobileTab === "dashboard";
+  const showLeads = showDashboard || mobileTab === "leads" || mobileTab === "deals";
   const [conversationError, setConversationError] = useState("");
   const [filterSalesman, setFilterSalesman] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -1714,7 +1731,7 @@ function AdminView({ conversationCount, salesmen, leads, onStatusChange, onUpdat
   useEffect(() => { setLeadsPage(1); }, [filterSalesman, filterStatus, filterDate, searchQuery]);
 
   return (
-    <div style={{ padding: "20px 24px", maxWidth: 1180, margin: "0 auto" }}>
+    <div className={phone && page !== "reports" ? "engage-admin-mobile-content" : undefined} style={{ padding: "20px 24px", maxWidth: 1180, margin: "0 auto" }}>
       {page === "reports" ? (
         <ReportsPage salesmen={salesmen} leads={leads} />
       ) : (
@@ -1730,6 +1747,7 @@ function AdminView({ conversationCount, salesmen, leads, onStatusChange, onUpdat
         </div>
       )}
 
+      <div hidden={!showDashboard}>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
         <StatCard label="Total Employees" value={salesmen.length} sub={<span style={{color:T.verified}}>{activeSalesmen} active now</span>} />
         <StatCard label="Conversation" value={conversationCount ?? "—"} color={T.route} onClick={async () => { try { setConversationError(""); const result=await api.adminLeads({status:"conversation"}); setStatLeadsModal({title:conversationCount>500?"Conversation Leads · Latest 500":"Conversation Leads",leads:(result.leads||[]).map(mapLeadRow)}); } catch(e) { setConversationError(e.message); } }} />
@@ -1749,9 +1767,11 @@ function AdminView({ conversationCount, salesmen, leads, onStatusChange, onUpdat
         <Tab active={mapView === "leads"} onClick={() => setMapView("leads")} label="Lead Locations" />
       </div>
 
-      {mapView === "live" ? (
-        <div className="ft-dashboard-grid">
-          <LiveMap salesmen={salesmen} leads={leads} onSelectLead={setSelectedLead} />
+      </div>
+      <div hidden={!showDashboard && mobileTab !== "employees"}>
+      {mapView === "live" || (phone && mobileTab === "employees") ? (
+        <div className={phone && mobileTab === "employees" ? undefined : "ft-dashboard-grid"}>
+          {showDashboard && <LiveMap salesmen={salesmen} leads={leads} onSelectLead={setSelectedLead} />}
           <SalesmenPanel
             salesmen={salesmen}
             leads={leads}
@@ -1768,11 +1788,13 @@ function AdminView({ conversationCount, salesmen, leads, onStatusChange, onUpdat
         <LiveMap salesmen={[]} leads={filteredLeads} onSelectLead={setSelectedLead} title="Lead Locations" subtitle="Respects the employee/status/date filters below" />
       )}
 
+      </div>
+      <div hidden={!showLeads}>
       <div className="ft-card" style={{ marginTop: 20, background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, padding: 18 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
-          <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16 }}>Leads</div>
+          <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16 }}>{phone && mobileTab === "deals" ? "Deals" : "Leads"}</div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ display: "flex", gap: 2, background: T.paperDeep, borderRadius: 8, padding: 2 }}>
+            <div style={{ display: phone && mobileTab !== "dashboard" ? "none" : "flex", gap: 2, background: T.paperDeep, borderRadius: 8, padding: 2 }}>
               <button
                 onClick={() => setLeadsViewMode("list")}
                 style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, padding: "5px 10px", borderRadius: 6, border: "none", cursor: "pointer", background: leadsViewMode === "list" ? "#fff" : "transparent", color: leadsViewMode === "list" ? T.ink : T.inkSoft, boxShadow: leadsViewMode === "list" ? "0 1px 2px rgba(20,20,30,0.08)" : "none" }}
@@ -1855,7 +1877,7 @@ function AdminView({ conversationCount, salesmen, leads, onStatusChange, onUpdat
           </div>
         )}
 
-        {leadsViewMode === "list" ? (
+        {(phone && mobileTab === "leads") || (!(phone && mobileTab === "deals") && leadsViewMode === "list") ? (
           <>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {pagedLeads.map((l) => (
@@ -1912,6 +1934,10 @@ function AdminView({ conversationCount, salesmen, leads, onStatusChange, onUpdat
           <LeadsBoardView leads={filteredLeads} onStatusChange={onStatusChange} onSelectLead={setSelectedLead} />
         )}
       </div>
+
+      </div>
+      {expensesVisited && <div hidden={!phone || mobileTab !== "expenses"}><ExpensesReport salesmen={salesmen} /></div>}
+      <AdminMobileNav active={mobileTab} onChange={switchMobileTab} />
 
       {selectedLead && <LeadDetailDrawer lead={leads.find((l) => l.id === selectedLead.id) || selectedLead} onClose={() => setSelectedLead(null)} onStatusChange={onStatusChange} onUpdate={onUpdateLead} onDelete={onDeleteLead} fetchHistory={api.adminLeadHistory} isAdmin />}
       {routeSalesman && <SalesmanRouteModal salesman={routeSalesman} onClose={() => setRouteSalesman(null)} />}
