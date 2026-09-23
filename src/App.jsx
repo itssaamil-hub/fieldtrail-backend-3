@@ -4935,6 +4935,35 @@ const DEFAULT_LOCATION_SETTINGS = { gpsLocation: true, locationMandatoryForNewLe
 // marks it read.
 function MessagesSection({ messages, onMarkRead, onDelete, onReply, employeeRepliesEnabled = true, onOpenLead }) {
   const unreadCount = messages.filter((m) => !m.read_at).length;
+  // Lead-linked messages are conversations: one row per lead, while normal messages stay individual.
+  const displayMessages = (() => {
+    const leadThreads = new Map();
+    const rows = [];
+    messages.forEach((m) => {
+      if (!m.lead_id) {
+        rows.push({ ...m, _rowKey: `message:${m.id}`, _threadMessages: [m], _unreadCount: m.read_at ? 0 : 1 });
+        return;
+      }
+      const key = String(m.lead_id);
+      const existing = leadThreads.get(key);
+      if (!existing) {
+        const thread = { ...m, _rowKey: `lead:${key}`, _threadMessages: [m], _unreadCount: m.read_at ? 0 : 1 };
+        leadThreads.set(key, thread);
+        rows.push(thread);
+      } else {
+        existing._threadMessages.push(m);
+        if (!m.read_at) existing._unreadCount += 1;
+        if (new Date(m.created_at).getTime() > new Date(existing.created_at).getTime()) {
+          const keep = { _rowKey: existing._rowKey, _threadMessages: existing._threadMessages, _unreadCount: existing._unreadCount };
+          Object.assign(existing, m, keep);
+        }
+      }
+    });
+    return rows.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  })();
+  const markThreadRead = (m) => {
+    (m._threadMessages || [m]).filter((item) => !item.read_at).forEach((item) => onMarkRead(item.id));
+  };
   const [replyingTo, setReplyingTo] = useState(null);
   const [replyText, setReplyText] = useState("");
   const [replyBusy, setReplyBusy] = useState(false);
@@ -4949,7 +4978,7 @@ function MessagesSection({ messages, onMarkRead, onDelete, onReply, employeeRepl
 
   return (
     <div className="ft-card" style={{ marginTop: 16, background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, padding: 16 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: messages.length ? 10 : 0 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: displayMessages.length ? 10 : 0 }}>
         <div style={{ fontWeight: 700, fontSize: 14.5, display: "flex", alignItems: "center", gap: 7 }}>
           <MessageSquare size={15} /> Messages
         </div>
@@ -4957,24 +4986,24 @@ function MessagesSection({ messages, onMarkRead, onDelete, onReply, employeeRepl
           <span style={{ fontSize: 10.5, fontWeight: 700, color: "#fff", background: T.danger, borderRadius: 999, padding: "2px 8px" }}>{unreadCount} new</span>
         )}
       </div>
-      {messages.length === 0 ? (
+      {displayMessages.length === 0 ? (
         <div style={{ fontSize: 12.5, color: T.inkSoft }}>No messages from admin yet.</div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {messages.slice(0, 20).map((m) => (
+          {displayMessages.slice(0, 20).map((m) => (
             <div
-              key={m.id}
+              key={m._rowKey || m.id}
               style={{
                 padding: "10px 12px", borderRadius: 11,
-                background: m.read_at ? "#fff" : T.warnSoft,
-                border: `1px solid ${m.read_at ? T.line : "transparent"}`,
+                background: m._unreadCount > 0 ? T.warnSoft : "#fff",
+                border: `1px solid ${m._unreadCount > 0 ? "transparent" : T.line}`,
               }}
             >
-              {m.message_type === "lead_mention" && <div style={{ fontSize: 10.5, fontWeight: 800, color: T.route, textTransform: "uppercase", letterSpacing: .4, marginBottom: 4 }}>Admin · Lead message{m.business_name ? ` · ${m.business_name}` : ""}</div>}
-              <div onClick={() => !m.read_at && onMarkRead(m.id)} style={{ fontSize: 13, color: T.ink, whiteSpace: "pre-wrap", cursor: m.read_at ? "default" : "pointer" }}>{m.body}</div>
-              {m.lead_id && onOpenLead && <button onClick={() => { if (!m.read_at) onMarkRead(m.id); onOpenLead(m.lead_id); }} style={{ marginTop: 8, border: `1px solid ${T.route}`, background: "#fff", color: T.route, borderRadius: 8, padding: "6px 10px", fontSize: 11.5, fontWeight: 800, cursor: "pointer" }}>Open Lead →</button>}
-              {m.message_type === "lead_mention" && employeeRepliesEnabled && onReply && <button onClick={() => { if (!m.read_at) onMarkRead(m.id); setReplyingTo(m); setReplyText(""); setReplyError(""); }} style={{ marginTop: 8, marginLeft: 7, border: `1px solid ${T.line}`, background: T.paperDeep, color: T.ink, borderRadius: 8, padding: "6px 10px", fontSize: 11.5, fontWeight: 800, cursor: "pointer" }}>Reply</button>}
-              {m.message_type === "lead_mention" && !employeeRepliesEnabled && <div style={{ marginTop: 7, fontSize: 10.5, color: T.inkSoft }}>Replies disabled by Admin</div>}
+              {m.lead_id && <div style={{ fontSize: 10.5, fontWeight: 800, color: T.route, textTransform: "uppercase", letterSpacing: .4, marginBottom: 4, display:"flex", justifyContent:"space-between", gap:8 }}><span>Lead conversation{m.business_name ? ` · ${m.business_name}` : ""}</span>{m._threadMessages?.length > 1 && <span style={{color:T.inkSoft,textTransform:"none",letterSpacing:0}}>{m._threadMessages.length} messages</span>}</div>}
+              <div onClick={() => m._unreadCount > 0 && markThreadRead(m)} style={{ fontSize: 13, color: T.ink, whiteSpace: "pre-wrap", cursor: m._unreadCount > 0 ? "pointer" : "default" }}>{m.body}</div>
+              {m.lead_id && onOpenLead && <button onClick={() => { markThreadRead(m); onOpenLead(m.lead_id); }} style={{ marginTop: 8, border: `1px solid ${T.route}`, background: "#fff", color: T.route, borderRadius: 8, padding: "6px 10px", fontSize: 11.5, fontWeight: 800, cursor: "pointer" }}>Open Lead →</button>}
+              {m.lead_id && employeeRepliesEnabled && onReply && <button onClick={() => { markThreadRead(m); setReplyingTo(m); setReplyText(""); setReplyError(""); }} style={{ marginTop: 8, marginLeft: 7, border: `1px solid ${T.line}`, background: T.paperDeep, color: T.ink, borderRadius: 8, padding: "6px 10px", fontSize: 11.5, fontWeight: 800, cursor: "pointer" }}>Reply</button>}
+              {m.lead_id && !employeeRepliesEnabled && <div style={{ marginTop: 7, fontSize: 10.5, color: T.inkSoft }}>Replies disabled by Admin</div>}
               {replyingTo?.id === m.id && <div style={{ marginTop: 9, paddingTop: 9, borderTop: `1px solid ${T.line}` }}>
                 <textarea autoFocus rows={3} maxLength={2000} value={replyText} onChange={e=>setReplyText(e.target.value)} placeholder="Reply to Admin…" style={{ width:"100%", boxSizing:"border-box", resize:"vertical", border:`1px solid ${T.line}`, borderRadius:9, padding:"8px 9px", font:"inherit", fontSize:12.5, outline:"none" }} />
                 {replyError && <div style={{fontSize:11,color:T.danger,marginTop:4}}>{replyError}</div>}
@@ -4983,7 +5012,7 @@ function MessagesSection({ messages, onMarkRead, onDelete, onReply, employeeRepl
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
                 <span style={{ fontSize: 10.5, color: T.inkSoft }}>{fmtTime(new Date(m.created_at))}</span>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  {!m.read_at && <span style={{ fontSize: 10, fontWeight: 700, color: T.warn }}>Tap to mark read</span>}
+                  {m._unreadCount > 0 && <span style={{ fontSize: 10, fontWeight: 700, color: T.warn }}>{m._unreadCount > 1 ? `${m._unreadCount} unread` : "Tap to mark read"}</span>}
                   {onDelete && !m.lead_id && (
                     <button
                       onClick={(e) => { e.stopPropagation(); onDelete(m.id); }}
