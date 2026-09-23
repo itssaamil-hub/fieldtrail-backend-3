@@ -115,12 +115,10 @@ function applyExactMetrics() {
 
 function removeComparisonLines(card) {
   if (!card) return;
+  // Only remove nodes created by this helper. Never delete untagged comparison
+  // nodes because those may be owned by React's StatCard tree; manually
+  // removing React-managed children can break reconciliation and blank the app.
   card.querySelectorAll(".engage-db-comparison").forEach((node) => node.remove());
-  [...card.querySelectorAll("div")].forEach((node) => {
-    if (node.classList.contains("engage-db-comparison")) return;
-    const text = (node.textContent || "").replace(/\s+/g, " ").trim();
-    if (/^(↑ New|↑ \d+%|↓ \d+%|— Same)\s+vs last (week|month)$/.test(text)) node.remove();
-  });
 }
 
 function cleanAllComparisonCards() {
