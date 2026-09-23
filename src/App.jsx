@@ -2060,7 +2060,7 @@ function ReportsPage({ salesmen, leads }) {
       {active === "performance" && <SalesmanPerformanceReport salesmen={salesmen} leads={leads} />}
       {active === "funnel" && <FunnelReport leads={leads} />}
       {active === "renewals" && <RenewalsReport leads={leads} />}
-      {active === "payments" && <PaymentDueReport salesmen={salesmen} />}
+      {active === "payments" && <CollectionsPanel embedded />}
       {active === "expenses" && <ExpensesReport salesmen={salesmen} />}
       {active === "daily" && <DailyActivityReport salesmen={salesmen} />}
       {active === "stage" && <TimeInStageReport />}
