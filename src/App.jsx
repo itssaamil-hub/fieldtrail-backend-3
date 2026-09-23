@@ -3456,6 +3456,15 @@ function DuplicateLeadWarning({ result }) {
   );
 }
 
+// Compact presentation shared only by the two Add Lead forms.
+function AddLeadField({ label, children }) {
+  return <div style={{ marginBottom: 8, minWidth: 0 }}><div style={{ fontSize: 11.5, color: T.inkSoft, fontWeight: 600, marginBottom: 4 }}>{label}</div>{children}</div>;
+}
+
+function AddLeadSection({ children }) {
+  return <div role="heading" aria-level={3} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11.5, fontWeight: 700, color: T.route, marginBottom: 6 }}><span>{children}</span><span aria-hidden="true" style={{ flex: 1, height: 1, background: T.line }} /></div>;
+}
+
 function AdminAddLeadModal({ salesmen, onClose, onSubmit }) {
   const activeSalesmen = salesmen.filter((s) => s.isActive);
   const [form, setForm] = useState({
@@ -3519,36 +3528,39 @@ function AdminAddLeadModal({ salesmen, onClose, onSubmit }) {
         <div style={{ fontSize: 13, color: T.inkSoft }}>Add an active employee first before creating a lead for them.</div>
       ) : (
         <>
-          <Field label="Assign to">
+          <AddLeadField label="Assign to">
             <select style={inputStyle} value={form.salesmanId} onChange={set("salesmanId")}>
               {activeSalesmen.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
-          </Field>
-          <Field label="Business Name"><input style={inputStyle} value={form.business} onChange={set("business")} placeholder="e.g. Sharma Textiles" autoFocus /></Field>
-          <Field label="Sub Location"><input style={inputStyle} value={form.subLocation} onChange={set("subLocation")} /></Field>
-          <Field label="POS Name"><input style={inputStyle} value={form.posName} onChange={set("posName")} /></Field>
-          <Field label="Contact Name"><input style={inputStyle} value={form.owner} onChange={set("owner")} /></Field>
-          <Field label="Contact Number"><input style={inputStyle} value={form.phone} onChange={set("phone")} /></Field>
+          </AddLeadField>
+          <AddLeadSection>Restaurant details</AddLeadSection>
+          <AddLeadField label="Business Name"><input style={inputStyle} value={form.business} onChange={set("business")} placeholder="e.g. Ganga Cafe" autoFocus /></AddLeadField>
+          <AddLeadField label="Sub Location"><input style={inputStyle} value={form.subLocation} onChange={set("subLocation")} /></AddLeadField>
+          <AddLeadField label="POS Name"><input style={inputStyle} value={form.posName} onChange={set("posName")} /></AddLeadField>
+          <AddLeadSection>Contact details</AddLeadSection>
+          <AddLeadField label="Contact Name"><input style={inputStyle} value={form.owner} onChange={set("owner")} /></AddLeadField>
+          <AddLeadField label="Contact Number"><input style={inputStyle} value={form.phone} onChange={set("phone")} /></AddLeadField>
           <DuplicateLeadWarning result={duplicateResult} />
+          <AddLeadSection>Deal &amp; follow-up</AddLeadSection>
           <div style={{ display: "flex", gap: 10 }}>
-            <div style={{ flex: 1 }}><Field label="Renewal Month">
+            <div style={{ flex: 1, minWidth: 0 }}><AddLeadField label="Renewal Month">
               <select style={inputStyle} value={form.renewalMonth} onChange={set("renewalMonth")}>
                 <option value="">Select…</option>
                 {MONTH_NAMES.map((m) => <option key={m} value={m}>{m}</option>)}
               </select>
-            </Field></div>
-            <div style={{ flex: 1 }}><Field label="Renewal Date"><input style={inputStyle} type="date" value={form.renewalDate} onChange={set("renewalDate")} /></Field></div>
+            </AddLeadField></div>
+            <div style={{ flex: 1, minWidth: 0 }}><AddLeadField label="Renewal Date"><input style={inputStyle} type="date" value={form.renewalDate} onChange={set("renewalDate")} /></AddLeadField></div>
           </div>
           <div style={{ display: "flex", gap: 10 }}>
-            <div style={{ flex: 1 }}><Field label="Status">
+            <div style={{ flex: 1, minWidth: 0 }}><AddLeadField label="Status">
               <select style={inputStyle} value={form.status} onChange={set("status")}>
                 {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
               </select>
-            </Field></div>
-            <div style={{ flex: 1 }}><Field label={`Next Follow-up${leadSettings?.requireFollowUpDate ? " *" : ""}`}><input style={inputStyle} type="date" value={form.nextFollowUpDate} onChange={set("nextFollowUpDate")} /></Field></div>
+            </AddLeadField></div>
+            <div style={{ flex: 1, minWidth: 0 }}><AddLeadField label={`Next Follow-up${leadSettings?.requireFollowUpDate ? " *" : ""}`}><input style={inputStyle} type="date" value={form.nextFollowUpDate} onChange={set("nextFollowUpDate")} /></AddLeadField></div>
           </div>
-          <Field label="Expected Deal Value"><input style={inputStyle} type="number" min="0" value={form.dealValue} onChange={set("dealValue")} placeholder="₹ e.g. 45000" /></Field>
-          <Field label="Comments"><textarea style={{ ...inputStyle, minHeight: 60 }} value={form.notes} onChange={set("notes")} /></Field>
+          <AddLeadField label="Expected Deal Value"><input style={inputStyle} type="number" min="0" value={form.dealValue} onChange={set("dealValue")} placeholder="₹ e.g. 45000" /></AddLeadField>
+          <AddLeadField label="Comments"><textarea style={{ ...inputStyle, minHeight: 60 }} value={form.notes} onChange={set("notes")} /></AddLeadField>
 
           {error && <div style={{ fontSize: 12.5, color: T.danger, marginBottom: 10 }}>{error}</div>}
           <button
@@ -5037,25 +5049,33 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
         </div>
       )}
 
-      <Field label={`Business / Restaurant name${leadSettings.requireBusinessName ? " *" : ""}`}>
+      <AddLeadSection>Restaurant details</AddLeadSection>
+      <AddLeadField label={`Business / Restaurant name${leadSettings.requireBusinessName ? " *" : ""}`}>
         <input style={inputStyle} value={form.business} onChange={set("business")} placeholder="e.g. Ganga Cafe" />
-      </Field>
-      <Field label={`Sub Location${leadSettings.requireSubLocation ? " *" : ""}`}>
+      </AddLeadField>
+      <AddLeadField label={`Sub Location${leadSettings.requireSubLocation ? " *" : ""}`}>
         <input style={inputStyle} value={form.subLocation} onChange={set("subLocation")} placeholder="e.g. Gomti Nagar" list="sub-location-options" />
         <datalist id="sub-location-options">
           {(fieldOptions.sub_location || []).map((v) => <option key={v} value={v} />)}
         </datalist>
-      </Field>
-      <Field label={`POS Name${leadSettings.requirePosName ? " *" : ""}`}>
+      </AddLeadField>
+      <AddLeadField label={`POS Name${leadSettings.requirePosName ? " *" : ""}`}>
         <input style={inputStyle} value={form.posName} onChange={set("posName")} placeholder="Current POS/software being used" list="pos-name-options" />
         <datalist id="pos-name-options">
           {(fieldOptions.pos_name || []).map((v) => <option key={v} value={v} />)}
         </datalist>
-      </Field>
-      <Field label={`Contact Name${leadSettings.requireContactName ? " *" : ""}`}>
+      </AddLeadField>
+      <AddLeadField label="Category">
+        <input style={inputStyle} value={form.category} onChange={set("category")} placeholder="e.g. Cafe" list="category-options" />
+        <datalist id="category-options">
+          {(fieldOptions.category?.length ? fieldOptions.category : ["Cafe", "QSR", "Casual Dining", "Fine Dining", "Cloud Kitchen", "Bakery"]).map((v) => <option key={v} value={v} />)}
+        </datalist>
+      </AddLeadField>
+      <AddLeadSection>Contact details</AddLeadSection>
+      <AddLeadField label={`Contact Name${leadSettings.requireContactName ? " *" : ""}`}>
         <input style={inputStyle} value={form.owner} onChange={set("owner")} />
-      </Field>
-      <Field label={`Contact Number${leadSettings.requireContactNumber ? " *" : ""}`}>
+      </AddLeadField>
+      <AddLeadField label={`Contact Number${leadSettings.requireContactNumber ? " *" : ""}`}>
         <div style={{ display: "flex", gap: 6 }}>
           <input style={{ ...inputStyle, marginBottom: 0, flex: 1 }} value={form.phone} onChange={set("phone")} />
           {contactPickerSupported && (
@@ -5069,53 +5089,44 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
             </button>
           )}
         </div>
-      </Field>
+      </AddLeadField>
       <DuplicateLeadWarning result={duplicateResult} />
-      <Field label="Category">
-        <input style={inputStyle} value={form.category} onChange={set("category")} placeholder="e.g. Cafe" list="category-options" />
-        <datalist id="category-options">
-          {(fieldOptions.category?.length ? fieldOptions.category : ["Cafe", "QSR", "Casual Dining", "Fine Dining", "Cloud Kitchen", "Bakery"]).map((v) => <option key={v} value={v} />)}
-        </datalist>
-      </Field>
+      <AddLeadSection>Deal &amp; follow-up</AddLeadSection>
       {leadSettings.requireStatus && (
-        <Field label="Status *">
+        <AddLeadField label="Status *">
           <select style={inputStyle} value={form.status} onChange={set("status")}>
             {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
           </select>
-        </Field>
+        </AddLeadField>
       )}
       <div style={{ display: "flex", gap: 10 }}>
-        <div style={{ flex: 1 }}>
-          <Field label={`Expected Deal Value${leadSettings.requireDealValue ? " *" : ""}`}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <AddLeadField label={`Expected Deal Value${leadSettings.requireDealValue ? " *" : ""}`}>
             <input style={inputStyle} type="number" min="0" inputMode="decimal" value={form.dealValue} onChange={set("dealValue")} placeholder="₹ e.g. 45000" />
-          </Field>
+          </AddLeadField>
         </div>
-        <div style={{ flex: 1 }}>
-          <Field label={`Next Follow-up${leadSettings.requireFollowUpDate ? " *" : ""}`}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <AddLeadField label={`Next Follow-up${leadSettings.requireFollowUpDate ? " *" : ""}`}>
             <input style={inputStyle} type="date" value={form.nextFollowUpDate} onChange={set("nextFollowUpDate")} />
-          </Field>
+          </AddLeadField>
         </div>
       </div>
       <div style={{ display: "flex", gap: 10 }}>
-        <div style={{ flex: 1 }}>
-          <Field label="Renewal Month">
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <AddLeadField label="Renewal Month">
             <select style={inputStyle} value={form.renewalMonth} onChange={set("renewalMonth")}>
               <option value="">Select…</option>
               {MONTH_NAMES.map((m) => <option key={m} value={m}>{m}</option>)}
             </select>
-          </Field>
+          </AddLeadField>
         </div>
-        <div style={{ flex: 1 }}>
-          <Field label="Renewal Date"><input style={inputStyle} type="date" value={form.renewalDate} onChange={set("renewalDate")} /></Field>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <AddLeadField label="Renewal Date"><input style={inputStyle} type="date" value={form.renewalDate} onChange={set("renewalDate")} /></AddLeadField>
         </div>
       </div>
-      <Field label={`Comments${leadSettings.requireComments ? " *" : ""}`}>
+      <AddLeadField label={`Comments${leadSettings.requireComments ? " *" : ""}`}>
         <textarea style={{ ...inputStyle, minHeight: 60 }} value={form.notes} onChange={set("notes")} />
-      </Field>
-
-      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 10px", border: `1px dashed ${T.line}`, borderRadius: 11, color: T.inkSoft, fontSize: 12.5, marginBottom: 14 }}>
-        <Camera size={15} /> Photo capture — not wired up yet (backend accepts a photoUrl once you add upload storage).
-      </div>
+      </AddLeadField>
 
       {error && <div style={{ fontSize: 12.5, color: T.danger, background: T.dangerSoft, borderRadius: 11, padding: "8px 10px", marginBottom: 12 }}>{error}</div>}
 
@@ -5260,3 +5271,4 @@ function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads", allowD
     </Overlay>
   );
 }
+
