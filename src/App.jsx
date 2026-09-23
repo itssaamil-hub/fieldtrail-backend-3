@@ -1,3 +1,4 @@
+import DesktopSidebar, { useDesktopSidebar } from "./DesktopSidebar.jsx";
 import SaveFeedback from "./SaveFeedback.jsx";
 import { showSaveFeedback } from "./saveFeedback.js";
 import AdminMobileNav, { useAdminPhone, salesmanTabs } from "./AdminMobileNav.jsx";
@@ -447,6 +448,20 @@ export default function App() {
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notificationLead, setNotificationLead] = useState(null);
+  const desktop = useDesktopSidebar();
+  const [desktopSection, setDesktopSection] = useState("dashboard");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try { return localStorage.getItem("engage:sidebar-collapsed") === "true"; } catch { return false; }
+  });
+  const adminDesktop = desktop && session?.role === "admin";
+  const selectDesktopSection = section => {
+    setDesktopSection(section);
+    setTopPage(section === "reports" ? "reports" : "dashboard");
+  };
+  const toggleSidebar = () => setSidebarCollapsed(value => {
+    try { localStorage.setItem("engage:sidebar-collapsed", String(!value)); } catch { /* optional preference */ }
+    return !value;
+  });
   const [topPage, setTopPage] = useState("dashboard"); // "dashboard" | "reports" — lives here so the toggle can live in the dark TopBar, for both roles
   const online = useOnlineStatus();
   const { canInstall, installed, promptInstall } = useInstallPrompt();
@@ -506,6 +521,8 @@ export default function App() {
   const handleLogout = () => {
     clearSession();
     setSessionState(null);
+    setDesktopSection("dashboard");
+    setTopPage("dashboard");
     closeNotifications();
     setNotificationLead(null);
     setShowOnboarding(false); setShowOnboardingSettings(false); setQuotationView(null); setShowDailyReports(false); setCollectionView(null);
@@ -534,14 +551,16 @@ export default function App() {
   } else if (!session) {
     body = <LoginScreen apiBase={apiBase} online={online} onLoggedIn={handleLoggedIn} onOpenSettings={() => setShowSettings(true)} />;
   } else if (session.role === "admin") {
-    body = <AdminApp notificationLead={notificationLead} session={session} online={online} onLogout={handleLogout} page={topPage} />;
+    body = <AdminApp desktopSection={adminDesktop ? (topPage === "reports" ? "reports" : desktopSection === "reports" ? "dashboard" : desktopSection) : null} notificationLead={notificationLead} session={session} online={online} onLogout={handleLogout} page={topPage} />;
   } else {
     body = <SalesmanApp key={`salesman-${session.id}`} notificationLead={notificationLead} session={session} online={online} onLogout={handleLogout} page={topPage} />;
   }
 
   return (
-    <div style={{ fontFamily: "Inter, system-ui, sans-serif", background: T.paper, minHeight: "100vh", color: T.ink }}>
+    <div className={adminDesktop ? `engage-desktop-shell${sidebarCollapsed ? " sidebar-collapsed" : ""}` : undefined} style={{ fontFamily: "Inter, system-ui, sans-serif", background: T.paper, minHeight: "100vh", color: T.ink }}>
+      {adminDesktop && <DesktopSidebar active={topPage === "reports" ? "reports" : desktopSection === "reports" ? "dashboard" : desktopSection} collapsed={sidebarCollapsed} onCollapse={toggleSidebar} onSelect={selectDesktopSection} settingsOpen={showSettings} onSettings={() => { closeNotifications(); setShowOnboarding(false); setShowSettings(true); }} />}
       <TopBar
+        hidePageNavigation={adminDesktop}
         online={online}
         session={session}
         page={session ? topPage : undefined}
@@ -601,7 +620,7 @@ function LogoMark({ size = 20 }) {
   );
 }
 
-function TopBar({ online, session, page, onChangePage, onAddExpense, onOpenSettings, onOpenOnboarding, onOpenCollections, onOpenDailyReports, onOpenQuotations, onOpenApprovals, onOpenNotifications, unreadCount = 0 }) {
+function TopBar({ hidePageNavigation = false, online, session, page, onChangePage, onAddExpense, onOpenSettings, onOpenOnboarding, onOpenCollections, onOpenDailyReports, onOpenQuotations, onOpenApprovals, onOpenNotifications, unreadCount = 0 }) {
   const [narrow, setNarrow] = useState(window.innerWidth < 560);
   useEffect(() => {
     const onResize = () => setNarrow(window.innerWidth < 560);
@@ -623,7 +642,7 @@ function TopBar({ online, session, page, onChangePage, onAddExpense, onOpenSetti
             </div>
           )}
 
-          {page && onChangePage && (
+          {!hidePageNavigation && page && onChangePage && (
             <div style={{ display: "flex", gap: 2, background: "rgba(255,255,255,0.14)", borderRadius: 7, padding: 2, border: "1px solid rgba(255,255,255,0.22)" }}>
               <button
                 onClick={() => onChangePage("dashboard")}
@@ -1523,7 +1542,7 @@ function LiveMap({ salesmen, leads, onSelectLead, title = "Live Employees & Lead
 // for instant pushes (new leads, live location, status changes), and falls
 // back to a periodic refetch as a safety net if the socket drops.
 // ---------------------------------------------------------------------------
-function AdminApp({ session, online, page, notificationLead }) {
+function AdminApp({ desktopSection, session, online, page, notificationLead }) {
   const [conversationCount, setConversationCount] = useState(null);
   const [salesmen, setSalesmen] = useState([]);
   const [leads, setLeads] = useState([]);
@@ -1678,6 +1697,7 @@ function AdminApp({ session, online, page, notificationLead }) {
 
   return (
     <AdminView
+      desktopSection={desktopSection}
       conversationCount={conversationCount}
       salesmen={salesmen}
       leads={leads}
@@ -1698,9 +1718,23 @@ function AdminApp({ session, online, page, notificationLead }) {
   );
 }
 
-function AdminView({ conversationCount, salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead, onAddLead, onAddSalesman, onEditSalesman, onDeleteSalesman, onToggleSalesmanActive, loadError, wsConnected, online, page, notificationLead }) {
+function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead, onAddLead, onAddSalesman, onEditSalesman, onDeleteSalesman, onToggleSalesmanActive, loadError, wsConnected, online, page, notificationLead }) {
   const phone = useAdminPhone();
   const [mobileTab, setMobileTab] = useState("dashboard");
+  const [tasksVisited, setTasksVisited] = useState(false);
+  const desktopPositions = useRef({});
+  const previousDesktopSection = useRef(null);
+  useEffect(() => {
+    if (!desktopSection) return;
+    if (desktopSection === "tasks") setTasksVisited(true);
+    const previous = previousDesktopSection.current;
+    if (previous) desktopPositions.current[previous] = window.scrollY;
+    previousDesktopSection.current = desktopSection;
+    const frame = requestAnimationFrame(() => window.scrollTo({ top: desktopPositions.current[desktopSection] || 0, behavior: "instant" }));
+    return () => cancelAnimationFrame(frame);
+  }, [desktopSection]);
+  const section = desktopSection || mobileTab;
+  const sectionNavigation = phone || Boolean(desktopSection);
   const [expensesVisited, setExpensesVisited] = useState(false);
   const scrollPositions = useRef({});
   const switchMobileTab = (tab) => {
@@ -1713,8 +1747,8 @@ function AdminView({ conversationCount, salesmen, leads, onStatusChange, onUpdat
     const frame = requestAnimationFrame(() => window.scrollTo({ top: scrollPositions.current[mobileTab] || 0, behavior: "instant" }));
     return () => cancelAnimationFrame(frame);
   }, [mobileTab, phone]);
-  const showDashboard = !phone || mobileTab === "dashboard";
-  const showLeads = showDashboard || mobileTab === "leads" || mobileTab === "deals";
+  const showDashboard = !sectionNavigation || section === "dashboard";
+  const showLeads = showDashboard || section === "leads" || section === "deals";
   const [conversationError, setConversationError] = useState("");
   const [filterSalesman, setFilterSalesman] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -1820,9 +1854,9 @@ function AdminView({ conversationCount, salesmen, leads, onStatusChange, onUpdat
       </div>
 
       </div>
-      <div hidden={!showDashboard && mobileTab !== "employees"}>
-      {mapView === "live" || (phone && mobileTab === "employees") ? (
-        <div className={phone && mobileTab === "employees" ? undefined : "ft-dashboard-grid"}>
+      <div hidden={!showDashboard && section !== "employees"}>
+      {mapView === "live" || (sectionNavigation && section === "employees") ? (
+        <div className={sectionNavigation && section === "employees" ? undefined : "ft-dashboard-grid"}>
           {showDashboard && <LiveMap salesmen={salesmen} leads={leads} onSelectLead={setSelectedLead} />}
           <SalesmenPanel
             salesmen={salesmen}
@@ -1844,9 +1878,9 @@ function AdminView({ conversationCount, salesmen, leads, onStatusChange, onUpdat
       <div hidden={!showLeads}>
       <div className="ft-card" style={{ marginTop: 20, background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, padding: 18 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
-          <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16 }}>{phone && mobileTab === "deals" ? "Deals" : "Leads"}</div>
+          <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16 }}>{sectionNavigation && section === "deals" ? (desktopSection ? "Deals Pipeline" : "Deals") : "Leads"}</div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ display: phone && mobileTab !== "dashboard" ? "none" : "flex", gap: 2, background: T.paperDeep, borderRadius: 8, padding: 2 }}>
+            <div style={{ display: sectionNavigation && section !== "dashboard" ? "none" : "flex", gap: 2, background: T.paperDeep, borderRadius: 8, padding: 2 }}>
               <button
                 onClick={() => setLeadsViewMode("list")}
                 style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, padding: "5px 10px", borderRadius: 6, border: "none", cursor: "pointer", background: leadsViewMode === "list" ? "#fff" : "transparent", color: leadsViewMode === "list" ? T.ink : T.inkSoft, boxShadow: leadsViewMode === "list" ? "0 1px 2px rgba(20,20,30,0.08)" : "none" }}
@@ -1929,7 +1963,7 @@ function AdminView({ conversationCount, salesmen, leads, onStatusChange, onUpdat
           </div>
         )}
 
-        {(phone && mobileTab === "leads") || (!(phone && mobileTab === "deals") && leadsViewMode === "list") ? (
+        {(sectionNavigation && section === "leads") || (!(sectionNavigation && section === "deals") && leadsViewMode === "list") ? (
           <>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {pagedLeads.map((l) => (
@@ -1989,6 +2023,7 @@ function AdminView({ conversationCount, salesmen, leads, onStatusChange, onUpdat
 
       </div>
       {expensesVisited && <div hidden={!phone || mobileTab !== "expenses"}><ExpensesReport salesmen={salesmen} /></div>}
+      {tasksVisited && <div hidden={desktopSection !== "tasks"}><TasksModal embedded active={desktopSection === "tasks"} /></div>}
       <AdminMobileNav active={mobileTab} onChange={switchMobileTab} />
 
       {selectedLead && <LeadDetailDrawer lead={leads.find((l) => l.id === selectedLead.id) || selectedLead} onClose={() => setSelectedLead(null)} onStatusChange={onStatusChange} onUpdate={onUpdateLead} onDelete={onDeleteLead} fetchHistory={api.adminLeadHistory} isAdmin />}
@@ -5421,3 +5456,4 @@ function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads", allowD
 function EmbeddedLeads({ title, children }) {
   return <section><h2 style={{ fontSize: 18, margin: "0 0 14px" }}>{title}</h2>{children}</section>;
 }
+

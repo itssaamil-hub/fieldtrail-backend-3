@@ -1,0 +1,20 @@
+.engage-desktop-sidebar { display: none; }
+@media (min-width:1024px) {
+  .engage-desktop-shell { padding-left: 200px; }
+  .engage-desktop-shell.sidebar-collapsed { padding-left: 64px; }
+  .engage-desktop-sidebar { position: fixed; inset: 0 auto 0 0; z-index: 50; width: 200px; display: flex; flex-direction: column; padding: env(safe-area-inset-top,0px) 10px 12px; color: #e5f0ef; background: #0f3d3e; border-right: 1px solid #ffffff12; overflow-y: auto; }
+  .engage-desktop-sidebar.is-collapsed { width: 64px; padding-left: 7px; padding-right: 7px; }
+  .engage-sidebar-brand { display: flex; align-items: center; gap: 10px; min-height: 64px; padding: 14px 10px; font: 700 21px 'Space Grotesk',sans-serif; color: #fff; white-space: nowrap; }
+  .engage-sidebar-brand img { object-fit: cover; border-radius: 7px; flex-shrink: 0; }
+  .engage-desktop-sidebar nav { padding-top: 16px; }
+  .engage-desktop-sidebar button { display: flex; align-items: center; gap: 11px; width: 100%; min-height: 44px; margin-bottom: 5px; padding: 11px 12px; border: none; border-radius: 8px; background: transparent; color: inherit; font: 500 12.5px Inter,sans-serif; text-align: left; cursor: pointer; white-space: nowrap; }
+  .engage-desktop-sidebar button svg { flex-shrink: 0; }
+  .engage-desktop-sidebar button:hover { background: #ffffff10; }
+  .engage-desktop-sidebar button[aria-current=page],.engage-desktop-sidebar button[aria-pressed=true] { background: #286162; color: #fff; font-weight: 700; box-shadow: inset 3px 0 #9bd5c9; }
+  .engage-desktop-sidebar button:focus-visible { outline: 2px solid #b9e5dc; outline-offset: -2px; }
+  .engage-sidebar-footer { margin-top: auto; padding-top: 24px; }
+  .engage-desktop-sidebar.is-collapsed button { justify-content: center; padding-left: 10px; padding-right: 10px; }
+  .engage-desktop-sidebar.is-collapsed .engage-sidebar-brand { justify-content: center; padding-left: 0; padding-right: 0; }
+  .engage-desktop-sidebar.is-collapsed button span,.engage-desktop-sidebar.is-collapsed .engage-sidebar-brand span { display: none; }
+  .engage-desktop-section-title { font: 700 20px 'Space Grotesk',sans-serif; color: #233b3b; margin: 0 0 16px; }
+}
