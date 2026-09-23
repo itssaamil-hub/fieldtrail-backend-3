@@ -3717,7 +3717,7 @@ function whatsappLink(phone) {
   return `https://wa.me/${digits}`;
 }
 
-function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, fetchHistory, isAdmin = false }) {
+function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, fetchHistory, isAdmin = false, employeeRepliesEnabled = true }) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [editing, setEditing] = useState(false);
   const [history, setHistory] = useState(null); // null = loading, [] = loaded & empty
@@ -3731,7 +3731,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
   const [statusExpanded, setStatusExpanded] = useState(false);
   const [statusToast, setStatusToast] = useState(null);
   const statusToastTimer = useRef(null);
-  const [mentionText, setMentionText] = useState(lead.salesmanName ? `@${lead.salesmanName} ` : "");
+  const [mentionText, setMentionText] = useState(isAdmin && lead.salesmanName ? `@${lead.salesmanName} ` : "");
   const [mentionSending, setMentionSending] = useState(false);
   const [mentionError, setMentionError] = useState("");
   const [mentionSaved, setMentionSaved] = useState("");
@@ -3780,16 +3780,26 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
 
 
   const sendLeadMention = async () => {
-    if (!isAdmin || mentionSending) return;
+    if (mentionSending || (!isAdmin && !employeeRepliesEnabled)) return;
     const body = mentionText.trim();
     if (!body) return;
     setMentionSending(true); setMentionError(""); setMentionSaved("");
     try {
-      await api.adminSendLeadMention(lead.id, body);
-      setMentionSaved(`Sent to ${lead.salesmanName || "salesman"}.`);
-      setMentionText(lead.salesmanName ? `@${lead.salesmanName} ` : "");
+      if (isAdmin) {
+        await api.adminSendLeadMention(lead.id, body);
+        setMentionSaved(`Sent to ${lead.salesmanName || "salesman"}.`);
+        setMentionText(lead.salesmanName ? `@${lead.salesmanName} ` : "");
+      } else {
+        const latestAdminMessage = [...(history || [])]
+          .filter(h => h.action === "lead.admin_mention" && h.message_id)
+          .sort((a,b) => new Date(b.changed_at) - new Date(a.changed_at))[0];
+        if (!latestAdminMessage) throw new Error("Admin needs to send the first message for this lead.");
+        await api.salesmanReplyMessage(latestAdminMessage.message_id, body);
+        setMentionSaved("Reply sent.");
+        setMentionText("");
+      }
       setHistoryRefresh(v => v + 1);
-    } catch (err) { setMentionError(err.message || "Couldn't send instruction."); }
+    } catch (err) { setMentionError(err.message || "Couldn't send message."); }
     finally { setMentionSending(false); }
   };
 
@@ -4308,10 +4318,10 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                     </div>;
                   })}
                 </div>
-                {isAdmin && <div style={{ padding: 12, background: "#fff", borderTop: `1px solid ${T.line}` }}>
+                {(isAdmin || employeeRepliesEnabled) && <div style={{ padding: 12, background: "#fff", borderTop: `1px solid ${T.line}` }}>
                   <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
-                    <textarea value={mentionText} onChange={e => { setMentionText(e.target.value); setMentionError(""); }} rows={2} maxLength={2000} placeholder="Write a message…" style={{ flex: 1, resize: "none", border: `1px solid ${T.line}`, borderRadius: 10, padding: "9px 10px", font: "inherit", fontSize: 13 }} />
-                    <button disabled={mentionSending || !mentionText.trim()} onClick={sendLeadMention} style={{ border: "none", borderRadius: 9, background: T.route, color: "#fff", padding: "10px 13px", fontWeight: 800, cursor: "pointer", opacity: mentionSending || !mentionText.trim() ? .55 : 1 }}>{mentionSending ? "…" : "Send"}</button>
+                    <textarea value={mentionText} onChange={e => { setMentionText(e.target.value); setMentionError(""); }} rows={2} maxLength={2000} placeholder={isAdmin ? "Write a message…" : "Reply to Admin…"} style={{ flex: 1, resize: "none", border: `1px solid ${T.line}`, borderRadius: 10, padding: "9px 10px", font: "inherit", fontSize: 13 }} />
+                    <button disabled={mentionSending || !mentionText.trim()} onClick={sendLeadMention} style={{ border: "none", borderRadius: 9, background: T.route, color: "#fff", padding: "10px 13px", fontWeight: 800, cursor: "pointer", opacity: mentionSending || !mentionText.trim() ? .55 : 1 }}>{mentionSending ? "…" : (isAdmin ? "Send" : "Reply")}</button>
                   </div>
                   {mentionError && <div style={{ color: T.danger, fontSize: 11.5, marginTop: 5 }}>{mentionError}</div>}
                 </div>}
@@ -4905,7 +4915,7 @@ function SalesmanView({ notificationLead, session, leads, dayStarted, allowLeadW
           onSelectLead={(l) => { setShowRenewals(false); setViewingLead(l); }}
         />
       )}
-      {viewingLead && <LeadDetailDrawer lead={leads.find((l) => l.id === viewingLead.id) || viewingLead} onClose={() => setViewingLead(null)} onStatusChange={onUpdateLeadStatus} onUpdate={onUpdateLeadDetails} fetchHistory={api.salesmanLeadHistory} />}
+      {viewingLead && <LeadDetailDrawer lead={leads.find((l) => l.id === viewingLead.id) || viewingLead} onClose={() => setViewingLead(null)} onStatusChange={onUpdateLeadStatus} onUpdate={onUpdateLeadDetails} fetchHistory={api.salesmanLeadHistory} employeeRepliesEnabled={employeeRepliesEnabled} />}
       </>
       )}
     </div>
