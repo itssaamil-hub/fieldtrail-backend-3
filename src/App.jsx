@@ -1,3 +1,4 @@
+import CollectionsPanel, {CollectionsEntry} from "./Collections.jsx";
 import SalesmanBriefPopup from "./SalesmanBrief.jsx";
 import {EmployeeSettings, DayClosingForm, DayClosingReports, DayClosingReportsEntry} from "./DayClosing.jsx";
 import QuotationsPanel, { QuotationSettings } from "./Quotations.jsx";
@@ -413,6 +414,9 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showDailyReports,setShowDailyReports] = useState(false);
+  const [collectionView,setCollectionView]=useState(null);
+  useEffect(()=>{const open=e=>{setQuotationView(null);setShowOnboarding(false);setShowSettings(false);setCollectionView({initialKey:e.detail?.key||null});};window.addEventListener('fieldtrail:open-collections',open);return()=>window.removeEventListener('fieldtrail:open-collections',open);},[]);
+
   const [quotationView, setQuotationView] = useState(null);
   const [showOnboardingSettings, setShowOnboardingSettings] = useState(false);
   const [showCrmSettings, setShowCrmSettings] = useState(false);
@@ -480,7 +484,7 @@ export default function App() {
     setSessionState(null);
     closeNotifications();
     setNotificationLead(null);
-    setShowOnboarding(false); setShowOnboardingSettings(false); setQuotationView(null); setShowDailyReports(false);
+    setShowOnboarding(false); setShowOnboardingSettings(false); setQuotationView(null); setShowDailyReports(false); setCollectionView(null);
   };
 
   let body;
@@ -505,6 +509,7 @@ export default function App() {
         unreadCount={unreadCount}
         onOpenNotifications={session ? () => { setShowSettings(false); setShowNotifications(true); } : undefined}
         onOpenSettings={() => { closeNotifications(); setShowOnboarding(false); setShowSettings(true); }}
+        onOpenCollections={()=>{closeNotifications();setShowSettings(false);setShowOnboarding(false);setQuotationView(null);setShowDailyReports(false);setCollectionView({});}}
         onOpenDailyReports={() => { closeNotifications(); setShowSettings(false); setShowOnboarding(false); setQuotationView(null); setShowDailyReports(true); }}
         onOpenOnboarding={() => { closeNotifications(); setQuotationView(null); setShowSettings(false); setShowOnboarding(true); }}
         onOpenQuotations={() => { closeNotifications(); setShowSettings(false); setShowOnboarding(false); setQuotationView({}); }}
@@ -530,6 +535,7 @@ export default function App() {
         />
       )}
       {session && quotationView && (quotationView.settings ? session.role === "admin" && <QuotationSettings onClose={() => setQuotationView(null)} /> : <QuotationsPanel key={`${session.id}-${quotationView.initialId||"list"}-${!!quotationView.approvals}`} {...quotationView} onClose={() => setQuotationView(null)} />)}
+      {session && collectionView && <CollectionsPanel {...collectionView} onClose={()=>setCollectionView(null)}/>}
       {session && showDailyReports && <DayClosingReports onClose={()=>setShowDailyReports(false)}/>}
       {session && showOnboarding && <OnboardingPanel key={session.id} onClose={() => setShowOnboarding(false)} />}
       {session?.role === "admin" && showOnboardingSettings && <OnboardingTemplateEditor onClose={() => setShowOnboardingSettings(false)} />}
@@ -553,7 +559,7 @@ function LogoMark({ size = 20 }) {
   );
 }
 
-function TopBar({ online, session, page, onChangePage, onAddExpense, onOpenSettings, onOpenOnboarding, onOpenDailyReports, onOpenQuotations, onOpenApprovals, onOpenNotifications, unreadCount = 0 }) {
+function TopBar({ online, session, page, onChangePage, onAddExpense, onOpenSettings, onOpenOnboarding, onOpenCollections, onOpenDailyReports, onOpenQuotations, onOpenApprovals, onOpenNotifications, unreadCount = 0 }) {
   const [narrow, setNarrow] = useState(window.innerWidth < 560);
   useEffect(() => {
     const onResize = () => setNarrow(window.innerWidth < 560);
@@ -611,7 +617,7 @@ function TopBar({ online, session, page, onChangePage, onAddExpense, onOpenSetti
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <ConnectionPill online={online} />
           {onOpenNotifications && <button type="button" onClick={onOpenNotifications} title="Notifications" aria-label={unreadCount ? `Notifications, ${unreadCount} unread` : "Notifications"} style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 6, border: "1px solid rgba(255,255,255,0.22)", cursor: "pointer", background: "rgba(255,255,255,0.14)", color: "#fff" }}><Bell size={14} />{unreadCount > 0 && <span className="ft-notification-badge" aria-hidden="true">{unreadCount > 99 ? "99+" : unreadCount}</span>}</button>}
-          <AppMenu signedIn={!!session} onSettings={onOpenSettings} onOnboarding={onOpenOnboarding} onQuotations={onOpenQuotations} onApprovals={onOpenApprovals} onDailyReports={session?.role === "salesman" ? onOpenDailyReports : undefined} />
+          <AppMenu onCollections={onOpenCollections} signedIn={!!session} onSettings={onOpenSettings} onOnboarding={onOpenOnboarding} onQuotations={onOpenQuotations} onApprovals={onOpenApprovals} onDailyReports={session?.role === "salesman" ? onOpenDailyReports : undefined} />
         </div>
       </div>
     </div>
@@ -2341,12 +2347,13 @@ function PaymentDueReport({ salesmen }) {
       .catch((err) => setError(err.message || "Couldn't load payments."));
   }, [salesmanId, onlyPending]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); window.addEventListener("fieldtrail:payments-updated",load); return()=>window.removeEventListener("fieldtrail:payments-updated",load); }, [load]);
 
   const exportParams = { salesmanId, onlyPending: onlyPending ? "true" : "" };
 
   return (
     <div>
+      <CollectionsEntry label="Collections, receipts & quotation accounts" />
       {summary && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10, marginBottom: 16 }}>
           <StatCard label="Pending" value={fmtMoney(summary.pendingTotal)} icon={Wallet} color={T.danger} />

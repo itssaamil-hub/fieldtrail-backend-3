@@ -129,6 +129,18 @@ export const api = {
   quoteSettings: () => request('/quotations/settings'),
   saveQuoteSettings: body => request('/quotations/settings',{method:'PUT',body}),
   quoteCustomers: search => request('/quotations/customers?'+new URLSearchParams({search})),
+  collections: params=>request('/collections?'+new URLSearchParams(params)),
+  collection: key=>request('/collections/'+encodeURIComponent(key)),
+  collectionFromQuote:(id,body)=>request('/collections/from-quotation/'+id,{method:'POST',body}),
+  collectionDue:(key,body)=>request('/collections/'+encodeURIComponent(key)+'/due-date',{method:'PUT',body}),
+  collectionPay:(key,body)=>request('/collections/'+encodeURIComponent(key)+'/payments',{method:'POST',body}),
+  collectionEdit:(key,id,body)=>request('/collections/'+encodeURIComponent(key)+'/payments/'+id,{method:'PATCH',body}),
+  collectionDelete:(key,id,body)=>request('/collections/'+encodeURIComponent(key)+'/payments/'+id,{method:'DELETE',body}),
+  collectionReceipt:(key,id)=>request('/collections/'+encodeURIComponent(key)+'/payments/'+id+'/receipt'),
+  collectionReceiptPDF:async(key,id)=>{
+    const r=await fetch(`${getApiBase()}/collections/${encodeURIComponent(key)}/payments/${id}/receipt?format=pdf`,{headers:{Authorization:`Bearer ${getSession()?.token||''}`}});
+    if(!r.ok){let data;try{data=await r.json()}catch{}throw new ApiError(data?.error||'Could not download receipt',r.status)}return r.blob();
+  },
   quotes: params => request('/quotations?'+new URLSearchParams(params)),
   deleteQuote: (id,body) => request('/quotations/'+id,{method:'DELETE',body}),
   quote: id => request('/quotations/'+id),
