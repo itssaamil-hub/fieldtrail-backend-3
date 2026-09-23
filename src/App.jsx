@@ -125,6 +125,33 @@ const isThisMonth = (d) => {
   const now = new Date();
   return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
 };
+const DASHBOARD_DISPLAY_KEY = "engage_dashboard_display_settings";
+const getDashboardDisplaySettings = () => {
+  try { return { showComparisons: true, comparisonPeriod: "weekly", ...JSON.parse(localStorage.getItem(DASHBOARD_DISPLAY_KEY) || "{}") }; }
+  catch { return { showComparisons: true, comparisonPeriod: "weekly" }; }
+};
+const periodBounds = (period, previous = false) => {
+  const now = new Date();
+  if (period === "monthly") {
+    const y = now.getFullYear(), m = now.getMonth() - (previous ? 1 : 0);
+    const start = new Date(y, m, 1);
+    const maxDay = new Date(y, m + 1, 0).getDate();
+    const end = previous ? new Date(y, m, Math.min(now.getDate(), maxDay), 23, 59, 59, 999) : now;
+    return [start, end];
+  }
+  const weekday = (now.getDay() + 6) % 7;
+  const currentStart = new Date(now); currentStart.setHours(0,0,0,0); currentStart.setDate(currentStart.getDate() - weekday);
+  const start = new Date(currentStart); if (previous) start.setDate(start.getDate() - 7);
+  const end = previous ? new Date(start.getTime() + (now.getTime() - currentStart.getTime())) : now;
+  return [start, end];
+};
+const comparisonFor = (items, period, predicate = () => true) => {
+  const [cs, ce] = periodBounds(period, false), [ps, pe] = periodBounds(period, true);
+  const current = items.filter(x => x.createdAt >= cs && x.createdAt <= ce && predicate(x)).length;
+  const previous = items.filter(x => x.createdAt >= ps && x.createdAt <= pe && predicate(x)).length;
+  if (previous === 0) return { current, previous, pct: current === 0 ? 0 : null };
+  return { current, previous, pct: Math.round(((current - previous) / previous) * 100) };
+};
 // True if a date falls between today and `days` days from now (inclusive) —
 // used for the "renewal/expiry coming up" box, not a rolling calendar month,
 // so it stays useful no matter what day you're looking on.
@@ -953,7 +980,7 @@ function SettingsModal({ apiBase, onClose, onSave, onLogout, onOpenCrmSettings, 
 // ---------------------------------------------------------------------------
 // Shared small pieces
 // ---------------------------------------------------------------------------
-function StatCard({ label, value, sub, color, icon: IconC, onClick }) {
+function StatCard({ label, value, sub, color, icon: IconC, onClick, comparison, comparisonPeriod }) {
   const c = color || T.ink;
   return (
     <div
@@ -975,6 +1002,7 @@ function StatCard({ label, value, sub, color, icon: IconC, onClick }) {
       </div>
       <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 24, fontWeight: 700, color: c }}>{value}</div>
       {sub && <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 2, overflowWrap: "break-word" }}>{sub}</div>}
+      {comparison && <div style={{fontSize:9.8,marginTop:4,fontWeight:700,color:comparison.pct==null?T.verified:comparison.pct>0?T.verified:comparison.pct<0?T.danger:T.inkSoft,whiteSpace:"nowrap"}}>{comparison.pct==null?"↑ New":comparison.pct>0?`↑ ${comparison.pct}%`:comparison.pct<0?`↓ ${Math.abs(comparison.pct)}%`:"— Same"} <span style={{fontWeight:500,color:T.inkSoft}}>vs last {comparisonPeriod==="monthly"?"month":"week"}</span></div>}
     </div>
   );
 }
@@ -1114,6 +1142,7 @@ function CrmSettingsModal({ onClose }) {
   const [leadSettings, setLeadSettings] = useState(null);
   const [locationSettings, setLocationSettings] = useState(null);
   const [messageSettings, setMessageSettings] = useState(null);
+  const [displaySettings, setDisplaySettings] = useState(getDashboardDisplaySettings);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -1201,6 +1230,15 @@ function CrmSettingsModal({ onClose }) {
             checked={messageSettings.employeeRepliesEnabled !== false}
             onChange={toggleMessage("employeeRepliesEnabled")}
           />
+          <div style={{fontSize:11,textTransform:"uppercase",color:T.inkSoft,fontWeight:700,letterSpacing:.4,marginTop:22,marginBottom:4}}>Display Settings</div>
+          <div style={{fontSize:12,color:T.inkSoft,marginBottom:8}}>Controls comparison indicators inside dashboard cards.</div>
+          <SettingToggle label="Show KPI Comparisons" description="Turn dashboard comparisons on or off." checked={displaySettings.showComparisons!==false} onChange={(val)=>{const next={...displaySettings,showComparisons:val};setDisplaySettings(next);localStorage.setItem(DASHBOARD_DISPLAY_KEY,JSON.stringify(next));window.dispatchEvent(new Event("engage-display-settings"));}} />
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,padding:"9px 2px"}}>
+            <div><div style={{fontSize:13,fontWeight:600}}>Comparison Period</div><div style={{fontSize:11.5,color:T.inkSoft,marginTop:2}}>Current period vs previous period.</div></div>
+            <select value={displaySettings.comparisonPeriod||"weekly"} onChange={(e)=>{const next={...displaySettings,comparisonPeriod:e.target.value};setDisplaySettings(next);localStorage.setItem(DASHBOARD_DISPLAY_KEY,JSON.stringify(next));window.dispatchEvent(new Event("engage-display-settings"));}} style={{border:`1px solid ${T.line}`,borderRadius:8,padding:"7px 9px",background:"#fff",fontSize:12.5}}>
+              <option value="weekly">Weekly</option><option value="monthly">Monthly</option>
+            </select>
+          </div>
 
           {saving && <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 12, display: "flex", alignItems: "center", gap: 6 }}><Loader2 size={12} className="spin" /> Saving…</div>}
         </>
@@ -1777,6 +1815,8 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
   const [viewingSalesmanLeads, setViewingSalesmanLeads] = useState(null);
   const [mapView, setMapView] = useState("live"); // "live" | "leads"
   const [dashboardSalesman, setDashboardSalesman] = useState("all");
+  const [dashboardDisplay, setDashboardDisplay] = useState(getDashboardDisplaySettings);
+  useEffect(() => { const sync=()=>setDashboardDisplay(getDashboardDisplaySettings()); window.addEventListener("engage-display-settings",sync); return()=>window.removeEventListener("engage-display-settings",sync); }, []);
   const [sheetsInfo, setSheetsInfo] = useState(null);
   const [sheetsError, setSheetsError] = useState("");
   const [statLeadsModal, setStatLeadsModal] = useState(null); // { title, leads } | null
@@ -1794,6 +1834,8 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
   const pending = dashboardLeads.filter((l) => !["won", "lost"].includes(l.status)).length;
   const upcomingFollowUps = dashboardLeads.filter((l) => l.nextFollowUpDate && new Date(l.nextFollowUpDate) >= new Date(new Date().toDateString()));
   const activeSalesmen = salesmen.filter((s) => s.status === "online").length;
+  const dashboardComparison = dashboardDisplay.showComparisons !== false ? comparisonFor(dashboardLeads, dashboardDisplay.comparisonPeriod || "weekly") : null;
+  const hotComparison = dashboardDisplay.showComparisons !== false ? comparisonFor(dashboardLeads, dashboardDisplay.comparisonPeriod || "weekly", (l) => l.status === "hot") : null;
 
   const filteredLeads = leads.filter(
     (l) =>
@@ -1831,9 +1873,9 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
         <StatCard label="Total Employees" value={salesmen.length} sub={<span style={{color:T.verified}}>{activeSalesmen} active now</span>} />
         <StatCard label="Conversation" value={conversationCount ?? "—"} color={T.route} onClick={async () => { try { setConversationError(""); const result=await api.adminLeads({status:"conversation"}); setStatLeadsModal({title:conversationCount>500?"Conversation Leads · Latest 500":"Conversation Leads",leads:(result.leads||[]).map(mapLeadRow)}); } catch(e) { setConversationError(e.message); } }} />
         <StatCard label="Leads Today" value={todayLeads.length} onClick={() => setStatLeadsModal({ title: "Leads Today", leads: todayLeads })} />
-        <StatCard label={<>Hot Leads <span style={{ fontSize: 8.5, opacity: 0.65 }}>TODAY</span></>} value={hotLeadsToday.length} color={T.danger} onClick={() => setStatLeadsModal({ title: "Hot Leads Today", leads: hotLeadsToday })} />
+        <StatCard label={<>Hot Leads <span style={{ fontSize: 8.5, opacity: 0.65 }}>TODAY</span></>} value={hotLeadsToday.length} comparison={hotComparison} comparisonPeriod={dashboardDisplay.comparisonPeriod} color={T.danger} onClick={() => setStatLeadsModal({ title: "Hot Leads Today", leads: hotLeadsToday })} />
         <StatCard label="In Negotiation" value={inNegotiation.length} color={T.route} onClick={() => setStatLeadsModal({ title: "In Negotiation", leads: inNegotiation })} />
-        <StatCard label="Total Leads" value={dashboardLeads.length} sub={`${pending} pending`} />
+        <StatCard label="Total Leads" value={dashboardLeads.length} sub={`${pending} pending`} comparison={dashboardComparison} comparisonPeriod={dashboardDisplay.comparisonPeriod} />
         <StatCard label="Won" value={converted} sub={convertedValue > 0 ? `${fmtMoney(convertedValue)} closed` : undefined} color={T.verified} onClick={() => setStatLeadsModal({ title: "Won Leads", leads: dashboardLeads.filter((l) => l.status === "won") })} />
         <StatCard label="Upcoming Follow-up" value={upcomingFollowUps.length} color={T.warn} onClick={() => setStatLeadsModal({ title: "Upcoming Follow-ups", leads: upcomingFollowUps })} />
         <StatCard label="Renewals Due" sub="next 30 days" value={upcomingRenewals.length} color={T.accent} onClick={() => setStatLeadsModal({ title: "Renewals Due (Next 30 Days)", leads: upcomingRenewals })} />
