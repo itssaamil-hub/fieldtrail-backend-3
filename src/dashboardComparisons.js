@@ -66,8 +66,16 @@ function dashboardEmployee() {
   return document.querySelector('select[aria-label="Dashboard employee"]')?.value || "all";
 }
 
+function isActuallyVisible(node) {
+  if (!node || !node.isConnected) return false;
+  if (node.closest('[hidden]')) return false;
+  const style = window.getComputedStyle(node);
+  if (style.display === "none" || style.visibility === "hidden") return false;
+  return node.getClientRects().length > 0;
+}
+
 function visibleCard(label) {
-  const cards = [...document.querySelectorAll(".ft-card")];
+  const cards = [...document.querySelectorAll(".ft-card")].filter(isActuallyVisible);
   return cards.find((card) => {
     const text = (card.textContent || "").replace(/\s+/g, " ").trim();
     if (label === "Hot Leads") return text.startsWith("Hot Leads");
