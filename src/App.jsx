@@ -54,6 +54,7 @@ import {
   Sparkles,
   Phone as PhoneIcon,
   MessageCircle as WhatsAppIcon,
+  Users,
 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
