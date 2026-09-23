@@ -1,6 +1,7 @@
 import { getApiBase, getSession } from "./api.js";
 
 const DISPLAY_KEY = "engage_dashboard_display_settings";
+const CACHE_KEY = "engage_dashboard_comparison_cache_v1";
 const COMPARISON_TARGETS = {
   Conversation: "conversation",
   "In Negotiation": "negotiation",
@@ -40,6 +41,24 @@ function settings() {
     };
   } catch {
     return { showComparisons: true, comparisonPeriod: "weekly" };
+  }
+}
+
+function readCachedLatest() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
+    if (!cached || !cached.metrics || !cached.comparisons || !cached.period) return null;
+    return cached;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedLatest(data) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+  } catch {
+    // Cache is only a fast-display fallback; dashboard still works without it.
   }
 }
 
@@ -93,9 +112,7 @@ function setCardSub(label, text) {
     return;
   }
 
-  if (!sub) {
-    sub = card.querySelector(":scope > .engage-db-sub");
-  }
+  if (!sub) sub = card.querySelector(":scope > .engage-db-sub");
   if (!sub) {
     sub = document.createElement("div");
     sub.className = "engage-db-sub";
@@ -125,9 +142,7 @@ function removeComparisonLines(card) {
   [...card.querySelectorAll("div")].forEach((node) => {
     if (node.classList.contains("engage-db-comparison")) return;
     const text = (node.textContent || "").replace(/\s+/g, " ").trim();
-    if (/^(↑ New|↑ \d+%|↓ \d+%|— Same)\s+vs last (week|month)$/.test(text)) {
-      node.remove();
-    }
+    if (/^(↑ New|↑ \d+%|↓ \d+%|— Same)\s+vs last (week|month)$/.test(text)) node.remove();
   });
 }
 
@@ -193,14 +208,23 @@ function render() {
   renderQueued = false;
   stopObserving();
   try {
-    cleanAllComparisonCards();
-    applyExactMetrics();
-
     const display = settings();
-    if (display.showComparisons === false || !latest) return;
+
+    // OFF must always remove comparisons immediately.
+    if (display.showComparisons === false) {
+      cleanAllComparisonCards();
+      applyExactMetrics();
+      return;
+    }
+
+    // Keep existing comparison lines while fresh data is unavailable. Once we
+    // have a matching cached/fresh payload, replace them with the exact values.
+    applyExactMetrics();
+    if (!latest) return;
     if (latest.period !== (display.comparisonPeriod || "weekly")) return;
     if (latest.salesmanId !== dashboardEmployee()) return;
 
+    cleanAllComparisonCards();
     Object.entries(COMPARISON_TARGETS).forEach(([label, key]) => {
       appendLine(visibleCard(label), latest.comparisons?.[key], latest.period);
     });
@@ -222,10 +246,6 @@ function scheduleRefresh(delay = 700) {
 
 async function refresh() {
   const display = settings();
-
-  // Apply display-setting changes immediately. In particular, turning KPI
-  // comparisons off must remove the old comparison lines without waiting for
-  // Render to wake up or for the API request below to succeed.
   queueRender();
 
   const base = getApiBase();
@@ -246,15 +266,18 @@ async function refresh() {
     const data = await response.json();
     if (thisRequest !== requestId) return;
     latest = { ...data, salesmanId };
+    writeCachedLatest(latest);
     queueRender();
   } catch {
-    // Exact dashboard metrics are an enhancement; keep the existing dashboard
-    // usable if Render is temporarily unavailable or still redeploying.
+    // Cached data remains visible while Render wakes up or is temporarily down.
   }
 }
 
 function install() {
   if (observer) return;
+
+  const cached = readCachedLatest();
+  if (cached) latest = cached;
 
   observer = new MutationObserver(() => {
     queueRender();
@@ -262,15 +285,27 @@ function install() {
   });
   startObserving();
 
-  window.addEventListener("engage-display-settings", () => refresh());
+  window.addEventListener("engage-display-settings", () => {
+    const display = settings();
+    const cachedNow = readCachedLatest();
+    if (cachedNow && cachedNow.period === (display.comparisonPeriod || "weekly") && cachedNow.salesmanId === dashboardEmployee()) {
+      latest = cachedNow;
+    }
+    refresh();
+  });
   window.addEventListener("focus", () => refresh());
   document.addEventListener("change", (event) => {
-    if (event.target?.matches?.('select[aria-label="Dashboard employee"]')) refresh();
+    if (event.target?.matches?.('select[aria-label="Dashboard employee"]')) {
+      const cachedNow = readCachedLatest();
+      latest = cachedNow?.salesmanId === dashboardEmployee() ? cachedNow : null;
+      refresh();
+    }
   });
 
-  // Initial fetch after the app mounts, plus a low-frequency safety refresh
-  // so exact counts stay current even if no visible React mutation occurs.
-  setTimeout(refresh, 0);
+  setTimeout(() => {
+    queueRender();
+    refresh();
+  }, 0);
   setInterval(refresh, 60000);
 }
 
