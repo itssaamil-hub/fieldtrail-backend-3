@@ -148,11 +148,22 @@ function appendLine(card, comparison, period) {
   line.style.marginTop = "4px";
   line.style.fontWeight = "700";
   line.style.color = lineColor(comparison);
-  line.style.whiteSpace = "nowrap";
+  line.style.lineHeight = "1.25";
+  line.style.maxWidth = "100%";
+  line.style.paddingBottom = "2px";
+  if (window.matchMedia("(min-width: 768px)").matches) {
+    line.style.display = "flex";
+    line.style.alignItems = "baseline";
+    line.style.gap = "3px";
+    line.style.flexWrap = "wrap";
+    line.style.whiteSpace = "normal";
+  } else {
+    line.style.whiteSpace = "nowrap";
+  }
   const text = lineText(comparison, period);
   const suffix = `vs last ${period === "monthly" ? "month" : "week"}`;
   const prefix = text.slice(0, text.length - suffix.length).trimEnd();
-  line.append(document.createTextNode(`${prefix} `));
+  line.append(document.createTextNode(prefix));
   const sub = document.createElement("span");
   sub.style.fontWeight = "500";
   sub.style.color = "#6B7280";
