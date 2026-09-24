@@ -982,8 +982,40 @@ function SettingsModal({ apiBase, onClose, onSave, onLogout, onOpenCrmSettings, 
 // ---------------------------------------------------------------------------
 // Shared small pieces
 // ---------------------------------------------------------------------------
-function StatCard({ label, value, sub, color, icon: IconC, onClick, comparison, comparisonPeriod }) {
+function StatCard({ label, value, sub, color, icon: IconC, onClick, comparison, comparisonPeriod, variant }) {
   const c = color || T.ink;
+  const dashboardCard = variant === "dashboard";
+
+  if (dashboardCard) {
+    return (
+      <div
+        className={`ft-card engage-dashboard-stat${onClick ? " ft-row" : ""}`}
+        onClick={onClick}
+        style={{ cursor: onClick ? "pointer" : "default" }}
+      >
+        <div className="engage-dashboard-stat-header">
+          <div className="engage-dashboard-stat-label">{label}</div>
+          {IconC && (
+            <div className="engage-dashboard-stat-icon" style={{ background: `${c}14`, color: c }} aria-hidden="true">
+              <IconC size={16} />
+            </div>
+          )}
+        </div>
+        <div className="engage-dashboard-stat-value engage-db-value">{value}</div>
+        {sub && <div className="engage-dashboard-stat-sub">{sub}</div>}
+        {comparison && (
+          <div
+            className="engage-dashboard-stat-comparison"
+            style={{ color: comparison.pct == null ? T.verified : comparison.pct > 0 ? T.verified : comparison.pct < 0 ? T.danger : T.inkSoft }}
+          >
+            {comparison.pct == null ? "↑ New" : comparison.pct > 0 ? `↑ ${comparison.pct}%` : comparison.pct < 0 ? `↓ ${Math.abs(comparison.pct)}%` : "— Same"}{" "}
+            <span>vs last {comparisonPeriod === "monthly" ? "month" : "week"}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div
       className={onClick ? "ft-card ft-row" : "ft-card"}
@@ -1874,15 +1906,15 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
 
       <div hidden={!showDashboard}>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
-        <StatCard label="Total Employees" value={salesmen.length} sub={<span style={{color:T.verified}}>{activeSalesmen} active now</span>} />
-        <StatCard label="Conversation" value={conversationCount ?? "—"} color={T.route} onClick={async () => { try { setConversationError(""); const result=await api.adminLeads({status:"conversation"}); setStatLeadsModal({title:conversationCount>500?"Conversation Leads · Latest 500":"Conversation Leads",leads:(result.leads||[]).map(mapLeadRow)}); } catch(e) { setConversationError(e.message); } }} />
-        <StatCard label="Leads Today" value={todayLeads.length} onClick={() => setStatLeadsModal({ title: "Leads Today", leads: todayLeads })} />
-        <StatCard label={<>Hot Leads <span style={{ fontSize: 8.5, opacity: 0.65 }}>TODAY</span></>} value={hotLeadsToday.length} comparison={hotComparison} comparisonPeriod={dashboardDisplay.comparisonPeriod} color={T.danger} onClick={() => setStatLeadsModal({ title: "Hot Leads Today", leads: hotLeadsToday })} />
-        <StatCard label="In Negotiation" value={inNegotiation.length} color={T.route} onClick={() => setStatLeadsModal({ title: "In Negotiation", leads: inNegotiation })} />
-        <StatCard label="Total Leads" value={dashboardLeads.length} sub={`${pending} pending`} comparison={dashboardComparison} comparisonPeriod={dashboardDisplay.comparisonPeriod} />
-        <StatCard label="Won" value={converted} sub={convertedValue > 0 ? `${fmtMoney(convertedValue)} closed` : undefined} color={T.verified} onClick={() => setStatLeadsModal({ title: "Won Leads", leads: dashboardLeads.filter((l) => l.status === "won") })} />
-        <StatCard label="Upcoming Follow-up" value={upcomingFollowUps.length} color={T.warn} onClick={() => setStatLeadsModal({ title: "Upcoming Follow-ups", leads: upcomingFollowUps })} />
-        <StatCard label="Renewals Due" sub="next 30 days" value={upcomingRenewals.length} color={T.accent} onClick={() => setStatLeadsModal({ title: "Renewals Due (Next 30 Days)", leads: upcomingRenewals })} />
+        <StatCard variant="dashboard" label="Total Employees" value={salesmen.length} sub={<span style={{color:T.verified}}>{activeSalesmen} active now</span>} icon={Contact2} color="#64748B" />
+        <StatCard variant="dashboard" label="Conversation" value={conversationCount ?? "—"} icon={MessageSquare} color={T.route} onClick={async () => { try { setConversationError(""); const result=await api.adminLeads({status:"conversation"}); setStatLeadsModal({title:conversationCount>500?"Conversation Leads · Latest 500":"Conversation Leads",leads:(result.leads||[]).map(mapLeadRow)}); } catch(e) { setConversationError(e.message); } }} />
+        <StatCard variant="dashboard" label="Leads Today" value={todayLeads.length} icon={TargetIcon} color="#3B82F6" onClick={() => setStatLeadsModal({ title: "Leads Today", leads: todayLeads })} />
+        <StatCard variant="dashboard" label={<>Hot Leads <span style={{ fontSize: 8.5, opacity: 0.65 }}>TODAY</span></>} value={hotLeadsToday.length} icon={Flame} comparison={hotComparison} comparisonPeriod={dashboardDisplay.comparisonPeriod} color={T.danger} onClick={() => setStatLeadsModal({ title: "Hot Leads Today", leads: hotLeadsToday })} />
+        <StatCard variant="dashboard" label="In Negotiation" value={inNegotiation.length} icon={Handshake} color="#8B5CF6" onClick={() => setStatLeadsModal({ title: "In Negotiation", leads: inNegotiation })} />
+        <StatCard variant="dashboard" label="Total Leads" value={dashboardLeads.length} comparison={dashboardComparison} comparisonPeriod={dashboardDisplay.comparisonPeriod} icon={Contact2} color="#0891B2" />
+        <StatCard variant="dashboard" label="Won" value={converted} icon={CheckCircle2} color={T.verified} onClick={() => setStatLeadsModal({ title: "Won Leads", leads: dashboardLeads.filter((l) => l.status === "won") })} />
+        <StatCard variant="dashboard" label="Upcoming Follow-up" value={upcomingFollowUps.length} icon={CalendarClock} color={T.warn} onClick={() => setStatLeadsModal({ title: "Upcoming Follow-ups", leads: upcomingFollowUps })} />
+        <StatCard variant="dashboard" label="Renewals Due" sub="next 30 days" value={upcomingRenewals.length} icon={RefreshCw} color={T.accent} onClick={() => setStatLeadsModal({ title: "Renewals Due (Next 30 Days)", leads: upcomingRenewals })} />
       </div>
 
       {conversationError && <p role="alert" style={{color:T.danger}}>{conversationError}</p>}
