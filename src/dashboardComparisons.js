@@ -112,7 +112,7 @@ function setCardSub(label, text) {
 function applyExactMetrics() {
   if (!latest?.metrics || latest.salesmanId !== dashboardEmployee()) return;
   Object.entries(METRIC_TARGETS).forEach(([label, key]) => setCardValue(label, latest.metrics[key]));
-  setCardSub("Total Leads", `${latest.metrics.pending} pending`);
+  setCardSub("Total Leads", `${latest.metrics.cold ?? 0} cold`);
   setCardSub("Won", latest.metrics.wonValue > 0 ? `${formatMoney(latest.metrics.wonValue)} closed` : "");
 }
 
@@ -263,9 +263,25 @@ async function fallbackFromLeads(base, token, period, salesmanId) {
   const previousNegotiation = count(ps, pe, "negotiation");
   const currentWon = count(cs, ce, "won");
   const previousWon = count(ps, pe, "won");
+  const cold = leads.filter((l) => l.status === "cold").length;
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const leadsToday = leads.filter((l) => createdAt(l) >= todayStart).length;
+  const hotToday = leads.filter((l) => createdAt(l) >= todayStart && l.status === "hot").length;
+  const wonValue = leads.filter((l) => l.status === "won").reduce((sum, l) => sum + Number(l.dealValue || l.deal_value || 0), 0);
   return {
     period,
     salesmanId,
+    metrics: {
+      total: leads.length,
+      conversation: leads.filter((l) => l.status === "conversation").length,
+      negotiation: leads.filter((l) => l.status === "negotiation").length,
+      won: leads.filter((l) => l.status === "won").length,
+      cold,
+      leadsToday,
+      hotToday,
+      wonValue,
+    },
     comparisons: {
       conversation: { current: currentConversation, previous: previousConversation, pct: pct(currentConversation, previousConversation) },
       negotiation: { current: currentNegotiation, previous: previousNegotiation, pct: pct(currentNegotiation, previousNegotiation) },
