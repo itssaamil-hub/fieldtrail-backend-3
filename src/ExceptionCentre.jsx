@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, BellRing, CalendarClock, CheckCircle2, ChevronRight, CircleDollarSign, Clock3, DatabaseZap, Flame, RefreshCw, Search, ShieldAlert, Target, UserRoundX } from 'lucide-react';
+import { AlertTriangle, BellRing, CalendarClock, CheckCircle2, ChevronRight, CircleDollarSign, Clock3, DatabaseZap, Flame, RefreshCw, Search, ShieldAlert, Target } from 'lucide-react';
 import { api } from './api.js';
 import './exception-centre.css';
 
@@ -63,7 +63,7 @@ export default function ExceptionCentre() {
     if (!leadResult) setError('Lead data could not be loaded. Exception counts may be incomplete.');
     setLeads(leadResult?.leads || []);
     setTasks(taskResult?.tasks || []);
-    setCollections(collectionResult?.collections || collectionResult?.items || collectionResult?.customers || []);
+    setCollections(collectionResult?.accounts || collectionResult?.collections || collectionResult?.items || collectionResult?.customers || []);
     setLastUpdated(new Date());
     setLoading(false);
   }, []);
@@ -109,11 +109,13 @@ export default function ExceptionCentre() {
     });
 
     collections.forEach(c => {
-      const outstanding = Number(pick(c, 'outstanding', 'outstanding_amount', 'balance', 'balance_due') || 0);
+      const outstanding = Number(pick(c, 'pending', 'outstanding', 'outstanding_amount', 'balance', 'balance_due') || 0);
+      const overdueAmount = Number(pick(c, 'overdue') || 0);
       const due = safeDate(pick(c, 'dueDate', 'due_date', 'payment_due_date'));
-      if (outstanding > 0 && due && due < now) {
-        const overdue = Math.max(1, Math.ceil((now - due) / DAY));
-        rows.push({ key:`payment:${pick(c,'id','customer_key','lead_id') || leadName(c)}`, type:'payment', severity: overdue >= 7 ? 'critical' : 'high', title:'Payment overdue', reason:`${money(outstanding)} outstanding · ${overdue} day${overdue === 1 ? '' : 's'} overdue`, action:'Open Collections', entityType:'payment', entityName:pick(c,'business_name','customer_name','business','name') || 'Customer', owner:pick(c,'salesman_name','owner_name') || 'Team', value:outstanding });
+      if (outstanding > 0 && ((due && due < now) || overdueAmount > 0)) {
+        const overdue = due ? Math.max(1, Math.ceil((now - due) / DAY)) : 1;
+        const customer = c.customer?.name || pick(c,'business_name','customer_name','business','name') || 'Customer';
+        rows.push({ key:`payment:${pick(c,'key','id','customer_key','lead_id') || customer}`, type:'payment', severity: overdue >= 7 ? 'critical' : 'high', title:'Payment overdue', reason:`${money(outstanding)} outstanding${due ? ` · ${overdue} day${overdue === 1 ? '' : 's'} overdue` : ''}`, action:'Open Collections', entityType:'payment', entityName:customer, owner:pick(c,'owner_name','salesman_name') || 'Team', value:outstanding });
       }
     });
 
