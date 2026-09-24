@@ -1,0 +1,51 @@
+@media (min-width:1024px){
+  .exception-actions-v2 .exception-snooze{min-width:82px;justify-content:center;gap:6px;transition:.15s ease}
+  .exception-actions-v2 .exception-snooze.is-busy{opacity:.65;pointer-events:none}
+  .exception-snooze-label{display:inline-block;line-height:1;white-space:nowrap}
+
+  .exception-history-drawer .exception-timeline>.exception-empty{
+    min-height:190px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    padding:24px 18px;
+    text-align:center;
+    line-height:1.45;
+  }
+  .exception-history-drawer .exception-timeline>.exception-empty strong{
+    display:block;
+    margin:0;
+    line-height:1.35;
+    font-size:13px;
+  }
+  .exception-history-drawer .exception-timeline>.exception-empty span{
+    display:block;
+    max-width:300px;
+    margin:0;
+    line-height:1.5;
+    font-size:11.5px;
+    white-space:normal;
+    overflow-wrap:anywhere;
+  }
+
+  .exception-ux-toast{
+    position:fixed;
+    right:24px;
+    bottom:24px;
+    z-index:220;
+    transform:translateY(12px);
+    opacity:0;
+    pointer-events:none;
+    padding:10px 14px;
+    border-radius:10px;
+    background:#173f3f;
+    color:#fff;
+    box-shadow:0 12px 30px rgba(20,50,50,.2);
+    font:700 11.5px Inter,sans-serif;
+    transition:.18s ease;
+  }
+  .exception-ux-toast[data-tone="error"]{background:#a33b2e}
+  .exception-ux-toast.is-visible{opacity:1;transform:translateY(0)}
+}
