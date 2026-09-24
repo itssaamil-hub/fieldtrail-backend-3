@@ -1,0 +1,59 @@
+@media (max-width: 899px) {
+  .engage-mobile-kpi-card {
+    flex: 1 1 46% !important;
+    min-width: 0 !important;
+    min-height: 86px !important;
+    padding: 10px 11px 9px !important;
+    border-radius: 13px !important;
+    background: #fff !important;
+    border: 1px solid #E7EBED !important;
+    box-shadow: 0 1px 3px rgba(32,64,64,.04) !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+  }
+
+  .engage-mobile-kpi-card > div:first-child {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 6px !important;
+    margin-bottom: 5px !important;
+  }
+
+  .engage-mobile-kpi-card > div:first-child > div:first-child {
+    font-size: 9px !important;
+    line-height: 1.15 !important;
+    font-weight: 700 !important;
+    letter-spacing: .1px !important;
+    color: #6F7B7D !important;
+    text-transform: none !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .engage-mobile-kpi-card .engage-db-value {
+    font-family: 'Space Grotesk', sans-serif !important;
+    font-size: 24px !important;
+    line-height: 1 !important;
+    font-weight: 700 !important;
+    letter-spacing: -.3px !important;
+    color: #173738 !important;
+  }
+
+  .engage-mobile-kpi-icon {
+    width: 22px !important;
+    height: 22px !important;
+    min-width: 22px !important;
+    border-radius: 7px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex: 0 0 22px !important;
+  }
+
+  .engage-mobile-kpi-icon svg {
+    width: 12px !important;
+    height: 12px !important;
+  }
+}
