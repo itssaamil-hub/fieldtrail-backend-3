@@ -1,0 +1,28 @@
+@media (min-width:1024px) {
+  .engage-desktop-deals.ft-card { background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; }
+  .engage-desktop-deals .engage-deals-title { font-size: 23px !important; color: #233b33; }
+  .engage-desktop-deals .engage-deals-summary { font: 12px Inter,sans-serif; color: #718078; margin-top: 6px; }
+  .engage-desktop-deals .engage-deals-add { width: auto !important; padding: 7px 12px; gap: 6px; height: auto !important; font-size: 12px; font-weight: 600; }
+  .engage-deals-board { display: flex; align-items: stretch; gap: 10px; overflow-x: auto; padding-bottom: 10px; }
+  .engage-deals-column { flex: 0 0 240px; box-sizing: border-box; padding: 8px; border: 1.5px solid transparent; border-radius: 10px; background: #edf0ee; min-height: 280px; }
+  .engage-deals-column.is-over { background: #e1eee6; border-color: #4c8265; }
+  .engage-deals-column-heading { border-top: 3px solid; border-radius: 2px; padding: 8px 3px 14px; }
+  .engage-deals-column-heading > div { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12.5px; }
+  .engage-deals-column-heading strong { font-weight: 700; }
+  .engage-deals-column-heading span { color: #718078; font-size: 11px; }
+  .engage-deals-column-heading small { display: block; color: #63756b; font-size: 11px; margin-top: 5px; }
+  .engage-deals-cards { display: flex; flex-direction: column; gap: 6px; }
+  .engage-deal-card { box-sizing: border-box; width: 100%; text-align: left; background: #fff; border: 1px solid #dfe6e1; border-radius: 10px; padding: 9px 10px; cursor: grab; color: #263b33; font: 12px Inter,sans-serif; box-shadow: 0 1px 2px rgba(20,20,30,.05); }
+  .engage-deal-card:hover { border-color: #719881; }
+  .engage-deal-card:focus-visible { outline: 2px solid #145c5d; outline-offset: 2px; }
+  .engage-deal-name { display: block; font-size: 12.5px; line-height: 1.4; overflow-wrap: anywhere; }
+  .engage-deal-value { font-size: 12px; font-weight: 600; margin: 7px 0; }
+  .engage-deal-owner { display: flex; align-items: center; gap: 6px; color: #718078; font-size: 11px; }
+  .engage-deal-owner span { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: #eaf0eb; color: #315b44; }
+  .engage-deal-followup { border-top: 1px solid #edf0ed; padding-top: 7px; margin-top: 8px; color: #63756b; font-size: 11px; }
+  .engage-deal-followup.is-overdue { color: #ad4533; }
+  .engage-deal-note { font-size: 11px; color: #718078; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .engage-deals-empty { padding: 20px 4px; text-align: center; font-size: 11px; color: #718078; }
+  .engage-deals-hint { color: #718078; font-size: 11px; margin-top: 12px; }
+  .engage-deals-error { color: #ad4533; font-size: 12px; margin-bottom: 10px; }
+}

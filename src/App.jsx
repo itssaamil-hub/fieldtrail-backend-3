@@ -1,3 +1,4 @@
+import DesktopDealsBoard from './DesktopDealsBoard';
 import DesktopSidebar, { useDesktopSidebar } from "./DesktopSidebar.jsx";
 import SaveFeedback from "./SaveFeedback.jsx";
 import { showSaveFeedback } from "./saveFeedback.js";
@@ -1787,6 +1788,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
     const frame = requestAnimationFrame(() => window.scrollTo({ top: scrollPositions.current[mobileTab] || 0, behavior: "instant" }));
     return () => cancelAnimationFrame(frame);
   }, [mobileTab, phone]);
+  const desktopDeals = desktopSection === "deals";
   const showDashboard = !sectionNavigation || section === "dashboard";
   const showLeads = showDashboard || section === "leads" || section === "deals";
   const [conversationError, setConversationError] = useState("");
@@ -1920,11 +1922,11 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
 
       </div>
       <div hidden={!showLeads}>
-      <div className="ft-card" style={{ marginTop: 20, background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, padding: 18 }}>
+      <div className={`ft-card${desktopDeals ? " engage-desktop-deals" : ""}`} style={{ marginTop: 20, background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, padding: 18 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
-          <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16 }}>{sectionNavigation && section === "deals" ? (desktopSection ? "Deals Pipeline" : "Deals") : "Leads"}</div>
+          <div><div className={desktopDeals ? "engage-deals-title" : undefined} style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16 }}>{sectionNavigation && section === "deals" ? (desktopSection ? "Deals Pipeline" : "Deals") : "Leads"}</div>{desktopDeals && <div className="engage-deals-summary">{filteredLeads.length} deals · {fmtMoney(filteredLeads.reduce((sum, lead) => sum + (Number(lead.dealValue) || 0), 0))} recorded value</div>}</div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ display: sectionNavigation && section !== "dashboard" ? "none" : "flex", gap: 2, background: T.paperDeep, borderRadius: 8, padding: 2 }}>
+            <div style={{ display: sectionNavigation && section !== "dashboard" && !desktopDeals ? "none" : "flex", gap: 2, background: T.paperDeep, borderRadius: 8, padding: 2 }}>
               <button
                 onClick={() => setLeadsViewMode("list")}
                 style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, padding: "5px 10px", borderRadius: 6, border: "none", cursor: "pointer", background: leadsViewMode === "list" ? "#fff" : "transparent", color: leadsViewMode === "list" ? T.ink : T.inkSoft, boxShadow: leadsViewMode === "list" ? "0 1px 2px rgba(20,20,30,0.08)" : "none" }}
@@ -1942,9 +1944,10 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
               <button
                 onClick={() => setShowAdminAddLead(true)}
                 title="Add lead"
+                className={desktopDeals ? "engage-deals-add" : undefined}
                 style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 8, border: "none", cursor: "pointer", background: T.route, color: "#fff" }}
               >
-                <Plus size={16} />
+                <Plus size={16} />{desktopDeals && "Add Lead"}
               </button>
             )}
           </div>
@@ -2007,7 +2010,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
           </div>
         )}
 
-        {(sectionNavigation && section === "leads") || (!(sectionNavigation && section === "deals") && leadsViewMode === "list") ? (
+        {(sectionNavigation && section === "leads") || ((desktopDeals || !(sectionNavigation && section === "deals")) && leadsViewMode === "list") ? (
           <>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {pagedLeads.map((l) => (
@@ -2061,7 +2064,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
         )}
           </>
         ) : (
-          <LeadsBoardView leads={filteredLeads} visibleStatus={desktopSection === "deals" ? filterStatus : "all"} onStatusChange={onStatusChange} onSelectLead={setSelectedLead} />
+          desktopDeals ? <DesktopDealsBoard leads={filteredLeads} visibleStatus={filterStatus} onStatusChange={onStatusChange} onSelectLead={setSelectedLead} /> : <LeadsBoardView leads={filteredLeads} onStatusChange={onStatusChange} onSelectLead={setSelectedLead} />
         )}
       </div>
 

@@ -1,0 +1,68 @@
+import React, { useState } from 'react';
+import './desktop-deals.css';
+
+const STAGES = [
+  ['cold', 'Cold', '#94a5b1'], ['conversation', 'Conversation', '#608c91'],
+  ['hot', 'Hot', '#ca7760'], ['demo', 'Demo', '#a497b8'],
+  ['negotiation', 'Negotiation', '#b79b60'], ['won', 'Won', '#5c9476'],
+  ['lost', 'Lost', '#a8acac'], ['nurture', 'Nurture', '#879c65'],
+];
+const amount = lead => lead.dealValue != null && Number.isFinite(Number(lead.dealValue)) ? Number(lead.dealValue) : null;
+const money = value => `₹${value.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+function followUp(value) {
+  if (!value) return null;
+  const day = String(value).slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
+  const date = new Date(`${day}T12:00:00+05:30`);
+  if (Number.isNaN(date.getTime())) return null;
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  return { overdue: day < today, text: `${day < today ? 'Overdue' : day === today ? 'Today' : 'Follow-up'} · ${date.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short' })}` };
+}
+export default function DesktopDealsBoard({ leads, visibleStatus = 'all', onStatusChange, onSelectLead }) {
+  const [dragging, setDragging] = useState(null);
+  const [over, setOver] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  async function drop(status) {
+    const lead = leads.find(l => l.id === dragging);
+    setDragging(null); setOver(null);
+    if (!lead || lead.status === status || saving) return;
+    setSaving(true); setError('');
+    try { await onStatusChange(lead.id, status); }
+    catch (err) { setError(err.message || 'Could not update the deal. Please try again.'); }
+    finally { setSaving(false); }
+  }
+  return <>
+    {error && <div className="engage-deals-error" role="alert">{error}</div>}
+    <div className="engage-deals-board" aria-label="Deals by status" aria-busy={saving}>
+      {STAGES.filter(([status]) => visibleStatus === 'all' || status === visibleStatus).map(([status, label, colour]) => {
+        const rows = leads.filter(l => l.status === status);
+        const valued = rows.filter(l => amount(l) !== null);
+        return <section key={status} className={`engage-deals-column${over === status ? ' is-over' : ''}`} aria-label={`${label} deals`}
+          onDragOver={e => { e.preventDefault(); if (!saving) setOver(status); }}
+          onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setOver(null); }}
+          onDrop={e => { e.preventDefault(); drop(status); }}>
+          <div className="engage-deals-column-heading" style={{ borderTopColor: colour }}>
+            <div><strong>{label}</strong><span>{rows.length}</span></div>
+            <small>{valued.length ? money(valued.reduce((total, l) => total + amount(l), 0)) : 'No value set'}{valued.length < rows.length && valued.length > 0 ? ` · ${rows.length - valued.length} unpriced` : ''}</small>
+          </div>
+          <div className="engage-deals-cards">{rows.map(lead => {
+            const follow = followUp(lead.nextFollowUpDate);
+            return <button key={lead.id} type="button" className="engage-deal-card" draggable={!saving}
+              onDragStart={e => { setDragging(lead.id); e.dataTransfer.setData('text/plain', String(lead.id)); e.dataTransfer.effectAllowed = 'move'; }}
+              onDragEnd={() => { setDragging(null); setOver(null); }} onClick={() => onSelectLead(lead)}
+              style={{ opacity: dragging === lead.id ? 0.4 : 1 }}>
+              <strong className="engage-deal-name">{lead.business}</strong>
+              <div className="engage-deal-value">{amount(lead) === null ? 'Value not set' : money(amount(lead))}</div>
+              <div className="engage-deal-owner"><span aria-hidden="true">{(lead.salesmanName || '?').slice(0, 1)}</span>{lead.salesmanName || 'Unassigned'}</div>
+              {follow && <div className={`engage-deal-followup${follow.overdue ? ' is-overdue' : ''}`}>{follow.text}</div>}
+              {lead.notes && <div className="engage-deal-note" title={lead.notes}>{lead.notes}</div>}
+            </button>;
+          })}</div>
+          {!rows.length && <div className="engage-deals-empty">No deals · Drop here</div>}
+        </section>;
+      })}
+    </div>
+    <div className="engage-deals-hint">Drag a deal to change its stage · Click a card to open lead details</div>
+  </>;
+}
