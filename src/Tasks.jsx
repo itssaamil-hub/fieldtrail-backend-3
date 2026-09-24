@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ClipboardList, X, ChevronRight } from 'lucide-react';
+import { ClipboardList, X, ChevronRight, Columns3, List } from 'lucide-react';
 import { api, getSession } from './api.js';
 import './tasks.css';
 const changed = () => { window.dispatchEvent(new Event('fieldtrail:tasks')); window.dispatchEvent(new Event('fieldtrail:notifications-read')); };
@@ -27,6 +27,15 @@ const dueISO = value => new Date(value + '+05:30').toISOString();
 export function TasksModal({lead,onClose,startCreate=false,focusId,embedded=false,active=true}) {
  const session=getSession(), admin=session?.role==='admin';
  const titleId=React.useId();
+ const [desktop,setDesktop]=useState(()=>typeof window.matchMedia==='function'&&window.matchMedia('(min-width: 1024px)').matches);
+ const [viewChoice,setViewChoice]=useState(null),[dragId,setDragId]=useState(''),[dragOver,setDragOver]=useState('');
+ const view=viewChoice||(admin&&desktop?'board':'list');
+ useEffect(()=>{
+  if(typeof window.matchMedia!=='function')return;
+  const media=window.matchMedia('(min-width: 1024px)');
+  const update=()=>{setDesktop(media.matches);setViewChoice(null)};
+  media.addEventListener('change',update);return()=>media.removeEventListener('change',update);
+ },[]);
  const [filter,setFilter]=useState(focusId||lead||admin?'all':'today');
  const [search,setSearch]=useState(''),[query,setQuery]=useState('');
  const [employeeFilter,setEmployeeFilter]=useState(''),[priorityFilter,setPriorityFilter]=useState(''),[progressFilter,setProgressFilter]=useState('');
@@ -72,7 +81,13 @@ export function TasksModal({lead,onClose,startCreate=false,focusId,embedded=fals
  const reload=()=>changed();
  const mutate=async(fn,message)=>{if(busyRef.current)return;busyRef.current=true;setBusy(true);setSaveError('');setSuccess('');try{await fn();setSuccess(message);setAction('');reload();return true}catch(e){setSaveError(e.message);return false}finally{busyRef.current=false;setBusy(false)}};
  const create=async e=>{e.preventDefault();const ok=await mutate(()=>api.createTask({title,notes,dueAt:dueISO(due),...(workflow?{priority,recurrence}:{}),...(admin?{assignedTo:assigned}:{}),...(linkedLead?{leadId:linkedLead}:{})}),'Task created.');if(ok){setCreating(false);setTitle('');setNotes('');setDue('');setLinkedLead(lead?.id||'');setLeadSearch('');setFilter('all');setPage(0)}};
- const openDetail=t=>{setSelectedId(t.id);setDetail(null);setAction('');setSaveError('');setCreating(false)};
+ const openDetail=t=>{if(busyRef.current)return;if(selectedId===t.id)setRevision(v=>v+1);setSelectedId(t.id);setDetail(null);setAction('');setSaveError('');setCreating(false)};
+ const moveTask=(task,status)=>{
+  setDragId('');setDragOver('');
+  if(!workflow||busyRef.current||!task||task.status==='completed'||task.status===status)return;
+  if(status==='completed'){openDetail(task);setAction('complete');setCompletion('');return;}
+  if(status==='pending'||status==='in_progress')mutate(()=>api.taskStatus(task.id,status),'Task progress updated.');
+ };
  const closeDetail=()=>{setSelectedId('');setDetail(null);setAction('');setSaveError('')};
  const openLead=()=>{if(!detail?.lead_id)return;const id=detail.lead_id;if(!embedded)onClose?.();const hash='#lead='+id;if(window.location.hash===hash)window.dispatchEvent(new Event('hashchange'));else window.location.hash=hash;};
  const changeFilter=(setter,value)=>{setter(value);setPage(0)};
@@ -96,6 +111,7 @@ export function TasksModal({lead,onClose,startCreate=false,focusId,embedded=fals
     <label>Notes (optional)<textarea maxLength={2000} value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Instructions for this task"/></label>
     <div className="ft-task-actions"><button className="ft-task-primary" disabled={busy||(admin&&(!employeesReady||!assigned))}>{busy?'Saving…':'Save task'}</button><button type="button" disabled={busy} onClick={()=>{setCreating(false);setSaveError('')}}>Cancel</button></div>
    </form>}
+   <div className="ft-task-view-switch" role="group" aria-label="Task layout"><button type="button" aria-pressed={view==='board'} onClick={()=>setViewChoice('board')}><Columns3 size={15}/> Board</button><button type="button" aria-pressed={view==='list'} onClick={()=>setViewChoice('list')}><List size={15}/> List</button></div>
    <div className="ft-task-tabs" aria-label="Task date view">{['all','today','overdue','upcoming','completed'].map(f=><button key={f} aria-pressed={filter===f} onClick={()=>{changeFilter(setFilter,f);setProgressFilter('')}}>{f[0].toUpperCase()+f.slice(1)}</button>)}</div>
    <div className="ft-task-filters">
     <label>Search<input disabled={!workflow} type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Task or restaurant" maxLength={180}/></label>
@@ -105,10 +121,30 @@ export function TasksModal({lead,onClose,startCreate=false,focusId,embedded=fals
     <label>Due from · IST<input disabled={!workflow} type="date" value={from} onChange={e=>changeFilter(setFrom,e.target.value)}/></label><label>Due through · IST<input disabled={!workflow} type="date" value={through} min={from} onChange={e=>changeFilter(setThrough,e.target.value)}/></label>
    </div>
    <p className="ft-task-muted">Dates in IST · Overdue includes tasks past their due time today.</p>
-   <div className={`ft-task-layout${selectedId?' has-detail':''}`}><div className="ft-task-list">
+   <div className={`ft-task-layout${view==='board'?' board-layout':''}${selectedId?' has-detail':''}`}><div className="ft-task-list">
    {loading?<p role="status">Loading tasks…</p>:error?<div role="alert"><p className="ft-task-error">{error}</p><button onClick={()=>setRevision(v=>v+1)}>Retry</button></div>:<>
-    {!tasks.length&&<div className="ft-task-empty"><ClipboardList size={26}/><strong>No tasks in this view</strong><span>Choose another filter or create a task.</span></div>}
-    {tasks.map(t=><button key={t.id} type="button" className={`ft-task-list-row${selectedId===t.id?' selected':''}`} onClick={()=>openDetail(t)}>
+    {view==='list'&&!tasks.length&&<div className="ft-task-empty"><ClipboardList size={26}/><strong>No tasks in this view</strong><span>Choose another filter or create a task.</span></div>}
+    {view==='board'?<>
+     <p className="ft-task-board-help ft-task-muted">{workflow?'Drag a task to update progress, or open it to use the action buttons.':'Open a task to view its details.'} Counts show tasks on this page.</p>
+     <div className="ft-task-board" aria-label="Task board">{['pending','in_progress','completed'].map(status=>{
+      const lane=tasks.filter(t=>t.status===status);
+      return <section key={status} aria-label={statusLabel(status)} className={`ft-task-lane ${status}${dragOver===status?' drag-over':''}`}
+       onDragOver={e=>{const task=tasks.find(t=>t.id===dragId);if(workflow&&!busy&&task&&task.status!=='completed'&&task.status!==status){e.preventDefault();e.dataTransfer.dropEffect='move';setDragOver(status)}}}
+       onDragLeave={e=>{if(!e.currentTarget.contains(e.relatedTarget))setDragOver('')}}
+       onDrop={e=>{e.preventDefault();moveTask(tasks.find(t=>t.id===dragId),status)}}>
+       <div className="ft-task-lane-title"><span><i/>{statusLabel(status)}</span><span aria-label={`${lane.length} tasks on this page`}>{lane.length}</span></div>
+       <div className="ft-task-lane-cards">{!lane.length&&<p className="ft-task-lane-empty">No tasks in this column</p>}{lane.map(t=><button key={t.id} type="button" disabled={busy}
+        className={`ft-task-board-card${selectedId===t.id?' selected':''}${dragId===t.id?' dragging':''}`} onClick={()=>openDetail(t)}
+        draggable={!!workflow&&!busy&&t.status!=='completed'}
+        onDragStart={e=>{if(!workflow||busy||t.status==='completed'){e.preventDefault();return;}setDragId(t.id);e.dataTransfer.setData('text/plain',t.id);e.dataTransfer.effectAllowed='move'}}
+        onDragEnd={()=>{setDragId('');setDragOver('')}}>
+        <strong>{t.title}</strong><span className="ft-task-board-business">{t.business_name||'General task'}</span>
+        <span className="ft-task-card-meta"><span>{t.assignee_name||'—'}</span><span className={`ft-task-priority ${t.priority||'medium'}`}>{t.priority||'medium'}</span></span>
+        <span className="ft-task-card-footer"><span>{time(t.due_at)}</span>{t.status!=='completed'&&new Date(t.due_at)<new Date()&&<small>Overdue</small>}</span>
+       </button>)}</div>
+      </section>;
+     })}</div>
+    </>:tasks.map(t=><button key={t.id} type="button" className={`ft-task-list-row${selectedId===t.id?' selected':''}`} onClick={()=>openDetail(t)}>
      <span className="ft-task-row-main"><strong>{t.title}</strong><span className="ft-task-muted">{t.business_name||'General task'}{admin?' · '+t.assignee_name:''}</span></span>
      <span className={`ft-task-priority ${t.priority||'medium'}`}>{t.priority||'medium'}</span>
      <span className={'ft-task-status '+(t.status==='completed'?'done':t.status==='in_progress'?'progress':'')}>{statusLabel(t.status)}</span>
@@ -130,7 +166,7 @@ export function TasksModal({lead,onClose,startCreate=false,focusId,embedded=fals
       <button disabled={busy||!workflow} onClick={()=>{setAction('reschedule');setNewDue(istInput(detail.due_at));setReason('');setSaveError('')}}>Reschedule</button>
       {manageable&&<button disabled={busy||!workflow} onClick={()=>{setAction('options');setSaveError('')}}>Task settings</button>}
      </div>}
-     {action==='complete'&&<form className="ft-task-form" onSubmit={e=>{e.preventDefault();mutate(()=>api.completeTask(detail.id,completion),'Task completed.')}}><label>Completion note (optional)<textarea maxLength={2000} value={completion} onChange={e=>setCompletion(e.target.value)} placeholder="What was done and what was the outcome?"/></label>{detail.recurrence&&detail.recurrence!=='none'&&<p className="ft-task-muted">The next occurrence will be created automatically.</p>}<div className="ft-task-actions"><button className="ft-task-primary" disabled={busy}>Confirm completion</button><button type="button" disabled={busy} onClick={()=>setAction('')}>Cancel</button></div></form>}
+     {action==='complete'&&detail.status!=='completed'&&<form className="ft-task-form" onSubmit={e=>{e.preventDefault();mutate(()=>api.completeTask(detail.id,completion),'Task completed.')}}><label>Completion note (optional)<textarea maxLength={2000} value={completion} onChange={e=>setCompletion(e.target.value)} placeholder="What was done and what was the outcome?"/></label>{detail.recurrence&&detail.recurrence!=='none'&&<p className="ft-task-muted">The next occurrence will be created automatically.</p>}<div className="ft-task-actions"><button className="ft-task-primary" disabled={busy}>Confirm completion</button><button type="button" disabled={busy} onClick={()=>setAction('')}>Cancel</button></div></form>}
      {action==='reschedule'&&<form className="ft-task-form" onSubmit={e=>{e.preventDefault();mutate(()=>api.rescheduleTask(detail.id,{dueAt:dueISO(newDue),reason}),'Task rescheduled.')}}><label>New due date and time (IST)<input required type="datetime-local" value={newDue} onChange={e=>setNewDue(e.target.value)}/></label><label>Reason (required)<textarea required maxLength={2000} value={reason} onChange={e=>setReason(e.target.value)} placeholder="Why is the deadline changing?"/></label><div className="ft-task-actions"><button className="ft-task-primary" disabled={busy}>Save reschedule</button><button type="button" disabled={busy} onClick={()=>setAction('')}>Cancel</button></div></form>}
      {action==='options'&&<form className="ft-task-form" onSubmit={e=>{e.preventDefault();mutate(()=>api.taskOptions(detail.id,{priority:editPriority,recurrence:editRepeat}),'Task settings saved.')}}><label>Priority<select value={editPriority} onChange={e=>setEditPriority(e.target.value)}>{['high','medium','low'].map(v=><option key={v} value={v}>{v}</option>)}</select></label><label>Repeat<select value={editRepeat} onChange={e=>setEditRepeat(e.target.value)}>{['none','daily','weekly','monthly'].map(v=><option key={v} value={v}>{repeatLabel(v)}</option>)}</select></label><p className="ft-task-muted">Choose “Does not repeat” to stop future occurrences.</p><div className="ft-task-actions"><button className="ft-task-primary" disabled={busy}>Save settings</button><button type="button" disabled={busy} onClick={()=>setAction('')}>Cancel</button></div></form>}
      <h4>Activity</h4>{!events.length&&<p className="ft-task-muted">{workflow===false?'Activity history will be available after the server update.':'No changes recorded yet.'}</p>}<div className="ft-task-history">{events.map(ev=><div key={ev.id}><strong>{ev.actor_name||'Former employee'} · {ev.action.replaceAll('_',' ')}</strong><span>{ev.action==='rescheduled'?`${time(ev.old_value)} → ${time(ev.new_value)} IST`:`${statusLabel(ev.old_value)||'—'} → ${statusLabel(ev.new_value)||'—'}`}</span>{ev.reason&&<p>{ev.reason}</p>}<small>{time(ev.created_at)} IST</small></div>)}</div>
@@ -149,3 +185,4 @@ export function TaskNotifications(){
  const open=async item=>{setFocus(item.task_id);try{await api.readTaskNotifications([item.id]);setItems(v=>v.filter(n=>n.id!==item.id));changed()}catch(e){setError('Task opened, but could not mark the alert read.')}};
  return <div className="ft-task-notifications">{error&&<div role="alert">{error} <button onClick={()=>setVersion(v=>v+1)}>Retry</button></div>}{items.length>0&&<><h3>Task alerts</h3>{items.map(n=><button key={n.id} className="ft-task-alert" onClick={()=>open(n)}><strong>{n.kind==='assigned'?'New task: ':'Task reminder: '}{n.title}</strong><span>{time(n.due_at)} IST · View task →</span></button>)}</>}{focus&&<TasksModal focusId={focus} onClose={()=>{setFocus(null);setVersion(v=>v+1)}}/>}</div>;
 }
+
