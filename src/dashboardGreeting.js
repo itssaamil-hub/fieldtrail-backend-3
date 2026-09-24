@@ -20,7 +20,25 @@ function greetingForHour(hour) {
   return "Good evening";
 }
 
+function dashboardTeamSelect() {
+  return document.querySelector('select[aria-label="Dashboard employee"]');
+}
+
+function restoreTeamSelect() {
+  const select = dashboardTeamSelect();
+  if (!select?.__engageOriginalParent) return;
+
+  const parent = select.__engageOriginalParent;
+  const next = select.__engageOriginalNextSibling;
+  if (next?.parentElement === parent) parent.insertBefore(select, next);
+  else parent.appendChild(select);
+
+  if (select.__engageOriginalCssText != null) select.style.cssText = select.__engageOriginalCssText;
+  if (select.__engageOriginalRow) select.__engageOriginalRow.style.display = "";
+}
+
 function removeGreeting() {
+  restoreTeamSelect();
   document.querySelectorAll(".engage-dashboard-greeting").forEach((node) => node.remove());
 }
 
@@ -30,11 +48,20 @@ function createGreeting() {
   row.style.minHeight = "44px";
   row.style.display = "flex";
   row.style.alignItems = "center";
-  row.style.gap = "10px";
+  row.style.justifyContent = "space-between";
+  row.style.gap = "16px";
   row.style.padding = "0 2px";
   row.style.marginBottom = "8px";
   row.style.whiteSpace = "nowrap";
-  row.style.overflow = "hidden";
+  row.style.overflow = "visible";
+
+  const left = document.createElement("div");
+  left.className = "engage-dashboard-greeting-copy";
+  left.style.display = "flex";
+  left.style.alignItems = "center";
+  left.style.gap = "10px";
+  left.style.minWidth = "0";
+  left.style.overflow = "hidden";
 
   const primary = document.createElement("span");
   primary.className = "engage-dashboard-greeting-primary";
@@ -44,6 +71,7 @@ function createGreeting() {
   primary.style.fontWeight = "700";
   primary.style.letterSpacing = "-.25px";
   primary.style.color = "#1A1D23";
+  primary.style.flexShrink = "0";
 
   const secondary = document.createElement("span");
   secondary.textContent = "A quick look at what needs your attention today.";
@@ -54,8 +82,46 @@ function createGreeting() {
   secondary.style.overflow = "hidden";
   secondary.style.textOverflow = "ellipsis";
 
-  row.append(primary, secondary);
+  const controls = document.createElement("div");
+  controls.className = "engage-dashboard-greeting-controls";
+  controls.style.display = "flex";
+  controls.style.alignItems = "center";
+  controls.style.justifyContent = "flex-end";
+  controls.style.flexShrink = "0";
+
+  left.append(primary, secondary);
+  row.append(left, controls);
   return row;
+}
+
+function moveTeamSelect(greeting) {
+  const select = dashboardTeamSelect();
+  const controls = greeting?.querySelector(".engage-dashboard-greeting-controls");
+  if (!select || !controls) return;
+
+  if (!select.__engageOriginalParent) {
+    select.__engageOriginalParent = select.parentElement;
+    select.__engageOriginalNextSibling = select.nextSibling;
+    select.__engageOriginalCssText = select.style.cssText;
+    select.__engageOriginalRow = select.parentElement;
+  }
+
+  controls.appendChild(select);
+  select.style.flex = "0 0 auto";
+  select.style.width = "auto";
+  select.style.minWidth = "128px";
+  select.style.height = "34px";
+  select.style.padding = "5px 30px 5px 10px";
+  select.style.borderRadius = "9px";
+  select.style.fontSize = "12.5px";
+  select.style.fontWeight = "600";
+  select.style.background = "#fff";
+  select.style.border = "1px solid #E7E9EE";
+  select.style.color = "#1A1D23";
+  select.style.cursor = "pointer";
+
+  const originalRow = select.__engageOriginalRow;
+  if (originalRow && originalRow !== controls) originalRow.style.display = "none";
 }
 
 function render() {
@@ -87,6 +153,8 @@ function render() {
 
   const primary = greeting.querySelector(".engage-dashboard-greeting-primary");
   if (primary) primary.textContent = `${greetingForHour(new Date().getHours())}, Aamil 👋`;
+
+  moveTeamSelect(greeting);
 }
 
 function queueRender() {
