@@ -2061,7 +2061,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
         )}
           </>
         ) : (
-          <LeadsBoardView leads={filteredLeads} onStatusChange={onStatusChange} onSelectLead={setSelectedLead} />
+          <LeadsBoardView leads={filteredLeads} visibleStatus={desktopSection === "deals" ? filterStatus : "all"} onStatusChange={onStatusChange} onSelectLead={setSelectedLead} />
         )}
       </div>
 
@@ -3013,11 +3013,12 @@ function LeadExportReport({ salesmen }) {
   );
 }
 
-function LeadsBoardView({ leads, onStatusChange, onSelectLead }) {
+function LeadsBoardView({ leads, onStatusChange, onSelectLead, visibleStatus = "all" }) {
   const [draggingId, setDraggingId] = useState(null);
   const [dragOverStatus, setDragOverStatus] = useState(null);
 
-  const columns = STATUSES.map((s) => ({ status: s, leads: leads.filter((l) => l.status === s) }));
+  const columns = STATUSES.filter((s) => visibleStatus === "all" || s === visibleStatus)
+    .map((s) => ({ status: s, leads: leads.filter((l) => l.status === s) }));
 
   const handleDrop = (status) => {
     if (draggingId) {
