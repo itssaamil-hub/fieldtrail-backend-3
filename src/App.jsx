@@ -1,3 +1,4 @@
+import DesktopContacts from './DesktopContacts.jsx';
 import DesktopDealsBoard from './DesktopDealsBoard';
 import DesktopSidebar, { useDesktopSidebar } from "./DesktopSidebar.jsx";
 import SaveFeedback from "./SaveFeedback.jsx";
@@ -1789,6 +1790,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
     return () => cancelAnimationFrame(frame);
   }, [mobileTab, phone]);
   const desktopDeals = desktopSection === "deals";
+  const desktopContacts = desktopSection === "leads";
   const showDashboard = !sectionNavigation || section === "dashboard";
   const showLeads = showDashboard || section === "leads" || section === "deals";
   const [conversationError, setConversationError] = useState("");
@@ -1922,9 +1924,9 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
 
       </div>
       <div hidden={!showLeads}>
-      <div className={`ft-card${desktopDeals ? " engage-desktop-deals" : ""}`} style={{ marginTop: 20, background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, padding: 18 }}>
+      <div className={`ft-card${desktopDeals ? " engage-desktop-deals" : desktopContacts ? " engage-desktop-contacts" : ""}`} style={{ marginTop: 20, background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, padding: 18 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
-          <div><div className={desktopDeals ? "engage-deals-title" : undefined} style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16 }}>{sectionNavigation && section === "deals" ? (desktopSection ? "Deals Pipeline" : "Deals") : "Leads"}</div>{desktopDeals && <div className="engage-deals-summary">{filteredLeads.length} deals · {fmtMoney(filteredLeads.reduce((sum, lead) => sum + (Number(lead.dealValue) || 0), 0))} recorded value</div>}</div>
+          <div><div className={desktopDeals ? "engage-deals-title" : desktopContacts ? "engage-contacts-heading" : undefined} style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16 }}>{sectionNavigation && section === "deals" ? (desktopSection ? "Deals Pipeline" : "Deals") : desktopContacts ? "Contacts" : "Leads"}</div>{desktopContacts && <div className="engage-contacts-summary">{filteredLeads.length} contact records · Your restaurant connections</div>}{desktopDeals && <div className="engage-deals-summary">{filteredLeads.length} deals · {fmtMoney(filteredLeads.reduce((sum, lead) => sum + (Number(lead.dealValue) || 0), 0))} recorded value</div>}</div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ display: sectionNavigation && section !== "dashboard" && !desktopDeals ? "none" : "flex", gap: 2, background: T.paperDeep, borderRadius: 8, padding: 2 }}>
               <button
@@ -1944,10 +1946,10 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
               <button
                 onClick={() => setShowAdminAddLead(true)}
                 title="Add lead"
-                className={desktopDeals ? "engage-deals-add" : undefined}
+                className={desktopDeals ? "engage-deals-add" : desktopContacts ? "engage-contacts-add" : undefined}
                 style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 8, border: "none", cursor: "pointer", background: T.route, color: "#fff" }}
               >
-                <Plus size={16} />{desktopDeals && "Add Lead"}
+                <Plus size={16} />{(desktopDeals || desktopContacts) && "Add Lead"}
               </button>
             )}
           </div>
@@ -1957,7 +1959,8 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
           <input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search leads by business, contact, phone, or area…"
+            aria-label={desktopContacts ? "Search contacts" : "Search leads"}
+            placeholder={desktopContacts ? "Search by contact, company, phone, or area…" : "Search leads by business, contact, phone, or area…"}
             style={{ width: "100%", padding: "9px 12px 9px 32px", borderRadius: 10, border: `1px solid ${T.line}`, fontSize: 13.5, boxSizing: "border-box" }}
           />
           {searchQuery && (
@@ -2012,6 +2015,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
 
         {(sectionNavigation && section === "leads") || ((desktopDeals || !(sectionNavigation && section === "deals")) && leadsViewMode === "list") ? (
           <>
+        {desktopContacts ? <DesktopContacts leads={pagedLeads} onSelectLead={setSelectedLead} renderVerification={l=>l.hasLocation ? <VerificationStamp status={l.verification} small /> : <NoLocationBadge small />} /> : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {pagedLeads.map((l) => (
             <div key={l.id} className="ft-row" onClick={() => setSelectedLead(l)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "10px 12px", border: `1px solid ${T.line}`, borderRadius: 11, cursor: "pointer", background: "#fff" }}>
@@ -2037,6 +2041,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
             </div>
           )}
         </div>
+        )}
 
         {filteredLeads.length > LEADS_PER_PAGE && (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 14, paddingTop: 14, borderTop: `1px solid ${T.line}` }}>
