@@ -34,6 +34,18 @@ const ICON_COLORS = {
   "Renewals Due": "#F5793B",
 };
 
+const ICON_BACKGROUNDS = {
+  "Total Employees": "#F1F5F9",
+  Conversation: "#EDF7F5",
+  "Leads Today": "#EEF4FF",
+  "Hot Leads": "#FDEDEC",
+  "In Negotiation": "#F3EFFF",
+  "Total Leads": "#ECF8FA",
+  Won: "#EAF7F2",
+  "Upcoming Follow-up": "#FFF6E8",
+  "Renewals Due": "#FFF1E8",
+};
+
 let observer = null;
 let queued = false;
 
@@ -54,38 +66,39 @@ function findValueNode(card) {
   if (!card) return null;
   return [...card.children].find((node) => {
     const family = node?.style?.fontFamily || "";
-    return family.includes("Space Grotesk") || node?.style?.fontSize === "24px" || node?.classList?.contains("engage-db-value");
+    return family.includes("Space Grotesk") || node?.style?.fontSize === "24px" || node?.style?.fontSize === "30px" || node?.classList?.contains("engage-db-value");
   }) || null;
 }
 
 function ensureIcon(header, label) {
-  if (!header || header.querySelector(".engage-kpi-card-icon")) return;
-
-  const wrap = document.createElement("span");
-  wrap.className = "engage-kpi-card-icon";
-  wrap.setAttribute("aria-hidden", "true");
-  wrap.style.width = "26px";
-  wrap.style.height = "26px";
-  wrap.style.borderRadius = "8px";
+  if (!header) return;
+  let wrap = header.querySelector(".engage-kpi-card-icon");
+  if (!wrap) {
+    wrap = document.createElement("span");
+    wrap.className = "engage-kpi-card-icon";
+    wrap.setAttribute("aria-hidden", "true");
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("width", "16");
+    svg.setAttribute("height", "16");
+    svg.setAttribute("fill", "none");
+    svg.setAttribute("stroke", "currentColor");
+    svg.setAttribute("stroke-width", "1.9");
+    svg.setAttribute("stroke-linecap", "round");
+    svg.setAttribute("stroke-linejoin", "round");
+    svg.innerHTML = ICONS[label] || ICONS["Total Leads"];
+    wrap.appendChild(svg);
+    header.appendChild(wrap);
+  }
+  wrap.style.width = "32px";
+  wrap.style.height = "32px";
+  wrap.style.borderRadius = "10px";
   wrap.style.display = "inline-flex";
   wrap.style.alignItems = "center";
   wrap.style.justifyContent = "center";
   wrap.style.flexShrink = "0";
-  wrap.style.background = "transparent";
+  wrap.style.background = ICON_BACKGROUNDS[label] || "#F1F5F9";
   wrap.style.color = ICON_COLORS[label] || "#64748B";
-
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.setAttribute("viewBox", "0 0 24 24");
-  svg.setAttribute("width", "17");
-  svg.setAttribute("height", "17");
-  svg.setAttribute("fill", "none");
-  svg.setAttribute("stroke", "currentColor");
-  svg.setAttribute("stroke-width", "1.9");
-  svg.setAttribute("stroke-linecap", "round");
-  svg.setAttribute("stroke-linejoin", "round");
-  svg.innerHTML = ICONS[label] || ICONS["Total Leads"];
-  wrap.appendChild(svg);
-  header.appendChild(wrap);
 }
 
 function applyDesktop(card, label) {
@@ -93,21 +106,30 @@ function applyDesktop(card, label) {
   card.classList.add("engage-kpi-desktop-card");
   card.style.flex = "1 1 205px";
   card.style.minWidth = "205px";
-  card.style.minHeight = "100px";
-  card.style.padding = "10px 20px 9px";
-  card.style.borderRadius = "16px";
+  card.style.minHeight = "112px";
+  card.style.padding = "14px 15px 13px";
+  card.style.borderRadius = "14px";
   card.style.boxSizing = "border-box";
   card.style.overflow = "hidden";
+  card.style.background = "#FFFFFF";
+  card.style.border = "1px solid #E4E8EB";
+  card.style.boxShadow = "none";
+  card.style.transition = "transform .15s ease, box-shadow .15s ease, border-color .15s ease";
 
   const header = card.children[0];
   if (header) {
-    header.style.marginBottom = "5px";
+    header.style.marginBottom = "8px";
     header.style.gap = "9px";
+    header.style.display = "flex";
+    header.style.alignItems = "center";
+    header.style.justifyContent = "space-between";
     const title = header.children[0];
     if (title) {
       title.style.fontSize = "10.5px";
-      title.style.letterSpacing = ".3px";
-      title.style.fontWeight = "750";
+      title.style.letterSpacing = ".15px";
+      title.style.fontWeight = "700";
+      title.style.color = "#6F7B7D";
+      title.style.textTransform = "none";
     }
     ensureIcon(header, label);
   }
@@ -115,23 +137,45 @@ function applyDesktop(card, label) {
   const value = findValueNode(card);
   if (value) {
     value.classList.add("engage-db-value");
-    value.style.fontSize = "30px";
-    value.style.lineHeight = "1.05";
-    value.style.letterSpacing = "-.3px";
+    value.style.fontFamily = "'Space Grotesk', sans-serif";
+    value.style.fontSize = "29px";
+    value.style.fontWeight = "700";
+    value.style.lineHeight = "1";
+    value.style.letterSpacing = "-.45px";
+    value.style.color = "#173738";
   }
 
   [...card.children].forEach((node) => {
     if (node === header || node === value) return;
     if (node.classList?.contains("engage-db-comparison")) {
-      node.style.marginTop = "2px";
-      node.style.fontSize = "10px";
+      node.style.marginTop = "5px";
+      node.style.fontSize = "9.8px";
+      node.style.fontWeight = "650";
+      node.style.lineHeight = "1.2";
       return;
     }
     if (node.tagName === "DIV") {
-      node.style.fontSize = node.style.fontSize === "9.8px" ? "10px" : "12px";
-      node.style.marginTop = "1px";
+      node.style.fontSize = "10.5px";
+      node.style.lineHeight = "1.3";
+      node.style.marginTop = "5px";
+      node.style.color = "#899092";
     }
   });
+
+  if (!card.dataset.exceptionHoverBound) {
+    card.dataset.exceptionHoverBound = "1";
+    card.addEventListener("mouseenter", () => {
+      if (!window.matchMedia("(min-width: 900px)").matches) return;
+      card.style.transform = "translateY(-1px)";
+      card.style.boxShadow = "0 6px 20px rgba(32,64,64,.07)";
+      card.style.borderColor = "#D8E2E0";
+    });
+    card.addEventListener("mouseleave", () => {
+      card.style.transform = "translateY(0)";
+      card.style.boxShadow = "none";
+      card.style.borderColor = "#E4E8EB";
+    });
+  }
 }
 
 function resetMobile(card) {
@@ -143,16 +187,26 @@ function resetMobile(card) {
   card.style.minHeight = "";
   card.style.padding = "14px 16px";
   card.style.borderRadius = "14px";
+  card.style.background = "";
+  card.style.border = "";
+  card.style.boxShadow = "";
+  card.style.transition = "";
+  card.style.transform = "";
 
   const header = card.children[0];
   if (header) {
     header.style.marginBottom = "8px";
     header.style.gap = "6px";
+    header.style.display = "";
+    header.style.alignItems = "";
+    header.style.justifyContent = "";
     const title = header.children[0];
     if (title) {
       title.style.fontSize = "9px";
       title.style.letterSpacing = ".2px";
       title.style.fontWeight = "700";
+      title.style.color = "";
+      title.style.textTransform = "";
     }
   }
 
@@ -161,6 +215,7 @@ function resetMobile(card) {
     value.style.fontSize = "24px";
     value.style.lineHeight = "";
     value.style.letterSpacing = "";
+    value.style.color = "";
   }
 }
 
