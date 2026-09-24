@@ -186,27 +186,29 @@ button:disabled {
   .engage-dashboard-stat {
     flex: 1 1 calc(50% - 6px);
     min-width: 0;
-    min-height: 78px;
-    padding: 9px 10px 8px;
-    border-radius: 14px;
-    background: linear-gradient(145deg, #EEF8F4 0%, #F7FBF9 52%, #FFFFFF 100%);
-    border: 1px solid #D5E9E1;
-    box-shadow: 0 3px 12px rgba(20,92,93,.07);
+    min-height: 82px;
+    padding: 10px 11px 9px;
+    border-radius: 15px;
+    background:
+      radial-gradient(circle at 18% 16%, rgba(18,128,92,.14) 0%, rgba(18,128,92,.07) 24%, transparent 48%),
+      linear-gradient(145deg, #F1FAF6 0%, #F8FCFA 58%, #FFFFFF 100%);
+    border: 1px solid rgba(18,128,92,.16);
+    box-shadow: 0 4px 14px rgba(18,128,92,.08);
   }
 
   .engage-dashboard-stat-header {
     justify-content: flex-start;
     gap: 6px;
-    margin-bottom: 4px;
+    margin-bottom: 5px;
     min-width: 0;
   }
 
   .engage-dashboard-stat-icon {
     order: -1;
-    width: 20px;
-    height: 20px;
-    border-radius: 6px;
-    box-shadow: inset 0 0 0 1px rgba(20,92,93,.05);
+    width: 21px;
+    height: 21px;
+    border-radius: 7px;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.5);
   }
 
   .engage-dashboard-stat-icon svg {
@@ -219,12 +221,12 @@ button:disabled {
     font-size: 9px;
     line-height: 1.15;
     letter-spacing: .05px;
-    color: #55706A;
+    color: #5E716C;
     text-transform: none;
   }
 
   .engage-dashboard-stat-value {
-    font-size: 23px;
+    font-size: 24px;
     line-height: 1;
     letter-spacing: -.35px;
     color: #173738;
@@ -232,7 +234,7 @@ button:disabled {
 
   .engage-dashboard-stat-sub {
     margin-top: 2px;
-    font-size: 9px;
+    font-size: 9.2px;
     line-height: 1.1;
     color: #6F817D;
   }
