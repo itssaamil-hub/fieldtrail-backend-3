@@ -12,9 +12,14 @@ import "./exceptionCentreUxFix.js";
 import "./exception-centre-fixes.css";
 import "./exceptionLeadDrawer.jsx";
 
-// Silent auto-update: when a new version is deployed, the next launch just
-// picks it up. A field team shouldn't have to think about "updating an app."
-registerSW({ immediate: true });
+// Silent auto-update: check for a new worker as soon as the app opens so an
+// installed PWA does not stay on an older cached dashboard bundle.
+registerSW({
+  immediate: true,
+  onRegisteredSW(_swUrl, registration) {
+    registration?.update().catch(() => {});
+  },
+});
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
