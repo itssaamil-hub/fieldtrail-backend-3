@@ -1856,7 +1856,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
   useEffect(() => { setLeadsPage(1); }, [filterSalesman, filterStatus, filterDate, searchQuery]);
 
   return (
-    <div className={phone && page !== "reports" ? "engage-admin-mobile-content" : undefined} style={{ padding: "20px 24px", maxWidth: 1180, margin: "0 auto" }}>
+    <div className={phone && page !== "reports" ? "engage-admin-mobile-content" : undefined} style={{ padding: desktopDeals || desktopContacts ? "20px 28px" : "20px 24px", maxWidth: desktopDeals || desktopContacts ? 1500 : 1180, margin: "0 auto" }}>
       {page === "reports" ? (
         <ReportsPage salesmen={salesmen} leads={leads} />
       ) : (
@@ -1926,7 +1926,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
       <div hidden={!showLeads}>
       <div className={`ft-card${desktopDeals ? " engage-desktop-deals" : desktopContacts ? " engage-desktop-contacts" : ""}`} style={{ marginTop: 20, background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, padding: 18 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
-          <div><div className={desktopDeals ? "engage-deals-title" : desktopContacts ? "engage-contacts-heading" : undefined} style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16 }}>{sectionNavigation && section === "deals" ? (desktopSection ? "Deals Pipeline" : "Deals") : desktopContacts ? "Contacts" : "Leads"}</div>{desktopContacts && <div className="engage-contacts-summary">{filteredLeads.length} contact records · Your restaurant connections</div>}{desktopDeals && <div className="engage-deals-summary">{filteredLeads.length} deals · {fmtMoney(filteredLeads.reduce((sum, lead) => sum + (Number(lead.dealValue) || 0), 0))} recorded value</div>}</div>
+          <div><div className={desktopDeals ? "engage-deals-title" : desktopContacts ? "engage-contacts-heading" : undefined} style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16 }}>{sectionNavigation && section === "deals" ? (desktopSection ? "Pipeline" : "Deals") : desktopContacts ? "Contacts" : "Leads"}</div>{desktopContacts && <div className="engage-contacts-summary">{filteredLeads.length} contact records · Your restaurant connections</div>}{desktopDeals && <div className="engage-deals-summary">{filteredLeads.length} deals · {fmtMoney(filteredLeads.reduce((sum, lead) => sum + (Number(lead.dealValue) || 0), 0))} recorded value</div>}</div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ display: sectionNavigation && section !== "dashboard" && !desktopDeals ? "none" : "flex", gap: 2, background: T.paperDeep, borderRadius: 8, padding: 2 }}>
               <button
