@@ -106,8 +106,8 @@ function applyDesktop(card, label) {
   card.classList.add("engage-kpi-desktop-card");
   card.style.flex = "1 1 205px";
   card.style.minWidth = "205px";
-  card.style.minHeight = "112px";
-  card.style.padding = "14px 15px 13px";
+  card.style.minHeight = "96px";
+  card.style.padding = "10px 15px 9px";
   card.style.borderRadius = "14px";
   card.style.boxSizing = "border-box";
   card.style.overflow = "hidden";
@@ -118,7 +118,7 @@ function applyDesktop(card, label) {
 
   const header = card.children[0];
   if (header) {
-    header.style.marginBottom = "8px";
+    header.style.marginBottom = "5px";
     header.style.gap = "9px";
     header.style.display = "flex";
     header.style.alignItems = "center";
@@ -148,7 +148,7 @@ function applyDesktop(card, label) {
   [...card.children].forEach((node) => {
     if (node === header || node === value) return;
     if (node.classList?.contains("engage-db-comparison")) {
-      node.style.marginTop = "5px";
+      node.style.marginTop = "3px";
       node.style.fontSize = "9.8px";
       node.style.fontWeight = "650";
       node.style.lineHeight = "1.2";
@@ -156,8 +156,8 @@ function applyDesktop(card, label) {
     }
     if (node.tagName === "DIV") {
       node.style.fontSize = "10.5px";
-      node.style.lineHeight = "1.3";
-      node.style.marginTop = "5px";
+      node.style.lineHeight = "1.2";
+      node.style.marginTop = "3px";
       node.style.color = "#899092";
     }
   });
