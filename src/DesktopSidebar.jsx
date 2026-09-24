@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Gauge, Contact2, Columns3, Users, ClipboardList, BarChart3, Settings, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Gauge, Contact2, Columns3, Users, ClipboardList, ShieldAlert, BarChart3, Settings, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import './desktop-sidebar.css';
 
 export function useDesktopSidebar() {
@@ -12,7 +12,7 @@ export function useDesktopSidebar() {
   }, []);
   return desktop;
 }
-const sections = [['dashboard', 'Dashboard', Gauge], ['leads', 'Leads', Contact2], ['deals', 'Deals Pipeline', Columns3], ['employees', 'Employees', Users], ['tasks', 'Tasks', ClipboardList], ['reports', 'Reports', BarChart3]];
+const sections = [['dashboard', 'Dashboard', Gauge], ['leads', 'Leads', Contact2], ['deals', 'Deals Pipeline', Columns3], ['employees', 'Employees', Users], ['tasks', 'Tasks', ClipboardList], ['exceptions', 'Exception Centre', ShieldAlert], ['reports', 'Reports', BarChart3]];
 export default function DesktopSidebar({ active, collapsed, onCollapse, onSelect, onSettings, settingsOpen }) {
   const item = ([key, label, Icon]) => <button key={key} type="button" aria-label={label} title={collapsed ? label : undefined} aria-current={!settingsOpen && active === key ? 'page' : undefined} onClick={() => onSelect(key)}><Icon size={19} aria-hidden="true"/><span>{label}</span></button>;
   return <aside className={`engage-desktop-sidebar${collapsed ? ' is-collapsed' : ''}`} aria-label="Admin sidebar">
