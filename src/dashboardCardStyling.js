@@ -178,45 +178,67 @@ function applyDesktop(card, label) {
   }
 }
 
-function resetMobile(card) {
+function applyMobile(card, label) {
   if (!card) return;
   card.classList.remove("engage-kpi-desktop-card");
-  card.querySelectorAll(".engage-kpi-card-icon").forEach((node) => node.remove());
-  card.style.flex = "1";
-  card.style.minWidth = "96px";
-  card.style.minHeight = "";
-  card.style.padding = "14px 16px";
-  card.style.borderRadius = "14px";
-  card.style.background = "";
-  card.style.border = "";
-  card.style.boxShadow = "";
+  card.style.flex = "1 1 46%";
+  card.style.minWidth = "0";
+  card.style.minHeight = "92px";
+  card.style.padding = "11px 12px 10px";
+  card.style.borderRadius = "13px";
+  card.style.boxSizing = "border-box";
+  card.style.overflow = "hidden";
+  card.style.background = "#FFFFFF";
+  card.style.border = "1px solid #E7EBED";
+  card.style.boxShadow = "0 1px 3px rgba(32,64,64,.04)";
   card.style.transition = "";
   card.style.transform = "";
 
   const header = card.children[0];
   if (header) {
-    header.style.marginBottom = "8px";
-    header.style.gap = "6px";
-    header.style.display = "";
-    header.style.alignItems = "";
-    header.style.justifyContent = "";
+    header.style.marginBottom = "4px";
+    header.style.gap = "7px";
+    header.style.display = "flex";
+    header.style.alignItems = "center";
+    header.style.justifyContent = "space-between";
     const title = header.children[0];
     if (title) {
-      title.style.fontSize = "9px";
-      title.style.letterSpacing = ".2px";
+      title.style.fontSize = "9.5px";
+      title.style.letterSpacing = ".1px";
       title.style.fontWeight = "700";
-      title.style.color = "";
-      title.style.textTransform = "";
+      title.style.color = "#6F7B7D";
+      title.style.textTransform = "none";
+    }
+    ensureIcon(header, label);
+    const icon = header.querySelector(".engage-kpi-card-icon");
+    if (icon) {
+      icon.style.width = "28px";
+      icon.style.height = "28px";
+      icon.style.borderRadius = "9px";
     }
   }
 
   const value = findValueNode(card);
   if (value) {
-    value.style.fontSize = "24px";
-    value.style.lineHeight = "";
-    value.style.letterSpacing = "";
-    value.style.color = "";
+    value.classList.add("engage-db-value");
+    value.style.fontFamily = "'Space Grotesk', sans-serif";
+    value.style.fontSize = "25px";
+    value.style.fontWeight = "700";
+    value.style.lineHeight = "1";
+    value.style.letterSpacing = "-.3px";
+    value.style.color = "#173738";
   }
+
+  [...card.children].forEach((node) => {
+    if (node === header || node === value) return;
+    if (node.classList?.contains("engage-db-comparison")) return;
+    if (node.tagName === "DIV") {
+      node.style.fontSize = "10px";
+      node.style.lineHeight = "1.2";
+      node.style.marginTop = "3px";
+      node.style.color = "#899092";
+    }
+  });
 }
 
 function apply() {
@@ -226,7 +248,7 @@ function apply() {
     const card = findCard(label);
     if (!card) return;
     if (desktop) applyDesktop(card, label);
-    else resetMobile(card);
+    else applyMobile(card, label);
   });
 }
 
