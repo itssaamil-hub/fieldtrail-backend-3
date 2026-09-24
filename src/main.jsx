@@ -8,6 +8,7 @@ import "./dashboardCardStyling.js";
 import "./dashboardTaskCard.js";
 import "./dashboardGreeting.js";
 import "./dashboardMapControls.js";
+import "./exceptionCentreMount.jsx";
 
 // Silent auto-update: when a new version is deployed, the next launch just
 // picks it up. A field team shouldn't have to think about "updating an app."
