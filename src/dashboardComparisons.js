@@ -1,7 +1,7 @@
 import { getApiBase, getSession } from "./api.js";
 
 const DISPLAY_KEY = "engage_dashboard_display_settings";
-const CACHE_KEY = "engage_dashboard_comparison_cache_v1";
+const CACHE_KEY = "engage_dashboard_comparison_cache_v2";
 const COMPARISON_TARGETS = {
   Conversation: "conversation",
   "In Negotiation": "negotiation",
@@ -304,7 +304,7 @@ async function refresh() {
   const thisRequest = ++requestId;
 
   try {
-    const response = await fetch(`${base}/admin/dashboard-comparisons?${params}`, { headers: { Authorization: `Bearer ${token}` } });
+    const response = await fetch(`${base}/admin/dashboard-comparisons?${params}`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
     if (response.ok) {
       const data = await response.json();
       if (thisRequest !== requestId) return;
@@ -326,6 +326,8 @@ async function refresh() {
 
 function install() {
   if (observer) return;
+  // v2 cache intentionally ignores older dashboard totals after the live lead
+  // status normalization migration.
   const cached = readCachedLatest();
   if (cached) latest = cached;
   observer = new MutationObserver(() => { queueRender(); scheduleRefresh(); });
