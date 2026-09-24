@@ -24,21 +24,7 @@ function dashboardTeamSelect() {
   return document.querySelector('select[aria-label="Dashboard employee"]');
 }
 
-function restoreTeamSelect() {
-  const select = dashboardTeamSelect();
-  if (!select?.__engageOriginalParent) return;
-
-  const parent = select.__engageOriginalParent;
-  const next = select.__engageOriginalNextSibling;
-  if (next?.parentElement === parent) parent.insertBefore(select, next);
-  else parent.appendChild(select);
-
-  if (select.__engageOriginalCssText != null) select.style.cssText = select.__engageOriginalCssText;
-  if (select.__engageOriginalRow) select.__engageOriginalRow.style.display = "";
-}
-
 function removeGreeting() {
-  restoreTeamSelect();
   document.querySelectorAll(".engage-dashboard-greeting").forEach((node) => node.remove());
 }
 
@@ -94,34 +80,49 @@ function createGreeting() {
   return row;
 }
 
-function moveTeamSelect(greeting) {
-  const select = dashboardTeamSelect();
-  const controls = greeting?.querySelector(".engage-dashboard-greeting-controls");
-  if (!select || !controls) return;
+function optionSignature(select) {
+  return [...select.options].map((option) => `${option.value}:${option.textContent}`).join("|");
+}
 
-  if (!select.__engageOriginalParent) {
-    select.__engageOriginalParent = select.parentElement;
-    select.__engageOriginalNextSibling = select.nextSibling;
-    select.__engageOriginalCssText = select.style.cssText;
-    select.__engageOriginalRow = select.parentElement;
+function syncTeamProxy(greeting) {
+  const original = dashboardTeamSelect();
+  const controls = greeting?.querySelector(".engage-dashboard-greeting-controls");
+  if (!original || !controls) return;
+
+  let proxy = controls.querySelector(".engage-dashboard-team-proxy");
+  if (!proxy) {
+    proxy = document.createElement("select");
+    proxy.className = "engage-dashboard-team-proxy";
+    proxy.setAttribute("aria-label", "Dashboard employee desktop");
+    proxy.style.flex = "0 0 auto";
+    proxy.style.width = "auto";
+    proxy.style.minWidth = "128px";
+    proxy.style.height = "34px";
+    proxy.style.padding = "5px 30px 5px 10px";
+    proxy.style.borderRadius = "9px";
+    proxy.style.fontSize = "12.5px";
+    proxy.style.fontWeight = "600";
+    proxy.style.background = "#fff";
+    proxy.style.border = "1px solid #E7E9EE";
+    proxy.style.color = "#1A1D23";
+    proxy.style.cursor = "pointer";
+    proxy.addEventListener("change", () => {
+      const source = dashboardTeamSelect();
+      if (!source) return;
+      source.value = proxy.value;
+      source.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    controls.appendChild(proxy);
   }
 
-  controls.appendChild(select);
-  select.style.flex = "0 0 auto";
-  select.style.width = "auto";
-  select.style.minWidth = "128px";
-  select.style.height = "34px";
-  select.style.padding = "5px 30px 5px 10px";
-  select.style.borderRadius = "9px";
-  select.style.fontSize = "12.5px";
-  select.style.fontWeight = "600";
-  select.style.background = "#fff";
-  select.style.border = "1px solid #E7E9EE";
-  select.style.color = "#1A1D23";
-  select.style.cursor = "pointer";
-
-  const originalRow = select.__engageOriginalRow;
-  if (originalRow && originalRow !== controls) originalRow.style.display = "none";
+  const signature = optionSignature(original);
+  if (proxy.dataset.optionSignature !== signature) {
+    proxy.innerHTML = "";
+    [...original.options].forEach((option) => proxy.appendChild(option.cloneNode(true)));
+    proxy.dataset.optionSignature = signature;
+  }
+  if (proxy.value !== original.value) proxy.value = original.value;
+  proxy.disabled = original.disabled;
 }
 
 function render() {
@@ -154,7 +155,7 @@ function render() {
   const primary = greeting.querySelector(".engage-dashboard-greeting-primary");
   if (primary) primary.textContent = `${greetingForHour(new Date().getHours())}, Aamil 👋`;
 
-  moveTeamSelect(greeting);
+  syncTeamProxy(greeting);
 }
 
 function queueRender() {
