@@ -40,10 +40,6 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // Make newly deployed app versions take control immediately instead of
-        // leaving an installed PWA on an older cached bundle until later.
-        skipWaiting: true,
-        clientsClaim: true,
         cleanupOutdatedCaches: true,
         // App shell + static assets are precached so the app opens instantly
         // and works with no signal (a salesman in the field is the whole point).
