@@ -7,6 +7,8 @@ import "./dashboardComparisons.js";
 import "./dashboardTaskCard.js";
 import "./dashboardGreeting.js";
 import "./dashboardMapControls.js";
+import "./salesmanDashboardCards.js";
+import "./salesman-dashboard-cards.css";
 import "./exceptionCentreMount.jsx";
 import "./exceptionCentreUxFix.js";
 import "./exception-centre-fixes.css";
