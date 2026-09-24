@@ -66,7 +66,10 @@ function visibleCard(label) {
 
 function valueNode(card) {
   if (!card) return null;
-  return [...card.children].find((node) => node?.style?.fontSize === "24px") || null;
+  return [...card.children].find((node) => {
+    const family = node?.style?.fontFamily || "";
+    return node?.classList?.contains("engage-db-value") || family.includes("Space Grotesk") || node?.style?.fontSize === "24px" || node?.style?.fontSize === "30px";
+  }) || null;
 }
 
 function setCardValue(label, value) {
