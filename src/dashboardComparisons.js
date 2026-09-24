@@ -81,14 +81,6 @@ function setCardValue(label, value) {
   if (node && value != null) node.textContent = String(value);
 }
 
-function formatMoney(n) {
-  const value = Number(n || 0);
-  if (value >= 1e7) return `₹${(value / 1e7).toFixed(1)}Cr`;
-  if (value >= 1e5) return `₹${(value / 1e5).toFixed(1)}L`;
-  if (value >= 1e3) return `₹${(value / 1e3).toFixed(1)}K`;
-  return `₹${value.toLocaleString("en-IN")}`;
-}
-
 function setCardSub(label, text) {
   const card = visibleCard(label);
   const value = valueNode(card);
@@ -113,7 +105,7 @@ function applyExactMetrics() {
   if (!latest?.metrics || latest.salesmanId !== dashboardEmployee()) return;
   Object.entries(METRIC_TARGETS).forEach(([label, key]) => setCardValue(label, latest.metrics[key]));
   setCardSub("Total Leads", `${latest.metrics.cold ?? 0} cold`);
-  setCardSub("Won", latest.metrics.wonValue > 0 ? `${formatMoney(latest.metrics.wonValue)} closed` : "");
+  setCardSub("Won", "");
 }
 
 function removeComparisonLines(card) {
@@ -199,7 +191,6 @@ function render() {
     const display = settings();
     applyExactMetrics();
 
-    // Phone keeps the native compact card UI. Only the exact KPI number is synced.
     if (!desktopCards()) {
       cleanDesktopOnlyDecoration();
       return;
@@ -333,8 +324,6 @@ async function refresh() {
 
 function install() {
   if (observer) return;
-  // v2 cache intentionally ignores older dashboard totals after the live lead
-  // status normalization migration.
   const cached = readCachedLatest();
   if (cached) latest = cached;
   observer = new MutationObserver(() => { queueRender(); scheduleRefresh(); });
