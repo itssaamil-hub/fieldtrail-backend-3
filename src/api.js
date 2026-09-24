@@ -179,7 +179,18 @@ export const api = {
   dataQualityReport: (params = {}) => request(`/admin/reports/data-quality?${new URLSearchParams(params)}`),
   tasks: (params = {}) => request(`/tasks?${new URLSearchParams(params)}`),
   createTask: body => request('/tasks', { method: 'POST', body }),
-  taskDetail: id => request(`/tasks/${id}`),
+  taskDetail: async id => {
+    try { return await request(`/tasks/${id}`); }
+    catch (err) {
+      // Older deployments have the scoped list endpoint but no detail route.
+      // Do not mask authenticated not-found/permission responses from the new API.
+      if (err.status !== 404 || err.message !== 'Request failed (404)') throw err;
+      const result = await request(`/tasks?${new URLSearchParams({ filter: 'all', taskId: id })}`);
+      const task = result.tasks?.find(item => item.id === id);
+      if (!task) throw new ApiError('Task not found or no longer assigned to you.', 404);
+      return { task, events: [], workflowAvailable: false };
+    }
+  },
   taskLeads: (params = {}) => request(`/tasks/leads?${new URLSearchParams(params)}`),
   taskStatus: (id, status) => request(`/tasks/${id}/status`, { method: 'PATCH', body: { status } }),
   rescheduleTask: (id, body) => request(`/tasks/${id}/reschedule`, { method: 'PATCH', body }),
