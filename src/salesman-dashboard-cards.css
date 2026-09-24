@@ -2,10 +2,10 @@
   .engage-salesman-water-card {
     border-radius: 16px !important;
     border: 1px solid rgba(20, 92, 93, 0.08) !important;
-    box-shadow: 0 6px 18px rgba(26, 57, 58, 0.06) !important;
+    box-shadow: 0 4px 14px rgba(26, 57, 58, 0.055) !important;
     overflow: hidden !important;
-    min-height: 132px !important;
-    padding: 15px 16px 14px !important;
+    min-height: 108px !important;
+    padding: 12px 14px 11px !important;
     position: relative !important;
     isolation: isolate;
   }
@@ -40,25 +40,25 @@
   }
 
   .engage-salesman-water-card > div:first-child {
-    margin-bottom: 16px !important;
+    margin-bottom: 10px !important;
   }
 
   .engage-salesman-water-card > div:first-child > div:first-child {
     color: #5f6b70 !important;
-    font-size: 11px !important;
+    font-size: 10.5px !important;
     font-weight: 700 !important;
-    letter-spacing: .08em !important;
+    letter-spacing: .07em !important;
   }
 
   .engage-salesman-water-card > div:nth-child(2) {
-    font-size: 31px !important;
+    font-size: 28px !important;
     line-height: 1 !important;
     font-weight: 700 !important;
   }
 
   .engage-salesman-water-card > div:nth-child(3) {
     color: #778086 !important;
-    font-size: 11px !important;
-    margin-top: 8px !important;
+    font-size: 10.5px !important;
+    margin-top: 4px !important;
   }
 }
