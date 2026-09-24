@@ -56,7 +56,6 @@ export default function DesktopDealsBoard({ leads, visibleStatus = 'all', onStat
               <div className="engage-deal-value">{amount(lead) === null ? 'Value not set' : money(amount(lead))}</div>
               <div className="engage-deal-owner"><span aria-hidden="true">{(lead.salesmanName || '?').slice(0, 1)}</span>{lead.salesmanName || 'Unassigned'}</div>
               {follow && <div className={`engage-deal-followup${follow.overdue ? ' is-overdue' : ''}`}>{follow.text}</div>}
-              {lead.notes && <div className="engage-deal-note" title={lead.notes}>{lead.notes}</div>}
             </button>;
           })}</div>
           {!rows.length && <div className="engage-deals-empty">No deals · Drop here</div>}
