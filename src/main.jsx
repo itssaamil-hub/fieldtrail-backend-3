@@ -9,6 +9,8 @@ import "./dashboardGreeting.js";
 import "./dashboardMapControls.js";
 import "./salesmanDashboardCards.js";
 import "./salesman-dashboard-cards.css";
+import "./onboardingLiveShare.js";
+import "./onboarding-live-share.css";
 import "./exceptionCentreMount.jsx";
 import "./exceptionCentreUxFix.js";
 import "./exception-centre-fixes.css";
