@@ -50,6 +50,10 @@ function dashboardEmployee() {
   return document.querySelector('select[aria-label="Dashboard employee"]')?.value || "all";
 }
 
+function desktopCards() {
+  return window.matchMedia("(min-width: 900px)").matches;
+}
+
 function isActuallyVisible(node) {
   if (!node || !node.isConnected || node.closest('[hidden]')) return false;
   const style = window.getComputedStyle(node);
@@ -89,15 +93,11 @@ function setCardSub(label, text) {
   const card = visibleCard(label);
   const value = valueNode(card);
   if (!card || !value) return;
-  const children = [...card.children];
-  const valueIndex = children.indexOf(value);
-  let sub = children.slice(valueIndex + 1).find((node) => node.tagName === "DIV" && !node.classList.contains("engage-db-comparison") && !node.classList.contains("engage-db-sub"));
-  if (!text) {
-    card.querySelectorAll(".engage-db-sub").forEach((node) => node.remove());
-    if (sub) sub.textContent = "";
+  let sub = card.querySelector(":scope > .engage-db-sub");
+  if (!text || !desktopCards()) {
+    sub?.remove();
     return;
   }
-  if (!sub) sub = card.querySelector(":scope > .engage-db-sub");
   if (!sub) {
     sub = document.createElement("div");
     sub.className = "engage-db-sub";
@@ -125,6 +125,11 @@ function cleanAllComparisonCards() {
   ALL_COMPARISON_CARDS.forEach((label) => removeComparisonLines(visibleCard(label)));
 }
 
+function cleanDesktopOnlyDecoration() {
+  cleanAllComparisonCards();
+  document.querySelectorAll(".engage-db-sub").forEach((node) => node.remove());
+}
+
 function lineText(comparison, period) {
   const pct = comparison?.pct;
   const prefix = pct == null ? "↑ New" : pct > 0 ? `↑ ${pct}%` : pct < 0 ? `↓ ${Math.abs(pct)}%` : "— Same";
@@ -149,7 +154,7 @@ function hasReactComparison(card, period) {
 }
 
 function appendLine(card, comparison, period) {
-  if (!card || !comparison || hasReactComparison(card, period)) return;
+  if (!desktopCards() || !card || !comparison || hasReactComparison(card, period)) return;
   const line = document.createElement("div");
   line.className = "engage-db-comparison";
   line.style.fontSize = "9.8px";
@@ -159,15 +164,11 @@ function appendLine(card, comparison, period) {
   line.style.lineHeight = "1.25";
   line.style.maxWidth = "100%";
   line.style.paddingBottom = "2px";
-  if (window.matchMedia("(min-width: 768px)").matches) {
-    line.style.display = "flex";
-    line.style.alignItems = "baseline";
-    line.style.gap = "3px";
-    line.style.flexWrap = "wrap";
-    line.style.whiteSpace = "normal";
-  } else {
-    line.style.whiteSpace = "nowrap";
-  }
+  line.style.display = "flex";
+  line.style.alignItems = "baseline";
+  line.style.gap = "3px";
+  line.style.flexWrap = "wrap";
+  line.style.whiteSpace = "normal";
   const text = lineText(comparison, period);
   const suffix = `vs last ${period === "monthly" ? "month" : "week"}`;
   const prefix = text.slice(0, text.length - suffix.length).trimEnd();
@@ -196,12 +197,18 @@ function render() {
   stopObserving();
   try {
     const display = settings();
-    if (display.showComparisons === false) {
-      cleanAllComparisonCards();
-      applyExactMetrics();
+    applyExactMetrics();
+
+    // Phone keeps the native compact card UI. Only the exact KPI number is synced.
+    if (!desktopCards()) {
+      cleanDesktopOnlyDecoration();
       return;
     }
-    applyExactMetrics();
+
+    if (display.showComparisons === false) {
+      cleanAllComparisonCards();
+      return;
+    }
     if (!latest || latest.period !== (display.comparisonPeriod || "weekly") || latest.salesmanId !== dashboardEmployee()) return;
     cleanAllComparisonCards();
     Object.entries(COMPARISON_TARGETS).forEach(([label, key]) => appendLine(visibleCard(label), latest.comparisons?.[key], latest.period));
@@ -334,6 +341,7 @@ function install() {
   startObserving();
   window.addEventListener("engage-display-settings", refresh);
   window.addEventListener("focus", refresh);
+  window.addEventListener("resize", queueRender);
   document.addEventListener("change", (event) => {
     if (event.target?.matches?.('select[aria-label="Dashboard employee"]')) {
       const cachedNow = readCachedLatest();
