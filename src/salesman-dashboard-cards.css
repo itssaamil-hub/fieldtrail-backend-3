@@ -1,0 +1,64 @@
+@media (max-width: 899px) {
+  .engage-salesman-water-card {
+    border-radius: 16px !important;
+    border: 1px solid rgba(20, 92, 93, 0.08) !important;
+    box-shadow: 0 6px 18px rgba(26, 57, 58, 0.06) !important;
+    overflow: hidden !important;
+    min-height: 132px !important;
+    padding: 15px 16px 14px !important;
+    position: relative !important;
+    isolation: isolate;
+  }
+
+  .engage-salesman-water-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(circle at 88% 10%, rgba(255,255,255,.92) 0 18%, transparent 42%),
+      linear-gradient(145deg, rgba(255,255,255,.96), rgba(255,255,255,.72));
+  }
+
+  .engage-salesman-water-card[data-kpi="today"] {
+    background: #eef8f6 !important;
+  }
+  .engage-salesman-water-card[data-kpi="hot"] {
+    background: #fff1ef !important;
+  }
+  .engage-salesman-water-card[data-kpi="conversation"] {
+    background: #fff4ed !important;
+  }
+  .engage-salesman-water-card[data-kpi="negotiation"] {
+    background: #fff8e9 !important;
+  }
+  .engage-salesman-water-card[data-kpi="won"] {
+    background: #eaf8f2 !important;
+  }
+  .engage-salesman-water-card[data-kpi="renewals"] {
+    background: #fff2eb !important;
+  }
+
+  .engage-salesman-water-card > div:first-child {
+    margin-bottom: 16px !important;
+  }
+
+  .engage-salesman-water-card > div:first-child > div:first-child {
+    color: #5f6b70 !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    letter-spacing: .08em !important;
+  }
+
+  .engage-salesman-water-card > div:nth-child(2) {
+    font-size: 31px !important;
+    line-height: 1 !important;
+    font-weight: 700 !important;
+  }
+
+  .engage-salesman-water-card > div:nth-child(3) {
+    color: #778086 !important;
+    font-size: 11px !important;
+    margin-top: 8px !important;
+  }
+}
