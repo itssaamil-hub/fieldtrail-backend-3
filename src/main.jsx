@@ -4,8 +4,6 @@ import { registerSW } from "virtual:pwa-register";
 import App from "./App.jsx";
 import "./index.css";
 import "./dashboardComparisons.js";
-import "./dashboardCardStyling.js";
-import "./mobileDashboardCardMatch.js";
 import "./dashboardTaskCard.js";
 import "./dashboardGreeting.js";
 import "./dashboardMapControls.js";
