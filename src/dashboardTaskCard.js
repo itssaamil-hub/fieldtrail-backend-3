@@ -51,8 +51,8 @@ function styleCard(card) {
   card.style.transition = "transform 0.15s ease, box-shadow 0.15s ease";
   card.style.flex = desktop ? "1 1 205px" : "1";
   card.style.minWidth = desktop ? "205px" : "96px";
-  card.style.minHeight = desktop ? "116px" : "";
-  card.style.padding = desktop ? "14px 20px 12px" : "14px 16px";
+  card.style.minHeight = desktop ? "100px" : "";
+  card.style.padding = desktop ? "10px 20px 9px" : "14px 16px";
   card.style.borderRadius = desktop ? "16px" : "14px";
 }
 
@@ -75,7 +75,7 @@ function createCard() {
   header.style.alignItems = "center";
   header.style.justifyContent = "space-between";
   header.style.gap = "9px";
-  header.style.marginBottom = "7px";
+  header.style.marginBottom = "5px";
 
   const title = document.createElement("div");
   title.textContent = "Tasks";
@@ -109,7 +109,7 @@ function createCard() {
   sub.className = "engage-task-kpi-sub";
   sub.style.fontSize = "12px";
   sub.style.color = "#6B7280";
-  sub.style.marginTop = "3px";
+  sub.style.marginTop = "1px";
   sub.textContent = dueToday == null ? "pending tasks" : `${dueToday} due today`;
 
   card.append(header, value, sub);
