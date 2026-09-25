@@ -1,11 +1,11 @@
 @media (max-width: 899px) {
   .engage-salesman-water-card {
     border-radius: 15px !important;
-    border: 1px solid rgba(20, 92, 93, 0.07) !important;
-    box-shadow: 0 4px 12px rgba(26, 57, 58, 0.05) !important;
+    border: 1px solid rgba(18,128,92,.14) !important;
+    box-shadow: 0 4px 14px rgba(18,128,92,.07) !important;
     overflow: hidden !important;
-    min-height: 96px !important;
-    padding: 11px 12px 10px !important;
+    min-height: 84px !important;
+    padding: 9px 9px 8px !important;
     position: relative !important;
     isolation: isolate;
   }
@@ -16,81 +16,92 @@
     inset: 0;
     z-index: -1;
     background:
-      radial-gradient(circle at 88% 10%, rgba(255,255,255,.90) 0 18%, transparent 42%),
-      linear-gradient(145deg, rgba(255,255,255,.95), rgba(255,255,255,.76));
+      radial-gradient(circle at 18% 16%, rgba(255,255,255,.48) 0%, rgba(255,255,255,.18) 26%, transparent 50%),
+      linear-gradient(145deg, rgba(255,255,255,.34), rgba(255,255,255,.72));
   }
 
   .engage-salesman-water-card[data-kpi="today"] {
-    background: #eef8f6 !important;
+    background: linear-gradient(145deg,#F1FAF6 0%,#F8FCFA 58%,#FFFFFF 100%) !important;
   }
   .engage-salesman-water-card[data-kpi="hot"] {
-    background: #fff1ef !important;
+    background: linear-gradient(145deg,#FFF3F1 0%,#FFF9F8 58%,#FFFFFF 100%) !important;
+    border-color: rgba(192,57,43,.13) !important;
   }
   .engage-salesman-water-card[data-kpi="conversation"] {
-    background: #fff4ed !important;
+    background: linear-gradient(145deg,#FFF7F2 0%,#FFFBF8 58%,#FFFFFF 100%) !important;
+    border-color: rgba(245,121,59,.14) !important;
   }
   .engage-salesman-water-card[data-kpi="negotiation"] {
-    background: #fff8e9 !important;
+    background: linear-gradient(145deg,#FFF9EC 0%,#FFFDF7 58%,#FFFFFF 100%) !important;
+    border-color: rgba(184,121,31,.14) !important;
   }
   .engage-salesman-water-card[data-kpi="won"] {
-    background: #eaf8f2 !important;
+    background: linear-gradient(145deg,#F0FAF6 0%,#F8FCFA 58%,#FFFFFF 100%) !important;
   }
   .engage-salesman-water-card[data-kpi="renewals"] {
-    background: #fff2eb !important;
+    background: linear-gradient(145deg,#FFF4EE 0%,#FFFAF7 58%,#FFFFFF 100%) !important;
+    border-color: rgba(245,121,59,.14) !important;
   }
 
   .engage-salesman-water-card > div:first-child {
-    margin-bottom: 10px !important;
+    margin-bottom: 5px !important;
     display: flex !important;
     align-items: center !important;
-    justify-content: space-between !important;
-    gap: 8px !important;
+    justify-content: flex-start !important;
+    gap: 5px !important;
     min-width: 0 !important;
   }
 
+  .engage-salesman-water-card > div:first-child > div:last-child {
+    order: -1 !important;
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px !important;
+    border-radius: 7px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: 1px solid rgba(255,255,255,.58) !important;
+    background: rgba(255,255,255,.74) !important;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.28) !important;
+  }
+
+  .engage-salesman-water-card > div:first-child > div:last-child svg {
+    width: 10.5px !important;
+    height: 10.5px !important;
+    stroke-width: 2 !important;
+  }
+
   .engage-salesman-water-card > div:first-child > div:first-child {
-    color: #5f6b70 !important;
-    font-size: 10px !important;
+    color: #5E716C !important;
+    font-size: 8.6px !important;
     font-weight: 700 !important;
-    letter-spacing: .04em !important;
+    letter-spacing: .02em !important;
     line-height: 1.1 !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
     min-width: 0 !important;
     flex: 1 1 auto !important;
-  }
-
-  .engage-salesman-water-card > div:first-child > div:last-child {
-    width: 24px !important;
-    height: 24px !important;
-    min-width: 24px !important;
-    border-radius: 8px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    border: 1px solid rgba(20, 92, 93, 0.06) !important;
-    background: rgba(255,255,255,.72) !important;
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,.28) !important;
-  }
-
-  .engage-salesman-water-card > div:first-child > div:last-child svg {
-    width: 13px !important;
-    height: 13px !important;
-    stroke-width: 2.1 !important;
+    text-transform: none !important;
   }
 
   .engage-salesman-water-card > div:nth-child(2) {
-    font-size: 27px !important;
+    font-family: 'Space Grotesk', sans-serif !important;
+    font-size: 23px !important;
     line-height: 1 !important;
     font-weight: 700 !important;
-    letter-spacing: -0.3px !important;
+    letter-spacing: -.35px !important;
+    color: #173738 !important;
   }
 
   .engage-salesman-water-card > div:nth-child(3) {
-    color: #778086 !important;
-    font-size: 10px !important;
-    margin-top: 5px !important;
-    line-height: 1.15 !important;
+    color: #6F817D !important;
+    font-size: 8.8px !important;
+    margin-top: 3px !important;
+    line-height: 1.1 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
 }
