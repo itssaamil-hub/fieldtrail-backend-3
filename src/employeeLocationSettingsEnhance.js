@@ -94,20 +94,21 @@ async function mountEmployeeLocation(dialog){
     body.innerHTML='';body.style.padding='0';
     let draft={...policy};let dirty=false;
     const status=document.createElement('div');status.style.cssText='font-size:11.5px;margin-top:8px;min-height:18px;color:#6f7a75;';
-    const save=document.createElement('button');save.type='button';save.className='ft-ob-primary';save.textContent='Save Location Settings';save.style.marginTop='10px';save.disabled=true;
-    const onChange=(key,value)=>{draft={...draft,[key]:value};dirty=true;save.disabled=false;status.textContent='Unsaved changes';status.style.color='#9a6b18';};
+    const save=document.createElement('button');save.type='button';save.className='ft-ob-primary';save.textContent='Save Location Settings';save.style.marginTop='10px';save.disabled=false;
+    const onChange=(key,value)=>{draft={...draft,[key]:value};dirty=true;status.textContent='Unsaved changes';status.style.color='#9a6b18';};
     body.append(
       switchRow('GPS Location','If off, leads can be saved with no location at all.','gpsLocation',draft,onChange),
       switchRow('Location Mandatory for New Lead','When GPS is on, location must be captured before a new lead can be saved.','locationMandatoryForNewLead',draft,onChange),
       switchRow('Continuous GPS Tracking','Sends live location pings only while this employee\'s day is active.','continuousGpsTracking',draft,onChange)
     );
     save.addEventListener('click',async()=>{
-      if(!dirty) return;save.disabled=true;save.textContent='Saving…';status.textContent='';
+      if(!dirty){status.textContent='No changes to save.';status.style.color='#6f7a75';return;}
+      save.disabled=true;save.textContent='Saving…';status.textContent='';
       try{
         const saved=await request(`/admin/employees/${id}/location-policy`,{method:'PUT',body:JSON.stringify({...draft,version:policy.version})});
         policy=saved;draft={...saved};policyCache.set(id,saved);dirty=false;status.textContent='Location settings saved.';status.style.color='#12805C';
-      }catch(e){status.textContent=e.message||'Could not save location settings.';status.style.color='#b42318';save.disabled=false;}
-      finally{save.textContent='Save Location Settings';}
+      }catch(e){status.textContent=e.message||'Could not save location settings.';status.style.color='#b42318';}
+      finally{save.disabled=false;save.textContent='Save Location Settings';}
     });
     body.append(save,status);
   }catch(e){body.textContent=e.message||'Could not load location settings.';body.style.color='#b42318';}
