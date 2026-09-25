@@ -42,8 +42,8 @@ function setReactValue(el, value){
 function enhanceContainer(root){
   if(!visible(root)) return;
   const labelNodes = [...root.querySelectorAll('div')].filter(visible);
-  const monthLabel = labelNodes.find(n => text(n) === 'Renewal Month');
-  const dateLabel = labelNodes.find(n => text(n) === 'Renewal Date');
+  const monthLabel = labelNodes.find(n => text(n) === 'Renewal Month' || text(n) === 'Renewal / Expiry Month');
+  const dateLabel = labelNodes.find(n => text(n) === 'Renewal Date' || text(n) === 'Exact Date (optional)');
   if(!monthLabel || !dateLabel) return;
 
   const monthField = monthLabel.parentElement;
@@ -54,6 +54,10 @@ function enhanceContainer(root){
 
   monthLabel.textContent = 'Renewal / Expiry Month';
   dateLabel.textContent = 'Exact Date (optional)';
+  monthField.dataset.renewalMonthField = 'true';
+  dateField.dataset.renewalDateField = 'true';
+  const commonRow = monthField.parentElement === dateField.parentElement ? monthField.parentElement : null;
+  if(commonRow) commonRow.dataset.renewalExpiryRow = 'true';
 
   if(!monthField.querySelector('[data-renewal-help]')){
     const help = document.createElement('div');
