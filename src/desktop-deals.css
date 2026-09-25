@@ -4,6 +4,31 @@
   .engage-desktop-deals .engage-deals-summary { font: 12px Inter,sans-serif; color: #718078; margin-top: 4px; }
   .engage-desktop-deals .engage-deals-add { width: auto !important; padding: 7px 12px; gap: 6px; height: auto !important; font-size: 12px; font-weight: 600; }
 
+  .engage-pipeline-enhanced { row-gap: 8px; }
+  .engage-pipeline-enhanced .engage-pipeline-search { min-height: 36px; }
+  .engage-pipeline-controls {
+    gap: 7px !important;
+    margin-bottom: 10px !important;
+    align-items: center !important;
+  }
+  .engage-pipeline-controls select,
+  .engage-pipeline-controls input[type="date"] {
+    min-height: 34px;
+  }
+  .engage-pipeline-reset {
+    border: 1px solid #DDE4E0;
+    background: #fff;
+    color: #52655D;
+    border-radius: 8px;
+    min-height: 34px;
+    padding: 0 10px;
+    font: 600 11px Inter, sans-serif;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .engage-pipeline-reset:hover { border-color: #8EAAA0; color: #145C5D; background: #F5F9F7; }
+  .engage-pipeline-reset[hidden] { display: none !important; }
+
   .engage-deals-board {
     display: flex;
     align-items: stretch;
