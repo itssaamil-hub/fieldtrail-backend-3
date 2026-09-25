@@ -123,28 +123,42 @@
   .engage-mobile-add-lead-polish [data-renewal-expiry-row="true"] {
     display: grid !important;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
-    gap: 10px !important;
+    column-gap: 10px !important;
+    row-gap: 0 !important;
     width: 100% !important;
     align-items: start !important;
+  }
+
+  .engage-mobile-add-lead-polish [data-renewal-month-wrap="true"],
+  .engage-mobile-add-lead-polish [data-renewal-date-wrap="true"] {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    flex: none !important;
   }
 
   .engage-mobile-add-lead-polish [data-renewal-month-field="true"],
   .engage-mobile-add-lead-polish [data-renewal-date-field="true"] {
     width: 100% !important;
     min-width: 0 !important;
+    max-width: 100% !important;
     flex: none !important;
   }
 
   .engage-mobile-add-lead-polish [data-renewal-month-field="true"] > div:first-child,
   .engage-mobile-add-lead-polish [data-renewal-date-field="true"] > div:first-child {
     white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
     font-size: 11px !important;
   }
 
   .engage-mobile-add-lead-polish [data-renewal-month-field="true"] select,
   .engage-mobile-add-lead-polish [data-renewal-date-field="true"] input {
+    display: block !important;
     width: 100% !important;
     min-width: 0 !important;
+    max-width: 100% !important;
     box-sizing: border-box !important;
   }
 
@@ -152,9 +166,11 @@
   .engage-mobile-add-lead-polish [data-expiry-help="true"] {
     display: block !important;
     width: 100% !important;
+    max-width: 100% !important;
     margin-top: 4px !important;
     font-size: 9.5px !important;
     line-height: 1.25 !important;
+    white-space: normal !important;
   }
 
   .engage-mobile-add-lead-polish [data-mobile-lead-save="true"] {
