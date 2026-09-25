@@ -13,6 +13,8 @@ import "./adminMobileLeadTrend.js";
 import "./admin-mobile-lead-trend.css";
 import "./adminTeamActivity.js";
 import "./admin-team-activity.css";
+import "./expenseReportEnhance.js";
+import "./expense-report-enhance.css";
 import "./onboardingLiveShare.js";
 import "./onboarding-live-share.css";
 import "./quotationSettingsEnhance.js";
