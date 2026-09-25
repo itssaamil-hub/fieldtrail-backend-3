@@ -16,7 +16,12 @@ function followUp(value) {
   const date = new Date(`${day}T12:00:00+05:30`);
   if (Number.isNaN(date.getTime())) return null;
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
-  return { overdue: day < today, text: `${day < today ? 'Overdue' : day === today ? 'Today' : 'Follow-up'} · ${date.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short' })}` };
+  const label = date.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short' });
+  return {
+    overdue: day < today,
+    today: day === today,
+    text: day < today ? `Overdue · ${label}` : day === today ? `Due today · ${label}` : `Follow-up · ${label}`,
+  };
 }
 export default function DesktopDealsBoard({ leads, visibleStatus = 'all', onStatusChange, onSelectLead }) {
   const [dragging, setDragging] = useState(null);
@@ -38,27 +43,32 @@ export default function DesktopDealsBoard({ leads, visibleStatus = 'all', onStat
       {STAGES.filter(([status]) => visibleStatus === 'all' || status === visibleStatus).map(([status, label, colour]) => {
         const rows = leads.filter(l => l.status === status);
         const valued = rows.filter(l => amount(l) !== null);
-        return <section key={status} className={`engage-deals-column${over === status ? ' is-over' : ''}`} aria-label={`${label} deals`}
+        const totalValue = valued.reduce((total, l) => total + amount(l), 0);
+        return <section key={status} className={`engage-deals-column${over === status ? ' is-over' : ''}${rows.length === 0 ? ' is-empty' : ''}`} aria-label={`${label} deals`}
           onDragOver={e => { e.preventDefault(); if (!saving) setOver(status); }}
           onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setOver(null); }}
           onDrop={e => { e.preventDefault(); drop(status); }}>
           <div className="engage-deals-column-heading" style={{ borderTopColor: colour }}>
             <div><strong>{label}</strong><span>{rows.length}</span></div>
-            <small>{valued.length ? money(valued.reduce((total, l) => total + amount(l), 0)) : 'No value set'}{valued.length < rows.length && valued.length > 0 ? ` · ${rows.length - valued.length} unpriced` : ''}</small>
+            <small>{rows.length} {rows.length === 1 ? 'lead' : 'leads'} · {valued.length ? money(totalValue) : 'No value'}{valued.length < rows.length && valued.length > 0 ? ` · ${rows.length - valued.length} unpriced` : ''}</small>
           </div>
           <div className="engage-deals-cards">{rows.map(lead => {
             const follow = followUp(lead.nextFollowUpDate);
+            const leadAmount = amount(lead);
             return <button key={lead.id} type="button" className="engage-deal-card" draggable={!saving}
               onDragStart={e => { setDragging(lead.id); e.dataTransfer.setData('text/plain', String(lead.id)); e.dataTransfer.effectAllowed = 'move'; }}
               onDragEnd={() => { setDragging(null); setOver(null); }} onClick={() => onSelectLead(lead)}
               style={{ opacity: dragging === lead.id ? 0.4 : 1 }}>
               <strong className="engage-deal-name">{lead.business}</strong>
-              <div className="engage-deal-value">{amount(lead) === null ? 'Value not set' : money(amount(lead))}</div>
-              <div className="engage-deal-owner"><span aria-hidden="true">{(lead.salesmanName || '?').slice(0, 1)}</span>{lead.salesmanName || 'Unassigned'}</div>
-              {follow && <div className={`engage-deal-followup${follow.overdue ? ' is-overdue' : ''}`}>{follow.text}</div>}
+              <div className={`engage-deal-value${leadAmount === null ? ' is-empty-value' : ''}`}>{leadAmount === null ? 'Value not set' : money(leadAmount)}</div>
+              <div className="engage-deal-meta-row">
+                <div className="engage-deal-owner"><span aria-hidden="true">{(lead.salesmanName || '?').slice(0, 1)}</span>{lead.salesmanName || 'Unassigned'}</div>
+                {follow && !follow.overdue && <div className={`engage-deal-followup${follow.today ? ' is-today' : ''}`}>{follow.text}</div>}
+              </div>
+              {follow?.overdue && <div className="engage-deal-overdue-pill">{follow.text}</div>}
             </button>;
           })}</div>
-          {!rows.length && <div className="engage-deals-empty">No deals · Drop here</div>}
+          {!rows.length && <div className="engage-deals-empty"><span>Empty stage</span><small>Drop a deal here</small></div>}
         </section>;
       })}
     </div>
