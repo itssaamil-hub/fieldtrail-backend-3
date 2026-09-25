@@ -1,4 +1,4 @@
-import { api, getSession } from './api.js';
+import { api, getApiBase, getSession } from './api.js';
 
 const SHEET_ID = 'engage-admin-team-activity-sheet';
 const PHONE_MAX = 900;
@@ -19,19 +19,19 @@ function valueOf(row, keys) {
   return null;
 }
 
-function isSameISTDay(value) {
-  if (!value) return false;
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return false;
-  const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' });
-  return fmt.format(d) === fmt.format(new Date());
+function istToday() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date());
 }
 
 function timeIST(value) {
   if (!value) return '—';
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return '—';
-  return new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', hour: 'numeric', minute: '2-digit' }).format(d);
+  return new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata', hour: 'numeric', minute: '2-digit',
+  }).format(d);
 }
 
 function relativeTime(value) {
@@ -47,76 +47,64 @@ function relativeTime(value) {
   return `${days} day${days === 1 ? '' : 's'} ago`;
 }
 
-function leadSalesmanId(lead) {
-  return lead?.salesman_id || lead?.salesmanId || lead?.assigned_to || lead?.assignedTo || '';
+async function fetchBrief(employeeId) {
+  const base = getApiBase();
+  const token = getSession()?.token;
+  if (!base || !token || !employeeId) return null;
+  const day = istToday();
+  const response = await fetch(`${base}/admin/salesmen/${encodeURIComponent(employeeId)}/brief?date=${encodeURIComponent(day)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw new Error(`Employee brief failed (${response.status})`);
+  return response.json();
 }
 
-function leadCreatedAt(lead) {
-  return lead?.created_at || lead?.createdAt || null;
-}
-
-function leadFollowUp(lead) {
-  return lead?.next_follow_up_date || lead?.nextFollowUpDate || null;
-}
-
-function taskSalesmanId(task) {
-  return task?.salesman_id || task?.salesmanId || task?.assigned_to || task?.assignedTo || task?.assignee_id || task?.assigneeId || '';
-}
-
-function taskDue(task) {
-  return task?.due_at || task?.dueAt || task?.due_date || task?.dueDate || null;
-}
-
-function taskOpen(task) {
-  const status = String(task?.status || '').toLowerCase();
-  return !['completed', 'done', 'cancelled', 'canceled'].includes(status);
-}
-
-function statusFor(row) {
-  const online = String(valueOf(row, ['status', 'presence_status', 'presenceStatus']) || '').toLowerCase() === 'online';
-  const started = valueOf(row, ['day_started_at', 'dayStartedAt', 'started_at', 'startedAt', 'start_day_at', 'startDayAt']);
-  const ended = valueOf(row, ['day_ended_at', 'dayEndedAt', 'ended_at', 'endedAt', 'end_day_at', 'endDayAt']);
-  if (online) return { key: 'active', label: 'Active now' };
-  if (ended && isSameISTDay(ended)) return { key: 'ended', label: 'Day ended' };
-  if (started && isSameISTDay(started)) return { key: 'offline', label: 'Offline' };
+function statusFor(row, brief) {
+  const presence = String(valueOf(row, ['status', 'presence_status', 'presenceStatus']) || '').toLowerCase();
+  const sessions = Array.isArray(brief?.sessions) ? brief.sessions : [];
+  const latest = sessions[sessions.length - 1] || null;
+  const hasStarted = sessions.length > 0;
+  const hasEnded = hasStarted && !!latest?.endedAt;
+  if (presence === 'online') return { key: 'active', label: 'Active now' };
+  if (hasEnded) return { key: 'ended', label: 'Day ended' };
+  if (hasStarted) return { key: 'offline', label: 'Offline' };
   return { key: 'not-started', label: 'Not started' };
 }
 
-function buildEmployee(row, leads, tasks) {
-  const id = rawId(row);
-  const employeeLeads = leads.filter(lead => String(leadSalesmanId(lead)) === String(id));
-  const todayLeads = employeeLeads.filter(lead => isSameISTDay(leadCreatedAt(lead))).length;
-  const followups = employeeLeads.filter(lead => isSameISTDay(leadFollowUp(lead))).length;
-  const employeeTasks = tasks.filter(task => String(taskSalesmanId(task)) === String(id) && taskOpen(task));
-  const dueToday = employeeTasks.filter(task => isSameISTDay(taskDue(task))).length;
-  const overdue = employeeTasks.filter(task => {
-    const due = taskDue(task);
-    if (!due) return false;
-    const d = new Date(due);
-    return !Number.isNaN(d.getTime()) && d.getTime() < Date.now() && !isSameISTDay(due);
-  }).length;
-  const latestLead = [...employeeLeads].sort((a, b) => new Date(leadCreatedAt(b) || 0) - new Date(leadCreatedAt(a) || 0))[0];
-  const started = valueOf(row, ['day_started_at', 'dayStartedAt', 'started_at', 'startedAt', 'start_day_at', 'startDayAt']);
-  const ended = valueOf(row, ['day_ended_at', 'dayEndedAt', 'ended_at', 'endedAt', 'end_day_at', 'endDayAt']);
-  const locationAt = valueOf(row, ['last_location_at', 'lastLocationAt', 'location_updated_at', 'locationUpdatedAt', 'last_seen_at', 'lastSeenAt']);
+function latestEventAt(brief) {
+  const events = Array.isArray(brief?.events) ? brief.events : [];
+  return events.reduce((latest, event) => {
+    const at = event?.at ? new Date(event.at) : null;
+    if (!at || Number.isNaN(at.getTime())) return latest;
+    if (!latest || at > latest) return at;
+    return latest;
+  }, null);
+}
+
+function buildEmployee(row, brief) {
+  const sessions = Array.isArray(brief?.sessions) ? brief.sessions : [];
+  const firstSession = sessions[0] || null;
+  const latestSession = sessions[sessions.length - 1] || null;
+  const locationAt = valueOf(row, ['last_seen_at', 'lastSeenAt', 'last_location_at', 'lastLocationAt']);
+  const lastEvent = latestEventAt(brief);
   return {
-    id,
-    name: rawName(row),
+    id: rawId(row),
+    name: brief?.employee?.name || rawName(row),
     area: valueOf(row, ['area', 'territory']) || 'Sales Executive',
-    status: statusFor(row),
-    started,
-    ended,
+    status: statusFor(row, brief),
+    started: firstSession?.startedAt || null,
+    ended: latestSession?.endedAt || null,
     locationAt,
-    todayLeads,
-    followups,
-    dueToday,
-    overdue,
-    lastActivityAt: valueOf(row, ['last_activity_at', 'lastActivityAt', 'last_seen_at', 'lastSeenAt']) || leadCreatedAt(latestLead),
+    todayLeads: Number(brief?.glance?.leadsAdded ?? brief?.summary?.leadsAdded ?? 0),
+    followups: Number(brief?.followUpHealth?.dueToday ?? 0),
+    dueToday: Number(brief?.unfinished?.pendingTasks ?? 0),
+    overdue: Number(brief?.unfinished?.overdueTasks ?? 0),
+    lastActivityAt: lastEvent || locationAt || null,
   };
 }
 
 function escapeHtml(value) {
-  return String(value ?? '').replace(/[&<>'"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[ch]));
+  return String(value ?? '').replace(/[&<>'\"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '\"': '&quot;' }[ch]));
 }
 
 function initials(name) {
@@ -145,8 +133,8 @@ function employeeCard(emp) {
       </div>
       <div class="engage-team-metrics">
         <div><strong>${emp.todayLeads}</strong><span>Leads today</span></div>
-        <div><strong>${emp.followups}</strong><span>Follow-ups</span></div>
-        <div><strong>${emp.dueToday}</strong><span>Tasks due</span></div>
+        <div><strong>${emp.followups}</strong><span>Follow-ups due</span></div>
+        <div><strong>${emp.dueToday}</strong><span>Open tasks</span></div>
         <div class="${emp.overdue ? 'is-alert' : ''}"><strong>${emp.overdue}</strong><span>Overdue</span></div>
       </div>
       <div class="engage-team-last-activity"><span>Last activity</span><strong>${escapeHtml(relativeTime(emp.lastActivityAt))}</strong></div>
@@ -195,12 +183,13 @@ async function openSheet() {
   if (getSession()?.role !== 'admin' || window.innerWidth > PHONE_MAX) return;
   const sheet = createSheet();
   try {
-    const [salesmenRes, leadsRes, tasksRes] = await Promise.all([
-      api.adminSalesmen(),
-      api.adminLeads(),
-      api.tasks({ filter: 'all' }).catch(() => ({ tasks: [] })),
-    ]);
-    const employees = (salesmenRes?.salesmen || []).map(row => buildEmployee(row, leadsRes?.leads || [], tasksRes?.tasks || []));
+    const salesmenRes = await api.adminSalesmen();
+    const rows = salesmenRes?.salesmen || [];
+    const briefResults = await Promise.allSettled(rows.map(row => fetchBrief(rawId(row))));
+    const employees = rows.map((row, index) => buildEmployee(
+      row,
+      briefResults[index]?.status === 'fulfilled' ? briefResults[index].value : null,
+    ));
     const counts = employees.reduce((acc, emp) => { acc[emp.status.key] = (acc[emp.status.key] || 0) + 1; return acc; }, {});
     sheet.querySelector('.engage-team-summary-text').textContent = `${employees.length} Employees · ${counts.active || 0} Active now`;
     sheet.querySelector('.engage-team-summary-cards').innerHTML = `
