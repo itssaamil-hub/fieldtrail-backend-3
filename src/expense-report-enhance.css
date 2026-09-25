@@ -4,6 +4,37 @@
   margin: 0 auto;
 }
 
+.engage-expense-quick-filters {
+  display:flex;
+  align-items:center;
+  gap:7px;
+  margin:0 0 8px;
+  flex-wrap:wrap;
+}
+.engage-expense-quick-filters>span {
+  font-size:10.5px;
+  font-weight:800;
+  color:#6B7280;
+  margin-right:2px;
+}
+.engage-expense-quick-filters button {
+  min-height:30px;
+  padding:0 10px;
+  border-radius:999px;
+  border:1px solid #DDE4E2;
+  background:#fff;
+  color:#586966;
+  font-size:11px;
+  font-weight:750;
+  cursor:pointer;
+}
+.engage-expense-quick-filters button:hover,
+.engage-expense-quick-filters button.is-active {
+  border-color:#BFD7D1;
+  background:#EDF7F4;
+  color:#145C5D;
+}
+
 .engage-expense-filters {
   display:grid!important;
   grid-template-columns:minmax(160px,1.1fr) minmax(170px,1.1fr) minmax(145px,.8fr) auto minmax(145px,.8fr);
@@ -22,19 +53,28 @@
 .engage-expense-total { display:none!important; }
 
 .engage-expense-breakdown { padding:15px; margin-bottom:16px!important; background:#fff; border:1px solid #E7E9EE; border-radius:14px; }
+.engage-expense-breakdown.engage-expense-breakdown-compact { padding-bottom:13px; }
 .engage-expense-breakdown::before { content:'Spend by category'; display:block; margin-bottom:12px; font-size:10.5px; font-weight:800; letter-spacing:.4px; text-transform:uppercase; color:#6B7280; }
 .engage-expense-breakdown [style*="height: 8px"] > div { background:#145C5D!important; }
 
 .engage-expense-list { gap:8px!important; }
-.engage-expense-list::before { content:'Expense entries'; display:block; margin:2px 0 4px; font-size:10.5px; font-weight:800; letter-spacing:.4px; text-transform:uppercase; color:#6B7280; }
+.engage-expense-list::before { content:'Expense entries'; display:block; margin:0 0 4px; font-size:10.5px; font-weight:800; letter-spacing:.4px; text-transform:uppercase; color:#6B7280; }
 .engage-expense-date-group { margin:8px 2px 2px; font-size:10px; font-weight:750; letter-spacing:.3px; text-transform:uppercase; color:#87918F; }
-.engage-expense-row { min-height:58px; padding:11px 13px!important; border-radius:12px!important; box-shadow:0 1px 2px rgba(16,24,40,.025); display:grid!important; grid-template-columns:minmax(0,1fr) auto; align-items:center!important; column-gap:12px!important; }
+.engage-expense-row { min-height:64px; padding:10px 12px!important; border-radius:12px!important; box-shadow:0 1px 2px rgba(16,24,40,.025); display:grid!important; grid-template-columns:minmax(0,1fr) auto; align-items:center!important; column-gap:12px!important; }
+.engage-expense-row-hidden { display:none!important; }
 .engage-expense-row>div:first-child { min-width:0; }
-.engage-expense-row>div:first-child>div:first-child { font-size:13px!important; font-weight:750!important; color:#1A1D23; }
-.engage-expense-row>div:first-child>div:nth-child(2) { margin-top:3px!important; font-size:11.5px!important; line-height:1.35; overflow-wrap:anywhere; }
-.engage-expense-row-actions { display:inline-flex; align-items:center; justify-content:flex-end; gap:6px; flex:0 0 auto; }
-.engage-expense-edit { border:none; background:#F3F7F5; color:#145C5D; width:30px; height:30px; border-radius:8px; cursor:pointer; font-size:15px; font-weight:800; flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; }
-.engage-expense-row-actions button[aria-label="Delete expense"] { width:30px; height:30px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px!important; }
+.engage-expense-row-title { font-size:13px!important; font-weight:800!important; color:#1A1D23!important; }
+.engage-expense-row-meta { margin-top:3px!important; font-size:11.25px!important; line-height:1.35; overflow-wrap:anywhere; color:#6B7280!important; }
+.engage-expense-row-badges { display:flex; gap:5px; flex-wrap:wrap; margin-top:6px; }
+.engage-expense-row-badges span { display:inline-flex; align-items:center; min-height:20px; padding:0 7px; border-radius:999px; background:#F1F6F4; border:1px solid #E1ECE8; color:#49655F; font-size:9.75px; font-weight:750; }
+.engage-expense-row-actions { display:inline-grid; grid-template-columns:auto 32px 32px; align-items:center; justify-content:end; gap:6px; flex:0 0 auto; }
+.engage-expense-row-amount { min-width:74px; text-align:right; font-family:'Space Grotesk',sans-serif; font-size:15px; line-height:1; color:#173738; white-space:nowrap; margin-right:4px; }
+.engage-expense-edit { border:1px solid #E2E9E6; background:#F3F7F5; color:#145C5D; width:32px; height:32px; border-radius:8px; cursor:pointer; font-size:15px; font-weight:800; flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; }
+.engage-expense-row-actions button[aria-label="Delete expense"] { width:32px; height:32px; display:inline-flex; align-items:center; justify-content:center; border:1px solid #E5E8EA!important; border-radius:8px!important; background:#FAFBFB!important; }
+.engage-expense-edit:hover { background:#EAF4F1; border-color:#C7DDD7; }
+.engage-expense-row-actions button[aria-label="Delete expense"]:hover { background:#FFF2F1!important; color:#C0392B!important; border-color:#F0D4D1!important; }
+.engage-expense-load-more { width:100%; min-height:38px; border:1px solid #DCE6E3; border-radius:10px; background:#fff; color:#145C5D; font-size:11.5px; font-weight:800; cursor:pointer; margin-top:4px; }
+.engage-expense-load-more:hover { background:#F1F8F5; }
 
 .engage-expense-edit-overlay { position:fixed; inset:0; z-index:4000; background:rgba(20,29,35,.34); display:flex; align-items:center; justify-content:center; padding:16px; }
 .engage-expense-edit-sheet { width:min(520px,100%); background:#fff; border-radius:18px; box-shadow:0 22px 60px rgba(0,0,0,.18); padding:18px; }
@@ -54,7 +94,8 @@
 
 @media (min-width:900px) {
   .engage-expense-report { padding:2px 0 18px; }
-  .engage-expense-report:has(.engage-expense-breakdown):has(.engage-expense-list) { display:grid; grid-template-columns:minmax(330px,.92fr) minmax(0,1.45fr); column-gap:18px; align-items:start; }
+  .engage-expense-report:has(.engage-expense-breakdown):has(.engage-expense-list) { display:grid; grid-template-columns:minmax(340px,.96fr) minmax(0,1.5fr); column-gap:14px; align-items:start; }
+  .engage-expense-report:has(.engage-expense-breakdown):has(.engage-expense-list)>.engage-expense-quick-filters,
   .engage-expense-report:has(.engage-expense-breakdown):has(.engage-expense-list)>.engage-expense-filters,
   .engage-expense-report:has(.engage-expense-breakdown):has(.engage-expense-list)>.engage-expense-summary,
   .engage-expense-report:has(.engage-expense-breakdown):has(.engage-expense-list)>.engage-expense-total { grid-column:1/-1; }
@@ -64,6 +105,9 @@
 
 @media (max-width:899px) {
   .engage-expense-report { padding:2px 12px 88px; }
+  .engage-expense-quick-filters { margin-bottom:8px; gap:6px; }
+  .engage-expense-quick-filters>span { width:100%; margin-bottom:1px; }
+  .engage-expense-quick-filters button { min-height:31px; padding:0 9px; font-size:10.5px; }
   .engage-expense-filters { grid-template-columns:1fr 1fr; gap:8px!important; padding:9px; border-radius:13px; }
   .engage-expense-filters>select { grid-column:span 1; }
   .engage-expense-filters>input[type="date"] { min-width:0; }
@@ -73,11 +117,13 @@
   .engage-expense-summary-card span { font-size:9.8px; }
   .engage-expense-summary-card strong { font-size:17px; }
   .engage-expense-summary-card small { font-size:9.5px; }
-  .engage-expense-breakdown { padding:13px; border-radius:13px; }
-  .engage-expense-row { grid-template-columns:minmax(0,1fr) auto!important; align-items:start!important; padding:11px 12px!important; column-gap:8px!important; }
-  .engage-expense-row-actions { gap:5px; }
-  .engage-expense-row .engage-expense-edit,.engage-expense-row-actions button[aria-label="Delete expense"] { min-width:34px; min-height:34px; margin-top:-3px; border-radius:9px!important; }
-  .engage-expense-row-actions button[aria-label="Delete expense"] { background:#F8F9FA!important; }
+  .engage-expense-breakdown { padding:12px; border-radius:13px; }
+  .engage-expense-breakdown.engage-expense-breakdown-compact { padding-bottom:11px; }
+  .engage-expense-row { grid-template-columns:minmax(0,1fr) auto!important; align-items:start!important; padding:10px 11px!important; column-gap:8px!important; }
+  .engage-expense-row-badges { margin-top:5px; }
+  .engage-expense-row-actions { grid-template-columns:auto 34px 34px; gap:5px; align-items:start; }
+  .engage-expense-row-amount { min-width:58px; font-size:14px; margin:7px 2px 0 0; }
+  .engage-expense-row .engage-expense-edit,.engage-expense-row-actions button[aria-label="Delete expense"] { width:34px; height:34px; border-radius:9px!important; }
   .engage-expense-edit-overlay { align-items:flex-end; padding:0; }
   .engage-expense-edit-sheet { width:100%; max-height:90dvh; overflow:auto; border-radius:20px 20px 0 0; padding:16px 14px max(18px,env(safe-area-inset-bottom)); }
   .engage-expense-edit-sheet form { grid-template-columns:1fr; }
