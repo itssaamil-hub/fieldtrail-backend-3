@@ -1,10 +1,12 @@
 import { getApiBase, getSession } from './api.js';
 
 const ROOT_CLASS = 'engage-expense-report';
+const PAGE_SIZE = 12;
 let latestExpenses = [];
 let latestMonthTotal = 0;
 let latestKey = '';
 let fetching = false;
+let visibleCount = PAGE_SIZE;
 
 function findExpenseRoot() {
   const categorySelect = [...document.querySelectorAll('select')].find((select) =>
@@ -38,6 +40,22 @@ function istDay(offset = 0) {
   }).formatToParts(new Date(Date.now() + offset * 86400000));
   const obj = Object.fromEntries(parts.map((p) => [p.type, p.value]));
   return `${obj.year}-${obj.month}-${obj.day}`;
+}
+
+function monthRange(offset = 0) {
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit'
+  }).formatToParts(now);
+  const obj = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+  const base = new Date(Number(obj.year), Number(obj.month) - 1 + offset, 1, 12);
+  const y = base.getFullYear();
+  const m = base.getMonth();
+  const start = `${y}-${String(m + 1).padStart(2, '0')}-01`;
+  if (offset === 0) return { from: start, to: istDay() };
+  const endDate = new Date(y, m + 1, 0, 12);
+  const to = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
+  return { from: start, to };
 }
 
 function groupLabel(value) {
@@ -94,15 +112,15 @@ async function refreshData(found) {
   if (key === latestKey && latestExpenses.length) return;
   fetching = true;
   try {
-    const now = new Date();
-    const monthStart = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit' }).format(now) + '-01';
+    const thisMonth = monthRange(0);
     const [filtered, month] = await Promise.all([
       apiGetExpenses(filters),
-      apiGetExpenses({ from: monthStart, to: istDay() }),
+      apiGetExpenses(thisMonth),
     ]);
     latestExpenses = filtered;
     latestMonthTotal = month.reduce((sum, item) => sum + Number(item.amount || 0), 0);
     latestKey = key;
+    visibleCount = PAGE_SIZE;
     queueEnhance();
   } catch {
     // Keep the React report usable if this enhancement fetch fails.
@@ -151,6 +169,51 @@ function summary(root) {
     <div class="engage-expense-summary-card"><span>Entries</span><strong>${latestExpenses.length}</strong></div>`;
 }
 
+function ensureQuickFilters(found) {
+  let quick = found.root.querySelector('.engage-expense-quick-filters');
+  if (!quick) {
+    quick = document.createElement('div');
+    quick.className = 'engage-expense-quick-filters';
+    quick.innerHTML = `
+      <span>Quick date</span>
+      <button type="button" data-range="this">This month</button>
+      <button type="button" data-range="last">Last month</button>
+      <button type="button" data-range="custom">Custom</button>`;
+    found.root.insertBefore(quick, found.filters);
+    quick.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-range]');
+      if (!button) return;
+      const dates = found.filters.querySelectorAll('input[type="date"]');
+      if (button.dataset.range === 'this') {
+        const range = monthRange(0);
+        dates[0].value = range.from;
+        dates[1].value = range.to;
+      } else if (button.dataset.range === 'last') {
+        const range = monthRange(-1);
+        dates[0].value = range.from;
+        dates[1].value = range.to;
+      } else {
+        dates[0]?.focus();
+        return;
+      }
+      dates[0]?.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  }
+
+  const { from, to } = currentFilterInfo(found.filters);
+  const thisMonth = monthRange(0);
+  const lastMonth = monthRange(-1);
+  quick.querySelectorAll('button[data-range]').forEach((button) => {
+    const range = button.dataset.range;
+    const active = range === 'this'
+      ? from === thisMonth.from && to === thisMonth.to
+      : range === 'last'
+        ? from === lastMonth.from && to === lastMonth.to
+        : !!(from || to) && !((from === thisMonth.from && to === thisMonth.to) || (from === lastMonth.from && to === lastMonth.to));
+    button.classList.toggle('is-active', active);
+  });
+}
+
 function removeDateGroups(list) {
   list.querySelectorAll(':scope > .engage-expense-date-group').forEach((n) => n.remove());
 }
@@ -159,6 +222,7 @@ function addDateGroups(list, rows) {
   removeDateGroups(list);
   let previous = '';
   rows.forEach((row, index) => {
+    if (index >= visibleCount) return;
     const item = latestExpenses[index];
     if (!item) return;
     const label = groupLabel(item.spentOn);
@@ -170,6 +234,22 @@ function addDateGroups(list, rows) {
       previous = label;
     }
   });
+}
+
+function applyPagination(list, rows) {
+  rows.forEach((row, index) => row.classList.toggle('engage-expense-row-hidden', index >= visibleCount));
+  list.querySelector(':scope > .engage-expense-load-more')?.remove();
+  if (rows.length > visibleCount) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'engage-expense-load-more';
+    button.textContent = `Load more (${rows.length - visibleCount} remaining)`;
+    button.addEventListener('click', () => {
+      visibleCount += PAGE_SIZE;
+      queueEnhance();
+    });
+    list.appendChild(button);
+  }
 }
 
 function openEdit(item, found) {
@@ -241,7 +321,29 @@ function openEdit(item, found) {
   });
 }
 
-function ensureActionGroup(row, item, found) {
+function polishRow(row, item, found) {
+  const content = row.children[0];
+  if (content) {
+    const title = content.children[0];
+    const details = content.children[1];
+    if (title) {
+      title.textContent = item.category || 'Expense';
+      title.classList.add('engage-expense-row-title');
+    }
+    if (details) {
+      const bits = [formatExpenseDate(item.spentOn), item.note].filter(Boolean);
+      details.textContent = bits.join(' · ');
+      details.classList.add('engage-expense-row-meta');
+    }
+    let badges = content.querySelector('.engage-expense-row-badges');
+    if (!badges) {
+      badges = document.createElement('div');
+      badges.className = 'engage-expense-row-badges';
+      content.appendChild(badges);
+    }
+    badges.innerHTML = item.salesmanName ? `<span>${item.salesmanName}</span>` : '<span>General</span>';
+  }
+
   const del = row.querySelector('button[aria-label="Delete expense"]');
   if (!del) return;
   let actions = row.querySelector('.engage-expense-row-actions');
@@ -251,6 +353,14 @@ function ensureActionGroup(row, item, found) {
     row.appendChild(actions);
     actions.appendChild(del);
   }
+  let amount = actions.querySelector('.engage-expense-row-amount');
+  if (!amount) {
+    amount = document.createElement('strong');
+    amount.className = 'engage-expense-row-amount';
+    actions.insertBefore(amount, actions.firstChild);
+  }
+  amount.textContent = money(item.amount);
+
   let edit = actions.querySelector('.engage-expense-edit');
   if (!edit) {
     edit = document.createElement('button');
@@ -273,13 +383,12 @@ function enhance() {
   const { root, filters } = found;
   root.classList.add(ROOT_CLASS);
   filters.classList.add('engage-expense-filters');
-
-  // ReportsPage already owns the page title. Remove the enhancement's older duplicate title if present.
   root.querySelector('.engage-expense-title')?.remove();
+  ensureQuickFilters(found);
 
   const children = [...root.children];
   children.forEach((child) => {
-    if (child === filters || child.classList.contains('engage-expense-summary')) return;
+    if (child === filters || child.classList.contains('engage-expense-summary') || child.classList.contains('engage-expense-quick-filters')) return;
     const text = (child.textContent || '').replace(/\s+/g, ' ').trim();
     if (text.startsWith('Total spend:')) {
       child.classList.add('engage-expense-total');
@@ -287,21 +396,26 @@ function enhance() {
     }
     if (child.querySelector?.('button[aria-label="Delete expense"]')) {
       child.classList.add('engage-expense-list');
-      const rows = [...child.children].filter((row) => !row.classList.contains('engage-expense-date-group'));
+      const rows = [...child.children].filter((row) =>
+        !row.classList.contains('engage-expense-date-group') && !row.classList.contains('engage-expense-load-more')
+      );
       rows.forEach((row, index) => {
         row.classList.add('engage-expense-row');
         cleanExpenseRowDate(row);
         const item = latestExpenses[index];
         if (item) {
           row.dataset.expenseId = item.id;
-          ensureActionGroup(row, item, found);
+          polishRow(row, item, found);
         }
       });
+      applyPagination(child, rows);
       if (latestExpenses.length) addDateGroups(child, rows);
       return;
     }
     if (child.querySelector?.('div > div[style*="width"]') || (child.children?.length && [...child.children].some((node) => node.querySelector?.('div[style*="height: 8px"]')))) {
       child.classList.add('engage-expense-breakdown');
+      const categoryCount = Object.keys(latestExpenses.reduce((acc, e) => { acc[e.category] = true; return acc; }, {})).length;
+      child.classList.toggle('engage-expense-breakdown-compact', categoryCount <= 1);
     }
   });
 
@@ -332,6 +446,7 @@ window.addEventListener('load', queueEnhance);
 document.addEventListener('change', (event) => {
   if (event.target?.closest?.('.engage-expense-filters')) {
     latestKey = '';
+    visibleCount = PAGE_SIZE;
     setTimeout(queueEnhance, 0);
   }
 });
