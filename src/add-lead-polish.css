@@ -1,0 +1,131 @@
+.engage-mobile-add-lead-polish {
+  background: #fbfcfb !important;
+}
+
+.engage-mobile-add-lead-polish > div:first-child {
+  background: linear-gradient(135deg, #0f3d3e 0%, #145c5d 100%) !important;
+}
+
+.engage-mobile-add-lead-polish > div:first-child > div:first-child,
+.engage-mobile-add-lead-polish > div:first-child button {
+  color: #fff !important;
+}
+
+.engage-mobile-add-lead-polish [role="heading"][aria-level="3"] {
+  color: #0f513f !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.12px !important;
+}
+
+.engage-mobile-add-lead-polish [role="heading"][aria-level="3"] > span:last-child {
+  background: #dfe8e4 !important;
+}
+
+.engage-mobile-add-lead-polish input,
+.engage-mobile-add-lead-polish select,
+.engage-mobile-add-lead-polish textarea {
+  border-color: #dfe5e2 !important;
+  background: #fff !important;
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+
+.engage-mobile-add-lead-polish input:focus,
+.engage-mobile-add-lead-polish select:focus,
+.engage-mobile-add-lead-polish textarea:focus {
+  outline: none !important;
+  border-color: #6fb39d !important;
+  box-shadow: 0 0 0 3px rgba(20,92,93,.08) !important;
+}
+
+.engage-mobile-add-lead-polish [data-mobile-lead-stage="true"] select {
+  background: #f4faf7 !important;
+  border-color: #8ec8b4 !important;
+  font-weight: 700 !important;
+  color: #173f35 !important;
+}
+
+.engage-mobile-add-lead-polish [data-mobile-lead-comments="true"] textarea {
+  background: #f8faf9 !important;
+}
+
+.engage-mobile-add-lead-polish [data-mobile-lead-save="true"] {
+  background: linear-gradient(135deg, #0f513f 0%, #0b6a50 100%) !important;
+  box-shadow: 0 6px 16px rgba(15,81,63,.16) !important;
+}
+
+@media (max-width: 560px) {
+  .engage-mobile-add-lead-polish {
+    width: 100% !important;
+    max-width: 480px !important;
+    max-height: 88vh !important;
+    padding: 14px !important;
+    padding-bottom: calc(14px + env(safe-area-inset-bottom)) !important;
+    border-radius: 16px 16px 0 0 !important;
+  }
+
+  .engage-mobile-add-lead-polish > div:first-child {
+    margin: -14px -14px 12px !important;
+    padding: 14px 14px 12px !important;
+    border-radius: 16px 16px 0 0 !important;
+  }
+
+  .engage-mobile-add-lead-polish > div:first-child > div:first-child {
+    font-size: 18px !important;
+    letter-spacing: -.2px !important;
+  }
+
+  .engage-mobile-add-lead-polish [role="heading"][aria-level="3"] {
+    margin-top: 9px !important;
+    margin-bottom: 6px !important;
+    font-size: 11.5px !important;
+  }
+
+  .engage-mobile-add-lead-polish [role="heading"][aria-level="3"]::before {
+    width: 22px;
+    height: 22px;
+    border-radius: 7px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #eaf5f0;
+    color: #145c5d;
+    font-size: 12px;
+    flex: 0 0 22px;
+  }
+
+  .engage-mobile-add-lead-polish [data-mobile-lead-section="restaurant"]::before { content: "▣"; }
+  .engage-mobile-add-lead-polish [data-mobile-lead-section="contact"]::before { content: "◯"; }
+  .engage-mobile-add-lead-polish [data-mobile-lead-section="deal"]::before { content: "▥"; }
+
+  .engage-mobile-add-lead-polish input,
+  .engage-mobile-add-lead-polish select,
+  .engage-mobile-add-lead-polish textarea {
+    min-height: 40px !important;
+  }
+
+  .engage-mobile-add-lead-polish textarea {
+    min-height: 58px !important;
+  }
+}
+
+@media (min-width: 561px) {
+  .engage-mobile-add-lead-polish {
+    width: 100% !important;
+    max-width: 480px !important;
+    max-height: 88vh !important;
+    padding: 18px !important;
+    border-radius: 16px 16px 0 0 !important;
+  }
+
+  .engage-mobile-add-lead-polish > div:first-child {
+    margin: -18px -18px 14px !important;
+    padding: 15px 18px 13px !important;
+    border-radius: 16px 16px 0 0 !important;
+  }
+
+  .engage-mobile-add-lead-polish [role="heading"][aria-level="3"] {
+    margin-top: 10px !important;
+    margin-bottom: 7px !important;
+    font-size: 11.5px !important;
+  }
+}
