@@ -16,6 +16,8 @@ import "./admin-team-activity.css";
 import "./expenseReportEnhance.js";
 import "./expense-report-enhance.css";
 import "./pipelineEnhance.js";
+import "./employeePanelEnhance.js";
+import "./employee-panel-enhance.css";
 import "./onboardingLiveShare.js";
 import "./onboarding-live-share.css";
 import "./quotationSettingsEnhance.js";
