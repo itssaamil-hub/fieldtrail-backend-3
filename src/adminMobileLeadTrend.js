@@ -209,7 +209,7 @@ function syncUtilityRow(grid, session) {
     slot.appendChild(select);
   }
 
-  if (row.previousElementSibling !== grid) grid.insertAdjacentElement('afterend', row);
+  if (row.nextElementSibling !== grid) grid.insertAdjacentElement('beforebegin', row);
   return row;
 }
 
@@ -230,7 +230,7 @@ function sync() {
     return;
   }
 
-  const utilityRow = syncUtilityRow(grid, session);
+  syncUtilityRow(grid, session);
 
   let card = existing;
   if (!card) {
@@ -240,7 +240,7 @@ function sync() {
     card.innerHTML = '<div class="engage-mobile-lead-trend-skeleton"></div>';
   }
 
-  if (card.previousElementSibling !== utilityRow) utilityRow.insertAdjacentElement('afterend', card);
+  if (card.previousElementSibling !== grid) grid.insertAdjacentElement('afterend', card);
   load(card);
 }
 
