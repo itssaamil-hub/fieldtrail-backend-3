@@ -9,6 +9,8 @@ import "./dashboardGreeting.js";
 import "./dashboardMapControls.js";
 import "./salesmanDashboardCards.js";
 import "./salesman-dashboard-cards.css";
+import "./adminMobileLeadTrend.js";
+import "./admin-mobile-lead-trend.css";
 import "./onboardingLiveShare.js";
 import "./onboarding-live-share.css";
 import "./quotationSettingsEnhance.js";
