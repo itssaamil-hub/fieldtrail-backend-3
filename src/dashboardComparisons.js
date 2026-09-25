@@ -97,16 +97,24 @@ function setCardSub(label, text) {
   }
   sub.style.fontSize = desktopCards() ? "11px" : "9.2px";
   sub.style.color = desktopCards() ? "#6B7280" : "#6F817D";
-  sub.style.marginTop = desktopCards() ? "2px" : "2px";
+  sub.style.marginTop = "2px";
   sub.style.lineHeight = "1.1";
   sub.textContent = text;
+}
+
+function fmtMoney(value) {
+  const n = Number(value || 0);
+  if (n >= 1e7) return `₹${(n / 1e7).toFixed(1)}Cr`;
+  if (n >= 1e5) return `₹${(n / 1e5).toFixed(1)}L`;
+  if (n >= 1e3) return `₹${(n / 1e3).toFixed(1)}K`;
+  return `₹${Math.round(n).toLocaleString("en-IN")}`;
 }
 
 function applyExactMetrics() {
   if (!latest?.metrics || latest.salesmanId !== dashboardEmployee()) return;
   Object.entries(METRIC_TARGETS).forEach(([label, key]) => setCardValue(label, latest.metrics[key]));
   setCardSub("Total Leads", `${latest.metrics.cold ?? 0} cold`);
-  setCardSub("Won", "");
+  setCardSub("Won", fmtMoney(latest.metrics.wonValue));
 }
 
 function removeComparisonLines(card) {
