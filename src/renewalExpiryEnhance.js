@@ -39,6 +39,14 @@ function setReactValue(el, value){
   el.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
+function commonAncestor(a, b, maxDepth = 4){
+  let current = a;
+  for(let depth = 0; current && depth <= maxDepth; depth += 1, current = current.parentElement){
+    if(current.contains(b)) return current;
+  }
+  return null;
+}
+
 function enhanceContainer(root){
   if(!visible(root)) return;
   const labelNodes = [...root.querySelectorAll('div')].filter(visible);
@@ -56,8 +64,16 @@ function enhanceContainer(root){
   dateLabel.textContent = 'Exact Date (optional)';
   monthField.dataset.renewalMonthField = 'true';
   dateField.dataset.renewalDateField = 'true';
-  const commonRow = monthField.parentElement === dateField.parentElement ? monthField.parentElement : null;
-  if(commonRow) commonRow.dataset.renewalExpiryRow = 'true';
+
+  // Add Lead wraps each field in its own flex child. Mark those wrappers and
+  // their shared row too; marking only the inner field left the mobile columns
+  // squeezed to content width on some Android browsers.
+  const monthWrap = monthField.parentElement;
+  const dateWrap = dateField.parentElement;
+  if(monthWrap) monthWrap.dataset.renewalMonthWrap = 'true';
+  if(dateWrap) dateWrap.dataset.renewalDateWrap = 'true';
+  const commonRow = commonAncestor(monthWrap, dateWrap, 3);
+  if(commonRow && commonRow !== root) commonRow.dataset.renewalExpiryRow = 'true';
 
   if(!monthField.querySelector('[data-renewal-help]')){
     const help = document.createElement('div');
