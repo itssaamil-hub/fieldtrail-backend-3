@@ -1,0 +1,296 @@
+#engage-admin-team-activity-sheet{display:none}
+
+@media (max-width:900px){
+  .engage-team-card-clickable{cursor:pointer}
+
+  #engage-admin-team-activity-sheet.engage-team-sheet-backdrop{
+    display:flex;
+    position:fixed;
+    inset:0;
+    z-index:9999;
+    align-items:flex-end;
+    justify-content:center;
+    background:rgba(14,28,29,.30);
+    backdrop-filter:blur(2px);
+  }
+
+  .engage-team-sheet{
+    width:100%;
+    max-height:88dvh;
+    overflow:auto;
+    padding:8px 16px calc(22px + env(safe-area-inset-bottom));
+    border-radius:24px 24px 0 0;
+    background:#F7F9F9;
+    box-shadow:0 -16px 45px rgba(20,54,54,.16);
+    animation:engageTeamSheetIn .18s ease-out;
+  }
+
+  .engage-team-handle{
+    width:42px;
+    height:4px;
+    margin:2px auto 12px;
+    border-radius:99px;
+    background:#CBD4D2;
+  }
+
+  .engage-team-sheet-head{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:14px;
+  }
+
+  .engage-team-sheet-head h2{
+    margin:0;
+    color:#173738;
+    font-family:'Space Grotesk',sans-serif;
+    font-size:22px;
+    line-height:1.1;
+    letter-spacing:-.35px;
+  }
+
+  .engage-team-sheet-head p{
+    margin:5px 0 0;
+    color:#6F7B7D;
+    font-size:12px;
+  }
+
+  .engage-team-close{
+    width:34px;
+    height:34px;
+    border:0;
+    border-radius:50%;
+    background:#EDEFF1;
+    color:#536467;
+    font-size:25px;
+    line-height:1;
+  }
+
+  .engage-team-summary-cards{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:7px;
+    margin-bottom:12px;
+  }
+
+  .engage-team-summary-cards>div{
+    min-width:0;
+    padding:9px 5px 8px;
+    border:1px solid #E4E8E8;
+    border-radius:12px;
+    background:#fff;
+    text-align:center;
+  }
+
+  .engage-team-summary-cards strong{
+    display:block;
+    font-family:'Space Grotesk',sans-serif;
+    font-size:18px;
+    line-height:1;
+    color:#173738;
+  }
+
+  .engage-team-summary-cards span{
+    display:block;
+    margin-top:4px;
+    color:#6E7C7A;
+    font-size:8.5px;
+    line-height:1.15;
+  }
+
+  .engage-team-summary-cards [data-tone="active"]{background:#EAF7F1;border-color:#D9EEE5}
+  .engage-team-summary-cards [data-tone="ended"]{background:#EEF4FF;border-color:#E2EAF8}
+  .engage-team-summary-cards [data-tone="not-started"]{background:#FFF7E7;border-color:#F4E8C9}
+  .engage-team-summary-cards [data-tone="offline"]{background:#F1F3F4;border-color:#E5E8E9}
+
+  .engage-team-search-wrap{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:12px;
+    padding:0 12px;
+    height:42px;
+    border:1px solid #E2E7E7;
+    border-radius:12px;
+    background:#fff;
+    color:#788583;
+  }
+
+  .engage-team-search-wrap span{font-size:18px}
+  .engage-team-search-wrap input{
+    width:100%;
+    border:0;
+    outline:0;
+    background:transparent;
+    color:#173738;
+    font:inherit;
+    font-size:13px;
+  }
+
+  .engage-team-list{
+    display:grid;
+    gap:10px;
+  }
+
+  .engage-team-employee-card{
+    padding:13px;
+    border:1px solid #E3E8E7;
+    border-radius:17px;
+    background:#fff;
+    box-shadow:0 5px 16px rgba(20,54,54,.045);
+  }
+
+  .engage-team-employee-top{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+
+  .engage-team-avatar{
+    display:grid;
+    place-items:center;
+    width:42px;
+    height:42px;
+    flex:0 0 42px;
+    border-radius:50%;
+    background:#E8F5EF;
+    color:#147A5A;
+    font-family:'Space Grotesk',sans-serif;
+    font-size:17px;
+    font-weight:700;
+  }
+
+  .engage-team-employee-card[data-status="ended"] .engage-team-avatar{background:#EEF3FF;color:#4967B2}
+  .engage-team-employee-card[data-status="not-started"] .engage-team-avatar{background:#FFF3D9;color:#966915}
+  .engage-team-employee-card[data-status="offline"] .engage-team-avatar{background:#EFF1F2;color:#657275}
+
+  .engage-team-employee-name-wrap{min-width:0;flex:1}
+  .engage-team-employee-name{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    color:#1E2A2D;
+    font-family:'Space Grotesk',sans-serif;
+    font-size:15px;
+    font-weight:700;
+  }
+
+  .engage-team-employee-role{
+    margin-top:2px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    color:#7B8787;
+    font-size:10.5px;
+  }
+
+  .engage-team-status{
+    flex:0 0 auto;
+    padding:5px 8px;
+    border-radius:999px;
+    background:#EAF7F1;
+    color:#12805C;
+    font-size:9.5px;
+    font-weight:700;
+  }
+
+  [data-status="ended"] .engage-team-status{background:#EEF3FF;color:#4C69A8}
+  [data-status="not-started"] .engage-team-status{background:#FFF4DA;color:#9A6B11}
+  [data-status="offline"] .engage-team-status{background:#EFF1F2;color:#657275}
+
+  .engage-team-meta-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:0;
+    margin-top:12px;
+    border-top:1px solid #EEF1F1;
+    border-bottom:1px solid #EEF1F1;
+  }
+
+  .engage-team-meta{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    min-width:0;
+    padding:9px 8px 9px 0;
+  }
+
+  .engage-team-meta+ .engage-team-meta{
+    padding-left:10px;
+    border-left:1px solid #EEF1F1;
+  }
+
+  .engage-team-meta span,
+  .engage-team-last-activity span{
+    color:#889290;
+    font-size:9.5px;
+  }
+
+  .engage-team-meta strong,
+  .engage-team-last-activity strong{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    color:#26383A;
+    font-size:11.5px;
+    font-weight:700;
+  }
+
+  .engage-team-metrics{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:0;
+    margin-top:10px;
+  }
+
+  .engage-team-metrics>div{
+    min-width:0;
+    padding:2px 5px;
+    text-align:center;
+    border-right:1px solid #EEF1F1;
+  }
+
+  .engage-team-metrics>div:last-child{border-right:0}
+  .engage-team-metrics strong{
+    display:block;
+    color:#173738;
+    font-family:'Space Grotesk',sans-serif;
+    font-size:16px;
+    line-height:1.05;
+  }
+
+  .engage-team-metrics span{
+    display:block;
+    margin-top:3px;
+    color:#7B8787;
+    font-size:8.5px;
+    line-height:1.1;
+  }
+
+  .engage-team-metrics .is-alert strong,
+  .engage-team-metrics .is-alert span{color:#C0392B}
+
+  .engage-team-last-activity{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-top:11px;
+    padding:9px 10px;
+    border-radius:10px;
+    background:#F7F9F9;
+  }
+
+  .engage-team-empty{
+    padding:24px 10px;
+    color:#7B8787;
+    text-align:center;
+    font-size:12px;
+  }
+}
+
+@keyframes engageTeamSheetIn{
+  from{transform:translateY(20px);opacity:.5}
+  to{transform:translateY(0);opacity:1}
+}
