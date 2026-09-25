@@ -24,16 +24,28 @@ function exactTextNode(label,root=document){
   return [...root.querySelectorAll('div,span,label,p,h1,h2,h3,h4')].find(n=>visible(n)&&text(n)===label)||null;
 }
 
-// Global CRM Settings no longer owns employee GPS policy.
+// Global CRM Settings no longer owns employee GPS policy. Hide only the
+// global Location Settings block; never scan/hide the same labels inside an
+// Employee Settings dialog.
 function removeGlobalLocationSettings(){
+  const already=document.querySelector('[data-engage-global-location-settings="true"]');
+  if(already){already.style.display='none';return;}
   const heading=exactTextNode('Location Settings');
-  if(heading) heading.style.display='none';
-  ['GPS Location','Location Mandatory for New Lead','Continuous GPS Tracking'].forEach(label=>{
-    const n=exactTextNode(label);
-    if(!n) return;
-    const row=n.closest('label')||n.parentElement?.parentElement||n.parentElement;
-    if(row) row.style.display='none';
-  });
+  if(!heading) return;
+  let box=heading.closest('.ft-q-box,.ft-card,section');
+  if(!box){
+    let node=heading.parentElement;
+    for(let i=0;i<6&&node;i++,node=node.parentElement){
+      const t=text(node);
+      if(t.includes('GPS Location')&&t.includes('Location Mandatory for New Lead')&&t.includes('Continuous GPS Tracking')){box=node;break;}
+    }
+  }
+  if(box){
+    box.dataset.engageGlobalLocationSettings='true';
+    box.style.display='none';
+  }else{
+    heading.style.display='none';
+  }
 }
 
 function employeeDialog(){
@@ -66,7 +78,6 @@ async function mountEmployeeLocation(dialog){
   if(dialog.querySelector('[data-engage-employee-location]')) return;
   const workButton=[...dialog.querySelectorAll('button')].find(b=>text(b)==='Work Rules');
   if(!workButton) return;
-  // Only render while Work Rules content is open.
   const dayClosing=exactTextNode('Day Closing',dialog);
   if(!dayClosing) return;
 
