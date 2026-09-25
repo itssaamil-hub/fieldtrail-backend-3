@@ -16,7 +16,6 @@ window.fetch = async (...args) => {
   return originalFetch(...args);
 };
 
-// Optional stage support inside the existing Onboarding Settings page.
 const originalTemplate = api.onboardingTemplate;
 api.onboardingTemplate = async (...args) => {
   const result = await originalTemplate(...args);
@@ -125,7 +124,8 @@ function mountShareControl() {
 
 function mountStageSelectors() {
   const panel = document.querySelector('.ft-onboarding');
-  if (!panel || panel.querySelector('#ft-onboarding-title')?.textContent?.trim() !== 'Onboarding checklist settings') return;
+  const title = panel?.querySelector('#ft-onboarding-title')?.textContent?.trim();
+  if (!panel || !['Onboarding checklist','Onboarding checklist settings'].includes(title)) return;
   [...panel.querySelectorAll('.ft-ob-edit')].forEach((row, index) => {
     if (row.querySelector('.ft-ob-stage-field')) return;
     const field = document.createElement('label');
