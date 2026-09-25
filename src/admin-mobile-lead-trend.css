@@ -1,11 +1,55 @@
 #engage-admin-mobile-lead-trend{display:none}
+#engage-admin-mobile-dashboard-utility{display:none}
 
 @media (max-width:900px){
+  #engage-admin-mobile-dashboard-utility.engage-admin-mobile-dashboard-utility{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:18px;
+    width:100%;
+    box-sizing:border-box;
+    margin:-8px 0 12px;
+    padding:0 2px;
+  }
+
+  .engage-admin-mobile-greeting{
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font-family:'Space Grotesk',sans-serif;
+    font-size:12.5px;
+    line-height:1.2;
+    font-weight:600;
+    color:#667572;
+    letter-spacing:-.05px;
+  }
+
+  .engage-admin-mobile-team-slot{
+    flex:0 0 auto;
+    display:flex;
+    align-items:center;
+  }
+
+  .engage-admin-mobile-team-slot select[aria-label="Dashboard employee"]{
+    width:auto !important;
+    min-width:124px !important;
+    max-width:148px !important;
+    height:34px !important;
+    min-height:34px !important;
+    padding:0 30px 0 11px !important;
+    margin:0 !important;
+    border-radius:9px !important;
+    font-size:12px !important;
+    line-height:34px !important;
+  }
+
   #engage-admin-mobile-lead-trend.engage-mobile-lead-trend{
     display:block;
     width:100%;
     box-sizing:border-box;
-    margin:-8px 0 16px;
+    margin:0 0 16px;
     padding:14px 14px 10px;
     border:1px solid #E2E8E6;
     border-radius:18px;
