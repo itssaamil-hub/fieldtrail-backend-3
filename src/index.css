@@ -218,15 +218,17 @@ button:disabled {
   }
 
   .engage-dashboard-stat-label {
-    font-size: 9px;
+    font-size: 10px;
+    font-weight: 750;
     line-height: 1.15;
-    letter-spacing: .05px;
-    color: #5E716C;
+    letter-spacing: .02px;
+    color: #4F6660;
     text-transform: none;
   }
 
   .engage-dashboard-stat-value {
-    font-size: 24px;
+    font-size: 25px;
+    font-weight: 700;
     line-height: 1;
     letter-spacing: -.35px;
     color: #173738;
@@ -234,9 +236,10 @@ button:disabled {
 
   .engage-dashboard-stat-sub {
     margin-top: 2px;
-    font-size: 9.2px;
+    font-size: 10px;
+    font-weight: 650;
     line-height: 1.1;
-    color: #6F817D;
+    color: #637873;
   }
 
   .engage-dashboard-stat-comparison {
