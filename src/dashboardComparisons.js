@@ -95,8 +95,9 @@ function setCardSub(label, text) {
     sub.className = "engage-db-sub";
     value.insertAdjacentElement("afterend", sub);
   }
-  sub.style.fontSize = desktopCards() ? "11px" : "9.2px";
-  sub.style.color = desktopCards() ? "#6B7280" : "#6F817D";
+  sub.style.fontSize = desktopCards() ? "11px" : "10px";
+  sub.style.fontWeight = desktopCards() ? "500" : "650";
+  sub.style.color = desktopCards() ? "#6B7280" : "#637873";
   sub.style.marginTop = "2px";
   sub.style.lineHeight = "1.1";
   sub.textContent = text;
@@ -154,11 +155,11 @@ function appendLine(card, comparison, period) {
   const mobile = !desktopCards();
   const line = document.createElement("div");
   line.className = "engage-db-comparison";
-  line.style.fontSize = mobile ? "8.8px" : "9.8px";
+  line.style.fontSize = mobile ? "9.6px" : "9.8px";
   line.style.marginTop = mobile ? "2px" : "4px";
-  line.style.fontWeight = "700";
+  line.style.fontWeight = mobile ? "750" : "700";
   line.style.color = lineColor(comparison);
-  line.style.lineHeight = mobile ? "1.1" : "1.25";
+  line.style.lineHeight = mobile ? "1.12" : "1.25";
   line.style.maxWidth = "100%";
   line.style.paddingBottom = mobile ? "0" : "2px";
   line.style.display = "flex";
@@ -171,8 +172,8 @@ function appendLine(card, comparison, period) {
   const prefix = text.slice(0, text.length - suffix.length).trimEnd();
   line.append(document.createTextNode(prefix));
   const sub = document.createElement("span");
-  sub.style.fontWeight = "500";
-  sub.style.color = mobile ? "#6F817D" : "#6B7280";
+  sub.style.fontWeight = mobile ? "600" : "500";
+  sub.style.color = mobile ? "#637873" : "#6B7280";
   sub.textContent = suffix;
   line.appendChild(sub);
   card.appendChild(line);
