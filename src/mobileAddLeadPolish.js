@@ -13,7 +13,7 @@ function isVisible(node) {
 function findAddLeadPanel() {
   const fixed = [...document.querySelectorAll('div')].filter((node) => {
     const style = getComputedStyle(node);
-    return style.position === 'fixed' && style.inset !== 'auto' && isVisible(node);
+    return style.position === 'fixed' && isVisible(node);
   });
 
   for (const overlay of fixed) {
@@ -23,7 +23,7 @@ function findAddLeadPanel() {
       if (!header) return false;
       return normalize(header.textContent).startsWith('Add Lead');
     });
-    if (panel) return panel;
+    if (panel) return { panel, overlay };
   }
   return null;
 }
@@ -59,9 +59,11 @@ function markSave(panel) {
 
 function apply() {
   queued = false;
-  const panel = findAddLeadPanel();
-  if (!panel) return;
+  const found = findAddLeadPanel();
+  if (!found) return;
+  const { panel, overlay } = found;
   panel.classList.add('engage-mobile-add-lead-polish');
+  overlay.classList.add('engage-add-lead-overlay');
   markSections(panel);
   markFields(panel);
   markSave(panel);
