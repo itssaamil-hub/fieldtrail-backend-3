@@ -95,6 +95,7 @@ function mountShareControl() {
         : `https://wa.me/?text=${encodeURIComponent(message)}`;
       result.innerHTML = `
         <p class="ft-ob-muted">${progressText} · Customer sees a read-only live checklist. Internal notes are hidden.</p>
+        <input class="ft-ob-live-link ft-ob-live-link-desktop" readonly value="${shareUrl.replace(/"/g, '&quot;')}" aria-label="Customer progress link" />
         <div class="ft-ob-live-link-row">
           <button type="button" class="ft-ob-live-copy">Copy link</button>
           <a class="ft-ob-primary ft-ob-live-whatsapp" href="${whatsapp}" target="_blank" rel="noopener noreferrer">Share on WhatsApp</a>
