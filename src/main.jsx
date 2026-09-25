@@ -18,6 +18,8 @@ import "./expense-report-enhance.css";
 import "./pipelineEnhance.js";
 import "./employeePanelEnhance.js";
 import "./employee-panel-enhance.css";
+import "./performanceReportEnhance.js";
+import "./performance-report-enhance.css";
 import "./onboardingLiveShare.js";
 import "./onboarding-live-share.css";
 import "./quotationSettingsEnhance.js";
