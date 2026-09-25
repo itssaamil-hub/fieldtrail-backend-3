@@ -218,7 +218,7 @@ button:disabled {
   }
 
   .engage-dashboard-stat-label {
-    font-size: 10px;
+    font-size: 10.5px;
     font-weight: 750;
     line-height: 1.15;
     letter-spacing: .02px;
@@ -236,7 +236,7 @@ button:disabled {
 
   .engage-dashboard-stat-sub {
     margin-top: 2px;
-    font-size: 10px;
+    font-size: 10.4px;
     font-weight: 650;
     line-height: 1.1;
     color: #637873;
