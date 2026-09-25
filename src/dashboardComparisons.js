@@ -86,18 +86,19 @@ function setCardSub(label, text) {
   const value = valueNode(card);
   if (!card || !value) return;
   let sub = card.querySelector(":scope > .engage-db-sub");
-  if (!text || !desktopCards()) {
+  if (!text) {
     sub?.remove();
     return;
   }
   if (!sub) {
     sub = document.createElement("div");
     sub.className = "engage-db-sub";
-    sub.style.fontSize = "11px";
-    sub.style.color = "#6B7280";
-    sub.style.marginTop = "2px";
     value.insertAdjacentElement("afterend", sub);
   }
+  sub.style.fontSize = desktopCards() ? "11px" : "9.2px";
+  sub.style.color = desktopCards() ? "#6B7280" : "#6F817D";
+  sub.style.marginTop = desktopCards() ? "2px" : "2px";
+  sub.style.lineHeight = "1.1";
   sub.textContent = text;
 }
 
@@ -115,11 +116,6 @@ function removeComparisonLines(card) {
 
 function cleanAllComparisonCards() {
   ALL_COMPARISON_CARDS.forEach((label) => removeComparisonLines(visibleCard(label)));
-}
-
-function cleanDesktopOnlyDecoration() {
-  cleanAllComparisonCards();
-  document.querySelectorAll(".engage-db-sub").forEach((node) => node.remove());
 }
 
 function lineText(comparison, period) {
@@ -146,19 +142,20 @@ function hasReactComparison(card, period) {
 }
 
 function appendLine(card, comparison, period) {
-  if (!desktopCards() || !card || !comparison || hasReactComparison(card, period)) return;
+  if (!card || !comparison || hasReactComparison(card, period)) return;
+  const mobile = !desktopCards();
   const line = document.createElement("div");
   line.className = "engage-db-comparison";
-  line.style.fontSize = "9.8px";
-  line.style.marginTop = "4px";
+  line.style.fontSize = mobile ? "8.8px" : "9.8px";
+  line.style.marginTop = mobile ? "2px" : "4px";
   line.style.fontWeight = "700";
   line.style.color = lineColor(comparison);
-  line.style.lineHeight = "1.25";
+  line.style.lineHeight = mobile ? "1.1" : "1.25";
   line.style.maxWidth = "100%";
-  line.style.paddingBottom = "2px";
+  line.style.paddingBottom = mobile ? "0" : "2px";
   line.style.display = "flex";
   line.style.alignItems = "baseline";
-  line.style.gap = "3px";
+  line.style.gap = mobile ? "2px" : "3px";
   line.style.flexWrap = "wrap";
   line.style.whiteSpace = "normal";
   const text = lineText(comparison, period);
@@ -167,7 +164,7 @@ function appendLine(card, comparison, period) {
   line.append(document.createTextNode(prefix));
   const sub = document.createElement("span");
   sub.style.fontWeight = "500";
-  sub.style.color = "#6B7280";
+  sub.style.color = mobile ? "#6F817D" : "#6B7280";
   sub.textContent = suffix;
   line.appendChild(sub);
   card.appendChild(line);
@@ -190,11 +187,6 @@ function render() {
   try {
     const display = settings();
     applyExactMetrics();
-
-    if (!desktopCards()) {
-      cleanDesktopOnlyDecoration();
-      return;
-    }
 
     if (display.showComparisons === false) {
       cleanAllComparisonCards();
