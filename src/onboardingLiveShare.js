@@ -3,7 +3,7 @@ import { api, getApiBase, getSession } from './api.js';
 let activeLeadId = null;
 let stageValues = [];
 let templateSteps = [];
-const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
+const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 const leadPath = new RegExp(`/onboarding/(${UUID})(?:$|\\?)`, 'i');
 
 const originalFetch = window.fetch.bind(window);
@@ -96,22 +96,19 @@ function mountShareControl() {
       result.innerHTML = `
         <p class="ft-ob-muted">${progressText} · Customer sees a read-only live checklist. Internal notes are hidden.</p>
         <div class="ft-ob-live-link-row">
-          <input class="ft-ob-live-link" readonly value="${shareUrl.replace(/"/g, '&quot;')}" aria-label="Customer progress link" />
           <button type="button" class="ft-ob-live-copy">Copy link</button>
+          <a class="ft-ob-primary ft-ob-live-whatsapp" href="${whatsapp}" target="_blank" rel="noopener noreferrer">Share on WhatsApp</a>
         </div>
-        <a class="ft-ob-primary ft-ob-live-whatsapp" href="${whatsapp}" target="_blank" rel="noopener noreferrer">Share on WhatsApp</a>
       `;
       result.hidden = false;
-      const input = result.querySelector('.ft-ob-live-link');
-      input.addEventListener('focus', () => input.select());
       result.querySelector('.ft-ob-live-copy').addEventListener('click', async event => {
         try {
           await navigator.clipboard.writeText(shareUrl);
           event.currentTarget.textContent = 'Copied ✓';
           setTimeout(() => { event.currentTarget.textContent = 'Copy link'; }, 1600);
         } catch {
-          input.focus();
-          input.select();
+          event.currentTarget.textContent = 'Copy failed';
+          setTimeout(() => { event.currentTarget.textContent = 'Copy link'; }, 1600);
         }
       });
     } catch (error) {
