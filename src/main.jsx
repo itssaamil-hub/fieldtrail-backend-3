@@ -31,6 +31,7 @@ import "./exceptionCentreUxFix.js";
 import "./exception-centre-fixes.css";
 import "./exceptionLeadDrawer.jsx";
 import "./dataHealthEnhance.js";
+import "./employeeLocationSettingsEnhance.js";
 
 // Silent auto-update: check for a new worker as soon as the app opens so an
 // installed PWA does not stay on an older cached dashboard bundle.
