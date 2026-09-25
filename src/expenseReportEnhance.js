@@ -147,7 +147,7 @@ function summary(root) {
   grid.innerHTML = `
     <div class="engage-expense-summary-card"><span>Total spend</span><strong>${money(total)}</strong></div>
     <div class="engage-expense-summary-card"><span>This month</span><strong>${money(latestMonthTotal)}</strong></div>
-    <div class="engage-expense-summary-card"><span>Top category</span><strong>${top ? top[0] : '—'}</strong></div>
+    <div class="engage-expense-summary-card"><span>Top category</span><strong>${top ? top[0] : '—'}</strong>${top ? `<small>${money(top[1])}</small>` : ''}</div>
     <div class="engage-expense-summary-card"><span>Entries</span><strong>${latestExpenses.length}</strong></div>`;
 }
 
@@ -241,6 +241,32 @@ function openEdit(item, found) {
   });
 }
 
+function ensureActionGroup(row, item, found) {
+  const del = row.querySelector('button[aria-label="Delete expense"]');
+  if (!del) return;
+  let actions = row.querySelector('.engage-expense-row-actions');
+  if (!actions) {
+    actions = document.createElement('div');
+    actions.className = 'engage-expense-row-actions';
+    row.appendChild(actions);
+    actions.appendChild(del);
+  }
+  let edit = actions.querySelector('.engage-expense-edit');
+  if (!edit) {
+    edit = document.createElement('button');
+    edit.type = 'button';
+    edit.className = 'engage-expense-edit';
+    edit.setAttribute('aria-label', 'Edit expense');
+    edit.title = 'Edit expense';
+    edit.innerHTML = '✎';
+    actions.insertBefore(edit, del);
+    edit.addEventListener('click', (event) => {
+      event.stopPropagation();
+      openEdit(item, found);
+    });
+  }
+}
+
 function enhance() {
   const found = findExpenseRoot();
   if (!found) return;
@@ -248,9 +274,12 @@ function enhance() {
   root.classList.add(ROOT_CLASS);
   filters.classList.add('engage-expense-filters');
 
+  // ReportsPage already owns the page title. Remove the enhancement's older duplicate title if present.
+  root.querySelector('.engage-expense-title')?.remove();
+
   const children = [...root.children];
   children.forEach((child) => {
-    if (child === filters || child.classList.contains('engage-expense-title') || child.classList.contains('engage-expense-summary')) return;
+    if (child === filters || child.classList.contains('engage-expense-summary')) return;
     const text = (child.textContent || '').replace(/\s+/g, ' ').trim();
     if (text.startsWith('Total spend:')) {
       child.classList.add('engage-expense-total');
@@ -265,21 +294,7 @@ function enhance() {
         const item = latestExpenses[index];
         if (item) {
           row.dataset.expenseId = item.id;
-          let edit = row.querySelector('.engage-expense-edit');
-          if (!edit) {
-            edit = document.createElement('button');
-            edit.type = 'button';
-            edit.className = 'engage-expense-edit';
-            edit.setAttribute('aria-label', 'Edit expense');
-            edit.title = 'Edit expense';
-            edit.innerHTML = '✎';
-            const del = row.querySelector('button[aria-label="Delete expense"]');
-            del?.parentElement?.insertBefore(edit, del);
-            edit.addEventListener('click', (event) => {
-              event.stopPropagation();
-              openEdit(item, found);
-            });
-          }
+          ensureActionGroup(row, item, found);
         }
       });
       if (latestExpenses.length) addDateGroups(child, rows);
@@ -289,13 +304,6 @@ function enhance() {
       child.classList.add('engage-expense-breakdown');
     }
   });
-
-  if (!root.querySelector('.engage-expense-title')) {
-    const title = document.createElement('div');
-    title.className = 'engage-expense-title';
-    title.innerHTML = '<div><h2>Expenses</h2><p>Track team spending by category, employee and date.</p></div>';
-    root.insertBefore(title, filters);
-  }
 
   const dateInputs = filters.querySelectorAll('input[type="date"]');
   dateInputs.forEach((input, index) => {
