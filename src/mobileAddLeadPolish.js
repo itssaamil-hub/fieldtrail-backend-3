@@ -11,7 +11,6 @@ function isVisible(node) {
 }
 
 function findAddLeadPanel() {
-  if (!window.matchMedia('(max-width: 560px)').matches) return null;
   const fixed = [...document.querySelectorAll('div')].filter((node) => {
     const style = getComputedStyle(node);
     return style.position === 'fixed' && style.inset !== 'auto' && isVisible(node);
