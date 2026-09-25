@@ -20,6 +20,8 @@ import "./employeePanelEnhance.js";
 import "./employee-panel-enhance.css";
 import "./performanceReportEnhance.js";
 import "./performance-report-enhance.css";
+import "./performanceInsightsEnhance.js";
+import "./performance-insights-enhance.css";
 import "./onboardingLiveShare.js";
 import "./onboarding-live-share.css";
 import "./quotationSettingsEnhance.js";
