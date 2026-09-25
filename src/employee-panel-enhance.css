@@ -1,0 +1,183 @@
+@media (min-width: 900px) {
+  .engage-employee-panel-enhanced .engage-employee-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 2px 0 2px;
+  }
+
+  .engage-employee-search-wrap {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    width: min(320px, 42vw);
+    height: 34px;
+    padding: 0 10px;
+    border: 1px solid #E7E9EE;
+    border-radius: 9px;
+    background: #fff;
+    color: #7B8683;
+  }
+  .engage-employee-search-wrap input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #1A1D23;
+    font: 12px Inter, sans-serif;
+  }
+
+  .engage-employee-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px;
+    border-radius: 9px;
+    background: #F4F5F7;
+  }
+  .engage-employee-filter button {
+    border: 0;
+    background: transparent;
+    color: #6B7280;
+    min-height: 28px;
+    padding: 0 9px;
+    border-radius: 7px;
+    cursor: pointer;
+    font: 650 10.8px Inter, sans-serif;
+    white-space: nowrap;
+  }
+  .engage-employee-filter button.is-active {
+    background: #fff;
+    color: #145C5D;
+    box-shadow: 0 1px 2px rgba(20, 28, 34, .07);
+  }
+
+  .engage-employee-online-card {
+    border-color: #E7E9EE !important;
+    border-left: 3px solid #12805C !important;
+  }
+
+  .engage-employee-today {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 5px;
+    font-size: 10.5px;
+    line-height: 1.35;
+    color: #6B7280;
+  }
+  .engage-employee-today strong {
+    color: #145C5D;
+    font-size: 10.5px;
+    font-weight: 800;
+  }
+
+  .engage-employee-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-top: 2px;
+    color: #6B7280;
+    font-size: 10.8px;
+  }
+  .engage-employee-pagination > div {
+    display: flex;
+    gap: 6px;
+  }
+  .engage-employee-pagination button {
+    min-height: 30px;
+    padding: 0 10px;
+    border: 1px solid #E1E5E4;
+    border-radius: 8px;
+    background: #fff;
+    color: #145C5D;
+    cursor: pointer;
+    font: 650 10.8px Inter, sans-serif;
+  }
+  .engage-employee-pagination button:disabled {
+    opacity: .45;
+    cursor: default;
+  }
+}
+
+@media (max-width: 899px) {
+  .engage-employee-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin: 2px 0;
+  }
+  .engage-employee-search-wrap {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    height: 36px;
+    padding: 0 10px;
+    border: 1px solid #E7E9EE;
+    border-radius: 9px;
+    background: #fff;
+    color: #7B8683;
+  }
+  .engage-employee-search-wrap input {
+    flex: 1;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    font: 12px Inter, sans-serif;
+  }
+  .engage-employee-filter {
+    display: flex;
+    gap: 5px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+  .engage-employee-filter button {
+    flex: 0 0 auto;
+    border: 1px solid #E7E9EE;
+    background: #fff;
+    color: #6B7280;
+    min-height: 30px;
+    padding: 0 9px;
+    border-radius: 8px;
+    font: 650 10.5px Inter, sans-serif;
+  }
+  .engage-employee-filter button.is-active {
+    border-color: #B7D1C7;
+    background: #F0F8F4;
+    color: #145C5D;
+  }
+  .engage-employee-online-card {
+    border-color: #E7E9EE !important;
+    border-left: 3px solid #12805C !important;
+  }
+  .engage-employee-today {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 6px;
+    margin-top: 5px;
+    font-size: 10.3px;
+    color: #6B7280;
+  }
+  .engage-employee-today strong { color: #145C5D; font-weight: 800; }
+  .engage-employee-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 10.5px;
+    color: #6B7280;
+  }
+  .engage-employee-pagination > div { display: flex; gap: 5px; }
+  .engage-employee-pagination button {
+    min-height: 30px;
+    padding: 0 9px;
+    border: 1px solid #E1E5E4;
+    border-radius: 8px;
+    background: #fff;
+    color: #145C5D;
+    font: 650 10.5px Inter, sans-serif;
+  }
+}
