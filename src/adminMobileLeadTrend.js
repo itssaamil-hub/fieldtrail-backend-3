@@ -1,6 +1,8 @@
 import { api, getSession } from './api.js';
 
 const CARD_ID = 'engage-admin-mobile-lead-trend';
+const UTILITY_ROW_ID = 'engage-admin-mobile-dashboard-utility';
+const FILTER_PLACEHOLDER_ID = 'engage-admin-mobile-team-filter-placeholder';
 const PHONE_MAX = 900;
 const DAY_MS = 86400000;
 let loading = false;
@@ -161,20 +163,74 @@ function findDashboardGrid() {
   return sameParent.length >= 5 ? parent : null;
 }
 
+function greetingFor(session) {
+  const hour = Number(new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Kolkata',
+    hour: '2-digit',
+    hourCycle: 'h23',
+  }).format(new Date()));
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const fullName = session?.fullName || session?.full_name || session?.name || 'Admin';
+  const firstName = String(fullName).trim().split(/\s+/)[0] || 'Admin';
+  return `${greeting}, ${firstName} 👋`;
+}
+
+function restoreTeamFilter() {
+  const row = document.getElementById(UTILITY_ROW_ID);
+  const select = row?.querySelector('select[aria-label="Dashboard employee"]');
+  const placeholder = document.getElementById(FILTER_PLACEHOLDER_ID);
+  if (select && placeholder?.parentElement) placeholder.insertAdjacentElement('afterend', select);
+  row?.remove();
+  placeholder?.remove();
+}
+
+function syncUtilityRow(grid, session) {
+  let row = document.getElementById(UTILITY_ROW_ID);
+  if (!row) {
+    row = document.createElement('div');
+    row.id = UTILITY_ROW_ID;
+    row.className = 'engage-admin-mobile-dashboard-utility';
+    row.innerHTML = '<div class="engage-admin-mobile-greeting"></div><div class="engage-admin-mobile-team-slot"></div>';
+  }
+
+  const greeting = row.querySelector('.engage-admin-mobile-greeting');
+  if (greeting) greeting.textContent = greetingFor(session);
+
+  const select = document.querySelector('select[aria-label="Dashboard employee"]');
+  const slot = row.querySelector('.engage-admin-mobile-team-slot');
+  if (select && slot && select.parentElement !== slot) {
+    let placeholder = document.getElementById(FILTER_PLACEHOLDER_ID);
+    if (!placeholder) {
+      placeholder = document.createElement('span');
+      placeholder.id = FILTER_PLACEHOLDER_ID;
+      placeholder.hidden = true;
+      select.insertAdjacentElement('beforebegin', placeholder);
+    }
+    slot.appendChild(select);
+  }
+
+  if (row.previousElementSibling !== grid) grid.insertAdjacentElement('afterend', row);
+  return row;
+}
+
 function sync() {
   const session = getSession();
   const existing = document.getElementById(CARD_ID);
   const eligible = session?.role === 'admin' && window.innerWidth <= PHONE_MAX;
   if (!eligible) {
     existing?.remove();
+    restoreTeamFilter();
     return;
   }
 
   const grid = findDashboardGrid();
   if (!grid || grid.offsetParent === null) {
     existing?.remove();
+    restoreTeamFilter();
     return;
   }
+
+  const utilityRow = syncUtilityRow(grid, session);
 
   let card = existing;
   if (!card) {
@@ -184,7 +240,7 @@ function sync() {
     card.innerHTML = '<div class="engage-mobile-lead-trend-skeleton"></div>';
   }
 
-  if (card.previousElementSibling !== grid) grid.insertAdjacentElement('afterend', card);
+  if (card.previousElementSibling !== utilityRow) utilityRow.insertAdjacentElement('afterend', card);
   load(card);
 }
 
