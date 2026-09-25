@@ -120,25 +120,29 @@
     min-height: 58px !important;
   }
 
+  /* Android is much more reliable when the renewal controls stack instead of
+     sharing a narrow flex/grid row. The phone modal already scrolls full-screen,
+     so this removes overlap without changing any lead data or desktop layout. */
   .engage-mobile-add-lead-polish [data-renewal-expiry-row="true"] {
     display: grid !important;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
-    column-gap: 10px !important;
-    row-gap: 0 !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 8px !important;
     width: 100% !important;
     align-items: start !important;
   }
 
   .engage-mobile-add-lead-polish [data-renewal-month-wrap="true"],
   .engage-mobile-add-lead-polish [data-renewal-date-wrap="true"] {
-    width: auto !important;
+    width: 100% !important;
     min-width: 0 !important;
-    max-width: none !important;
+    max-width: 100% !important;
+    grid-column: 1 / -1 !important;
     flex: none !important;
   }
 
   .engage-mobile-add-lead-polish [data-renewal-month-field="true"],
   .engage-mobile-add-lead-polish [data-renewal-date-field="true"] {
+    display: block !important;
     width: 100% !important;
     min-width: 0 !important;
     max-width: 100% !important;
@@ -147,10 +151,11 @@
 
   .engage-mobile-add-lead-polish [data-renewal-month-field="true"] > div:first-child,
   .engage-mobile-add-lead-polish [data-renewal-date-field="true"] > div:first-child {
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
     font-size: 11px !important;
+    line-height: 1.3 !important;
   }
 
   .engage-mobile-add-lead-polish [data-renewal-month-field="true"] select,
@@ -162,7 +167,10 @@
     box-sizing: border-box !important;
   }
 
-  .engage-mobile-add-lead-polish [data-renewal-help="true"],
+  .engage-mobile-add-lead-polish [data-renewal-help="true"] {
+    display: none !important;
+  }
+
   .engage-mobile-add-lead-polish [data-expiry-help="true"] {
     display: block !important;
     width: 100% !important;
