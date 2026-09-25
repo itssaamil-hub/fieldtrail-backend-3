@@ -113,16 +113,16 @@ function apply() {
     switcher.style.display = "flex";
     switcher.style.alignItems = "center";
     switcher.style.gap = "6px";
-    switcher.style.marginLeft = "12px";
-    switcher.style.marginRight = "auto";
     header.appendChild(switcher);
   }
+  switcher.style.marginLeft = "auto";
+  switcher.style.marginRight = "0";
 
   ensureProxy(switcher, "live", "Live Map", liveButton);
   ensureProxy(switcher, "leads", "Lead Locations", leadButton);
 
   const liveStatus = [...header.children].find((child) => child !== switcher && /LIVE/.test(child.textContent || ""));
-  if (liveStatus) liveStatus.style.marginLeft = "auto";
+  if (liveStatus) liveStatus.style.marginLeft = "12px";
 }
 
 function queueApply() {
