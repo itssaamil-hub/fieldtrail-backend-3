@@ -11,6 +11,8 @@ import "./salesmanDashboardCards.js";
 import "./salesman-dashboard-cards.css";
 import "./onboardingLiveShare.js";
 import "./onboarding-live-share.css";
+import "./quotationSettingsEnhance.js";
+import "./quotation-settings-enhance.css";
 import "./exceptionCentreMount.jsx";
 import "./exceptionCentreUxFix.js";
 import "./exception-centre-fixes.css";
