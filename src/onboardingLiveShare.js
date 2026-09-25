@@ -3,7 +3,7 @@ import { api, getApiBase, getSession } from './api.js';
 let activeLeadId = null;
 let stageValues = [];
 let templateSteps = [];
-const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
+const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 const leadPath = new RegExp(`/onboarding/(${UUID})(?:$|\\?)`, 'i');
 
 const originalFetch = window.fetch.bind(window);
