@@ -243,6 +243,16 @@ button:disabled {
   }
 
   .engage-dashboard-stat-comparison {
-    display: none;
+    display: block;
+    margin-top: 2px;
+    font-size: 9.6px;
+    font-weight: 750;
+    line-height: 1.12;
+    white-space: normal;
+  }
+
+  .engage-dashboard-stat-comparison span {
+    color: #637873;
+    font-weight: 600;
   }
 }
