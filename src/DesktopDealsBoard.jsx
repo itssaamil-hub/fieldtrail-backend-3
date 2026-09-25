@@ -28,6 +28,21 @@ export default function DesktopDealsBoard({ leads, visibleStatus = 'all', onStat
   const [over, setOver] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [scrollLeft, setScrollLeft] = useState(0);
+  const visibleStages = STAGES.filter(([status]) => visibleStatus === 'all' || status === visibleStatus);
+  const stageData = visibleStages.map(([status, label, colour]) => {
+    const rows = leads.filter(l => l.status === status);
+    const valued = rows.filter(l => amount(l) !== null);
+    return {
+      status,
+      label,
+      colour,
+      rows,
+      valued,
+      totalValue: valued.reduce((total, l) => total + amount(l), 0),
+    };
+  });
+
   async function drop(status) {
     const lead = leads.find(l => l.id === dragging);
     setDragging(null); setOver(null);
@@ -37,21 +52,28 @@ export default function DesktopDealsBoard({ leads, visibleStatus = 'all', onStat
     catch (err) { setError(err.message || 'Could not update the deal. Please try again.'); }
     finally { setSaving(false); }
   }
+
   return <>
     {error && <div className="engage-deals-error" role="alert">{error}</div>}
-    <div className="engage-deals-board" aria-label="Deals by status" aria-busy={saving}>
-      {STAGES.filter(([status]) => visibleStatus === 'all' || status === visibleStatus).map(([status, label, colour]) => {
-        const rows = leads.filter(l => l.status === status);
-        const valued = rows.filter(l => amount(l) !== null);
-        const totalValue = valued.reduce((total, l) => total + amount(l), 0);
-        return <section key={status} className={`engage-deals-column${over === status ? ' is-over' : ''}${rows.length === 0 ? ' is-empty' : ''}`} aria-label={`${label} deals`}
+
+    <div className="engage-deals-sticky-head" aria-hidden="true">
+      <div className="engage-deals-sticky-track" style={{ transform: `translateX(${-scrollLeft}px)` }}>
+        {stageData.map(({ status, label, colour, rows, valued, totalValue }) => (
+          <div key={status} className="engage-deals-sticky-cell" style={{ borderTopColor: colour }}>
+            <div><strong>{label}</strong><span>{rows.length}</span></div>
+            <small>{rows.length} {rows.length === 1 ? 'lead' : 'leads'}{valued.length ? ` · ${money(totalValue)}` : ''}{valued.length < rows.length && valued.length > 0 ? ` · ${rows.length - valued.length} unpriced` : ''}</small>
+          </div>
+        ))}
+        <div className="engage-deals-sticky-spacer" />
+      </div>
+    </div>
+
+    <div className="engage-deals-board" aria-label="Deals by status" aria-busy={saving} onScroll={e => setScrollLeft(e.currentTarget.scrollLeft)}>
+      {stageData.map(({ status, label, rows }) => (
+        <section key={status} className={`engage-deals-column${over === status ? ' is-over' : ''}${rows.length === 0 ? ' is-empty' : ''}`} aria-label={`${label} deals`}
           onDragOver={e => { e.preventDefault(); if (!saving) setOver(status); }}
           onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setOver(null); }}
           onDrop={e => { e.preventDefault(); drop(status); }}>
-          <div className="engage-deals-column-heading" style={{ borderTopColor: colour }}>
-            <div><strong>{label}</strong><span>{rows.length}</span></div>
-            <small>{rows.length} {rows.length === 1 ? 'lead' : 'leads'} · {valued.length ? money(totalValue) : 'No value'}{valued.length < rows.length && valued.length > 0 ? ` · ${rows.length - valued.length} unpriced` : ''}</small>
-          </div>
           <div className="engage-deals-cards">{rows.map(lead => {
             const follow = followUp(lead.nextFollowUpDate);
             const leadAmount = amount(lead);
@@ -60,7 +82,7 @@ export default function DesktopDealsBoard({ leads, visibleStatus = 'all', onStat
               onDragEnd={() => { setDragging(null); setOver(null); }} onClick={() => onSelectLead(lead)}
               style={{ opacity: dragging === lead.id ? 0.4 : 1 }}>
               <strong className="engage-deal-name">{lead.business}</strong>
-              <div className={`engage-deal-value${leadAmount === null ? ' is-empty-value' : ''}`}>{leadAmount === null ? 'Value not set' : money(leadAmount)}</div>
+              {leadAmount !== null && <div className="engage-deal-value">{money(leadAmount)}</div>}
               <div className="engage-deal-meta-row">
                 <div className="engage-deal-owner"><span aria-hidden="true">{(lead.salesmanName || '?').slice(0, 1)}</span>{lead.salesmanName || 'Unassigned'}</div>
                 {follow && !follow.overdue && <div className={`engage-deal-followup${follow.today ? ' is-today' : ''}`}>{follow.text}</div>}
@@ -69,8 +91,9 @@ export default function DesktopDealsBoard({ leads, visibleStatus = 'all', onStat
             </button>;
           })}</div>
           {!rows.length && <div className="engage-deals-empty"><span>Empty stage</span><small>Drop a deal here</small></div>}
-        </section>;
-      })}
+        </section>
+      ))}
+      <div className="engage-deals-board-spacer" aria-hidden="true" />
     </div>
     <div className="engage-deals-hint">Drag a deal to change its stage · Click a card to open lead details</div>
   </>;
