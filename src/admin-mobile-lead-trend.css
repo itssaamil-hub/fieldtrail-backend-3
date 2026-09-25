@@ -1,0 +1,115 @@
+#engage-admin-mobile-lead-trend{display:none}
+
+@media (max-width:900px){
+  #engage-admin-mobile-lead-trend.engage-mobile-lead-trend{
+    display:block;
+    width:100%;
+    box-sizing:border-box;
+    margin:-8px 0 16px;
+    padding:14px 14px 10px;
+    border:1px solid #E2E8E6;
+    border-radius:18px;
+    background:#FFFFFF;
+    box-shadow:0 8px 22px rgba(20,54,54,.055);
+    overflow:hidden;
+  }
+
+  .engage-mobile-lead-trend-head{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:6px;
+  }
+
+  .engage-mobile-lead-trend-title{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:15px;
+    line-height:1.2;
+    font-weight:700;
+    color:#173737;
+    letter-spacing:-.1px;
+  }
+
+  .engage-mobile-lead-trend-sub{
+    margin-top:3px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    line-height:1.35;
+    color:#788784;
+  }
+
+  .engage-mobile-lead-trend-badge{
+    flex:0 0 auto;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:25px;
+    padding:0 9px;
+    border-radius:999px;
+    background:#E8F7F1;
+    color:#12805C;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    font-weight:700;
+    white-space:nowrap;
+  }
+
+  .engage-mobile-lead-trend-badge.is-down{
+    background:#FCECEA;
+    color:#B84B3F;
+  }
+
+  .engage-mobile-lead-trend-badge.is-flat{
+    background:#F1F4F4;
+    color:#667572;
+  }
+
+  .engage-mobile-lead-trend-svg{
+    display:block;
+    width:100%;
+    height:auto;
+    max-height:132px;
+    overflow:visible;
+  }
+
+  .engage-mobile-lead-trend-grid{
+    stroke:#E7EEEC;
+    stroke-width:1;
+    stroke-dasharray:3 3;
+  }
+
+  .engage-mobile-lead-trend-line{
+    fill:none;
+    stroke:#14886A;
+    stroke-width:2.4;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+
+  .engage-mobile-lead-trend-dot{
+    fill:#14886A;
+    stroke:#FFFFFF;
+    stroke-width:2;
+  }
+
+  .engage-mobile-lead-trend-x,
+  .engage-mobile-lead-trend-y{
+    fill:#85928F;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:8.5px;
+  }
+
+  .engage-mobile-lead-trend-skeleton{
+    height:150px;
+    border-radius:12px;
+    background:linear-gradient(90deg,#F5F7F7 25%,#EDF2F1 37%,#F5F7F7 63%);
+    background-size:400% 100%;
+    animation:engageLeadTrendPulse 1.25s ease infinite;
+  }
+}
+
+@keyframes engageLeadTrendPulse{
+  0%{background-position:100% 0}
+  100%{background-position:0 0}
+}
