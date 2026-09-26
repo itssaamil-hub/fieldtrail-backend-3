@@ -1,0 +1,23 @@
+name: Strong frontend cleanup batch 6
+on:
+  push:
+    paths:
+      - 'tools/strong_frontend_cleanup_batch6.py'
+      - '.github/workflows/strong-frontend-cleanup-batch6.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python tools/strong_frontend_cleanup_batch6.py
+      - run: npm ci
+      - run: npm run build
+      - name: Commit verified cleanup
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/Onboarding.jsx src/api.js src/main.jsx
+          if git diff --cached --quiet; then echo "No changes"; else git commit -m "Move onboarding enhancements into React" && git push; fi
