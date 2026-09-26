@@ -2442,6 +2442,7 @@ function SalesmanPerformanceReport({ salesmen }) {
   const [employee,setEmployee]=useState("");
   const [data,setData]=useState(null);
   const [targets,setTargets]=useState([]);
+  const [insights,setInsights]=useState(null);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
 
@@ -2451,14 +2452,28 @@ function SalesmanPerformanceReport({ salesmen }) {
     setLoading(true);setError("");
     Promise.all([
       api.performanceReport({period:"month",anchor,...(employee?{salesmanId:employee}:{})}),
-      api.performanceTargets({month:anchor})
-    ]).then(([p,t])=>{setData(p);setTargets(t.targets||[])}).catch(e=>setError(e.message||"Couldn't load performance.")).finally(()=>setLoading(false));
+      api.performanceTargets({month:anchor}),
+      api.performanceInsights({month:anchor.slice(0,7),...(employee?{salesmanId:employee}:{})}).catch(()=>null)
+    ]).then(([p,t,i])=>{setData(p);setTargets(t.targets||[]);setInsights(i)}).catch(e=>setError(e.message||"Couldn't load performance.")).finally(()=>setLoading(false));
   },[anchor,employee]);
   useEffect(()=>{load()},[load]);
 
   const targetFor=id=>targets.find(t=>t.salesman_id===id)||{};
   const pct=(value,target)=>target>0?Math.min(100,Math.round((Number(value||0)/Number(target))*100)):null;
   const monthLabel=new Date(`${anchor.slice(0,7)}-01T00:00:00`).toLocaleDateString("en-IN",{month:"long",year:"numeric"});
+  const conversion=(a,b)=>Number(a)>0?Math.round(Number(b||0)/Number(a)*100):0;
+  const progressState=(r,tg)=>{
+    if(Number(r.leads||0)===0&&Number(r.visits||0)===0)return {label:"No activity",tone:"quiet"};
+    const p=(v,t)=>Number(t)>0?Math.round(Number(v||0)/Number(t)*100):null;
+    const won=p(r.won,tg.won_target), sales=p(r.sales_value,tg.sales_value_target), leads=p(r.leads,tg.leads_target), demos=p(r.demos,tg.demos_target);
+    if((won!=null&&won>=100)||(sales!=null&&sales>=100))return {label:"On target",tone:"strong"};
+    if(leads!=null&&demos!=null&&leads>=100&&demos>=100)return {label:"On track",tone:"strong"};
+    if([leads,demos,won].some(v=>v!=null)&&[leads,demos,won].filter(v=>v!=null).every(v=>v<60))return {label:"Behind",tone:"behind"};
+    if([leads,demos,won,sales].every(v=>v==null))return {label:"No target",tone:"quiet"};
+    return {label:"Active",tone:"active"};
+  };
+  const insightFor=id=>(insights?.employees||[]).find(x=>String(x.id||x.salesman_id)===String(id))||null;
+  const managerNotes=(r,tg,i)=>{const state=progressState(r,tg),notes=[];if(state.tone==='strong')notes.push('Strong progress against target this month.');else if(state.tone==='behind')notes.push('Core funnel activity is behind target and needs attention.');else if(state.tone==='quiet')notes.push('Very little recorded sales activity this month.');if(Number(i?.overdue_tasks||i?.tasks_overdue||0)>0)notes.push(`${Number(i?.overdue_tasks||i?.tasks_overdue)} overdue task${Number(i?.overdue_tasks||i?.tasks_overdue)===1?'':'s'} should be cleared.`);if(Number(i?.followups_overdue||i?.overdue_followups||0)>0)notes.push(`${Number(i?.followups_overdue||i?.overdue_followups)} follow-up${Number(i?.followups_overdue||i?.overdue_followups)===1?' is':'s are'} overdue.`);if(Number(i?.negotiations||0)>0)notes.push(`${Number(i.negotiations)} deal${Number(i.negotiations)===1?' is':'s are'} currently in negotiation.`);if(conversion(r.leads,r.won)>=25&&Number(r.won||0)>0)notes.push('Lead-to-win conversion is strong.');return notes.length?notes:['Performance is steady; keep activity and follow-ups consistent.'];};
   const metric=(label,value,target,format=false)=>{
     const progress=pct(value,target);
     return <div style={{marginTop:10}}>
@@ -2470,19 +2485,23 @@ function SalesmanPerformanceReport({ salesmen }) {
     </div>
   };
 
-  return <div>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",gap:10,flexWrap:"wrap",marginBottom:15}}>
-      <div><div style={{fontSize:15,fontWeight:750,color:T.ink}}>Monthly performance & targets</div><div style={{fontSize:12,color:T.inkSoft,marginTop:3}}>{monthLabel} · Restaurant visits → Leads → Demos → Won → Sales value.</div></div>
-      <div style={{display:"flex",gap:7}}>
+  return <div className="engage-performance-report-page">
+    <div className="engage-performance-hero" style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",gap:10,flexWrap:"wrap",marginBottom:15}}>
+      <div><div className="engage-performance-kicker">SALES PERFORMANCE</div><div style={{fontSize:18,fontWeight:800,color:T.ink}}>Monthly Performance</div><div style={{fontSize:12,color:T.inkSoft,marginTop:3}}>{monthLabel} · Restaurant visits → Leads → Demos → Won → Sales value.</div></div>
+      <div className="engage-performance-filters" style={{display:"flex",gap:7}}>
         <input type="month" value={anchor.slice(0,7)} onChange={e=>setAnchor(`${e.target.value}-01`)} style={{height:36,border:`1px solid ${T.line}`,borderRadius:9,padding:"0 9px",background:"#fff",color:T.ink}}/>
         <select value={employee} onChange={e=>setEmployee(e.target.value)} style={{height:36,border:`1px solid ${T.line}`,borderRadius:9,padding:"0 9px",background:"#fff",color:T.ink}}>
           <option value="">All employees</option>{salesmen.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}
         </select>
+        <button type="button" onClick={load} disabled={loading} style={{height:36,border:`1px solid ${T.line}`,borderRadius:9,padding:"0 11px",background:"#fff",color:T.route,fontWeight:750,cursor:"pointer"}}><RefreshCw size={13}/> Refresh</button>
       </div>
     </div>
     {error&&<div style={{padding:11,borderRadius:10,background:"#fff3f0",color:T.danger,marginBottom:12,fontSize:12.5}}>{error}</div>}
     {loading?<div style={{padding:24,color:T.inkSoft}}>Loading performance…</div>:data&&<>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(135px,1fr))",gap:8,marginBottom:17}}>
+      <div className="engage-performance-funnel" style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:8,marginBottom:10}}>
+        {[["Leads",data.totals.leads],["Demos",data.totals.demos],["Won",data.totals.won],["Sales",money(data.totals.sales_value)]].map(([label,value],idx)=><div key={label} style={{background:"#F7FAF9",border:`1px solid ${T.line}`,borderRadius:10,padding:"9px 10px",position:"relative"}}><div style={{fontSize:9.5,color:T.inkSoft,fontWeight:800,textTransform:"uppercase"}}>{label}</div><strong style={{fontSize:16}}>{value}</strong>{idx<3&&<span style={{position:"absolute",right:-7,top:"50%",color:T.inkSoft}}>→</span>}</div>)}
+      </div>
+      <div className="engage-performance-summary" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(135px,1fr))",gap:8,marginBottom:17}}>
         {[
           ["Leads",data.totals.leads],
           ["Restaurant visits",data.totals.visits],
@@ -2494,10 +2513,10 @@ function SalesmanPerformanceReport({ salesmen }) {
 
       <div style={{fontSize:11,textTransform:"uppercase",letterSpacing:.55,color:T.inkSoft,fontWeight:800,marginBottom:9}}>Employee progress</div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(270px,1fr))",gap:10}}>
-        {data.rows.map(r=>{const tg=targetFor(r.id);return <div key={r.id} style={{background:"#fff",border:`1px solid ${T.line}`,borderRadius:14,padding:14,boxShadow:"0 1px 2px rgba(20,20,30,.03)"}}>
+        {data.rows.map(r=>{const tg=targetFor(r.id);const ins=insightFor(r.id);const state=progressState(r,tg);return <div key={r.id} className="engage-performance-employee-card" style={{background:"#fff",border:`1px solid ${T.line}`,borderRadius:14,padding:14,boxShadow:"0 1px 2px rgba(20,20,30,.03)"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
             <div><div style={{fontSize:14,fontWeight:800,color:T.ink}}>{r.full_name}</div><div style={{fontSize:11.5,color:T.inkSoft,marginTop:2}}>{r.won} won · {money(r.sales_value)} sales</div></div>
-            <span style={{fontSize:10.5,color:T.inkSoft}}>Targets set in Employee Settings</span>
+            <span className={`engage-performance-status is-${state.tone}`} style={{fontSize:10.5,fontWeight:800,padding:"4px 8px",borderRadius:999,background:state.tone==='strong'?"#E6F6EF":state.tone==='behind'?"#FBEAE8":"#F4F5F7",color:state.tone==='strong'?T.verified:state.tone==='behind'?T.danger:T.inkSoft}}>{state.label}</span>
           </div>
           <>
             {metric("Restaurant visits",r.visits,tg.visits_target)}
@@ -2514,6 +2533,17 @@ function SalesmanPerformanceReport({ salesmen }) {
                 Math.max(0,Number(r.sales_value||0)-Number(tg.sales_value_target||0))*Number(tg.sales_value_incentive_pct||0)/100;
               return earned>0?<div style={{marginTop:12,padding:"9px 10px",borderRadius:9,background:"#F0F8F4",color:T.route,fontSize:12,fontWeight:750}}>Calculated incentive · {money(earned)}</div>:null;
             })()}
+            <div className="engage-performance-at-glance" style={{marginTop:12,paddingTop:11,borderTop:`1px solid ${T.line}`}}>
+              <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:.5,fontWeight:800,color:T.inkSoft,marginBottom:7}}>At a glance</div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:6}}>
+                {[["Lead → Demo",`${conversion(r.leads,r.demos)}%`],["Demo → Won",`${conversion(r.demos,r.won)}%`],["Lead → Won",`${conversion(r.leads,r.won)}%`]].map(([l,v])=><div key={l} style={{background:"#F7FAF9",borderRadius:8,padding:"7px 8px"}}><strong style={{fontSize:13}}>{v}</strong><div style={{fontSize:9.5,color:T.inkSoft}}>{l}</div></div>)}
+              </div>
+              {ins&&<div className="engage-performance-manager" style={{marginTop:9,background:"#F8FAFC",borderRadius:9,padding:"9px 10px"}}>
+                <div style={{fontSize:10,fontWeight:800,color:T.inkSoft,textTransform:"uppercase",marginBottom:6}}>Manager view</div>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap",fontSize:10.5,color:T.inkSoft}}><span>{Number(ins.followups_completed||0)} follow-ups completed</span><span>{Number(ins.followups_overdue||ins.overdue_followups||0)} overdue</span><span>{Number(ins.negotiations||0)} negotiations</span><span>{Number(ins.active_days||0)} active days</span><span>{Number(ins.visits||r.visits||0)} visits</span></div>
+                <ul style={{margin:"7px 0 0",paddingLeft:17,fontSize:10.8,color:T.ink,lineHeight:1.45}}>{managerNotes(r,tg,ins).map((note,i)=><li key={i}>{note}</li>)}</ul>
+              </div>}
+            </div>
           </>
         </div>})}
       </div>

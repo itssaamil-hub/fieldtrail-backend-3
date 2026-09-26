@@ -184,6 +184,7 @@ export const api = {
   },
   dealValueReport: () => request('/admin/reports/deal-values'),
   performanceReport: (params = {}) => request(`/admin/reports/performance?${new URLSearchParams(params)}`),
+  performanceInsights: (params = {}) => request(`/admin/reports/performance-insights?${new URLSearchParams(params)}`),
   incentivePlan: (salesmanId, year) => request(`/admin/employees/${salesmanId}/incentive-plan?year=${year}`),
   saveIncentivePlan: (salesmanId, body) => request(`/admin/employees/${salesmanId}/incentive-plan`, { method: 'PUT', body }),
   performanceTargets: (params = {}) => request(`/admin/reports/performance-targets?${new URLSearchParams(params)}`),
