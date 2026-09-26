@@ -18,8 +18,8 @@ jobs:
           ref: main
           fetch-depth: 0
       - name: Refactor lead UI into React
-        shell: python
         run: |
+          python - <<'PY'
           from pathlib import Path
 
           app_path = Path('src/App.jsx')
@@ -33,7 +33,6 @@ jobs:
                   raise SystemExit(f'{label}: expected {expected} match(es), found {found}')
               return text.replace(old, new)
 
-          # Keep edited business names immediately in React state for both admin and salesman.
           app = replace_exact(
               app,
               '      ...l,\n      subLocation: payload.subLocation, posName: payload.posName,',
@@ -41,8 +40,6 @@ jobs:
               expected=2,
               label='optimistic business-name state',
           )
-
-          # Business Name becomes a first-class field in the actual lead edit form.
           app = replace_exact(
               app,
               '  const [form, setForm] = useState({\n    subLocation: lead.subLocation || "", posName: lead.posName || "",',
@@ -86,7 +83,6 @@ jobs:
               label='business-name activity label',
           )
 
-          # Stage is always a native React dropdown. Cold remains the form default.
           old_stage = '''      {leadSettings.requireStatus && (
         <AddLeadField label="Status *">
           <select style={inputStyle} value={form.status} onChange={set("status")}>
@@ -102,24 +98,22 @@ jobs:
           app = replace_exact(app, old_stage, new_stage, label='native salesman stage dropdown')
           app = replace_exact(app, '<AddLeadField label="Status">\n              <select style={inputStyle} value={form.status}', '<AddLeadField label="Stage">\n              <select style={inputStyle} value={form.status}', label='admin stage label')
 
-          # Stop loading the two old post-render DOM enhancers.
           main = replace_exact(main, 'import "./leadBusinessNameEditEnhance.js";\n', '', label='remove business enhancer import')
           main = replace_exact(main, 'import "./addLeadStageDropdown.js";\n', '', label='remove stage enhancer import')
 
           app_path.write_text(app)
           main_path.write_text(main)
-
           for path in [Path('src/leadBusinessNameEditEnhance.js'), Path('src/addLeadStageDropdown.js')]:
               if path.exists():
                   path.unlink()
-
+          PY
       - name: Verify frontend build
         run: npm ci && npm run build
       - name: Commit native React cleanup
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/App.jsx src/main.jsx src/leadBusinessNameEditEnhance.js src/addLeadStageDropdown.js
+          git add -A src/App.jsx src/main.jsx src/leadBusinessNameEditEnhance.js src/addLeadStageDropdown.js
           git diff --cached --quiet && exit 0
           git commit -m "Move business name and stage controls into React"
           git push origin HEAD:main
