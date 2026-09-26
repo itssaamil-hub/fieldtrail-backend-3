@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ClipboardList, X, ChevronRight, Columns3, List } from 'lucide-react';
+import { ClipboardList, X, ChevronRight, Columns3, List, SlidersHorizontal, Search } from 'lucide-react';
 import { api, getSession } from './api.js';
 import './tasks.css';
 const changed = () => { window.dispatchEvent(new Event('fieldtrail:tasks')); window.dispatchEvent(new Event('fieldtrail:notifications-read')); };
@@ -40,6 +40,7 @@ export function TasksModal({lead,onClose,startCreate=false,focusId,embedded=fals
  const [search,setSearch]=useState(''),[query,setQuery]=useState('');
  const [employeeFilter,setEmployeeFilter]=useState(''),[priorityFilter,setPriorityFilter]=useState(''),[progressFilter,setProgressFilter]=useState('');
  const [from,setFrom]=useState(''),[through,setThrough]=useState('');
+ const [mobileFiltersOpen,setMobileFiltersOpen]=useState(false);
  const [workflow,setWorkflow]=useState(null);
  const [page,setPage]=useState(0),[tasks,setTasks]=useState([]),[more,setMore]=useState(false),[loading,setLoading]=useState(true),[error,setError]=useState(''),[revision,setRevision]=useState(0);
  const [employees,setEmployees]=useState([]),[employeesReady,setEmployeesReady]=useState(!admin),[employeeError,setEmployeeError]=useState('');
@@ -113,14 +114,30 @@ export function TasksModal({lead,onClose,startCreate=false,focusId,embedded=fals
    </form>}
    <div className="ft-task-view-switch" role="group" aria-label="Task layout"><button type="button" aria-pressed={view==='board'} onClick={()=>setViewChoice('board')}><Columns3 size={15}/> Board</button><button type="button" aria-pressed={view==='list'} onClick={()=>setViewChoice('list')}><List size={15}/> List</button></div>
    <div className="ft-task-tabs" aria-label="Task date view">{['all','today','overdue','upcoming','completed'].map(f=><button key={f} aria-pressed={filter===f} onClick={()=>{changeFilter(setFilter,f);setProgressFilter('')}}>{f[0].toUpperCase()+f.slice(1)}</button>)}</div>
-   <div className="ft-task-filters">
+   <div className="ft-task-mobile-search-row">
+    <label className="ft-task-mobile-search"><Search size={16}/><input disabled={!workflow} type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search tasks..." maxLength={180}/></label>
+    <button type="button" className="ft-task-mobile-filter-button" onClick={()=>setMobileFiltersOpen(true)}><SlidersHorizontal size={16}/> Filter{[employeeFilter,priorityFilter,progressFilter,from,through].filter(Boolean).length>0?` (${[employeeFilter,priorityFilter,progressFilter,from,through].filter(Boolean).length})`:''}</button>
+   </div>
+   <div className="ft-task-filters ft-task-desktop-filters">
     <label>Search<input disabled={!workflow} type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Task or restaurant" maxLength={180}/></label>
     {admin&&<label>Employee<select disabled={!workflow} value={employeeFilter} onChange={e=>changeFilter(setEmployeeFilter,e.target.value)}><option value="">All employees</option>{employees.map(s=><option key={s.id} value={s.id}>{s.full_name}{s.is_active?'':' (inactive)'}</option>)}</select></label>}
     <label>Priority<select disabled={!workflow} value={priorityFilter} onChange={e=>changeFilter(setPriorityFilter,e.target.value)}><option value="">All priorities</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></label>
     <label>Progress<select value={progressFilter} onChange={e=>changeFilter(setProgressFilter,e.target.value)} disabled={!workflow||filter==='completed'}><option value="">All progress</option><option value="pending">To do</option><option value="in_progress">In progress</option>{filter==='all'&&<option value="completed">Completed</option>}</select></label>
     <label>Due from · IST<input disabled={!workflow} type="date" value={from} onChange={e=>changeFilter(setFrom,e.target.value)}/></label><label>Due through · IST<input disabled={!workflow} type="date" value={through} min={from} onChange={e=>changeFilter(setThrough,e.target.value)}/></label>
    </div>
-   <p className="ft-task-muted">Dates in IST · Overdue includes tasks past their due time today.</p>
+   <p className="ft-task-muted ft-task-desktop-filter-help">Dates in IST · Overdue includes tasks past their due time today.</p>
+   {mobileFiltersOpen&&<div className="ft-task-mobile-filter-backdrop" onClick={()=>setMobileFiltersOpen(false)}><div className="ft-task-mobile-filter-sheet" role="dialog" aria-modal="true" aria-label="Task filters" onClick={e=>e.stopPropagation()}>
+    <div className="ft-task-mobile-filter-head"><div><strong>Filters</strong><span>Refine your task list</span></div><button type="button" aria-label="Close filters" onClick={()=>setMobileFiltersOpen(false)}><X size={18}/></button></div>
+    <div className="ft-task-mobile-filter-fields">
+     {admin&&<label>Employee<select disabled={!workflow} value={employeeFilter} onChange={e=>changeFilter(setEmployeeFilter,e.target.value)}><option value="">All employees</option>{employees.map(s=><option key={s.id} value={s.id}>{s.full_name}{s.is_active?'':' (inactive)'}</option>)}</select></label>}
+     <label>Priority<select disabled={!workflow} value={priorityFilter} onChange={e=>changeFilter(setPriorityFilter,e.target.value)}><option value="">All priorities</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></label>
+     <label>Progress<select value={progressFilter} onChange={e=>changeFilter(setProgressFilter,e.target.value)} disabled={!workflow||filter==='completed'}><option value="">All progress</option><option value="pending">To do</option><option value="in_progress">In progress</option>{filter==='all'&&<option value="completed">Completed</option>}</select></label>
+     <label>Due from · IST<input disabled={!workflow} type="date" value={from} onChange={e=>changeFilter(setFrom,e.target.value)}/></label>
+     <label>Due through · IST<input disabled={!workflow} type="date" value={through} min={from} onChange={e=>changeFilter(setThrough,e.target.value)}/></label>
+     <p className="ft-task-muted">Dates in IST · Overdue includes tasks past their due time today.</p>
+    </div>
+    <div className="ft-task-mobile-filter-actions"><button type="button" onClick={()=>{setEmployeeFilter('');setPriorityFilter('');setProgressFilter('');setFrom('');setThrough('');setPage(0)}}>Reset</button><button type="button" className="ft-task-primary" onClick={()=>setMobileFiltersOpen(false)}>Apply filters</button></div>
+   </div></div>}
    <div className={`ft-task-layout${view==='board'?' board-layout':''}${selectedId?' has-detail':''}`}><div className="ft-task-list">
    {loading?<p role="status">Loading tasks…</p>:error?<div role="alert"><p className="ft-task-error">{error}</p><button onClick={()=>setRevision(v=>v+1)}>Retry</button></div>:<>
     {view==='list'&&!tasks.length&&<div className="ft-task-empty"><ClipboardList size={26}/><strong>No tasks in this view</strong><span>Choose another filter or create a task.</span></div>}
