@@ -1,0 +1,34 @@
+name: Dependency fix test
+
+on:
+  push:
+    paths:
+      - '.github/workflows/dependency-fix-test.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test-fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - name: Upgrade only Vite to first patched 6.x release
+        run: npm install --save-dev vite@^6.4.3
+      - name: Require clean moderate-or-higher audit
+        run: npm audit --audit-level=moderate
+      - name: Production build
+        run: npm run build
+      - name: Commit only if audit and build pass
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          if git diff --cached --quiet; then
+            echo "No dependency changes"
+          else
+            git commit -m "Upgrade Vite to patched 6.x release"
+            git push
+          fi
