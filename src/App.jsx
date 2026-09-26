@@ -1963,7 +1963,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
         </div>
       )}
       {phone && (
-        <div className="engage-admin-mobile-dashboard-utility">
+        <div id="engage-admin-mobile-dashboard-utility" className="engage-admin-mobile-dashboard-utility">
           <div className="engage-admin-mobile-greeting">{new Date().getHours() < 12 ? "Good morning" : new Date().getHours() < 17 ? "Good afternoon" : "Good evening"}, {(getSession()?.fullName || getSession()?.full_name || getSession()?.name || "Admin").split(/\s+/)[0]} 👋</div>
           <div className="engage-admin-mobile-team-slot">
             <select aria-label="Dashboard employee" value={dashboardSalesman} onChange={(e)=>setDashboardSalesman(e.target.value)}>
