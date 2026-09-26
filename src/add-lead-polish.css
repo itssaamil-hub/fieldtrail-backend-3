@@ -106,9 +106,9 @@
     flex: 0 0 22px;
   }
 
-  .engage-mobile-add-lead-polish [data-mobile-lead-section="restaurant"]::before { content: "▣"; }
-  .engage-mobile-add-lead-polish [data-mobile-lead-section="contact"]::before { content: "◯"; }
-  .engage-mobile-add-lead-polish [data-mobile-lead-section="deal"]::before { content: "▥"; }
+  .engage-mobile-add-lead-polish [data-mobile-lead-section="restaurant"] [role="heading"]::before { content: "▣"; }
+  .engage-mobile-add-lead-polish [data-mobile-lead-section="contact"] [role="heading"]::before { content: "◯"; }
+  .engage-mobile-add-lead-polish [data-mobile-lead-section="deal"] [role="heading"]::before { content: "▥"; }
 
   .engage-mobile-add-lead-polish input,
   .engage-mobile-add-lead-polish select,

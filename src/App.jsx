@@ -5260,6 +5260,20 @@ function MessagesSection({ messages, onMarkRead, onDelete, onReply, employeeRepl
 }
 
 
+function AddLeadOverlay({ onClose, children }) {
+  return (
+    <div className="engage-add-lead-overlay" style={{ position:"fixed", inset:0, zIndex:2000, background:"rgba(28,36,48,0.42)", display:"flex", alignItems:"flex-end", justifyContent:"center" }} onMouseDown={(e)=>{ if(e.target===e.currentTarget) onClose(); }}>
+      <section className="engage-mobile-add-lead-polish" role="dialog" aria-modal="true" aria-label="Add Lead" style={{ width:"100%", maxWidth:480, maxHeight:"88vh", overflowY:"auto", background:T.card, padding:18, boxSizing:"border-box" }} onMouseDown={(e)=>e.stopPropagation()}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, marginBottom:14 }}>
+          <div style={{ fontFamily:"'Space Grotesk', sans-serif", fontWeight:700, fontSize:18 }}>Add Lead</div>
+          <button type="button" aria-label="Close Add Lead" onClick={onClose} style={{ border:"none", background:"transparent", cursor:"pointer", color:T.ink }}><X size={19}/></button>
+        </div>
+        {children}
+      </section>
+    </div>
+  );
+}
+
 function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
   const [form, setForm] = useState({
     business: "", subLocation: "", posName: "", renewalMonth: "", renewalDate: "",
@@ -5378,7 +5392,7 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
   };
 
   return (
-    <Overlay onClose={onClose} title="Add Lead">
+    <AddLeadOverlay onClose={onClose}>
       {!online && (
         <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: T.warn, background: T.warnSoft, padding: "8px 10px", borderRadius: 11, marginBottom: 12 }}>
           <WifiOff size={13} /> Offline — this will save to your device and sync when reconnected.
@@ -5391,7 +5405,7 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
         </div>
       )}
 
-      <AddLeadSection>Restaurant details</AddLeadSection>
+      <div data-mobile-lead-section="restaurant"><AddLeadSection>Restaurant details</AddLeadSection></div>
       <AddLeadField label={`Business / Restaurant name${leadSettings.requireBusinessName ? " *" : ""}`}>
         <input style={inputStyle} value={form.business} onChange={set("business")} placeholder="e.g. Ganga Cafe" />
       </AddLeadField>
@@ -5413,7 +5427,7 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
           {(fieldOptions.category?.length ? fieldOptions.category : ["Cafe", "QSR", "Casual Dining", "Fine Dining", "Cloud Kitchen", "Bakery"]).map((v) => <option key={v} value={v} />)}
         </datalist>
       </AddLeadField>
-      <AddLeadSection>Contact details</AddLeadSection>
+      <div data-mobile-lead-section="contact"><AddLeadSection>Contact details</AddLeadSection></div>
       <AddLeadField label={`Contact Name${leadSettings.requireContactName ? " *" : ""}`}>
         <input style={inputStyle} value={form.owner} onChange={set("owner")} />
       </AddLeadField>
@@ -5433,12 +5447,12 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
         </div>
       </AddLeadField>
       <DuplicateLeadWarning result={duplicateResult} />
-      <AddLeadSection>Deal &amp; follow-up</AddLeadSection>
-      <AddLeadField label={`Stage${leadSettings.requireStatus ? " *" : ""}`}>
+      <div data-mobile-lead-section="deal"><AddLeadSection>Deal &amp; follow-up</AddLeadSection></div>
+      <div data-mobile-lead-stage="true"><AddLeadField label={`Stage${leadSettings.requireStatus ? " *" : ""}`}>
         <select style={inputStyle} value={form.status} onChange={set("status")}>
           {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
         </select>
-      </AddLeadField>
+      </AddLeadField></div>
       <div style={{ display: "flex", gap: 10 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <AddLeadField label={`Expected Deal Value${leadSettings.requireDealValue ? " *" : ""}`}>
@@ -5464,13 +5478,14 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
           <AddLeadField label="Renewal Date"><input style={inputStyle} type="date" value={form.renewalDate} onChange={set("renewalDate")} /></AddLeadField>
         </div>
       </div>
-      <AddLeadField label={`Comments${leadSettings.requireComments ? " *" : ""}`}>
+      <div data-mobile-lead-comments="true"><AddLeadField label={`Comments${leadSettings.requireComments ? " *" : ""}`}>
         <textarea style={{ ...inputStyle, minHeight: 60 }} value={form.notes} onChange={set("notes")} />
-      </AddLeadField>
+      </AddLeadField></div>
 
       {error && <div style={{ fontSize: 12.5, color: T.danger, background: T.dangerSoft, borderRadius: 11, padding: "8px 10px", marginBottom: 12 }}>{error}</div>}
 
       <button
+        data-mobile-lead-save="true"
         disabled={!canSubmit || submitting || duplicateResult?.blocking}
         onClick={handleSubmit}
         style={{ width: "100%", padding: "12px", borderRadius: 11, border: "none", cursor: canSubmit && !duplicateResult?.blocking ? "pointer" : "not-allowed", background: canSubmit && !duplicateResult?.blocking ? T.route : "#C7CDD6", color: "#fff", fontWeight: 700, fontSize: 14.5, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
@@ -5478,7 +5493,7 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
         {submitting && <Loader2 size={16} className="spin" />}
         {submitting ? "Saving…" : online ? "Save Lead" : "Save Lead (offline)"}
       </button>
-    </Overlay>
+    </AddLeadOverlay>
   );
 }
 

@@ -15,7 +15,6 @@ import "./performance-insights-enhance.css";
 import "./onboarding-live-share.css";
 import "./quotation-settings-enhance.css";
 import "./exception-centre-fixes.css";
-import "./mobileAddLeadPolish.js";
 import "./add-lead-polish.css";
 
 // Silent auto-update: check for a new worker as soon as the app opens so an
