@@ -1,5 +1,24 @@
 import React, { useEffect, useState } from 'react';
-import { Activity, ArrowRight, CalendarDays, CheckCircle2, Flame, Handshake, RefreshCw, Target } from 'lucide-react';
+import {
+  Activity,
+  ArrowRight,
+  CalendarDays,
+  CheckCircle2,
+  ChevronRight,
+  CircleDollarSign,
+  ClipboardCheck,
+  FileText,
+  Flame,
+  Handshake,
+  ListChecks,
+  MapPin,
+  MessageSquare,
+  RefreshCw,
+  Settings,
+  ShieldAlert,
+  Target,
+  UserPlus,
+} from 'lucide-react';
 import { api } from './api.js';
 
 const C = {
@@ -16,9 +35,33 @@ const metricDefs = [
 ];
 
 const moduleTone = {
-  Lead:['#EAF2FF','#2563EB'], Task:['#F3E8FF','#7C3AED'], Attendance:['#E8F7EF','#14805E'],
-  Employee:['#EEF2FF','#4F46E5'], Onboarding:['#FFF3E8','#C96A18'], Message:['#EEF7FA','#0E7490'],
-  Settings:['#F2F4F7','#475467'], Quotation:['#F2ECFF','#7C3AED'], Payment:['#EAF8EE','#15803D'], Activity:['#F2F4F7','#475467']
+  Lead:['#EAF2FF','#2563EB'],
+  Task:['#EEF8F7','#0F766E'],
+  Attendance:['#E8F7EF','#14805E'],
+  Employee:['#EEF2FF','#4F46E5'],
+  Onboarding:['#FFF3E8','#C96A18'],
+  Message:['#EEF7FA','#0E7490'],
+  Settings:['#F2F4F7','#475467'],
+  Quotation:['#F2ECFF','#7C3AED'],
+  Payment:['#EAF8EE','#15803D'],
+  Activity:['#F2F4F7','#475467'],
+  'Data Health':['#FDECEC','#D92D20'],
+  System:['#FDECEC','#D92D20'],
+};
+
+const moduleIcons = {
+  Lead: UserPlus,
+  Task: ListChecks,
+  Attendance: ClipboardCheck,
+  Employee: Activity,
+  Onboarding: CheckCircle2,
+  Message: MessageSquare,
+  Settings,
+  Quotation: FileText,
+  Payment: CircleDollarSign,
+  Activity,
+  'Data Health': ShieldAlert,
+  System: ShieldAlert,
 };
 
 function fmtDay(day) {
@@ -33,7 +76,7 @@ function initials(name='') {
 }
 
 function SparkChart({ rows, activeKeys }) {
-  const w=760,h=230,left=42,right=18,top=18,bottom=34;
+  const w=720,h=210,left=42,right=18,top=16,bottom=32;
   const values = rows.flatMap(r => activeKeys.map(k => Number(r[k]||0)));
   const max = Math.max(4, ...values);
   const yMax = Math.ceil(max/4)*4;
@@ -41,14 +84,14 @@ function SparkChart({ rows, activeKeys }) {
   const y = v => top + (h-top-bottom) * (1 - Number(v||0)/yMax);
   const grid = [0,.25,.5,.75,1].map(p => Math.round(yMax*p));
   return <div style={{width:'100%',overflowX:'auto'}}>
-    <svg viewBox={`0 0 ${w} ${h}`} style={{width:'100%',minWidth:620,height:230,display:'block'}} role="img" aria-label="Seven day lead activity chart">
+    <svg viewBox={`0 0 ${w} ${h}`} style={{width:'100%',minWidth:560,height:210,display:'block'}} role="img" aria-label="Seven day lead activity chart">
       {grid.map(v => <g key={v}><line x1={left} x2={w-right} y1={y(v)} y2={y(v)} stroke="#EDEFF2" strokeWidth="1"/><text x={left-10} y={y(v)+4} textAnchor="end" fontSize="10" fill="#98A2B3">{v}</text></g>)}
-      {rows.map((r,i)=><text key={r.day} x={x(i)} y={h-10} textAnchor="middle" fontSize="10.5" fill="#667085">{fmtDay(r.day)}</text>)}
+      {rows.map((r,i)=><text key={r.day} x={x(i)} y={h-9} textAnchor="middle" fontSize="10.5" fill="#667085">{fmtDay(r.day)}</text>)}
       {metricDefs.filter(m=>activeKeys.includes(m.key)).map(m=>{
         const pts=rows.map((r,i)=>`${x(i)},${y(r[m.key])}`).join(' ');
         return <g key={m.key}>
-          <polyline fill="none" stroke={m.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" points={pts}/>
-          {rows.map((r,i)=><circle key={r.day} cx={x(i)} cy={y(r[m.key])} r="3.4" fill="#fff" stroke={m.color} strokeWidth="2"><title>{`${fmtDay(r.day)} · ${m.label}: ${r[m.key]}`}</title></circle>)}
+          <polyline fill="none" stroke={m.color} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" points={pts}/>
+          {rows.map((r,i)=><circle key={r.day} cx={x(i)} cy={y(r[m.key])} r="3.2" fill="#fff" stroke={m.color} strokeWidth="2"><title>{`${fmtDay(r.day)} · ${m.label}: ${r[m.key]}`}</title></circle>)}
         </g>;
       })}
     </svg>
@@ -81,8 +124,9 @@ export default function AdminActivityOverview({ salesmen=[] }) {
   const activities=data?.activities||[];
   const toggle=k=>setActiveKeys(prev=>prev.includes(k)?(prev.length===1?prev:prev.filter(x=>x!==k)):[...prev,k]);
 
-  return <div style={{display:'grid',gridTemplateColumns:'minmax(0,1.72fr) minmax(320px,.9fr)',gap:14,marginBottom:18}} className="engage-activity-overview">
-    <style>{`@media(max-width:920px){.engage-activity-overview{grid-template-columns:1fr!important}.engage-activity-feed{max-height:none!important}}`}</style>
+  return <div style={{display:'grid',gridTemplateColumns:'minmax(0,1.05fr) minmax(430px,1.2fr)',gap:14,marginBottom:18}} className="engage-activity-overview">
+    <style>{`@media(max-width:1100px){.engage-activity-overview{grid-template-columns:minmax(0,1fr) minmax(390px,1fr)!important}} @media(max-width:920px){.engage-activity-overview{grid-template-columns:1fr!important}.engage-activity-feed{max-height:none!important}}`}</style>
+
     <section style={{background:C.card,border:`1px solid ${C.line}`,borderRadius:16,padding:16,minWidth:0,boxShadow:'0 1px 2px rgba(15,23,42,.03)'}}>
       <div style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'flex-start',marginBottom:12,flexWrap:'wrap'}}>
         <div><div style={{fontSize:16,fontWeight:800,color:C.ink}}>Lead Activity — Last 7 Days</div><div style={{fontSize:12,color:C.soft,marginTop:3}}>Real activity recorded in Engage · {person}</div></div>
@@ -91,41 +135,59 @@ export default function AdminActivityOverview({ salesmen=[] }) {
             <option value="all">All Employees</option>
             {salesmen.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
-          <div style={{fontSize:11.5,color:C.soft,display:'flex',alignItems:'center',gap:6}}>{loading?<><RefreshCw size={12} className="spin"/> Refreshing</>:<><Activity size={12}/> Live CRM data</>}</div>
+          <div style={{fontSize:11.5,color:C.soft,display:'flex',alignItems:'center',gap:6}}>{loading?<><RefreshCw size={12} className="spin"/> Refreshing</>:<><Activity size={12}/> Live data</>}</div>
         </div>
       </div>
 
       {error ? <div style={{padding:'18px 4px',fontSize:12.5,color:'#B42318'}}>{error}</div> : <>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(5,minmax(105px,1fr))',gap:8,overflowX:'auto',paddingBottom:2}}>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(5,minmax(92px,1fr))',gap:7,overflowX:'auto',paddingBottom:2}}>
           {metricDefs.map(m=>{
             const on=activeKeys.includes(m.key); const Icon=m.Icon;
-            return <button key={m.key} onClick={()=>toggle(m.key)} style={{minWidth:105,textAlign:'left',padding:'10px 11px',borderRadius:11,border:`1px solid ${on?m.color+'55':C.line}`,background:on?`${m.color}0D`:'#fff',cursor:'pointer'}}>
-              <div style={{display:'flex',alignItems:'center',gap:6,fontSize:10.5,fontWeight:750,color:C.soft}}><Icon size={13} color={m.color}/>{m.label}</div>
-              <div style={{fontSize:21,fontWeight:850,color:C.ink,marginTop:5}}>{Number(totals[m.key]||0)}</div>
+            return <button key={m.key} onClick={()=>toggle(m.key)} style={{minWidth:92,textAlign:'left',padding:'9px 10px',borderRadius:10,border:`1px solid ${on?m.color+'55':C.line}`,background:on?`${m.color}0D`:'#fff',cursor:'pointer'}}>
+              <div style={{display:'flex',alignItems:'center',gap:5,fontSize:9.8,fontWeight:750,color:C.soft,whiteSpace:'nowrap'}}><Icon size={12.5} color={m.color}/>{m.label}</div>
+              <div style={{fontSize:19,fontWeight:850,color:C.ink,marginTop:4}}>{Number(totals[m.key]||0)}</div>
             </button>;
           })}
         </div>
-        {rows.length ? <SparkChart rows={rows} activeKeys={activeKeys}/> : !loading && <div style={{padding:'48px 12px',textAlign:'center',color:C.soft,fontSize:12.5}}>No lead activity recorded in this period.</div>}
+        {rows.length ? <SparkChart rows={rows} activeKeys={activeKeys}/> : !loading && <div style={{padding:'42px 12px',textAlign:'center',color:C.soft,fontSize:12.5}}>No lead activity recorded in this period.</div>}
       </>}
     </section>
 
-    <section style={{background:C.card,border:`1px solid ${C.line}`,borderRadius:16,padding:'15px 0 6px',minWidth:0,boxShadow:'0 1px 2px rgba(15,23,42,.03)'}}>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:10,padding:'0 14px 10px'}}>
-        <div><div style={{fontSize:16,fontWeight:800,color:C.ink}}>Activity Centre</div><div style={{fontSize:12,color:C.soft,marginTop:3}}>Latest recorded activity · {person}</div></div>
-        <span style={{fontSize:10.5,fontWeight:800,color:C.teal,background:'#EAF4F2',padding:'5px 8px',borderRadius:999}}>LIVE</span>
+    <section style={{background:C.card,border:`1px solid ${C.line}`,borderRadius:16,padding:'15px 0 0',minWidth:0,boxShadow:'0 1px 2px rgba(15,23,42,.03)',overflow:'hidden'}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:10,padding:'0 14px 11px'}}>
+        <div>
+          <div style={{fontSize:16,fontWeight:800,color:C.ink}}>Activity Centre</div>
+          <div style={{fontSize:12,color:C.soft,marginTop:3}}>Latest activities across your team · {person}</div>
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:7}}>
+          <span style={{fontSize:10.5,fontWeight:800,color:C.teal,background:'#EAF4F2',padding:'5px 8px',borderRadius:999}}>LIVE</span>
+          <span style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:11,fontWeight:750,color:C.teal,background:'#F5FAF9',border:'1px solid #DCECE8',padding:'6px 8px',borderRadius:8}}>Latest <ArrowRight size={12}/></span>
+        </div>
       </div>
-      <div className="engage-activity-feed" style={{maxHeight:316,overflowY:'auto',borderTop:`1px solid ${C.line}`}}>
+
+      <div className="engage-activity-feed" style={{maxHeight:350,overflowY:'auto',borderTop:`1px solid ${C.line}`}}>
         {error ? <div style={{padding:16,fontSize:12.5,color:'#B42318'}}>{error}</div> : activities.length ? activities.map((a,i)=>{
           const [bg,fg]=moduleTone[a.module]||moduleTone.Activity;
-          return <div key={a.id} style={{display:'grid',gridTemplateColumns:'54px 30px minmax(0,1fr) auto',gap:8,alignItems:'center',padding:'10px 12px',borderTop:i?`1px solid ${C.line}`:'none'}}>
-            <div style={{fontSize:10.5,color:'#8A94A3'}}>{fmtTime(a.createdAt)}</div>
-            <div style={{width:28,height:28,borderRadius:'50%',background:'#EEF1F7',color:'#53627D',display:'grid',placeItems:'center',fontSize:9.5,fontWeight:800}}>{initials(a.actorName)}</div>
-            <div style={{minWidth:0}}><div style={{fontSize:11.8,fontWeight:800,color:C.ink,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{a.title}</div><div style={{fontSize:10.8,color:C.soft,marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{a.actorName}{a.detail?` · ${a.detail}`:''}</div></div>
-            <span style={{fontSize:9.5,fontWeight:800,color:fg,background:bg,padding:'4px 6px',borderRadius:6,whiteSpace:'nowrap'}}>{a.module}</span>
+          const Icon=moduleIcons[a.module]||Activity;
+          return <div key={a.id} style={{display:'grid',gridTemplateColumns:'34px 58px 32px 76px minmax(0,1fr) auto 18px',gap:8,alignItems:'center',padding:'9px 12px',borderTop:i?`1px solid ${C.line}`:'none',minHeight:58}}>
+            <div style={{width:30,height:30,borderRadius:8,background:bg,color:fg,display:'grid',placeItems:'center'}}><Icon size={15}/></div>
+            <div style={{fontSize:10.5,color:'#8A94A3',whiteSpace:'nowrap'}}>{fmtTime(a.createdAt)}</div>
+            <div style={{width:30,height:30,borderRadius:'50%',background:'#E9EDF6',color:'#566481',display:'grid',placeItems:'center',fontSize:9.5,fontWeight:850}}>{initials(a.actorName)}</div>
+            <div style={{fontSize:10.9,fontWeight:750,color:'#475467',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{a.actorName}</div>
+            <div style={{minWidth:0}}>
+              <div style={{fontSize:11.9,fontWeight:800,color:C.ink,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{a.title}</div>
+              <div style={{fontSize:10.8,color:C.soft,marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{a.detail || 'Recorded in Engage'}</div>
+            </div>
+            <span style={{fontSize:9.7,fontWeight:800,color:fg,background:bg,padding:'5px 7px',borderRadius:7,whiteSpace:'nowrap'}}>{a.module}</span>
+            <ChevronRight size={15} color="#A9B1BD"/>
           </div>;
-        }) : !loading ? <div style={{padding:'34px 16px',textAlign:'center',fontSize:12.5,color:C.soft}}>No recorded activity yet.</div> : <div style={{padding:'34px 16px',textAlign:'center',fontSize:12.5,color:C.soft}}>Loading activity…</div>}
+        }) : !loading ? <div style={{padding:'38px 16px',textAlign:'center',fontSize:12.5,color:C.soft}}>No recorded activity yet.</div> : <div style={{padding:'38px 16px',textAlign:'center',fontSize:12.5,color:C.soft}}>Loading activity…</div>}
       </div>
-      <div style={{display:'flex',justifyContent:'flex-end',padding:'8px 12px 4px',fontSize:10.5,color:C.soft}}>Only recorded CRM events are shown <ArrowRight size={12} style={{marginLeft:5}}/></div>
+
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'9px 12px',borderTop:`1px solid ${C.line}`,background:'#FBFCFD'}}>
+        <div style={{display:'flex',alignItems:'center',gap:5,fontSize:10.5,color:C.soft}}><MapPin size={12}/> Recorded CRM events only</div>
+        <div style={{fontSize:10.5,color:C.soft}}>Auto-refreshes every minute</div>
+      </div>
     </section>
   </div>;
 }
