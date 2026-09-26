@@ -9,6 +9,13 @@ function monthFromDate(value){
   return m >= 1 && m <= 12 ? MONTH_NAMES[m - 1] : '';
 }
 
+function formatDate(value){
+  if(!value) return '';
+  const [y,m,d] = String(value).split('-');
+  if(!y || !m || !d) return value;
+  return `${d}/${m}/${String(y).slice(-2)}`;
+}
+
 function normalizePayload(payload = {}){
   if (!payload || typeof payload !== 'object') return payload;
   if (payload.renewalDate) return { ...payload, renewalMonth: monthFromDate(payload.renewalDate) || payload.renewalMonth || null };
@@ -50,7 +57,7 @@ function commonAncestor(a, b, maxDepth = 4){
 function enhanceContainer(root){
   if(!visible(root)) return;
   const labelNodes = [...root.querySelectorAll('div')].filter(visible);
-  const monthLabel = labelNodes.find(n => text(n) === 'Renewal Month' || text(n) === 'Renewal / Expiry Month');
+  const monthLabel = labelNodes.find(n => text(n) === 'Renewal Month' || text(n) === 'Renewal / Expiry Month' || text(n) === 'Renewal / Expiry');
   const dateLabel = labelNodes.find(n => text(n) === 'Renewal Date' || text(n) === 'Exact Date (optional)');
   if(!monthLabel || !dateLabel) return;
 
@@ -60,14 +67,12 @@ function enhanceContainer(root){
   const dateInput = dateField?.querySelector('input[type="date"]');
   if(!monthSelect || !dateInput) return;
 
-  monthLabel.textContent = 'Renewal / Expiry Month';
-  dateLabel.textContent = 'Exact Date (optional)';
+  monthLabel.textContent = 'Renewal / Expiry';
+  dateLabel.textContent = '';
+  dateLabel.dataset.renewalDateLabel = 'true';
   monthField.dataset.renewalMonthField = 'true';
   dateField.dataset.renewalDateField = 'true';
 
-  // Add Lead wraps each field in its own flex child. Mark those wrappers and
-  // their shared row too; marking only the inner field left the mobile columns
-  // squeezed to content width on some Android browsers.
   const monthWrap = monthField.parentElement;
   const dateWrap = dateField.parentElement;
   if(monthWrap) monthWrap.dataset.renewalMonthWrap = 'true';
@@ -75,34 +80,46 @@ function enhanceContainer(root){
   const commonRow = commonAncestor(monthWrap, dateWrap, 3);
   if(commonRow && commonRow !== root) commonRow.dataset.renewalExpiryRow = 'true';
 
-  if(!monthField.querySelector('[data-renewal-help]')){
-    const help = document.createElement('div');
-    help.dataset.renewalHelp = 'true';
-    help.textContent = 'Use the month if the exact expiry date is not known.';
-    help.style.cssText = 'font-size:10.5px;color:#8A919C;margin-top:4px;line-height:1.35;';
-    monthField.appendChild(help);
+  monthField.querySelector('[data-renewal-help]')?.remove();
+  dateField.querySelector('[data-expiry-help]')?.remove();
+
+  let pickerButton = dateField.querySelector('[data-renewal-date-picker]');
+  if(!pickerButton){
+    pickerButton = document.createElement('button');
+    pickerButton.type = 'button';
+    pickerButton.dataset.renewalDatePicker = 'true';
+    pickerButton.setAttribute('aria-label','Choose exact renewal or expiry date');
+    pickerButton.addEventListener('click', () => {
+      try{
+        if(typeof dateInput.showPicker === 'function') dateInput.showPicker();
+        else dateInput.click();
+      }catch{
+        dateInput.focus();
+        dateInput.click();
+      }
+    });
+    dateInput.insertAdjacentElement('afterend', pickerButton);
   }
-  if(!dateField.querySelector('[data-expiry-help]')){
-    const help = document.createElement('div');
-    help.dataset.expiryHelp = 'true';
-    help.textContent = 'Choosing a date automatically sets the month.';
-    help.style.cssText = 'font-size:10.5px;color:#8A919C;margin-top:4px;line-height:1.35;';
-    dateField.appendChild(help);
-  }
+
+  dateInput.dataset.renewalNativeDate = 'true';
 
   const sync = () => {
     const derived = monthFromDate(dateInput.value);
     if(derived){
       if(monthSelect.value !== derived) setReactValue(monthSelect, derived);
       monthSelect.disabled = true;
-      monthSelect.style.opacity = '.65';
+      monthSelect.style.opacity = '.72';
       monthSelect.style.cursor = 'not-allowed';
       monthSelect.title = `Month is set automatically from ${dateInput.value}`;
+      pickerButton.textContent = `📅 ${formatDate(dateInput.value)}`;
+      pickerButton.dataset.hasDate = 'true';
     } else {
       monthSelect.disabled = false;
       monthSelect.style.opacity = '1';
       monthSelect.style.cursor = '';
       monthSelect.title = 'Choose a month when the exact date is not known';
+      pickerButton.textContent = '📅 Exact date';
+      pickerButton.dataset.hasDate = 'false';
     }
   };
 
@@ -119,7 +136,7 @@ function apply(){
   [...document.querySelectorAll('body *')].filter(node => {
     if(!visible(node)) return false;
     const t = text(node);
-    return (t.includes('Renewal Month') || t.includes('Renewal / Expiry Month')) && (t.includes('Renewal Date') || t.includes('Exact Date (optional)'));
+    return (t.includes('Renewal Month') || t.includes('Renewal / Expiry Month') || t.includes('Renewal / Expiry')) && (t.includes('Renewal Date') || t.includes('Exact Date (optional)'));
   }).forEach(enhanceContainer);
 }
 function queue(){ if(queued) return; queued = true; requestAnimationFrame(apply); }
