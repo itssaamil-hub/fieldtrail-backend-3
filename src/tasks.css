@@ -38,3 +38,38 @@
 .ft-task-card-footer small{font-size:10px;background:#fff0ef;color:#b53c32;padding:3px 5px;border-radius:4px}
 .ft-task-board-card:focus-visible,.ft-task-view-switch button:focus-visible{outline:2px solid #145c5d;outline-offset:3px}
 @media(max-width:600px){.ft-task-view-switch button{min-height:40px}.ft-task-board{grid-template-columns:repeat(3,250px)}}
+
+
+/* Employee/mobile Tasks: compact phone workspace with filter bottom sheet. */
+.ft-task-mobile-search-row,.ft-task-mobile-filter-backdrop{display:none}
+@media(max-width:600px){
+ .ft-tasks-embedded .ft-tasks-workspace{padding:18px 16px 92px;background:#f4f5f7;border-radius:0;max-height:none;min-height:calc(100dvh - 112px)}
+ .ft-tasks-embedded .ft-tasks-workspace>header{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:10px;margin-bottom:12px}
+ .ft-tasks-embedded .ft-tasks-workspace>header h2{font-size:22px;line-height:1.15}
+ .ft-tasks-embedded .ft-tasks-workspace>header .ft-task-muted{font-size:12px;margin-top:5px}
+ .ft-tasks-embedded .ft-task-header-actions .ft-task-primary{min-height:36px;padding:8px 12px;border-radius:10px;font-size:11.5px;white-space:nowrap}
+ .ft-tasks-embedded .ft-task-view-switch{justify-content:flex-start;margin:8px 0 10px;gap:4px}
+ .ft-tasks-embedded .ft-task-view-switch button{min-height:36px;padding:7px 11px;border-radius:10px}
+ .ft-tasks-embedded .ft-task-tabs{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:7px;margin:0 -16px 12px;padding:0 16px 8px;border-bottom:0;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+ .ft-tasks-embedded .ft-task-tabs::-webkit-scrollbar{display:none}
+ .ft-tasks-embedded .ft-task-tabs button{flex:0 0 auto;min-height:34px;padding:7px 12px;border-radius:999px;background:#fff;border-color:#e2e6e8;font-size:11.5px}
+ .ft-tasks-embedded .ft-task-tabs button[aria-pressed=true]{background:#145c5d;color:#fff;border-color:#145c5d}
+ .ft-tasks-embedded .ft-task-desktop-filters,.ft-tasks-embedded .ft-task-desktop-filter-help{display:none}
+ .ft-tasks-embedded .ft-task-mobile-search-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin:4px 0 12px}
+ .ft-tasks-embedded .ft-task-mobile-search{display:flex;align-items:center;gap:8px;height:42px;padding:0 12px;background:#fff;border:1px solid #dfe4e7;border-radius:12px;color:#768187}
+ .ft-tasks-embedded .ft-task-mobile-search input{width:100%;min-width:0;border:0;outline:0;background:transparent;font:14px Inter,sans-serif;color:#20252b}
+ .ft-tasks-embedded .ft-task-mobile-filter-button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:42px;padding:0 12px;border-radius:12px;background:#fff;font-size:11.5px;white-space:nowrap}
+ .ft-task-mobile-filter-backdrop{display:flex;position:fixed;inset:0;z-index:6500;background:rgba(16,28,31,.38);align-items:flex-end}
+ .ft-task-mobile-filter-sheet{width:100%;max-height:82dvh;overflow:auto;background:#fff;border-radius:20px 20px 0 0;padding:18px 18px max(18px,env(safe-area-inset-bottom));box-shadow:0 -14px 36px rgba(16,28,31,.16)}
+ .ft-task-mobile-filter-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+ .ft-task-mobile-filter-head>div{display:flex;flex-direction:column;gap:2px}.ft-task-mobile-filter-head strong{font-size:18px}.ft-task-mobile-filter-head span{font-size:11.5px;color:#718078}
+ .ft-task-mobile-filter-head button{display:grid;place-items:center;width:36px;height:36px;padding:0;border-radius:10px}
+ .ft-task-mobile-filter-fields{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+ .ft-task-mobile-filter-fields label{display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:700;color:#65766e}
+ .ft-task-mobile-filter-fields select,.ft-task-mobile-filter-fields input{width:100%;min-width:0;height:44px;border:1px solid #dce4df;border-radius:10px;background:#fff;padding:0 10px;font:14px Inter,sans-serif;color:#243a30}
+ .ft-task-mobile-filter-fields p{grid-column:1/-1;margin:0;padding-top:2px}
+ .ft-task-mobile-filter-actions{position:sticky;bottom:0;display:grid;grid-template-columns:.8fr 1.2fr;gap:9px;padding-top:14px;margin-top:14px;background:#fff}
+ .ft-task-mobile-filter-actions button{min-height:44px;border-radius:11px}
+ .ft-tasks-embedded .ft-task-layout{margin-top:12px}
+ .ft-tasks-embedded .ft-task-empty{min-height:145px;background:#fff;border:1px dashed #dfe5e2;border-radius:14px;padding:22px}
+}
