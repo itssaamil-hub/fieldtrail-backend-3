@@ -40,7 +40,7 @@ function normalizePhone(value) {
   return digits.length === 10 ? `91${digits}` : digits;
 }
 
-function LeadDrawer({ request, onClose }) {
+export default function ExceptionLeadDrawer({ request, onClose }) {
   const [lead, setLead] = useState(null);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -151,34 +151,3 @@ function LeadDrawer({ request, onClose }) {
     document.body
   );
 }
-
-export default function ExceptionLeadDrawerBridge() {
-  const [request, setRequest] = useState(null);
-
-  useEffect(() => {
-    const handle = event => {
-      const button = event.target.closest?.('.exception-centre .exception-open');
-      if (!button) return;
-      const row = button.closest('.exception-row');
-      if (!row) return;
-      const title = row.querySelector('.exception-title-line span')?.textContent?.trim() || '';
-      if (!LEAD_EXCEPTION_TITLES.has(title)) return;
-      const name = row.querySelector('.exception-title-line strong')?.textContent?.trim() || '';
-      const reason = row.querySelector('.exception-main > p')?.textContent?.trim() || '';
-      if (!name) return;
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation?.();
-      setRequest({ name, title, reason, openedAt: Date.now() });
-    };
-    document.addEventListener('click', handle, true);
-    return () => document.removeEventListener('click', handle, true);
-  }, []);
-
-  return request ? <LeadDrawer request={request} onClose={() => setRequest(null)} /> : null;
-}
-
-const bridgeHost = document.createElement('div');
-bridgeHost.id = 'exception-lead-drawer-root';
-document.body.appendChild(bridgeHost);
-import('react-dom/client').then(({ createRoot }) => createRoot(bridgeHost).render(<ExceptionLeadDrawerBridge />));

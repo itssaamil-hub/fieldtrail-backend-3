@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { api, getApiBase, getSession } from './api.js';
 import './exception-centre.css';
+import ExceptionLeadDrawer from './exceptionLeadDrawer.jsx';
 
 const ACTIVE = new Set(['cold','conversation','hot','demo','negotiation','nurture']);
 const DAY = 86400000;
@@ -39,22 +40,6 @@ async function exceptionRequest(path, options = {}) {
   let data = null; try { data = await response.json(); } catch { /* no body */ }
   if (!response.ok) throw new Error(data?.error || `Request failed (${response.status})`);
   return data;
-}
-
-function openSidebar(label) {
-  const button = [...document.querySelectorAll('.engage-desktop-sidebar button')].find(b => (b.getAttribute('aria-label') || b.textContent || '').trim() === label);
-  button?.click();
-}
-function openLead(name) {
-  openSidebar('Leads');
-  const target = String(name || '').trim().toLowerCase();
-  let attempts = 0;
-  const timer = setInterval(() => {
-    attempts += 1;
-    const row = [...document.querySelectorAll('.ft-row')].find(node => (node.textContent || '').toLowerCase().includes(target));
-    if (row) { clearInterval(timer); row.click(); }
-    if (attempts > 12) clearInterval(timer);
-  }, 120);
 }
 
 function buildDetections(leads, tasks, collections, rules) {
@@ -119,7 +104,7 @@ function buildDetections(leads, tasks, collections, rules) {
   return rows;
 }
 
-export default function ExceptionCentre() {
+export default function ExceptionCentre({ onNavigate }) {
   const [loading,setLoading] = useState(true);
   const [busy,setBusy] = useState(false);
   const [error,setError] = useState('');
@@ -134,6 +119,8 @@ export default function ExceptionCentre() {
   const [historyCase,setHistoryCase] = useState(null);
   const [history,setHistory] = useState([]);
   const [lastUpdated,setLastUpdated] = useState(null);
+  const [leadRequest,setLeadRequest] = useState(null);
+  const [toast,setToast] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true); setError('');
@@ -191,7 +178,7 @@ export default function ExceptionCentre() {
     catch(e){ setError(e.message); }
     finally { setBusy(false); }
   };
-  const snooze = (item,days) => mutate(item,{action:'snooze',until:new Date(Date.now()+days*DAY).toISOString()});
+  const snooze = async (item,days) => { await mutate(item,{action:'snooze',until:new Date(Date.now()+days*DAY).toISOString()}); setToast(`Snoozed for ${days} day${days===1?'':'s'}`); setTimeout(()=>setToast(''),2200); };
   const resolve = item => {
     const note = window.prompt('Resolution note (optional):','');
     if (note === null) return;
@@ -209,12 +196,17 @@ export default function ExceptionCentre() {
   };
   const primaryAction = item => {
     const type = item.entity_type || item.entityType;
-    if (type === 'lead') return openLead(item.entity_name || item.entityName);
-    if (type === 'task') return openSidebar('Tasks');
-    if (type === 'payment') { document.querySelector('.ft-app-menu-trigger')?.click(); }
+    if (type === 'lead') {
+      setLeadRequest({ name:item.entity_name || item.entityName, title:item.title, reason:item.reason, openedAt:Date.now() });
+      return;
+    }
+    if (type === 'task') { onNavigate?.('tasks'); return; }
+    if (type === 'payment') window.dispatchEvent(new CustomEvent('fieldtrail:open-collections'));
   };
 
   return <main className="exception-centre">
+    {toast&&<div className="exception-ux-toast is-visible" data-tone="success">{toast}</div>}
+    {leadRequest&&<ExceptionLeadDrawer request={leadRequest} onClose={()=>setLeadRequest(null)}/>}
     <div className="exception-hero">
       <div><div className="exception-kicker"><ShieldAlert size={15}/> MANAGER CONTROL</div><h1>Exception Centre</h1><p>Detect risk, assign ownership and close the loop — without losing the audit trail.</p></div>
       <div className="exception-hero-actions">
@@ -253,7 +245,7 @@ export default function ExceptionCentre() {
               <button title="History" onClick={()=>openHistory(item)}><History size={15}/></button>
               {workflow==='open'&&<>
                 <select aria-label="Assign exception" value={item.assigned_to||''} onChange={e=>mutate(item,{action:'assign',assignedTo:e.target.value||null})}><option value="">Assign…</option>{salesmen.map(s=><option key={s.id} value={s.id}>{s.full_name||s.name}</option>)}</select>
-                <button title="Snooze 1 day" onClick={()=>snooze(item,1)}><PauseCircle size={15}/></button>
+                <button className="exception-snooze" title="Snooze for 1 day" onClick={()=>snooze(item,1)}><PauseCircle size={15}/><span className="exception-snooze-label">Snooze</span></button>
                 <button className="exception-resolve" onClick={()=>resolve(item)}><CheckCircle2 size={15}/> Resolve</button>
               </>}
               {workflow!=='open'&&<button onClick={()=>mutate(item,{action:'reopen'})}><RotateCcw size={14}/> Reopen</button>}

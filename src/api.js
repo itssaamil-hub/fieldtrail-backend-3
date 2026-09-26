@@ -82,6 +82,17 @@ export function removeQueuedLead(clientUuid) {
   setQueuedLeads(getQueuedLeads().filter((l) => l.clientUuid !== clientUuid));
 }
 
+
+const RENEWAL_MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+function normalizeRenewalPayload(payload = {}) {
+  if (!payload || typeof payload !== "object" || !payload.renewalDate) return payload;
+  const month = Number(String(payload.renewalDate).slice(5, 7));
+  return {
+    ...payload,
+    renewalMonth: month >= 1 && month <= 12 ? RENEWAL_MONTH_NAMES[month - 1] : (payload.renewalMonth || null),
+  };
+}
+
 export class ApiError extends Error {
   constructor(message, status) {
     super(message);
@@ -213,10 +224,10 @@ export const api = {
     const qs = new URLSearchParams(entries).toString();
     return request(`/admin/leads${qs ? `?${qs}` : ""}`);
   },
-  adminCreateLead: (payload) => request(`/admin/leads`, { method: "POST", body: payload }),
+  adminCreateLead: (payload) => request(`/admin/leads`, { method: "POST", body: normalizeRenewalPayload(payload) }),
   adminCheckDuplicateLead: (payload) => request(`/admin/leads/duplicate-check`, { method: "POST", body: payload }),
   adminUpdateLeadStatus: (id, status) => request(`/admin/leads/${id}/status`, { method: "PATCH", body: { status } }),
-  adminUpdateLead: (id, payload) => request(`/admin/leads/${id}`, { method: "PATCH", body: payload }),
+  adminUpdateLead: (id, payload) => request(`/admin/leads/${id}`, { method: "PATCH", body: normalizeRenewalPayload(payload) }),
   adminDeleteLead: (id) => request(`/admin/leads/${id}`, { method: "DELETE" }),
   adminLeadHistory: (id) => request(`/admin/leads/${id}/history`),
   adminReportTimeInStage: () => request(`/admin/reports/time-in-stage`),
@@ -278,9 +289,9 @@ export const api = {
   salesmanLeads: () => request("/salesman/leads"),
   salesmanLead: (id) => request(`/salesman/leads/${id}`),
   salesmanLeadHistory: (id) => request(`/salesman/leads/${id}/history`),
-  salesmanCreateLead: (payload) => request("/salesman/leads", { method: "POST", body: payload }),
+  salesmanCreateLead: (payload) => request("/salesman/leads", { method: "POST", body: normalizeRenewalPayload(payload) }),
   salesmanCheckDuplicateLead: (payload) => request("/salesman/leads/duplicate-check", { method: "POST", body: payload }),
-  salesmanUpdateLead: (id, payload) => request(`/salesman/leads/${id}`, { method: "PATCH", body: payload }),
+  salesmanUpdateLead: (id, payload) => request(`/salesman/leads/${id}`, { method: "PATCH", body: normalizeRenewalPayload(payload) }),
   salesmanGetSettings: () => request("/salesman/settings"),
   salesmanGetProfile: () => request("/salesman/profile"),
   salesmanGetLeadOptions: () => request("/salesman/lead-options"),

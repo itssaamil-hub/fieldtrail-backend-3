@@ -14,6 +14,7 @@ import { TasksEntry, TasksModal } from "./Tasks.jsx";
 import LeadBriefPopup from "./LeadBriefPopup.jsx";
 import useUnreadNotifications from "./useUnreadNotifications.js";
 import NotificationsPanel from "./NotificationsPanel.jsx";
+import ExceptionCentre from "./ExceptionCentre.jsx";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   MapPin,
@@ -593,7 +594,9 @@ export default function App() {
   } else if (!session) {
     body = <LoginScreen apiBase={apiBase} online={online} onLoggedIn={handleLoggedIn} onOpenSettings={() => setShowSettings(true)} />;
   } else if (session.role === "admin") {
-    body = <AdminApp desktopSection={adminDesktop ? (topPage === "reports" ? "reports" : desktopSection === "reports" ? "dashboard" : desktopSection) : null} notificationLead={notificationLead} session={session} online={online} onLogout={handleLogout} page={topPage} />;
+    body = adminDesktop && desktopSection === "exceptions" && topPage !== "reports"
+      ? <ExceptionCentre onNavigate={selectDesktopSection} />
+      : <AdminApp desktopSection={adminDesktop ? (topPage === "reports" ? "reports" : desktopSection === "reports" ? "dashboard" : desktopSection) : null} notificationLead={notificationLead} session={session} online={online} onLogout={handleLogout} page={topPage} />;
   } else {
     body = <SalesmanApp key={`salesman-${session.id}`} notificationLead={notificationLead} session={session} online={online} onLogout={handleLogout} page={topPage} />;
   }
