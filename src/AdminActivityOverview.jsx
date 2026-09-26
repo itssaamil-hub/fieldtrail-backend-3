@@ -128,7 +128,7 @@ export default function AdminActivityOverview({ salesmen=[] }) {
     <style>{`@media(max-width:1100px){.engage-activity-overview{grid-template-columns:minmax(0,1fr) minmax(390px,1fr)!important}} @media(max-width:920px){.engage-activity-overview{grid-template-columns:1fr!important}.engage-activity-feed{max-height:none!important}}`}</style>
 
     <section style={{background:C.card,border:`1px solid ${C.line}`,borderRadius:16,padding:16,minWidth:0,boxShadow:'0 1px 2px rgba(15,23,42,.03)'}}>
-      <div style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'flex-start',marginBottom:12,flexWrap:'wrap'}}>
+      <div style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'flex-start',marginBottom:10,flexWrap:'wrap'}}>
         <div><div style={{fontSize:16,fontWeight:800,color:C.ink}}>Lead Activity — Last 7 Days</div><div style={{fontSize:12,color:C.soft,marginTop:3}}>Real activity recorded in Engage · {person}</div></div>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
           <select aria-label="Activity employee" value={salesmanId} onChange={e=>setSalesmanId(e.target.value)} style={{height:34,border:`1px solid ${C.line}`,borderRadius:9,background:'#fff',color:C.ink,fontSize:11.5,fontWeight:650,padding:'0 28px 0 9px'}}>
@@ -140,12 +140,12 @@ export default function AdminActivityOverview({ salesmen=[] }) {
       </div>
 
       {error ? <div style={{padding:'18px 4px',fontSize:12.5,color:'#B42318'}}>{error}</div> : <>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(5,minmax(92px,1fr))',gap:7,overflowX:'auto',paddingBottom:2}}>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(5,minmax(82px,1fr))',gap:6,overflowX:'auto',paddingBottom:0}}>
           {metricDefs.map(m=>{
             const on=activeKeys.includes(m.key); const Icon=m.Icon;
-            return <button key={m.key} onClick={()=>toggle(m.key)} style={{minWidth:92,textAlign:'left',padding:'9px 10px',borderRadius:10,border:`1px solid ${on?m.color+'55':C.line}`,background:on?`${m.color}0D`:'#fff',cursor:'pointer'}}>
-              <div style={{display:'flex',alignItems:'center',gap:5,fontSize:9.8,fontWeight:750,color:C.soft,whiteSpace:'nowrap'}}><Icon size={12.5} color={m.color}/>{m.label}</div>
-              <div style={{fontSize:19,fontWeight:850,color:C.ink,marginTop:4}}>{Number(totals[m.key]||0)}</div>
+            return <button key={m.key} onClick={()=>toggle(m.key)} style={{minWidth:82,textAlign:'left',padding:'6px 8px',borderRadius:9,border:`1px solid ${on?m.color+'55':C.line}`,background:on?`${m.color}0D`:'#fff',cursor:'pointer'}}>
+              <div style={{display:'flex',alignItems:'center',gap:4,fontSize:9.2,fontWeight:750,color:C.soft,whiteSpace:'nowrap'}}><Icon size={11.5} color={m.color}/>{m.label}</div>
+              <div style={{fontSize:17,fontWeight:850,color:C.ink,marginTop:2,lineHeight:1.05}}>{Number(totals[m.key]||0)}</div>
             </button>;
           })}
         </div>
