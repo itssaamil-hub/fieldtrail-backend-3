@@ -1,8 +1,11 @@
 {
   "name": "fieldtrail-pwa",
   "version": "1.0.0",
-  "description": "FieldTrail — salesman lead & live location tracking, installable PWA demo",
+  "description": "Engage — salesman lead & live location tracking PWA",
   "type": "module",
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
