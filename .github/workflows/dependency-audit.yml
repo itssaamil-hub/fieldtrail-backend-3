@@ -1,0 +1,23 @@
+name: Dependency audit
+
+on:
+  push:
+    paths:
+      - '.github/workflows/dependency-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - name: Audit exact lockfile
+        run: npm audit --json || true
+      - name: Show outdated direct packages
+        run: npm outdated || true
+      - name: Production build
+        run: npm run build
