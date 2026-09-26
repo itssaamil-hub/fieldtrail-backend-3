@@ -16,6 +16,7 @@ import useUnreadNotifications from "./useUnreadNotifications.js";
 import NotificationsPanel from "./NotificationsPanel.jsx";
 import { AdminMobileLeadTrend, AdminTeamActivitySheet } from "./AdminMobileEnhancements.jsx";
 import ExceptionCentre from "./ExceptionCentre.jsx";
+import DataHealth from "./DataHealth.jsx";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   MapPin,
@@ -489,6 +490,7 @@ export default function App() {
   const [quotationView, setQuotationView] = useState(null);
   const [showOnboardingSettings, setShowOnboardingSettings] = useState(false);
   const [showCrmSettings, setShowCrmSettings] = useState(false);
+  const [showDataHealth, setShowDataHealth] = useState(false);
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notificationLead, setNotificationLead] = useState(null);
@@ -633,6 +635,7 @@ export default function App() {
           onSave={(url) => { handleSaveApiBase(url); setShowSettings(false); }}
           onLogout={session ? () => { setShowSettings(false); handleLogout(); } : undefined}
           onOpenCrmSettings={session?.role === "admin" ? () => { setShowSettings(false); setShowCrmSettings(true); } : undefined}
+          onOpenDataHealth={session?.role === "admin" ? () => { setShowSettings(false); setShowDataHealth(true); } : undefined}
           onOpenQuotationSettings={session?.role === "admin" ? () => { setShowSettings(false); setQuotationView({settings:true}); } : undefined}
           onOpenOnboardingSettings={session?.role === "admin" ? () => { setShowSettings(false); setShowOnboardingSettings(true); } : undefined}
           canInstall={canInstall}
@@ -647,6 +650,7 @@ export default function App() {
       {session && showOnboarding && <OnboardingPanel key={session.id} onClose={() => setShowOnboarding(false)} />}
       {session?.role === "admin" && showOnboardingSettings && <OnboardingTemplateEditor onClose={() => setShowOnboardingSettings(false)} />}
       {showCrmSettings && <CrmSettingsModal onClose={() => setShowCrmSettings(false)} />}
+      {showDataHealth && <DataHealth onClose={() => setShowDataHealth(false)} />}
       {showAddExpense && <AddExpenseModal onClose={() => setShowAddExpense(false)} />}
     </div>
   );
@@ -880,7 +884,7 @@ function LoginScreen({ apiBase, online, onLoggedIn, onOpenSettings }) {
   );
 }
 
-function SettingsModal({ apiBase, onClose, onSave, onLogout, onOpenCrmSettings, onOpenOnboardingSettings, onOpenQuotationSettings, canInstall, installed, promptInstall, push }) {
+function SettingsModal({ apiBase, onClose, onSave, onLogout, onOpenCrmSettings, onOpenDataHealth, onOpenOnboardingSettings, onOpenQuotationSettings, canInstall, installed, promptInstall, push }) {
   const [url, setUrl] = useState(apiBase || "");
   const isIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
   const [showIosHint, setShowIosHint] = useState(false);
@@ -919,6 +923,11 @@ function SettingsModal({ apiBase, onClose, onSave, onLogout, onOpenCrmSettings, 
           style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "11px", borderRadius: 11, border: `1px solid ${T.line}`, cursor: "pointer", background: T.paperDeep, color: T.ink, fontWeight: 700, fontSize: 13.5, marginBottom: 18 }}
         >
           <Settings size={14} /> CRM Settings
+        </button>
+      )}
+      {onOpenDataHealth && (
+        <button type="button" onClick={onOpenDataHealth} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "11px", borderRadius: 11, border: `1px solid ${T.line}`, cursor: "pointer", background: T.paperDeep, color: T.ink, fontWeight: 700, fontSize: 13.5, marginTop: -6, marginBottom: 18 }}>
+          <CheckCircle2 size={14} /> Data Health
         </button>
       )}
 
