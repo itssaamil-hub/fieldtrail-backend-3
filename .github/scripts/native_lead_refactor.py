@@ -1,0 +1,102 @@
+from pathlib import Path
+
+app_path = Path("src/App.jsx")
+main_path = Path("src/main.jsx")
+app = app_path.read_text()
+main = main_path.read_text()
+
+
+def replace_exact(text, old, new, expected=1, label="replacement"):
+    found = text.count(old)
+    if found != expected:
+        raise SystemExit(f"{label}: expected {expected} match(es), found {found}")
+    return text.replace(old, new)
+
+
+app = replace_exact(
+    app,
+    "      ...l,\n      subLocation: payload.subLocation, posName: payload.posName,",
+    "      ...l,\n      business: payload.businessName ?? l.business,\n      subLocation: payload.subLocation, posName: payload.posName,",
+    expected=2,
+    label="optimistic business-name state",
+)
+
+app = replace_exact(
+    app,
+    '  const [form, setForm] = useState({\n    subLocation: lead.subLocation || "", posName: lead.posName || "",',
+    '  const [form, setForm] = useState({\n    business: lead.business || "", subLocation: lead.subLocation || "", posName: lead.posName || "",',
+    label="lead edit form state",
+)
+
+app = replace_exact(
+    app,
+    "  const saveEdit = async () => {\n    setSaving(true);",
+    "  const saveEdit = async () => {\n    const businessName = form.business.trim();\n    if (!businessName) return;\n    setSaving(true);",
+    label="business-name validation",
+)
+
+app = replace_exact(
+    app,
+    "    const payload = {\n      subLocation: form.subLocation, posName: form.posName,",
+    "    const payload = {\n      businessName,\n      subLocation: form.subLocation, posName: form.posName,",
+    label="business-name edit payload",
+)
+
+app = replace_exact(
+    app,
+    "      ...prev,\n      subLocation: payload.subLocation, posName: payload.posName,",
+    "      ...prev,\n      business: payload.businessName,\n      subLocation: payload.subLocation, posName: payload.posName,",
+    label="business-name saved override",
+)
+
+app = replace_exact(
+    app,
+    '          <div style={{ marginTop: 16 }}>\n            <Field label="Sub Location">',
+    '          <div style={{ marginTop: 16 }}>\n            <Field label="Business Name *"><input style={inputStyle} value={form.business} onChange={set("business")} placeholder="Business / Restaurant name" /></Field>\n            <Field label="Sub Location">',
+    label="native business-name field",
+)
+
+app = replace_exact(
+    app,
+    '<button onClick={saveEdit} disabled={saving} style={{ flex: 1, padding: 10, borderRadius: 11, border: "none", background: T.route, color: "#fff", fontWeight: 700, cursor: "pointer" }}>{saving ? "Saving…" : "Save changes"}</button>',
+    '<button onClick={saveEdit} disabled={saving || !form.business.trim()} style={{ flex: 1, padding: 10, borderRadius: 11, border: "none", background: T.route, color: "#fff", fontWeight: 700, cursor: saving || !form.business.trim() ? "not-allowed" : "pointer", opacity: saving || !form.business.trim() ? .6 : 1 }}>{saving ? "Saving…" : "Save changes"}</button>',
+    label="business-name save guard",
+)
+
+app = replace_exact(
+    app,
+    'const names = { subLocation:"Sub Location", posName:"POS Name", renewalMonth:"Renewal Month", renewalDate:"Renewal Date", contactName:"Contact Name", phone:"Contact Number", dealValue:"Deal Value" };',
+    'const names = { businessName:"Business Name", subLocation:"Sub Location", posName:"POS Name", renewalMonth:"Renewal Month", renewalDate:"Renewal Date", contactName:"Contact Name", phone:"Contact Number", dealValue:"Deal Value" };',
+    label="business-name activity label",
+)
+
+old_stage = '''      {leadSettings.requireStatus && (
+        <AddLeadField label="Status *">
+          <select style={inputStyle} value={form.status} onChange={set("status")}>
+            {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+          </select>
+        </AddLeadField>
+      )}'''
+new_stage = '''      <AddLeadField label={`Stage${leadSettings.requireStatus ? " *" : ""}`}>
+        <select style={inputStyle} value={form.status} onChange={set("status")}>
+          {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+        </select>
+      </AddLeadField>'''
+app = replace_exact(app, old_stage, new_stage, label="native salesman stage dropdown")
+app = replace_exact(
+    app,
+    '<AddLeadField label="Status">\n              <select style={inputStyle} value={form.status}',
+    '<AddLeadField label="Stage">\n              <select style={inputStyle} value={form.status}',
+    label="admin stage label",
+)
+
+main = replace_exact(main, 'import "./leadBusinessNameEditEnhance.js";\n', "", label="remove business enhancer import")
+main = replace_exact(main, 'import "./addLeadStageDropdown.js";\n', "", label="remove stage enhancer import")
+
+app_path.write_text(app)
+main_path.write_text(main)
+for path in [Path("src/leadBusinessNameEditEnhance.js"), Path("src/addLeadStageDropdown.js")]:
+    if path.exists():
+        path.unlink()
+
+print("Native lead React refactor applied successfully")
