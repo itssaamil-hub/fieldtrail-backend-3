@@ -26,14 +26,25 @@ const labelStyle = { display: "block", fontSize: 12, fontWeight: 700, color: "#4
 const cardStyle = { border: "1px solid #E7E9EE", borderRadius: 14, padding: 18, background: "#fff" };
 
 export default function AccountSettingsLauncher() {
-  const session = getSession();
-  const isAdmin = session?.role === "admin";
+  const [isAdmin, setIsAdmin] = useState(() => getSession()?.role === "admin");
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const handler = () => setOpen(true);
+    const sync = () => setIsAdmin(getSession()?.role === "admin");
+    const handler = () => {
+      sync();
+      if (getSession()?.role === "admin") setOpen(true);
+    };
+    const timer = window.setInterval(sync, 700);
+    window.addEventListener("storage", sync);
+    window.addEventListener("focus", sync);
     window.addEventListener("engage:open-account-settings", handler);
-    return () => window.removeEventListener("engage:open-account-settings", handler);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("storage", sync);
+      window.removeEventListener("focus", sync);
+      window.removeEventListener("engage:open-account-settings", handler);
+    };
   }, []);
 
   if (!isAdmin) return null;
