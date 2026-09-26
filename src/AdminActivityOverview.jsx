@@ -75,18 +75,19 @@ function initials(name='') {
   return name.trim().split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase() || '?';
 }
 
-function SparkChart({ rows, activeKeys }) {
-  const w=720,h=210,left=42,right=18,top=16,bottom=32;
+function SparkChart({ rows, activeKeys, days }) {
+  const w=Math.max(760, rows.length*42),h=300,left=42,right=18,top=18,bottom=34;
   const values = rows.flatMap(r => activeKeys.map(k => Number(r[k]||0)));
   const max = Math.max(4, ...values);
   const yMax = Math.ceil(max/4)*4;
   const x = i => left + (rows.length<=1?0:i*(w-left-right)/(rows.length-1));
   const y = v => top + (h-top-bottom) * (1 - Number(v||0)/yMax);
   const grid = [0,.25,.5,.75,1].map(p => Math.round(yMax*p));
-  return <div style={{width:'100%',overflowX:'auto'}}>
-    <svg viewBox={`0 0 ${w} ${h}`} style={{width:'100%',minWidth:560,height:210,display:'block'}} role="img" aria-label="Seven day lead activity chart">
+  const labelEvery = days === 30 ? 4 : days === 15 ? 2 : 1;
+  return <div style={{width:'100%',overflowX:'auto',marginTop:4}}>
+    <svg viewBox={`0 0 ${w} ${h}`} style={{width:days===30?'auto':'100%',minWidth:days===30?920:620,height:300,display:'block'}} role="img" aria-label={`${days} day lead activity chart`}>
       {grid.map(v => <g key={v}><line x1={left} x2={w-right} y1={y(v)} y2={y(v)} stroke="#EDEFF2" strokeWidth="1"/><text x={left-10} y={y(v)+4} textAnchor="end" fontSize="10" fill="#98A2B3">{v}</text></g>)}
-      {rows.map((r,i)=><text key={r.day} x={x(i)} y={h-9} textAnchor="middle" fontSize="10.5" fill="#667085">{fmtDay(r.day)}</text>)}
+      {rows.map((r,i)=> (i%labelEvery===0 || i===rows.length-1) ? <text key={r.day} x={x(i)} y={h-9} textAnchor="middle" fontSize="10.5" fill="#667085">{fmtDay(r.day)}</text> : null)}
       {metricDefs.filter(m=>activeKeys.includes(m.key)).map(m=>{
         const pts=rows.map((r,i)=>`${x(i)},${y(r[m.key])}`).join(' ');
         return <g key={m.key}>
@@ -100,6 +101,7 @@ function SparkChart({ rows, activeKeys }) {
 
 export default function AdminActivityOverview({ salesmen=[] }) {
   const [salesmanId,setSalesmanId]=useState('all');
+  const [days,setDays]=useState(7);
   const [data,setData]=useState(null);
   const [error,setError]=useState('');
   const [loading,setLoading]=useState(true);
@@ -108,34 +110,40 @@ export default function AdminActivityOverview({ salesmen=[] }) {
   useEffect(()=>{
     let alive=true;
     setLoading(true); setError('');
-    api.adminActivityOverview({ salesmanId })
+    api.adminActivityOverview({ salesmanId, days })
       .then(v=>{ if(alive) setData(v); })
       .catch(e=>{ if(alive) setError(e.message || 'Could not load activity.'); })
       .finally(()=>{ if(alive) setLoading(false); });
     const timer=setInterval(()=>{
-      api.adminActivityOverview({ salesmanId }).then(v=>{ if(alive) setData(v); }).catch(()=>{});
+      api.adminActivityOverview({ salesmanId, days }).then(v=>{ if(alive) setData(v); }).catch(()=>{});
     },60000);
     return()=>{alive=false;clearInterval(timer);};
-  },[salesmanId]);
+  },[salesmanId,days]);
 
   const person = salesmanId==='all' ? 'All employees' : (salesmen.find(s=>s.id===salesmanId)?.name || 'Employee');
   const totals=data?.totals||{};
   const rows=data?.trend||[];
   const activities=data?.activities||[];
   const toggle=k=>setActiveKeys(prev=>prev.includes(k)?(prev.length===1?prev:prev.filter(x=>x!==k)):[...prev,k]);
+  const periodLabel = days===30 ? '1 Month' : `${days} Days`;
 
-  return <div style={{display:'grid',gridTemplateColumns:'minmax(0,1.05fr) minmax(430px,1.2fr)',gap:14,marginBottom:18}} className="engage-activity-overview">
-    <style>{`@media(max-width:1100px){.engage-activity-overview{grid-template-columns:minmax(0,1fr) minmax(390px,1fr)!important}} @media(max-width:920px){.engage-activity-overview{grid-template-columns:1fr!important}.engage-activity-feed{max-height:none!important}}`}</style>
+  return <div style={{display:'grid',gridTemplateColumns:'minmax(0,1.24fr) minmax(420px,1fr)',gap:14,marginBottom:18}} className="engage-activity-overview">
+    <style>{`@media(max-width:1100px){.engage-activity-overview{grid-template-columns:minmax(0,1.12fr) minmax(390px,1fr)!important}} @media(max-width:920px){.engage-activity-overview{grid-template-columns:1fr!important}.engage-activity-feed{max-height:none!important}}`}</style>
 
     <section style={{background:C.card,border:`1px solid ${C.line}`,borderRadius:16,padding:16,minWidth:0,boxShadow:'0 1px 2px rgba(15,23,42,.03)'}}>
-      <div style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'flex-start',marginBottom:10,flexWrap:'wrap'}}>
-        <div><div style={{fontSize:16,fontWeight:800,color:C.ink}}>Lead Activity — Last 7 Days</div><div style={{fontSize:12,color:C.soft,marginTop:3}}>Real activity recorded in Engage · {person}</div></div>
-        <div style={{display:'flex',alignItems:'center',gap:8}}>
+      <div style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'center',marginBottom:10,flexWrap:'wrap'}}>
+        <div style={{minWidth:220}}><div style={{fontSize:16,fontWeight:800,color:C.ink}}>Lead Activity — Last {periodLabel}</div><div style={{fontSize:12,color:C.soft,marginTop:3}}>Real activity recorded in Engage · {person}</div></div>
+        <div style={{display:'flex',alignItems:'center',gap:7,flexWrap:'wrap',justifyContent:'flex-end'}}>
+          <select aria-label="Activity period" value={days} onChange={e=>setDays(Number(e.target.value))} style={{height:34,border:`1px solid ${C.line}`,borderRadius:9,background:'#fff',color:C.ink,fontSize:11.5,fontWeight:650,padding:'0 28px 0 9px'}}>
+            <option value={7}>7 Days</option>
+            <option value={15}>15 Days</option>
+            <option value={30}>1 Month</option>
+          </select>
           <select aria-label="Activity employee" value={salesmanId} onChange={e=>setSalesmanId(e.target.value)} style={{height:34,border:`1px solid ${C.line}`,borderRadius:9,background:'#fff',color:C.ink,fontSize:11.5,fontWeight:650,padding:'0 28px 0 9px'}}>
             <option value="all">All Employees</option>
             {salesmen.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
-          <div style={{fontSize:11.5,color:C.soft,display:'flex',alignItems:'center',gap:6}}>{loading?<><RefreshCw size={12} className="spin"/> Refreshing</>:<><Activity size={12}/> Live data</>}</div>
+          <div style={{height:34,padding:'0 9px',border:`1px solid ${C.line}`,borderRadius:9,background:'#F8FBFA',fontSize:11.2,color:C.soft,display:'flex',alignItems:'center',gap:6,whiteSpace:'nowrap'}}>{loading?<><RefreshCw size={12} className="spin"/> Refreshing</>:<><span style={{width:7,height:7,borderRadius:'50%',background:C.green}}/> Live data</>}</div>
         </div>
       </div>
 
@@ -149,7 +157,7 @@ export default function AdminActivityOverview({ salesmen=[] }) {
             </button>;
           })}
         </div>
-        {rows.length ? <SparkChart rows={rows} activeKeys={activeKeys}/> : !loading && <div style={{padding:'42px 12px',textAlign:'center',color:C.soft,fontSize:12.5}}>No lead activity recorded in this period.</div>}
+        {rows.length ? <SparkChart rows={rows} activeKeys={activeKeys} days={days}/> : !loading && <div style={{padding:'72px 12px',textAlign:'center',color:C.soft,fontSize:12.5}}>No lead activity recorded in this period.</div>}
       </>}
     </section>
 
@@ -169,7 +177,7 @@ export default function AdminActivityOverview({ salesmen=[] }) {
         {error ? <div style={{padding:16,fontSize:12.5,color:'#B42318'}}>{error}</div> : activities.length ? activities.map((a,i)=>{
           const [bg,fg]=moduleTone[a.module]||moduleTone.Activity;
           const Icon=moduleIcons[a.module]||Activity;
-          return <div key={a.id} style={{display:'grid',gridTemplateColumns:'34px 58px 32px 76px minmax(0,1fr) auto 18px',gap:8,alignItems:'center',padding:'9px 12px',borderTop:i?`1px solid ${C.line}`:'none',minHeight:58}}>
+          return <div key={a.id} style={{display:'grid',gridTemplateColumns:'34px 58px 32px 70px minmax(0,1fr) auto 18px',gap:8,alignItems:'center',padding:'9px 12px',borderTop:i?`1px solid ${C.line}`:'none',minHeight:58}}>
             <div style={{width:30,height:30,borderRadius:8,background:bg,color:fg,display:'grid',placeItems:'center'}}><Icon size={15}/></div>
             <div style={{fontSize:10.5,color:'#8A94A3',whiteSpace:'nowrap'}}>{fmtTime(a.createdAt)}</div>
             <div style={{width:30,height:30,borderRadius:'50%',background:'#E9EDF6',color:'#566481',display:'grid',placeItems:'center',fontSize:9.5,fontWeight:850}}>{initials(a.actorName)}</div>
