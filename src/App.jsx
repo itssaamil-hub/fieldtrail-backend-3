@@ -1507,7 +1507,7 @@ function Overlay({ title, onClose, children }) {
 // markers are plain Leaflet layers kept in refs so live position updates
 // just move existing markers instead of re-creating the map on every render.
 // ---------------------------------------------------------------------------
-function LiveMap({ salesmen, leads, onSelectLead, title = "Live Employees & Lead Map", subtitle }) {
+function LiveMap({ salesmen, leads, onSelectLead, title = "Live Employees & Lead Map", subtitle, headerControls }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const salesmanMarkersRef = useRef({});
@@ -1614,9 +1614,9 @@ function LiveMap({ salesmen, leads, onSelectLead, title = "Live Employees & Lead
 
   return (
     <div className="ft-card" style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, padding: 18 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: subtitle ? 2 : 8 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: subtitle ? 2 : 8, flexWrap: "wrap" }}>
         <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16 }}>{title}</div>
-        {!subtitle && <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: T.verified, fontFamily: "'IBM Plex Mono', monospace" }}><Radio size={12} /> LIVE</div>}
+        {headerControls || (!subtitle && <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: T.verified, fontFamily: "'IBM Plex Mono', monospace" }}><Radio size={12} /> LIVE</div>)}
       </div>
       {subtitle && <div style={{ fontSize: 11.5, color: T.inkSoft, marginBottom: 8 }}>{subtitle}</div>}
       <div style={{ position: "relative" }}>
@@ -1989,32 +1989,21 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
 
       {conversationError && <p role="alert" style={{color:T.danger}}>{conversationError}</p>}
       <div style={{ display: "none" }} aria-hidden="true"><TasksEntry onPendingChange={setAdminPendingTasks} /></div>
-      {!phone && salesmen.length > 0 && (
-        <div className="engage-map-team-pulse" style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", margin: "0 0 10px", border: `1px solid ${T.line}`, borderRadius: 11, background: "#FBFCFC", overflowX: "auto" }}>
-          <strong style={{ fontSize: 11.5, color: T.ink, whiteSpace: "nowrap" }}>{salesmen.filter((s) => s.status === "online").length} live</strong>
-          {salesmen.slice().sort((a,b)=>(a.status === "online" ? 0 : 1)-(b.status === "online" ? 0 : 1)).map((s) => (
-            <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 7, padding: "6px 8px", borderRadius: 9, background: "#fff", border: `1px solid ${s.status === "online" ? "#D9EAE4" : T.line}`, flex: "none" }}>
-              <span style={{ width: 7, height: 7, borderRadius: "50%", background: s.status === "online" ? T.verified : "#A4AAAC" }} />
-              <div style={{ lineHeight: 1.15 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: T.ink, whiteSpace: "nowrap" }}>{s.name}</div>
-                <div style={{ fontSize: 9.5, color: T.inkSoft, whiteSpace: "nowrap" }}>{(s.distanceM / 1000).toFixed(1)} km · {fmtTime(s.lastUpdate)}</div>
-              </div>
-              <button type="button" onClick={() => setRouteSalesman(s)} style={{ border: 0, background: "#EDF7F5", color: T.route, borderRadius: 7, padding: "5px 7px", fontSize: 9.5, fontWeight: 750, cursor: "pointer" }}>Route</button>
-            </div>
-          ))}
-        </div>
-      )}
-      <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: phone ? "nowrap" : "wrap", alignItems: "center", width: phone ? "100%" : "auto" }}>
-        <div style={{ flex: phone ? "1 1 0" : "0 0 auto", minWidth: 0 }}><Tab active={mapView === "live"} onClick={() => setMapView("live")} label="Live Map" /></div>
-        <div style={{ flex: phone ? "1.25 1 0" : "0 0 auto", minWidth: 0 }}><Tab active={mapView === "leads"} onClick={() => setMapView("leads")} label="Lead Locations" /></div>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 5, marginLeft: phone ? 0 : "auto", padding: "6px 9px", borderRadius: 999, background: T.verifiedSoft, color: T.verified, fontSize: 10.5, fontWeight: 800, letterSpacing: ".04em" }}><Radio size={12} /> LIVE</span>
-      </div>
 
       </div>
       <div hidden={!showDashboard && section !== "employees"}>
       {mapView === "live" || (sectionNavigation && section === "employees") ? (
         <div className={sectionNavigation && section === "employees" ? undefined : "ft-dashboard-grid"}>
-          {showDashboard && <LiveMap salesmen={salesmen} leads={leads} onSelectLead={setSelectedLead} />}
+          {showDashboard && <LiveMap
+            salesmen={salesmen}
+            leads={leads}
+            onSelectLead={setSelectedLead}
+            headerControls={<div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+              <Tab active={mapView === "live"} onClick={() => setMapView("live")} label="Live Map" />
+              <Tab active={mapView === "leads"} onClick={() => setMapView("leads")} label="Lead Locations" />
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 9px", borderRadius: 999, background: T.verifiedSoft, color: T.verified, fontSize: 10.5, fontWeight: 800, letterSpacing: ".04em" }}><Radio size={12} /> LIVE</span>
+            </div>}
+          />}
           <SalesmenPanel
             salesmen={salesmen}
             leads={leads}
@@ -2028,7 +2017,18 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
           />
         </div>
       ) : (
-        <LiveMap salesmen={[]} leads={filteredLeads} onSelectLead={setSelectedLead} title="Lead Locations" subtitle="Respects the employee/status/date filters below" />
+        <LiveMap
+          salesmen={[]}
+          leads={filteredLeads}
+          onSelectLead={setSelectedLead}
+          title="Live Employees & Lead Map"
+          subtitle="Respects the employee/status/date filters below"
+          headerControls={<div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            <Tab active={mapView === "live"} onClick={() => setMapView("live")} label="Live Map" />
+            <Tab active={mapView === "leads"} onClick={() => setMapView("leads")} label="Lead Locations" />
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 9px", borderRadius: 999, background: T.verifiedSoft, color: T.verified, fontSize: 10.5, fontWeight: 800, letterSpacing: ".04em" }}><Radio size={12} /> LIVE</span>
+          </div>}
+        />
       )}
 
       </div>
