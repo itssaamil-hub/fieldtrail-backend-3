@@ -1,6 +1,7 @@
 import React,{useEffect,useState} from 'react';
 import {api,getSession} from './api.js';
 import {OnboardingDialog} from './Onboarding.jsx';
+import EmployeeLocationSettings from './EmployeeLocationSettings.jsx';
 import './quotations.css';
 const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 export function EmployeeSettings({employee,isActive=true,onClose,onEdit,onDelete,onToggleActive}){
@@ -25,6 +26,7 @@ export function EmployeeSettings({employee,isActive=true,onClose,onEdit,onDelete
   {tab==='work'&&<>
    <div className="ft-q-box"><h3 style={{marginTop:0}}>Day Closing</h3>{error&&<p role="alert">{error} <button onClick={()=>setReload(v=>v+1)}>Reload</button></p>}{p?<><p className="ft-ob-muted">Control how this employee starts, works and ends the day.</p>{[['require_closing','Require Day Closing before End Day'],['allow_skip','Allow salesman to skip Day Closing'],['require_skip_reason','Require reason when skipped'],['allow_multiple_starts','Allow multiple Start Day / End Day cycles per day']].map(([k,label])=><label className="ft-q-check" key={k}><input type="checkbox" role="switch" checked={!!p[k]} disabled={busy} onChange={e=>{setP(v=>({...v,[k]:e.target.checked}));setSaved('')}}/><span>{label} — <strong>{p[k]?'ON':'OFF'}</strong></span></label>)}</>:!error&&<p>Loading permissions…</p>}</div>
    {p&&<div className="ft-q-box" style={{marginTop:14}}><h3 style={{marginTop:0}}>Lead Permissions</h3><label className="ft-q-check"><input type="checkbox" role="switch" checked={!!p.allow_lead_without_start_day} disabled={busy} onChange={e=>{setP(v=>({...v,allow_lead_without_start_day:e.target.checked}));setSaved('')}}/><span>Allow lead entry without Start Day / GPS — <strong>{p.allow_lead_without_start_day?'ON':'OFF'}</strong></span></label><p className="ft-ob-muted">Use this only for trusted employees who may add leads without starting their day or capturing GPS.</p></div>}
+   <EmployeeLocationSettings employeeId={employee.id}/>
    {p&&<><button className="ft-ob-primary" style={{marginTop:14}} disabled={busy} onClick={async()=>{setBusy(true);setError('');try{setP(await api.saveEmployeeClosingPermissions(employee.id,p));setSaved('Work rules saved.')}catch(e){setError(e.message)}finally{setBusy(false)}}}>Save Work Rules</button>{saved&&<p role="status">{saved}</p>}</>}
   </>}
 
