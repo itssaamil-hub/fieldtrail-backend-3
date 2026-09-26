@@ -1832,6 +1832,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
   const [mobileTab, setMobileTab] = useState("dashboard");
   const [showTeamActivity, setShowTeamActivity] = useState(false);
   const [tasksVisited, setTasksVisited] = useState(false);
+  const [adminPendingTasks, setAdminPendingTasks] = useState(null);
   const desktopPositions = useRef({});
   const previousDesktopSection = useRef(null);
   useEffect(() => {
@@ -1979,14 +1980,15 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
         <StatCard variant="dashboard" label={<>Hot Leads <span style={{ fontSize: 8.5, opacity: 0.65 }}>TODAY</span></>} value={hotLeadsToday.length} icon={Flame} comparison={hotComparison} comparisonPeriod={comparisonPeriod} color={T.danger} onClick={() => setStatLeadsModal({ title: "Hot Leads Today", leads: hotLeadsToday })} />
         <StatCard variant="dashboard" label="In Negotiation" value={inNegotiation.length} comparison={negotiationComparison} comparisonPeriod={comparisonPeriod} icon={Handshake} color="#8B5CF6" onClick={() => setStatLeadsModal({ title: "In Negotiation", leads: inNegotiation })} />
         <StatCard variant="dashboard" label="Total Leads" value={dashboardLeads.length} comparison={dashboardComparison} comparisonPeriod={comparisonPeriod} icon={Contact2} color="#0891B2" />
-        <StatCard variant="dashboard" label="Won" value={converted} comparison={wonComparison} comparisonPeriod={comparisonPeriod} icon={CheckCircle2} color={T.verified} onClick={() => setStatLeadsModal({ title: "Won Leads", leads: dashboardLeads.filter((l) => l.status === "won") })} />
+        <StatCard variant="dashboard" label="Won" value={converted} sub={fmtMoney(convertedValue)} comparison={wonComparison} comparisonPeriod={comparisonPeriod} icon={CheckCircle2} color={T.verified} onClick={() => setStatLeadsModal({ title: "Won Leads", leads: dashboardLeads.filter((l) => l.status === "won") })} />
+        <StatCard variant="dashboard" label="Tasks" value={adminPendingTasks ?? 0} sub="pending" icon={List} color="#145C5D" />
         <StatCard variant="dashboard" label="Upcoming Follow-up" value={upcomingFollowUps.length} icon={CalendarClock} color={T.warn} onClick={() => setStatLeadsModal({ title: "Upcoming Follow-ups", leads: upcomingFollowUps })} />
         <StatCard variant="dashboard" label="Renewals Due" sub="next 30 days" value={upcomingRenewals.length} icon={RefreshCw} color={T.accent} onClick={() => setStatLeadsModal({ title: "Renewals Due (Next 30 Days)", leads: upcomingRenewals })} />
       </div>
       {phone && <AdminMobileLeadTrend leads={dashboardLeads} />}
 
       {conversationError && <p role="alert" style={{color:T.danger}}>{conversationError}</p>}
-      <TasksEntry />
+      <div style={{ display: "none" }} aria-hidden="true"><TasksEntry onPendingChange={setAdminPendingTasks} /></div>
       {!phone && salesmen.length > 0 && (
         <div className="engage-map-team-pulse" style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", margin: "0 0 10px", border: `1px solid ${T.line}`, borderRadius: 11, background: "#FBFCFC", overflowX: "auto" }}>
           <strong style={{ fontSize: 11.5, color: T.ink, whiteSpace: "nowrap" }}>{salesmen.filter((s) => s.status === "online").length} live</strong>
@@ -2005,15 +2007,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
       <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: phone ? "nowrap" : "wrap", alignItems: "center", width: phone ? "100%" : "auto" }}>
         <div style={{ flex: phone ? "1 1 0" : "0 0 auto", minWidth: 0 }}><Tab active={mapView === "live"} onClick={() => setMapView("live")} label="Live Map" /></div>
         <div style={{ flex: phone ? "1.25 1 0" : "0 0 auto", minWidth: 0 }}><Tab active={mapView === "leads"} onClick={() => setMapView("leads")} label="Lead Locations" /></div>
-        <select
-          aria-label="Dashboard employee"
-          value={dashboardSalesman}
-          onChange={(e) => setDashboardSalesman(e.target.value)}
-          style={{ flex: phone ? "1.15 1 0" : "0 0 auto", minWidth: 0, width: phone ? 0 : "auto", fontSize: 12.5, fontWeight: 600, padding: "6px 8px", borderRadius: 8, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, cursor: "pointer" }}
-        >
-          <option value="all">👥 All Team</option>
-          {salesmen.map((s) => <option key={s.id} value={s.id}>👤 {s.name}</option>)}
-        </select>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 5, marginLeft: phone ? 0 : "auto", padding: "6px 9px", borderRadius: 999, background: T.verifiedSoft, color: T.verified, fontSize: 10.5, fontWeight: 800, letterSpacing: ".04em" }}><Radio size={12} /> LIVE</span>
       </div>
 
       </div>
