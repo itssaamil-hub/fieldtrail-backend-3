@@ -1992,11 +1992,11 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
       <div style={{ display: "none" }} aria-hidden="true"><TasksEntry onPendingChange={setAdminPendingTasks} /></div>
 
       </div>
-      {showDashboard && !phone && <AdminActivityOverview salesmen={salesmen} salesmanId={dashboardSalesman} />}
       <div hidden={!showDashboard && section !== "employees"}>
+      {sectionNavigation && section === "employees" && !phone && <AdminActivityOverview salesmen={salesmen} />}
       {mapView === "live" || (sectionNavigation && section === "employees") ? (
         <div className={sectionNavigation && section === "employees" ? undefined : "ft-dashboard-grid"}>
-          {showDashboard && <LiveMap
+          {(showDashboard || (sectionNavigation && section === "employees")) && <LiveMap
             salesmen={salesmen}
             leads={leads}
             onSelectLead={setSelectedLead}
