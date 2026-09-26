@@ -1,0 +1,125 @@
+name: Feature code splitting
+
+on:
+  push:
+    paths:
+      - '.github/workflows/code-splitting.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  split-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - name: Baseline production bundle
+        run: |
+          npm run build
+          echo '--- BEFORE: JS chunks ---'
+          du -h dist/assets/*.js | sort -h
+      - name: Convert feature modules to lazy chunks
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          app = Path('src/App.jsx')
+          text = app.read_text()
+
+          eager_imports = [
+              'import CollectionsPanel, {CollectionsEntry} from "./Collections.jsx";\n',
+              'import SalesmanBriefPopup from "./SalesmanBrief.jsx";\n',
+              'import {EmployeeSettings, DayClosingForm, DayClosingReports, DayClosingReportsEntry} from "./DayClosing.jsx";\n',
+              'import QuotationsPanel, { QuotationSettings } from "./Quotations.jsx";\n',
+              'import OnboardingPanel, { AppMenu, OnboardingTemplateEditor } from "./Onboarding.jsx";\n',
+              'import DealValueReport from "./DealValueReport.jsx";\n',
+              'import { TasksEntry, TasksModal } from "./Tasks.jsx";\n',
+              'import LeadBriefPopup from "./LeadBriefPopup.jsx";\n',
+              'import NotificationsPanel from "./NotificationsPanel.jsx";\n',
+              'import { AdminMobileLeadTrend, AdminTeamActivitySheet } from "./AdminMobileEnhancements.jsx";\n',
+              'import ExceptionCentre from "./ExceptionCentre.jsx";\n',
+              'import DataHealth from "./DataHealth.jsx";\n',
+          ]
+          for line in eager_imports:
+              if line not in text:
+                  raise SystemExit(f'Missing expected import: {line.strip()}')
+              text = text.replace(line, '', 1)
+
+          old_react = 'import React, { useState, useEffect, useRef, useCallback } from "react";'
+          new_react = 'import React, { lazy, Suspense, useState, useEffect, useRef, useCallback } from "react";'
+          if old_react not in text:
+              raise SystemExit('React import anchor not found')
+          text = text.replace(old_react, new_react, 1)
+
+          marker = '} from "./api.js";\n\n'
+          if marker not in text:
+              raise SystemExit('API import anchor not found')
+
+          lazy_block = r'''// Feature-level lazy boundaries keep infrequently used admin/report screens out
+// of the startup bundle. Each wrapper owns its Suspense boundary so opening one
+// feature never blanks the rest of the CRM while its chunk is fetched.
+const withLazyBoundary = (LazyComponent) => {
+  function LazyFeature(props) {
+    return (
+      <Suspense fallback={<div style={{ padding: 24, textAlign: "center", color: "#6B7280", fontSize: 13 }}>Loading…</div>}>
+        <LazyComponent {...props} />
+      </Suspense>
+    );
+  }
+  return LazyFeature;
+};
+const lazyDefault = (loader) => withLazyBoundary(lazy(loader));
+const lazyNamed = (loader, exportName) => withLazyBoundary(lazy(() => loader().then((mod) => ({ default: mod[exportName] }))));
+
+const CollectionsPanel = lazyDefault(() => import("./Collections.jsx"));
+const CollectionsEntry = lazyNamed(() => import("./Collections.jsx"), "CollectionsEntry");
+const SalesmanBriefPopup = lazyDefault(() => import("./SalesmanBrief.jsx"));
+const EmployeeSettings = lazyNamed(() => import("./DayClosing.jsx"), "EmployeeSettings");
+const DayClosingForm = lazyNamed(() => import("./DayClosing.jsx"), "DayClosingForm");
+const DayClosingReports = lazyNamed(() => import("./DayClosing.jsx"), "DayClosingReports");
+const DayClosingReportsEntry = lazyNamed(() => import("./DayClosing.jsx"), "DayClosingReportsEntry");
+const QuotationsPanel = lazyDefault(() => import("./Quotations.jsx"));
+const QuotationSettings = lazyNamed(() => import("./Quotations.jsx"), "QuotationSettings");
+const OnboardingPanel = lazyDefault(() => import("./Onboarding.jsx"));
+const AppMenu = lazyNamed(() => import("./Onboarding.jsx"), "AppMenu");
+const OnboardingTemplateEditor = lazyNamed(() => import("./Onboarding.jsx"), "OnboardingTemplateEditor");
+const DealValueReport = lazyDefault(() => import("./DealValueReport.jsx"));
+const TasksEntry = lazyNamed(() => import("./Tasks.jsx"), "TasksEntry");
+const TasksModal = lazyNamed(() => import("./Tasks.jsx"), "TasksModal");
+const LeadBriefPopup = lazyDefault(() => import("./LeadBriefPopup.jsx"));
+const NotificationsPanel = lazyDefault(() => import("./NotificationsPanel.jsx"));
+const AdminMobileLeadTrend = lazyNamed(() => import("./AdminMobileEnhancements.jsx"), "AdminMobileLeadTrend");
+const AdminTeamActivitySheet = lazyNamed(() => import("./AdminMobileEnhancements.jsx"), "AdminTeamActivitySheet");
+const ExceptionCentre = lazyDefault(() => import("./ExceptionCentre.jsx"));
+const DataHealth = lazyDefault(() => import("./DataHealth.jsx"));
+
+'''
+          text = text.replace(marker, marker + lazy_block, 1)
+          app.write_text(text)
+
+          vite = Path('vite.config.js')
+          vt = vite.read_text()
+          old = '      external: ["fsevents"],\n'
+          new = '''      external: ["fsevents"],\n      output: {\n        manualChunks(id) {\n          if (!id.includes("node_modules")) return;\n          if (id.includes("react") || id.includes("scheduler")) return "vendor-react";\n          if (id.includes("leaflet")) return "vendor-map";\n          if (id.includes("lucide-react")) return "vendor-icons";\n        },\n      },\n'''
+          if old not in vt:
+              raise SystemExit('Vite rollup anchor not found')
+          vt = vt.replace(old, new, 1)
+          vite.write_text(vt)
+          PY
+      - name: Verify production build and audit
+        run: |
+          rm -rf dist
+          npm run build
+          npm audit --audit-level=moderate
+          echo '--- AFTER: JS chunks ---'
+          du -h dist/assets/*.js | sort -h
+      - name: Commit verified split only
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm .github/workflows/code-splitting.yml
+          git add src/App.jsx vite.config.js .github/workflows/code-splitting.yml
+          git commit -m "Lazy-load feature modules and split vendor bundles"
+          git push
