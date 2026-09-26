@@ -20,7 +20,7 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - name: Keep map on dashboard only
+      - name: Remove map from Employees while keeping it on Dashboard
         shell: python
         run: |
           from pathlib import Path
@@ -28,43 +28,29 @@ jobs:
           path = Path('src/App.jsx')
           s = path.read_text()
 
-          # Activity overview is already directly below the dashboard KPIs.
           dashboard_activity = '{showDashboard && !phone && <AdminActivityOverview salesmen={salesmen} />}'
           if dashboard_activity not in s:
               raise SystemExit('Dashboard activity overview not found')
-
-          # Ensure no activity overview remains tied to Employees.
           if 'section === "employees" && !phone && <AdminActivityOverview' in s:
               raise SystemExit('Employee activity overview still present')
 
-          old_open = '{mapView === "live" || (sectionNavigation && section === "employees") ? ('
-          if old_open not in s:
-              raise SystemExit('Employee-aware map block opening not found')
-          s = s.replace(old_open, '{showDashboard && (mapView === "live" ? (', 1)
+          live_old = '{(showDashboard || (sectionNavigation && section === "employees")) && <LiveMap'
+          live_new = '{showDashboard && <LiveMap'
+          if live_old not in s:
+              raise SystemExit('Live map employee condition not found')
+          s = s.replace(live_old, live_new, 1)
 
-          old_grid = '<div className={sectionNavigation && section === "employees" ? undefined : "ft-dashboard-grid"}>'
-          if old_grid not in s:
-              raise SystemExit('Employee-aware map grid wrapper not found')
-          s = s.replace(old_grid, '<div className="ft-dashboard-grid">', 1)
+          filtered_old = '        <LiveMap\n          salesmen={[]}\n          leads={filteredLeads}'
+          filtered_new = '        {showDashboard && <LiveMap\n          salesmen={[]}\n          leads={filteredLeads}'
+          if filtered_old not in s:
+              raise SystemExit('Filtered map opening not found')
+          s = s.replace(filtered_old, filtered_new, 1)
 
-          old_live = '{(showDashboard || (sectionNavigation && section === "employees")) && <LiveMap'
-          if old_live not in s:
-              raise SystemExit('Employee-aware live map condition not found')
-          s = s.replace(old_live, '<LiveMap', 1)
-
-          # Find the closing of the filtered-map ternary and close the new
-          # showDashboard wrapper as well.
-          marker = 'subtitle="Respects the employee/status/date filters below"'
-          pos = s.find(marker)
-          if pos == -1:
-              raise SystemExit('Filtered map marker not found')
-          end = s.find('/>', pos)
-          if end == -1:
-              raise SystemExit('Filtered map component end not found')
-          close = s.find(')}', end)
-          if close == -1:
-              raise SystemExit('Map ternary close not found')
-          s = s[:close] + '))}' + s[close+2:]
+          filtered_tail = '          </div>}\n        />\n      )}'
+          filtered_tail_new = '          </div>}\n        />}\n      )}'
+          if filtered_tail not in s:
+              raise SystemExit('Filtered map closing not found')
+          s = s.replace(filtered_tail, filtered_tail_new, 1)
 
           path.write_text(s)
       - name: Install dependencies
@@ -78,5 +64,5 @@ jobs:
           rm .github/workflows/move-activity-dashboard-once.yml
           git add src/App.jsx .github/workflows/move-activity-dashboard-once.yml
           git diff --cached --quiet && exit 0
-          git commit -m "fix: keep activity and map on dashboard only"
+          git commit -m "fix: keep activity and maps on dashboard only"
           git push origin HEAD:main
