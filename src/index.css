@@ -337,6 +337,7 @@ button:disabled {
   background: #F1EAFE !important;
   color: #7450C7 !important;
   border-color: transparent !important;
+  border-radius: 999px !important;
   box-shadow: none !important;
 }
 .ft-lead-brief-pill svg {
