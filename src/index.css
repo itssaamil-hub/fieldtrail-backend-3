@@ -330,3 +330,16 @@ button:disabled {
   pointer-events: none !important;
   z-index: 2 !important;
 }
+
+
+/* Global Brief action: unified violet pill across Engage. */
+.ft-lead-brief-pill {
+  background: #F1EAFE !important;
+  color: #7450C7 !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+.ft-lead-brief-pill svg {
+  color: #7450C7 !important;
+  stroke: #7450C7 !important;
+}
