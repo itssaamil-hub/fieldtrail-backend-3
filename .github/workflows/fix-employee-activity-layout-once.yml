@@ -1,0 +1,46 @@
+name: Fix employee activity layout
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-employee-activity-layout-once.yml'
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Move overview above employee map
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/App.jsx')
+          s=p.read_text()
+          old='      {showDashboard && !phone && <AdminActivityOverview salesmen={salesmen} salesmanId={dashboardSalesman} />}\n      <div hidden={!showDashboard && section !== "employees"}>\n'
+          new='      <div hidden={!showDashboard && section !== "employees"}>\n      {sectionNavigation && section === "employees" && !phone && <AdminActivityOverview salesmen={salesmen} />}\n'
+          if old not in s:
+              raise SystemExit('overview placement marker not found')
+          s=s.replace(old,new,1)
+          old_map='          {showDashboard && <LiveMap\n'
+          new_map='          {(showDashboard || (sectionNavigation && section === "employees")) && <LiveMap\n'
+          if old_map not in s:
+              raise SystemExit('map marker not found')
+          s=s.replace(old_map,new_map,1)
+          p.write_text(s)
+          PY
+      - name: Install dependencies
+        run: npm ci
+      - name: Build frontend
+        run: npm run build
+      - name: Commit verified change and remove workflow
+        run: |
+          rm .github/workflows/fix-employee-activity-layout-once.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/App.jsx src/AdminActivityOverview.jsx .github/workflows/fix-employee-activity-layout-once.yml
+          git commit -m "fix: place activity overview above employee map" || exit 0
+          git push
