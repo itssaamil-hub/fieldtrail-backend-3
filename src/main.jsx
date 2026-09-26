@@ -13,7 +13,6 @@ import "./performanceReportEnhance.js";
 import "./performance-report-enhance.css";
 import "./performanceInsightsEnhance.js";
 import "./performance-insights-enhance.css";
-import "./onboardingLiveShare.js";
 import "./onboarding-live-share.css";
 import "./quotation-settings-enhance.css";
 import "./exception-centre-fixes.css";

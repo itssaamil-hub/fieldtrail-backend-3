@@ -174,6 +174,7 @@ export const api = {
   onboardingGet: id => request(`/onboarding/${id}`),
   onboardingUpdate: (id,stepId,body) => request(`/onboarding/${id}/steps/${stepId}`, {method:'PATCH',body}),
   onboardingSummary: id => request(`/onboarding/${id}/summary`),
+  onboardingShareLink: id => request(`/onboarding/${id}/share-link`, {method:'POST'}),
   onboardingTemplate: () => request('/onboarding/template'),
   onboardingSaveTemplate: body => request('/onboarding/template', {method:'PUT',body}),
   onboardingPDF: async id => {
