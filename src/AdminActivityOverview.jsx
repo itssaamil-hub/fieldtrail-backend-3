@@ -1,9 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Activity, ArrowRight, CalendarDays, CheckCircle2, Flame, Handshake, RefreshCw, Target } from 'lucide-react';
 import { api } from './api.js';
 
 const C = {
-  ink:'#1A1D23', soft:'#6B7280', line:'#E7E9EE', card:'#FFFFFF', paper:'#F7F8FA',
+  ink:'#1A1D23', soft:'#6B7280', line:'#E7E9EE', card:'#FFFFFF',
   green:'#12805C', red:'#D94A4A', blue:'#2563EB', purple:'#8B5CF6', amber:'#D97706', teal:'#145C5D'
 };
 
@@ -55,7 +55,8 @@ function SparkChart({ rows, activeKeys }) {
   </div>;
 }
 
-export default function AdminActivityOverview({ salesmen=[], salesmanId='all' }) {
+export default function AdminActivityOverview({ salesmen=[] }) {
+  const [salesmanId,setSalesmanId]=useState('all');
   const [data,setData]=useState(null);
   const [error,setError]=useState('');
   const [loading,setLoading]=useState(true);
@@ -85,7 +86,13 @@ export default function AdminActivityOverview({ salesmen=[], salesmanId='all' })
     <section style={{background:C.card,border:`1px solid ${C.line}`,borderRadius:16,padding:16,minWidth:0,boxShadow:'0 1px 2px rgba(15,23,42,.03)'}}>
       <div style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'flex-start',marginBottom:12,flexWrap:'wrap'}}>
         <div><div style={{fontSize:16,fontWeight:800,color:C.ink}}>Lead Activity — Last 7 Days</div><div style={{fontSize:12,color:C.soft,marginTop:3}}>Real activity recorded in Engage · {person}</div></div>
-        <div style={{fontSize:11.5,color:C.soft,display:'flex',alignItems:'center',gap:6}}>{loading?<><RefreshCw size={12} className="spin"/> Refreshing</>:<><Activity size={12}/> Live CRM data</>}</div>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <select aria-label="Activity employee" value={salesmanId} onChange={e=>setSalesmanId(e.target.value)} style={{height:34,border:`1px solid ${C.line}`,borderRadius:9,background:'#fff',color:C.ink,fontSize:11.5,fontWeight:650,padding:'0 28px 0 9px'}}>
+            <option value="all">All Employees</option>
+            {salesmen.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+          <div style={{fontSize:11.5,color:C.soft,display:'flex',alignItems:'center',gap:6}}>{loading?<><RefreshCw size={12} className="spin"/> Refreshing</>:<><Activity size={12}/> Live CRM data</>}</div>
+        </div>
       </div>
 
       {error ? <div style={{padding:'18px 4px',fontSize:12.5,color:'#B42318'}}>{error}</div> : <>
@@ -104,7 +111,7 @@ export default function AdminActivityOverview({ salesmen=[], salesmanId='all' })
 
     <section style={{background:C.card,border:`1px solid ${C.line}`,borderRadius:16,padding:'15px 0 6px',minWidth:0,boxShadow:'0 1px 2px rgba(15,23,42,.03)'}}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:10,padding:'0 14px 10px'}}>
-        <div><div style={{fontSize:16,fontWeight:800,color:C.ink}}>Activity Centre</div><div style={{fontSize:12,color:C.soft,marginTop:3}}>Latest recorded activity</div></div>
+        <div><div style={{fontSize:16,fontWeight:800,color:C.ink}}>Activity Centre</div><div style={{fontSize:12,color:C.soft,marginTop:3}}>Latest recorded activity · {person}</div></div>
         <span style={{fontSize:10.5,fontWeight:800,color:C.teal,background:'#EAF4F2',padding:'5px 8px',borderRadius:999}}>LIVE</span>
       </div>
       <div className="engage-activity-feed" style={{maxHeight:316,overflowY:'auto',borderTop:`1px solid ${C.line}`}}>
