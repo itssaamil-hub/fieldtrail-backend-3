@@ -256,3 +256,41 @@ button:disabled {
     font-weight: 600;
   }
 }
+
+
+/* Employee phone Leads: compact filters and actionable age/overdue metadata. */
+.employee-mobile-lead-filters {
+  display: grid;
+  grid-template-columns: .82fr .82fr 1.36fr;
+  gap: 7px;
+  margin-bottom: 12px;
+}
+.employee-mobile-lead-filters select,
+.employee-mobile-custom-date input {
+  width: 100%;
+  min-width: 0;
+  height: 38px;
+  box-sizing: border-box;
+  border: 1px solid #E7E9EE;
+  border-radius: 10px;
+  background: #fff;
+  color: #1A1D23;
+  padding: 0 9px;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.employee-mobile-custom-date {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin: -4px 0 12px;
+}
+.employee-mobile-lead-meta strong { font-weight: 700; }
+.employee-mobile-lead-meta--overdue strong { color: #C0392B; }
+.employee-mobile-lead-meta--due strong { color: #B8791F; }
+.employee-mobile-lead-meta--stale strong { color: #8A6430; }
+@media (max-width: 380px) {
+  .employee-mobile-lead-filters { grid-template-columns: 1fr 1fr; }
+  .employee-mobile-lead-filters select:last-child { grid-column: 1 / -1; }
+}

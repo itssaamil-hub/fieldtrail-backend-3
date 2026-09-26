@@ -365,6 +365,7 @@ export function mapLeadRow(row) {
     accuracy: row.accuracy_m,
     verification: row.verification_status,
     createdAt: new Date(row.created_at),
+    updatedAt: new Date(row.updated_at || row.created_at),
     notes: row.notes || "",
     syncStatus: "synced",
   };
