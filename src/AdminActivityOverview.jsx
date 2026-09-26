@@ -125,15 +125,17 @@ export default function AdminActivityOverview({ salesmen=[] }) {
   const rows=data?.trend||[];
   const activities=data?.activities||[];
   const toggle=k=>setActiveKeys(prev=>prev.includes(k)?(prev.length===1?prev:prev.filter(x=>x!==k)):[...prev,k]);
-  const periodLabel = days===30 ? '1 Month' : `${days} Days`;
 
-  return <div style={{display:'grid',gridTemplateColumns:'minmax(0,1.24fr) minmax(420px,1fr)',gap:14,marginBottom:18}} className="engage-activity-overview">
-    <style>{`@media(max-width:1100px){.engage-activity-overview{grid-template-columns:minmax(0,1.12fr) minmax(390px,1fr)!important}} @media(max-width:920px){.engage-activity-overview{grid-template-columns:1fr!important}.engage-activity-feed{max-height:none!important}}`}</style>
+  return <div style={{display:'grid',gridTemplateColumns:'minmax(0,1.42fr) minmax(380px,.86fr)',gap:14,marginBottom:18}} className="engage-activity-overview">
+    <style>{`@media(max-width:1180px){.engage-activity-overview{grid-template-columns:minmax(0,1.28fr) minmax(370px,.92fr)!important}} @media(max-width:920px){.engage-activity-overview{grid-template-columns:1fr!important}.engage-activity-feed{max-height:none!important}}`}</style>
 
     <section style={{background:C.card,border:`1px solid ${C.line}`,borderRadius:16,padding:16,minWidth:0,boxShadow:'0 1px 2px rgba(15,23,42,.03)'}}>
-      <div style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'center',marginBottom:10,flexWrap:'wrap'}}>
-        <div style={{minWidth:220}}><div style={{fontSize:16,fontWeight:800,color:C.ink}}>Lead Activity — Last {periodLabel}</div><div style={{fontSize:12,color:C.soft,marginTop:3}}>Real activity recorded in Engage · {person}</div></div>
-        <div style={{display:'flex',alignItems:'center',gap:7,flexWrap:'wrap',justifyContent:'flex-end'}}>
+      <div style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'flex-start',marginBottom:10,flexWrap:'wrap'}}>
+        <div style={{minWidth:180,paddingLeft:2}}>
+          <div style={{fontSize:16,fontWeight:800,color:C.ink}}>Lead Activity</div>
+          <div style={{fontSize:12,color:C.soft,marginTop:3}}>Real activity recorded in Engage · {person}</div>
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:7,flexWrap:'wrap',justifyContent:'flex-end',marginLeft:'auto'}}>
           <select aria-label="Activity period" value={days} onChange={e=>setDays(Number(e.target.value))} style={{height:34,border:`1px solid ${C.line}`,borderRadius:9,background:'#fff',color:C.ink,fontSize:11.5,fontWeight:650,padding:'0 28px 0 9px'}}>
             <option value={7}>7 Days</option>
             <option value={15}>15 Days</option>
@@ -162,12 +164,12 @@ export default function AdminActivityOverview({ salesmen=[] }) {
     </section>
 
     <section style={{background:C.card,border:`1px solid ${C.line}`,borderRadius:16,padding:'15px 0 0',minWidth:0,boxShadow:'0 1px 2px rgba(15,23,42,.03)',overflow:'hidden'}}>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:10,padding:'0 14px 11px'}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:10,padding:'0 12px 11px'}}>
         <div>
           <div style={{fontSize:16,fontWeight:800,color:C.ink}}>Activity Centre</div>
           <div style={{fontSize:12,color:C.soft,marginTop:3}}>Latest activities across your team · {person}</div>
         </div>
-        <div style={{display:'flex',alignItems:'center',gap:7}}>
+        <div style={{display:'flex',alignItems:'center',gap:6}}>
           <span style={{fontSize:10.5,fontWeight:800,color:C.teal,background:'#EAF4F2',padding:'5px 8px',borderRadius:999}}>LIVE</span>
           <span style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:11,fontWeight:750,color:C.teal,background:'#F5FAF9',border:'1px solid #DCECE8',padding:'6px 8px',borderRadius:8}}>Latest <ArrowRight size={12}/></span>
         </div>
@@ -177,24 +179,24 @@ export default function AdminActivityOverview({ salesmen=[] }) {
         {error ? <div style={{padding:16,fontSize:12.5,color:'#B42318'}}>{error}</div> : activities.length ? activities.map((a,i)=>{
           const [bg,fg]=moduleTone[a.module]||moduleTone.Activity;
           const Icon=moduleIcons[a.module]||Activity;
-          return <div key={a.id} style={{display:'grid',gridTemplateColumns:'34px 58px 32px 70px minmax(0,1fr) auto 18px',gap:8,alignItems:'center',padding:'9px 12px',borderTop:i?`1px solid ${C.line}`:'none',minHeight:58}}>
-            <div style={{width:30,height:30,borderRadius:8,background:bg,color:fg,display:'grid',placeItems:'center'}}><Icon size={15}/></div>
-            <div style={{fontSize:10.5,color:'#8A94A3',whiteSpace:'nowrap'}}>{fmtTime(a.createdAt)}</div>
-            <div style={{width:30,height:30,borderRadius:'50%',background:'#E9EDF6',color:'#566481',display:'grid',placeItems:'center',fontSize:9.5,fontWeight:850}}>{initials(a.actorName)}</div>
-            <div style={{fontSize:10.9,fontWeight:750,color:'#475467',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{a.actorName}</div>
+          return <div key={a.id} style={{display:'grid',gridTemplateColumns:'32px 54px 30px 64px minmax(0,1fr) auto 16px',gap:7,alignItems:'center',padding:'9px 10px',borderTop:i?`1px solid ${C.line}`:'none',minHeight:58}}>
+            <div style={{width:28,height:28,borderRadius:8,background:bg,color:fg,display:'grid',placeItems:'center'}}><Icon size={14}/></div>
+            <div style={{fontSize:10.3,color:'#8A94A3',whiteSpace:'nowrap'}}>{fmtTime(a.createdAt)}</div>
+            <div style={{width:28,height:28,borderRadius:'50%',background:'#E9EDF6',color:'#566481',display:'grid',placeItems:'center',fontSize:9.2,fontWeight:850}}>{initials(a.actorName)}</div>
+            <div style={{fontSize:10.5,fontWeight:750,color:'#475467',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{a.actorName}</div>
             <div style={{minWidth:0}}>
-              <div style={{fontSize:11.9,fontWeight:800,color:C.ink,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{a.title}</div>
-              <div style={{fontSize:10.8,color:C.soft,marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{a.detail || 'Recorded in Engage'}</div>
+              <div style={{fontSize:11.6,fontWeight:800,color:C.ink,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{a.title}</div>
+              <div style={{fontSize:10.5,color:C.soft,marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{a.detail || 'Recorded in Engage'}</div>
             </div>
-            <span style={{fontSize:9.7,fontWeight:800,color:fg,background:bg,padding:'5px 7px',borderRadius:7,whiteSpace:'nowrap'}}>{a.module}</span>
-            <ChevronRight size={15} color="#A9B1BD"/>
+            <span style={{fontSize:9.4,fontWeight:800,color:fg,background:bg,padding:'5px 6px',borderRadius:7,whiteSpace:'nowrap'}}>{a.module}</span>
+            <ChevronRight size={14} color="#A9B1BD"/>
           </div>;
         }) : !loading ? <div style={{padding:'38px 16px',textAlign:'center',fontSize:12.5,color:C.soft}}>No recorded activity yet.</div> : <div style={{padding:'38px 16px',textAlign:'center',fontSize:12.5,color:C.soft}}>Loading activity…</div>}
       </div>
 
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'9px 12px',borderTop:`1px solid ${C.line}`,background:'#FBFCFD'}}>
-        <div style={{display:'flex',alignItems:'center',gap:5,fontSize:10.5,color:C.soft}}><MapPin size={12}/> Recorded CRM events only</div>
-        <div style={{fontSize:10.5,color:C.soft}}>Auto-refreshes every minute</div>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'9px 10px',borderTop:`1px solid ${C.line}`,background:'#FBFCFD'}}>
+        <div style={{display:'flex',alignItems:'center',gap:5,fontSize:10.3,color:C.soft}}><MapPin size={12}/> Recorded CRM events only</div>
+        <div style={{fontSize:10.3,color:C.soft}}>Auto-refreshes every minute</div>
       </div>
     </section>
   </div>;
