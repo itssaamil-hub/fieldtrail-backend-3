@@ -2,7 +2,8 @@ name: Mobile Tasks UI
 
 on:
   push:
-    branches: [employee-mobile-tasks-ui]
+    branches:
+      - employee-mobile-tasks-ui
 
 permissions:
   contents: write
@@ -19,75 +20,20 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - run: npm ci
-      - name: Apply mobile-only Tasks UI
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          p=Path('src/Tasks.jsx')
-          s=p.read_text()
-          s=s.replace("import { ClipboardList, X, ChevronRight, Columns3, List } from 'lucide-react';", "import { ClipboardList, X, ChevronRight, Columns3, List, SlidersHorizontal, Search } from 'lucide-react';")
-          old=" const [from,setFrom]=useState(''),[through,setThrough]=useState('');\n const [workflow,setWorkflow]=useState(null);"
-          new=" const [from,setFrom]=useState(''),[through,setThrough]=useState('');\n const [mobileFiltersOpen,setMobileFiltersOpen]=useState(false);\n const [workflow,setWorkflow]=useState(null);"
-          assert old in s
-          s=s.replace(old,new,1)
-
-          old_block='''   <div className="ft-task-filters">\n    <label>Search<input disabled={!workflow} type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Task or restaurant" maxLength={180}/></label>\n    {admin&&<label>Employee<select disabled={!workflow} value={employeeFilter} onChange={e=>changeFilter(setEmployeeFilter,e.target.value)}><option value="">All employees</option>{employees.map(s=><option key={s.id} value={s.id}>{s.full_name}{s.is_active?'':' (inactive)'}</option>)}</select></label>}\n    <label>Priority<select disabled={!workflow} value={priorityFilter} onChange={e=>changeFilter(setPriorityFilter,e.target.value)}><option value="">All priorities</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></label>\n    <label>Progress<select value={progressFilter} onChange={e=>changeFilter(setProgressFilter,e.target.value)} disabled={!workflow||filter==='completed'}><option value="">All progress</option><option value="pending">To do</option><option value="in_progress">In progress</option>{filter==='all'&&<option value="completed">Completed</option>}</select></label>\n    <label>Due from · IST<input disabled={!workflow} type="date" value={from} onChange={e=>changeFilter(setFrom,e.target.value)}/></label><label>Due through · IST<input disabled={!workflow} type="date" value={through} min={from} onChange={e=>changeFilter(setThrough,e.target.value)}/></label>\n   </div>\n   <p className="ft-task-muted">Dates in IST · Overdue includes tasks past their due time today.</p>'''
-          new_block='''   <div className="ft-task-mobile-search-row">\n    <label className="ft-task-mobile-search"><Search size={16}/><input disabled={!workflow} type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search tasks..." maxLength={180}/></label>\n    <button type="button" className="ft-task-mobile-filter-button" onClick={()=>setMobileFiltersOpen(true)}><SlidersHorizontal size={16}/> Filter{[employeeFilter,priorityFilter,progressFilter,from,through].filter(Boolean).length>0?` (${[employeeFilter,priorityFilter,progressFilter,from,through].filter(Boolean).length})`:''}</button>\n   </div>\n   <div className="ft-task-filters ft-task-desktop-filters">\n    <label>Search<input disabled={!workflow} type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Task or restaurant" maxLength={180}/></label>\n    {admin&&<label>Employee<select disabled={!workflow} value={employeeFilter} onChange={e=>changeFilter(setEmployeeFilter,e.target.value)}><option value="">All employees</option>{employees.map(s=><option key={s.id} value={s.id}>{s.full_name}{s.is_active?'':' (inactive)'}</option>)}</select></label>}\n    <label>Priority<select disabled={!workflow} value={priorityFilter} onChange={e=>changeFilter(setPriorityFilter,e.target.value)}><option value="">All priorities</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></label>\n    <label>Progress<select value={progressFilter} onChange={e=>changeFilter(setProgressFilter,e.target.value)} disabled={!workflow||filter==='completed'}><option value="">All progress</option><option value="pending">To do</option><option value="in_progress">In progress</option>{filter==='all'&&<option value="completed">Completed</option>}</select></label>\n    <label>Due from · IST<input disabled={!workflow} type="date" value={from} onChange={e=>changeFilter(setFrom,e.target.value)}/></label><label>Due through · IST<input disabled={!workflow} type="date" value={through} min={from} onChange={e=>changeFilter(setThrough,e.target.value)}/></label>\n   </div>\n   <p className="ft-task-muted ft-task-desktop-filter-help">Dates in IST · Overdue includes tasks past their due time today.</p>\n   {mobileFiltersOpen&&<div className="ft-task-mobile-filter-backdrop" onClick={()=>setMobileFiltersOpen(false)}><div className="ft-task-mobile-filter-sheet" role="dialog" aria-modal="true" aria-label="Task filters" onClick={e=>e.stopPropagation()}>\n    <div className="ft-task-mobile-filter-head"><div><strong>Filters</strong><span>Refine your task list</span></div><button type="button" aria-label="Close filters" onClick={()=>setMobileFiltersOpen(false)}><X size={18}/></button></div>\n    <div className="ft-task-mobile-filter-fields">\n     {admin&&<label>Employee<select disabled={!workflow} value={employeeFilter} onChange={e=>changeFilter(setEmployeeFilter,e.target.value)}><option value="">All employees</option>{employees.map(s=><option key={s.id} value={s.id}>{s.full_name}{s.is_active?'':' (inactive)'}</option>)}</select></label>}\n     <label>Priority<select disabled={!workflow} value={priorityFilter} onChange={e=>changeFilter(setPriorityFilter,e.target.value)}><option value="">All priorities</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></label>\n     <label>Progress<select value={progressFilter} onChange={e=>changeFilter(setProgressFilter,e.target.value)} disabled={!workflow||filter==='completed'}><option value="">All progress</option><option value="pending">To do</option><option value="in_progress">In progress</option>{filter==='all'&&<option value="completed">Completed</option>}</select></label>\n     <label>Due from · IST<input disabled={!workflow} type="date" value={from} onChange={e=>changeFilter(setFrom,e.target.value)}/></label>\n     <label>Due through · IST<input disabled={!workflow} type="date" value={through} min={from} onChange={e=>changeFilter(setThrough,e.target.value)}/></label>\n     <p className="ft-task-muted">Dates in IST · Overdue includes tasks past their due time today.</p>\n    </div>\n    <div className="ft-task-mobile-filter-actions"><button type="button" onClick={()=>{setEmployeeFilter('');setPriorityFilter('');setProgressFilter('');setFrom('');setThrough('');setPage(0)}}>Reset</button><button type="button" className="ft-task-primary" onClick={()=>setMobileFiltersOpen(false)}>Apply filters</button></div>\n   </div></div>}'''
-          assert old_block in s, 'filter block not found'
-          s=s.replace(old_block,new_block,1)
-          p.write_text(s)
-
-          css=Path('src/tasks.css')
-          c=css.read_text()
-          marker='/* Employee/mobile Tasks: compact phone workspace with filter bottom sheet. */'
-          if marker not in c:
-              c += r'''\n\n/* Employee/mobile Tasks: compact phone workspace with filter bottom sheet. */
-.ft-task-mobile-search-row,.ft-task-mobile-filter-backdrop{display:none}
-@media(max-width:600px){
- .ft-tasks-embedded .ft-tasks-workspace{padding:18px 16px 92px;background:#f4f5f7;border-radius:0;max-height:none;min-height:calc(100dvh - 112px)}
- .ft-tasks-embedded .ft-tasks-workspace>header{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:10px;margin-bottom:12px}
- .ft-tasks-embedded .ft-tasks-workspace>header h2{font-size:22px;line-height:1.15}
- .ft-tasks-embedded .ft-tasks-workspace>header .ft-task-muted{font-size:12px;margin-top:5px}
- .ft-tasks-embedded .ft-task-header-actions .ft-task-primary{min-height:36px;padding:8px 12px;border-radius:10px;font-size:11.5px;white-space:nowrap}
- .ft-tasks-embedded .ft-task-view-switch{justify-content:flex-start;margin:8px 0 10px;gap:4px}
- .ft-tasks-embedded .ft-task-view-switch button{min-height:36px;padding:7px 11px;border-radius:10px}
- .ft-tasks-embedded .ft-task-tabs{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:7px;margin:0 -16px 12px;padding:0 16px 8px;border-bottom:0;scrollbar-width:none;-webkit-overflow-scrolling:touch}
- .ft-tasks-embedded .ft-task-tabs::-webkit-scrollbar{display:none}
- .ft-tasks-embedded .ft-task-tabs button{flex:0 0 auto;min-height:34px;padding:7px 12px;border-radius:999px;background:#fff;border-color:#e2e6e8;font-size:11.5px}
- .ft-tasks-embedded .ft-task-tabs button[aria-pressed=true]{background:#145c5d;color:#fff;border-color:#145c5d}
- .ft-tasks-embedded .ft-task-desktop-filters,.ft-tasks-embedded .ft-task-desktop-filter-help{display:none}
- .ft-tasks-embedded .ft-task-mobile-search-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin:4px 0 12px}
- .ft-tasks-embedded .ft-task-mobile-search{display:flex;align-items:center;gap:8px;height:42px;padding:0 12px;background:#fff;border:1px solid #dfe4e7;border-radius:12px;color:#768187}
- .ft-tasks-embedded .ft-task-mobile-search input{width:100%;min-width:0;border:0;outline:0;background:transparent;font:14px Inter,sans-serif;color:#20252b}
- .ft-tasks-embedded .ft-task-mobile-filter-button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:42px;padding:0 12px;border-radius:12px;background:#fff;font-size:11.5px;white-space:nowrap}
- .ft-task-mobile-filter-backdrop{display:flex;position:fixed;inset:0;z-index:6500;background:rgba(16,28,31,.38);align-items:flex-end}
- .ft-task-mobile-filter-sheet{width:100%;max-height:82dvh;overflow:auto;background:#fff;border-radius:20px 20px 0 0;padding:18px 18px max(18px,env(safe-area-inset-bottom));box-shadow:0 -14px 36px rgba(16,28,31,.16)}
- .ft-task-mobile-filter-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
- .ft-task-mobile-filter-head>div{display:flex;flex-direction:column;gap:2px}.ft-task-mobile-filter-head strong{font-size:18px}.ft-task-mobile-filter-head span{font-size:11.5px;color:#718078}
- .ft-task-mobile-filter-head button{display:grid;place-items:center;width:36px;height:36px;padding:0;border-radius:10px}
- .ft-task-mobile-filter-fields{display:grid;grid-template-columns:1fr 1fr;gap:11px}
- .ft-task-mobile-filter-fields label{display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:700;color:#65766e}
- .ft-task-mobile-filter-fields select,.ft-task-mobile-filter-fields input{width:100%;min-width:0;height:44px;border:1px solid #dce4df;border-radius:10px;background:#fff;padding:0 10px;font:14px Inter,sans-serif;color:#243a30}
- .ft-task-mobile-filter-fields p{grid-column:1/-1;margin:0;padding-top:2px}
- .ft-task-mobile-filter-actions{position:sticky;bottom:0;display:grid;grid-template-columns:.8fr 1.2fr;gap:9px;padding-top:14px;margin-top:14px;background:#fff}
- .ft-task-mobile-filter-actions button{min-height:44px;border-radius:11px}
- .ft-tasks-embedded .ft-task-layout{margin-top:12px}
- .ft-tasks-embedded .ft-task-empty{min-height:145px;background:#fff;border:1px dashed #dfe5e2;border-radius:14px;padding:22px}
-}
-'''
-              css.write_text(c)
-          PY
-      - run: npm run build
-      - run: npm audit --audit-level=moderate
-      - name: Commit verified source changes
+      - name: Install
+        run: npm ci
+      - name: Patch
+        run: python scripts/mobile_tasks_patch.py
+      - name: Build
+        run: npm run build
+      - name: Audit
+        run: npm audit --audit-level=moderate
+      - name: Commit
         run: |
           git restore --source=origin/main -- dist node_modules 2>/dev/null || true
-          rm .github/workflows/mobile-tasks-ui.yml
+          rm .github/workflows/mobile-tasks-ui.yml scripts/mobile_tasks_patch.py
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/Tasks.jsx src/tasks.css .github/workflows/mobile-tasks-ui.yml
+          git add src/Tasks.jsx src/tasks.css .github/workflows/mobile-tasks-ui.yml scripts/mobile_tasks_patch.py
           git commit -m "Polish mobile Tasks workspace"
           git push origin employee-mobile-tasks-ui
