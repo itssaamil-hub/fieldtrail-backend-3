@@ -32,3 +32,4 @@ jobs:
             git commit -m "Integrate exception centre and API invariants"
             git push
           fi
+# trigger
