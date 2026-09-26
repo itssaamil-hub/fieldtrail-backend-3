@@ -41,16 +41,10 @@ jobs:
           s = s.replace(live_old, live_new, 1)
 
           filtered_old = '        <LiveMap\n          salesmen={[]}\n          leads={filteredLeads}'
-          filtered_new = '        {showDashboard && <LiveMap\n          salesmen={[]}\n          leads={filteredLeads}'
+          filtered_new = '        showDashboard && <LiveMap\n          salesmen={[]}\n          leads={filteredLeads}'
           if filtered_old not in s:
               raise SystemExit('Filtered map opening not found')
           s = s.replace(filtered_old, filtered_new, 1)
-
-          filtered_tail = '          </div>}\n        />\n      )}'
-          filtered_tail_new = '          </div>}\n        />}\n      )}'
-          if filtered_tail not in s:
-              raise SystemExit('Filtered map closing not found')
-          s = s.replace(filtered_tail, filtered_tail_new, 1)
 
           path.write_text(s)
       - name: Install dependencies
