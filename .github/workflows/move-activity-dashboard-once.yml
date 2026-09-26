@@ -1,4 +1,4 @@
-name: Move activity overview to dashboard
+name: Finalize dashboard activity layout
 
 on:
   push:
@@ -20,7 +20,7 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - name: Move dashboard activity and remove employee map/activity
+      - name: Keep map on dashboard only
         shell: python
         run: |
           from pathlib import Path
@@ -28,42 +28,39 @@ jobs:
           path = Path('src/App.jsx')
           s = path.read_text()
 
-          employee_activity = '{section === "employees" && !phone && <AdminActivityOverview salesmen={salesmen} />}\n'
-          if employee_activity not in s:
-              raise SystemExit('Employee activity block not found')
-          s = s.replace(employee_activity, '', 1)
+          # Activity overview is already directly below the dashboard KPIs.
+          dashboard_activity = '{showDashboard && !phone && <AdminActivityOverview salesmen={salesmen} />}'
+          if dashboard_activity not in s:
+              raise SystemExit('Dashboard activity overview not found')
 
-          renewal = '        <StatCard variant="dashboard" label="Renewals Due" sub="next 30 days" value={upcomingRenewals.length} icon={RefreshCw} color={T.accent} onClick={() => setStatLeadsModal({ title: "Renewals Due (Next 30 Days)", leads: upcomingRenewals })} />\n      </div>'
-          if renewal not in s:
-              raise SystemExit('Dashboard KPI tail not found')
-          replacement = renewal + '\n      {showDashboard && !phone && <AdminActivityOverview salesmen={salesmen} />}'
-          s = s.replace(renewal, replacement, 1)
+          # Ensure no activity overview remains tied to Employees.
+          if 'section === "employees" && !phone && <AdminActivityOverview' in s:
+              raise SystemExit('Employee activity overview still present')
 
-          old_map_open = '{mapView === "live" || (sectionNavigation && section === "employees") ? ('
-          if old_map_open not in s:
-              raise SystemExit('Map block opening not found')
-          s = s.replace(old_map_open, '{showDashboard && (mapView === "live" ? (', 1)
+          old_open = '{mapView === "live" || (sectionNavigation && section === "employees") ? ('
+          if old_open not in s:
+              raise SystemExit('Employee-aware map block opening not found')
+          s = s.replace(old_open, '{showDashboard && (mapView === "live" ? (', 1)
 
           old_grid = '<div className={sectionNavigation && section === "employees" ? undefined : "ft-dashboard-grid"}>'
           if old_grid not in s:
-              raise SystemExit('Map grid wrapper not found')
+              raise SystemExit('Employee-aware map grid wrapper not found')
           s = s.replace(old_grid, '<div className="ft-dashboard-grid">', 1)
 
           old_live = '{(showDashboard || (sectionNavigation && section === "employees")) && <LiveMap'
           if old_live not in s:
-              raise SystemExit('Live map condition not found')
+              raise SystemExit('Employee-aware live map condition not found')
           s = s.replace(old_live, '<LiveMap', 1)
 
-          # The map ternary previously ended with one `)}`. The new showDashboard wrapper
-          # needs one extra closing parenthesis. Anchor on the filtered-map tail before the
-          # employee/dashboard content that follows.
-          marker = '          subtitle="Respects the employee/status/date filters below"'
+          # Find the closing of the filtered-map ternary and close the new
+          # showDashboard wrapper as well.
+          marker = 'subtitle="Respects the employee/status/date filters below"'
           pos = s.find(marker)
           if pos == -1:
               raise SystemExit('Filtered map marker not found')
           end = s.find('/>', pos)
           if end == -1:
-              raise SystemExit('Filtered map end not found')
+              raise SystemExit('Filtered map component end not found')
           close = s.find(')}', end)
           if close == -1:
               raise SystemExit('Map ternary close not found')
@@ -81,5 +78,5 @@ jobs:
           rm .github/workflows/move-activity-dashboard-once.yml
           git add src/App.jsx .github/workflows/move-activity-dashboard-once.yml
           git diff --cached --quiet && exit 0
-          git commit -m "fix: move activity and map to dashboard"
+          git commit -m "fix: keep activity and map on dashboard only"
           git push origin HEAD:main
