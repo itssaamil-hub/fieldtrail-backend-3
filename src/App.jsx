@@ -1708,6 +1708,7 @@ function AdminApp({ desktopSection, session, online, page, notificationLead }) {
   const onUpdateLead = async (id, payload) => {
     setLeads((prev) => prev.map((l) => (l.id === id ? {
       ...l,
+      business: payload.businessName ?? l.business,
       subLocation: payload.subLocation, posName: payload.posName,
       renewalMonth: payload.renewalMonth, renewalDate: payload.renewalDate || "",
       owner: payload.contactName, phone: payload.phone, notes: payload.notes,
@@ -3751,7 +3752,7 @@ function AdminAddLeadModal({ salesmen, onClose, onSubmit }) {
             <div style={{ flex: 1, minWidth: 0 }}><AddLeadField label="Renewal Date"><input style={inputStyle} type="date" value={form.renewalDate} onChange={set("renewalDate")} /></AddLeadField></div>
           </div>
           <div style={{ display: "flex", gap: 10 }}>
-            <div style={{ flex: 1, minWidth: 0 }}><AddLeadField label="Status">
+            <div style={{ flex: 1, minWidth: 0 }}><AddLeadField label="Stage">
               <select style={inputStyle} value={form.status} onChange={set("status")}>
                 {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
               </select>
@@ -3880,7 +3881,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
   const [showLeadConversation, setShowLeadConversation] = useState(false);
   const [deletingMessageId, setDeletingMessageId] = useState(null);
   const [form, setForm] = useState({
-    subLocation: lead.subLocation || "", posName: lead.posName || "",
+    business: lead.business || "", subLocation: lead.subLocation || "", posName: lead.posName || "",
     renewalMonth: lead.renewalMonth || "", renewalDate: lead.renewalDate || "",
     owner: lead.owner || "", phone: lead.phone || "", notes: lead.notes || "",
     dealValue: lead.dealValue != null ? String(lead.dealValue) : "",
@@ -3959,8 +3960,11 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
   };
 
   const saveEdit = async () => {
+    const businessName = form.business.trim();
+    if (!businessName) return;
     setSaving(true);
     const payload = {
+      businessName,
       subLocation: form.subLocation, posName: form.posName,
       renewalMonth: form.renewalMonth, renewalDate: form.renewalDate || null,
       contactName: form.owner, phone: form.phone, notes: form.notes,
@@ -3970,6 +3974,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
     await onUpdate(lead.id, payload);
     setSavedOverrides((prev) => ({
       ...prev,
+      business: payload.businessName,
       subLocation: payload.subLocation, posName: payload.posName,
       renewalMonth: payload.renewalMonth, renewalDate: payload.renewalDate || "",
       owner: payload.contactName, phone: payload.phone, notes: payload.notes,
@@ -4160,6 +4165,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
         
         {editing ? (
           <div style={{ marginTop: 16 }}>
+            <Field label="Business Name *"><input style={inputStyle} value={form.business} onChange={set("business")} placeholder="Business / Restaurant name" /></Field>
             <Field label="Sub Location"><input style={inputStyle} value={form.subLocation} onChange={set("subLocation")} /></Field>
             <Field label="POS Name"><input style={inputStyle} value={form.posName} onChange={set("posName")} /></Field>
             <Field label="Contact Name"><input style={inputStyle} value={form.owner} onChange={set("owner")} /></Field>
@@ -4180,7 +4186,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
             <Field label="Comments"><textarea style={{ ...inputStyle, minHeight: 60 }} value={form.notes} onChange={set("notes")} /></Field>
             <div style={{ display: "flex", gap: 8 }}>
               <button onClick={() => setEditing(false)} style={{ flex: 1, padding: 10, borderRadius: 11, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
-              <button onClick={saveEdit} disabled={saving} style={{ flex: 1, padding: 10, borderRadius: 11, border: "none", background: T.route, color: "#fff", fontWeight: 700, cursor: "pointer" }}>{saving ? "Saving…" : "Save changes"}</button>
+              <button onClick={saveEdit} disabled={saving || !form.business.trim()} style={{ flex: 1, padding: 10, borderRadius: 11, border: "none", background: T.route, color: "#fff", fontWeight: 700, cursor: saving || !form.business.trim() ? "not-allowed" : "pointer", opacity: saving || !form.business.trim() ? .6 : 1 }}>{saving ? "Saving…" : "Save changes"}</button>
             </div>
           </div>
         ) : detailTab === "overview" ? (
@@ -4409,7 +4415,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                                   const text = String(newValue || "").trim();
                                   detail = text ? <span style={{ color: T.inkSoft }}>“{text.length > 90 ? `${text.slice(0, 90)}…` : text}”</span> : <span style={{ color: T.inkSoft }}>Comment cleared</span>;
                                 } else if (action === "lead.edited" && h.changes) {
-                                  const names = { subLocation:"Sub Location", posName:"POS Name", renewalMonth:"Renewal Month", renewalDate:"Renewal Date", contactName:"Contact Name", phone:"Contact Number", dealValue:"Deal Value" };
+                                  const names = { businessName:"Business Name", subLocation:"Sub Location", posName:"POS Name", renewalMonth:"Renewal Month", renewalDate:"Renewal Date", contactName:"Contact Name", phone:"Contact Number", dealValue:"Deal Value" };
                                   const fields = Object.keys(h.changes).map((k) => names[k] || k);
                                   detail = <span style={{ color: T.inkSoft }}>{fields.length ? fields.join(", ") : "Lead details updated"}</span>;
                                 }
@@ -4756,6 +4762,7 @@ function SalesmanApp({ session, online, page, notificationLead }) {
   const handleUpdateLeadDetails = async (id, payload) => {
     setLeads((prev) => prev.map((l) => (l.id === id ? {
       ...l,
+      business: payload.businessName ?? l.business,
       subLocation: payload.subLocation, posName: payload.posName,
       renewalMonth: payload.renewalMonth, renewalDate: payload.renewalDate || "",
       owner: payload.contactName, phone: payload.phone, notes: payload.notes,
@@ -5356,13 +5363,11 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
       </AddLeadField>
       <DuplicateLeadWarning result={duplicateResult} />
       <AddLeadSection>Deal &amp; follow-up</AddLeadSection>
-      {leadSettings.requireStatus && (
-        <AddLeadField label="Status *">
-          <select style={inputStyle} value={form.status} onChange={set("status")}>
-            {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
-          </select>
-        </AddLeadField>
-      )}
+      <AddLeadField label={`Stage${leadSettings.requireStatus ? " *" : ""}`}>
+        <select style={inputStyle} value={form.status} onChange={set("status")}>
+          {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+        </select>
+      </AddLeadField>
       <div style={{ display: "flex", gap: 10 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <AddLeadField label={`Expected Deal Value${leadSettings.requireDealValue ? " *" : ""}`}>
