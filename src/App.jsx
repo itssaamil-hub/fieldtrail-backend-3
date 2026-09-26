@@ -1613,14 +1613,14 @@ function LiveMap({ salesmen, leads, onSelectLead, title = "Live Employees & Lead
   }, [leads]);
 
   return (
-    <div className="ft-card" style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, padding: 18 }}>
+    <div className="ft-card" style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, padding: 18, display: "flex", flexDirection: "column", height: "100%", boxSizing: "border-box" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: subtitle ? 2 : 8, flexWrap: "wrap" }}>
         <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16 }}>{title}</div>
         {headerControls || (!subtitle && <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: T.verified, fontFamily: "'IBM Plex Mono', monospace" }}><Radio size={12} /> LIVE</div>)}
       </div>
       {subtitle && <div style={{ fontSize: 11.5, color: T.inkSoft, marginBottom: 8 }}>{subtitle}</div>}
-      <div style={{ position: "relative" }}>
-        <div ref={containerRef} style={{ width: "100%", height: subtitle ? 460 : 360, borderRadius: 11, overflow: "hidden" }} />
+      <div style={{ position: "relative", flex: 1, minHeight: subtitle ? 460 : 360 }}>
+        <div ref={containerRef} style={{ width: "100%", height: "100%", minHeight: subtitle ? 460 : 360, borderRadius: 11, overflow: "hidden" }} />
         <button
           onClick={() => setLocked((v) => !v)}
           title={locked ? "Map is locked — tap to unlock and move it" : "Map is unlocked — tap to lock it in place"}
