@@ -120,67 +120,6 @@
     min-height: 58px !important;
   }
 
-  /* Android is much more reliable when the renewal controls stack instead of
-     sharing a narrow flex/grid row. The phone modal already scrolls full-screen,
-     so this removes overlap without changing any lead data or desktop layout. */
-  .engage-mobile-add-lead-polish [data-renewal-expiry-row="true"] {
-    display: grid !important;
-    grid-template-columns: minmax(0, 1fr) !important;
-    gap: 8px !important;
-    width: 100% !important;
-    align-items: start !important;
-  }
-
-  .engage-mobile-add-lead-polish [data-renewal-month-wrap="true"],
-  .engage-mobile-add-lead-polish [data-renewal-date-wrap="true"] {
-    width: 100% !important;
-    min-width: 0 !important;
-    max-width: 100% !important;
-    grid-column: 1 / -1 !important;
-    flex: none !important;
-  }
-
-  .engage-mobile-add-lead-polish [data-renewal-month-field="true"],
-  .engage-mobile-add-lead-polish [data-renewal-date-field="true"] {
-    display: block !important;
-    width: 100% !important;
-    min-width: 0 !important;
-    max-width: 100% !important;
-    flex: none !important;
-  }
-
-  .engage-mobile-add-lead-polish [data-renewal-month-field="true"] > div:first-child,
-  .engage-mobile-add-lead-polish [data-renewal-date-field="true"] > div:first-child {
-    white-space: normal !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-    font-size: 11px !important;
-    line-height: 1.3 !important;
-  }
-
-  .engage-mobile-add-lead-polish [data-renewal-month-field="true"] select,
-  .engage-mobile-add-lead-polish [data-renewal-date-field="true"] input {
-    display: block !important;
-    width: 100% !important;
-    min-width: 0 !important;
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-  }
-
-  .engage-mobile-add-lead-polish [data-renewal-help="true"] {
-    display: none !important;
-  }
-
-  .engage-mobile-add-lead-polish [data-expiry-help="true"] {
-    display: block !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    margin-top: 4px !important;
-    font-size: 9.5px !important;
-    line-height: 1.25 !important;
-    white-space: normal !important;
-  }
-
   .engage-mobile-add-lead-polish [data-mobile-lead-save="true"] {
     position: sticky !important;
     bottom: 0 !important;
@@ -209,5 +148,97 @@
     margin-top: 10px !important;
     margin-bottom: 7px !important;
     font-size: 11.5px !important;
+  }
+}
+
+/* Renewal / Expiry is one control: month stays primary, exact date opens from a compact picker button. */
+.engage-mobile-add-lead-polish [data-renewal-expiry-row="true"] {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  column-gap: 8px !important;
+  row-gap: 0 !important;
+  width: 100% !important;
+  align-items: end !important;
+}
+
+.engage-mobile-add-lead-polish [data-renewal-month-wrap="true"],
+.engage-mobile-add-lead-polish [data-renewal-date-wrap="true"] {
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  flex: none !important;
+}
+
+.engage-mobile-add-lead-polish [data-renewal-month-field="true"],
+.engage-mobile-add-lead-polish [data-renewal-date-field="true"] {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+.engage-mobile-add-lead-polish [data-renewal-date-label="true"] {
+  display: none !important;
+}
+
+.engage-mobile-add-lead-polish [data-renewal-native-date="true"] {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+}
+
+.engage-mobile-add-lead-polish [data-renewal-date-field="true"] {
+  position: relative !important;
+}
+
+.engage-mobile-add-lead-polish [data-renewal-date-picker="true"] {
+  min-height: 40px !important;
+  height: 40px !important;
+  padding: 0 13px !important;
+  border: 1px solid #dfe5e2 !important;
+  border-radius: 10px !important;
+  background: #fff !important;
+  color: #145c5d !important;
+  font: inherit !important;
+  font-weight: 700 !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+  box-sizing: border-box !important;
+  box-shadow: none !important;
+}
+
+.engage-mobile-add-lead-polish [data-renewal-date-picker="true"][data-has-date="true"] {
+  background: #f4faf7 !important;
+  border-color: #8ec8b4 !important;
+}
+
+@media (max-width: 560px) {
+  .engage-mobile-add-lead-polish [data-renewal-expiry-row="true"] {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    column-gap: 8px !important;
+    align-items: end !important;
+  }
+
+  .engage-mobile-add-lead-polish [data-renewal-month-field="true"] > div:first-child {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    font-size: 11px !important;
+    line-height: 1.3 !important;
+  }
+
+  .engage-mobile-add-lead-polish [data-renewal-month-field="true"] select {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .engage-mobile-add-lead-polish [data-renewal-date-picker="true"] {
+    min-width: 116px !important;
+    max-width: 150px !important;
+    font-size: 11px !important;
   }
 }
