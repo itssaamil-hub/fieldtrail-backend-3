@@ -5118,7 +5118,7 @@ function SalesmanView({ notificationLead, session, leads, dayStarted, allowLeadW
       </div>
       <div hidden={!dashboard}><TasksEntry onPendingChange={setPendingTasks} /></div>
       {visited.leads && <div hidden={!phone || mobileTab !== "leads"}>
-        <MyLeadsModal embedded leads={leads} onSelectLead={setViewingLead} allowDateFilter />
+        <MyLeadsModal embedded leads={leads} onSelectLead={setViewingLead} allowDateFilter employeeMobile />
       </div>}
       {visited.tasks && <div hidden={!phone || mobileTab !== "tasks"}><TasksModal embedded active={phone && mobileTab === "tasks"} /></div>}
       {phone && mobileTab === "more" && <section className="engage-salesman-more"><h2>More</h2>
@@ -5571,21 +5571,83 @@ function GpsStatus({ gps, verification }) {
   );
 }
 
-function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads", allowDateFilter = false, embedded = false }) {
+function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads", allowDateFilter = false, embedded = false, employeeMobile = false }) {
   const [briefLead, setBriefLead] = useState(null);
   const [filterDate, setFilterDate] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [revenuePeriod, setRevenuePeriod] = useState("all"); // "all" | "month" — only shown for the Won Leads modal
+  const [employeeDatePreset, setEmployeeDatePreset] = useState("all");
+  const [employeeDateFrom, setEmployeeDateFrom] = useState("");
+  const [employeeDateTo, setEmployeeDateTo] = useState("");
+  const [employeeSort, setEmployeeSort] = useState("latest_activity");
   const isWonModal = title === "Won Leads";
 
-  const shown = leads.filter(
+  const localDayStart = (value) => {
+    if (!value) return null;
+    const date = value instanceof Date ? new Date(value) : new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+    date.setHours(0, 0, 0, 0);
+    return date;
+  };
+  const leadActivityDate = (lead) => lead.updatedAt || lead.createdAt;
+  const employeeDateMatches = (lead) => {
+    if (!employeeMobile || employeeDatePreset === "all") return true;
+    const activity = localDayStart(leadActivityDate(lead));
+    if (!activity) return false;
+    const today = localDayStart(new Date());
+    const daysAgo = Math.floor((today - activity) / 86400000);
+    if (employeeDatePreset === "today") return daysAgo === 0;
+    if (employeeDatePreset === "yesterday") return daysAgo === 1;
+    if (employeeDatePreset === "last7") return daysAgo >= 0 && daysAgo <= 6;
+    if (employeeDatePreset === "last30") return daysAgo >= 0 && daysAgo <= 29;
+    if (employeeDatePreset === "month") return activity.getFullYear() === today.getFullYear() && activity.getMonth() === today.getMonth();
+    if (employeeDatePreset === "custom") {
+      const from = employeeDateFrom ? localDayStart(`${employeeDateFrom}T00:00:00`) : null;
+      const to = employeeDateTo ? localDayStart(`${employeeDateTo}T00:00:00`) : null;
+      return (!from || activity >= from) && (!to || activity <= to);
+    }
+    return true;
+  };
+  const employeeAttention = (lead) => {
+    const today = localDayStart(new Date());
+    const followUp = lead.nextFollowUpDate ? localDayStart(`${String(lead.nextFollowUpDate).slice(0, 10)}T00:00:00`) : null;
+    const terminal = lead.status === "won" || lead.status === "lost";
+    if (followUp && !terminal) {
+      const diff = Math.round((followUp - today) / 86400000);
+      if (diff < 0) return { label: "Overdue", tone: "overdue" };
+      if (diff === 0) return { label: "Due today", tone: "due" };
+      if (diff === 1) return { label: "Due tomorrow", tone: "due" };
+    }
+    const activity = localDayStart(leadActivityDate(lead));
+    if (!activity) return { label: "", tone: "normal" };
+    const age = Math.max(0, Math.floor((today - activity) / 86400000));
+    if (age === 0) return { label: "Today", tone: "normal" };
+    if (age === 1) return { label: "Yesterday", tone: "normal" };
+    if (age < 7) return { label: `${age} days ago`, tone: "normal" };
+    return { label: `${age} days old`, tone: "stale" };
+  };
+
+  const filtered = leads.filter(
     (l) =>
       (!filterDate || l.createdAt.toISOString().slice(0, 10) === filterDate) &&
       (filterStatus === "all" || l.status === filterStatus) &&
       (!isWonModal || revenuePeriod === "all" || isThisMonth(l.createdAt)) &&
+      employeeDateMatches(l) &&
       (!searchQuery.trim() || [l.business, l.owner, l.phone, l.subLocation].some((f) => f && f.toLowerCase().includes(searchQuery.trim().toLowerCase())))
   );
+  const shown = employeeMobile ? [...filtered].sort((a, b) => {
+    const activityA = new Date(leadActivityDate(a) || 0).getTime();
+    const activityB = new Date(leadActivityDate(b) || 0).getTime();
+    if (employeeSort === "oldest_activity") return activityA - activityB;
+    if (employeeSort === "newest_lead") return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    if (employeeSort === "oldest_lead") return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    if (employeeSort === "follow_up") {
+      const follow = (lead) => lead.nextFollowUpDate ? new Date(`${String(lead.nextFollowUpDate).slice(0, 10)}T00:00:00`).getTime() : Number.POSITIVE_INFINITY;
+      return follow(a) - follow(b) || activityB - activityA;
+    }
+    return activityB - activityA;
+  }) : filtered;
 
   const totalRevenue = isWonModal ? shown.reduce((sum, l) => sum + (l.dealValue || 0), 0) : 0;
 
@@ -5628,21 +5690,54 @@ function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads", allowD
           </button>
         )}
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-        {!isWonModal && (
-          <Select value={filterStatus} onChange={setFilterStatus} options={[["all", "All statuses"], ...STATUSES.map((s) => [s, STATUS_LABEL[s]])]} />
-        )}
-        {allowDateFilter && (
-          <>
-            <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} style={{ ...inputStyle, marginBottom: 0, flex: 1, minWidth: 130 }} />
-            {filterDate && (
-              <button onClick={() => setFilterDate("")} style={{ fontSize: 11.5, color: T.inkSoft, background: "none", border: "none", cursor: "pointer", whiteSpace: "nowrap" }}>
-                Clear date
-              </button>
-            )}
-          </>
-        )}
-      </div>
+      {employeeMobile ? (
+        <>
+          <div className="employee-mobile-lead-filters">
+            <select aria-label="Lead status" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+              <option value="all">Status</option>
+              {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+            </select>
+            <select aria-label="Lead date" value={employeeDatePreset} onChange={(e) => setEmployeeDatePreset(e.target.value)}>
+              <option value="all">Date</option>
+              <option value="today">Today</option>
+              <option value="yesterday">Yesterday</option>
+              <option value="last7">Last 7 days</option>
+              <option value="last30">Last 30 days</option>
+              <option value="month">This month</option>
+              <option value="custom">Custom range</option>
+            </select>
+            <select aria-label="Lead sort" value={employeeSort} onChange={(e) => setEmployeeSort(e.target.value)}>
+              <option value="latest_activity">Latest activity</option>
+              <option value="oldest_activity">Oldest activity</option>
+              <option value="newest_lead">Newest lead</option>
+              <option value="oldest_lead">Oldest lead</option>
+              <option value="follow_up">Follow-up due</option>
+            </select>
+          </div>
+          {employeeDatePreset === "custom" && (
+            <div className="employee-mobile-custom-date">
+              <input aria-label="Date from" type="date" value={employeeDateFrom} onChange={(e) => setEmployeeDateFrom(e.target.value)} />
+              <input aria-label="Date to" type="date" value={employeeDateTo} onChange={(e) => setEmployeeDateTo(e.target.value)} />
+            </div>
+          )}
+        </>
+      ) : (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+          {!isWonModal && (
+            <Select value={filterStatus} onChange={setFilterStatus} options={[["all", "All statuses"], ...STATUSES.map((s) => [s, STATUS_LABEL[s]])]} />
+          )}
+          {allowDateFilter && (
+            <>
+              <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} style={{ ...inputStyle, marginBottom: 0, flex: 1, minWidth: 130 }} />
+              {filterDate && (
+                <button onClick={() => setFilterDate("")} style={{ fontSize: 11.5, color: T.inkSoft, background: "none", border: "none", cursor: "pointer", whiteSpace: "nowrap" }}>
+                  Clear date
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      )}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {shown.length === 0 && (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, color: T.inkSoft, fontSize: 13, padding: "30px 8px" }}>
@@ -5660,7 +5755,10 @@ function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads", allowD
                   <button type="button" className="ft-lead-brief-pill" aria-label={`Brief for ${l.business}`} onClick={event => { event.stopPropagation(); setBriefLead(l); }}><Sparkles size={11} /> Brief</button>
                 </div>
                 <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 3, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <span>{STATUS_LABEL[l.status]} · {fmtTime(l.createdAt)}</span>
+                  {employeeMobile ? (() => {
+                    const attention = employeeAttention(l);
+                    return <span className={`employee-mobile-lead-meta employee-mobile-lead-meta--${attention.tone}`}><span>{STATUS_LABEL[l.status]}</span>{attention.label && <><span aria-hidden="true"> · </span><strong>{attention.label}</strong></>}</span>;
+                  })() : <span>{STATUS_LABEL[l.status]} · {fmtTime(l.createdAt)}</span>}
               {l.renewalDate && (
                 <span style={{ fontWeight: 700, color: T.accent }}>
                   Renews {new Date(l.renewalDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
