@@ -1,0 +1,85 @@
+name: Move activity overview to dashboard
+
+on:
+  push:
+    paths:
+      - '.github/workflows/move-activity-dashboard-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Move dashboard activity and remove employee map/activity
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('src/App.jsx')
+          s = path.read_text()
+
+          employee_activity = '{section === "employees" && !phone && <AdminActivityOverview salesmen={salesmen} />}\n'
+          if employee_activity not in s:
+              raise SystemExit('Employee activity block not found')
+          s = s.replace(employee_activity, '', 1)
+
+          renewal = '        <StatCard variant="dashboard" label="Renewals Due" sub="next 30 days" value={upcomingRenewals.length} icon={RefreshCw} color={T.accent} onClick={() => setStatLeadsModal({ title: "Renewals Due (Next 30 Days)", leads: upcomingRenewals })} />\n      </div>'
+          if renewal not in s:
+              raise SystemExit('Dashboard KPI tail not found')
+          replacement = renewal + '\n      {showDashboard && !phone && <AdminActivityOverview salesmen={salesmen} />}'
+          s = s.replace(renewal, replacement, 1)
+
+          old_map_open = '{mapView === "live" || (sectionNavigation && section === "employees") ? ('
+          if old_map_open not in s:
+              raise SystemExit('Map block opening not found')
+          s = s.replace(old_map_open, '{showDashboard && (mapView === "live" ? (', 1)
+
+          old_grid = '<div className={sectionNavigation && section === "employees" ? undefined : "ft-dashboard-grid"}>'
+          if old_grid not in s:
+              raise SystemExit('Map grid wrapper not found')
+          s = s.replace(old_grid, '<div className="ft-dashboard-grid">', 1)
+
+          old_live = '{(showDashboard || (sectionNavigation && section === "employees")) && <LiveMap'
+          if old_live not in s:
+              raise SystemExit('Live map condition not found')
+          s = s.replace(old_live, '<LiveMap', 1)
+
+          # The map ternary previously ended with one `)}`. The new showDashboard wrapper
+          # needs one extra closing parenthesis. Anchor on the filtered-map tail before the
+          # employee/dashboard content that follows.
+          marker = '          subtitle="Respects the employee/status/date filters below"'
+          pos = s.find(marker)
+          if pos == -1:
+              raise SystemExit('Filtered map marker not found')
+          end = s.find('/>', pos)
+          if end == -1:
+              raise SystemExit('Filtered map end not found')
+          close = s.find(')}', end)
+          if close == -1:
+              raise SystemExit('Map ternary close not found')
+          s = s[:close] + '))}' + s[close+2:]
+
+          path.write_text(s)
+      - name: Install dependencies
+        run: npm ci
+      - name: Build frontend
+        run: npm run build
+      - name: Commit verified change and remove workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm .github/workflows/move-activity-dashboard-once.yml
+          git add src/App.jsx .github/workflows/move-activity-dashboard-once.yml
+          git diff --cached --quiet && exit 0
+          git commit -m "fix: move activity and map to dashboard"
+          git push origin HEAD:main
