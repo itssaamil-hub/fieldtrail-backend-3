@@ -1,0 +1,60 @@
+name: Apply activity overview dashboard
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-activity-overview-once.yml'
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Wire API and dashboard
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          api = Path('src/api.js')
+          text = api.read_text()
+          marker = '  adminSummary: () => request("/admin/dashboard/summary"),\n'
+          addition = '''  adminSummary: () => request("/admin/dashboard/summary"),\n  adminActivityOverview: (params = {}) => {\n    const entries = Object.entries(params).filter(([, v]) => v != null && v !== "" && v !== "all");\n    const qs = new URLSearchParams(entries).toString();\n    return request(`/admin/activity-centre/overview${qs ? `?${qs}` : ""}`);\n  },\n'''
+          if 'adminActivityOverview:' not in text:
+              if marker not in text:
+                  raise SystemExit('api marker not found')
+              text = text.replace(marker, addition, 1)
+              api.write_text(text)
+
+          app = Path('src/App.jsx')
+          text = app.read_text()
+          import_line = 'import AdminActivityOverview from "./AdminActivityOverview.jsx";\n'
+          if import_line not in text:
+              marker = 'import useUnreadNotifications from "./useUnreadNotifications.js";\n'
+              if marker not in text:
+                  raise SystemExit('App import marker not found')
+              text = text.replace(marker, marker + import_line, 1)
+
+          if '<AdminActivityOverview salesmen={salesmen} salesmanId={dashboardSalesman} />' not in text:
+              marker = '      </div>\n      <div hidden={!showDashboard && section !== "employees"}>\n'
+              replacement = '      </div>\n      {showDashboard && !phone && <AdminActivityOverview salesmen={salesmen} salesmanId={dashboardSalesman} />}\n      <div hidden={!showDashboard && section !== "employees"}>\n'
+              if marker not in text:
+                  raise SystemExit('dashboard insertion marker not found')
+              text = text.replace(marker, replacement, 1)
+          app.write_text(text)
+          PY
+      - name: Install dependencies
+        run: npm ci
+      - name: Build frontend
+        run: npm run build
+      - name: Commit verified change and remove one-time workflow
+        run: |
+          rm .github/workflows/apply-activity-overview-once.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/api.js src/App.jsx src/AdminActivityOverview.jsx .github/workflows/apply-activity-overview-once.yml
+          git commit -m "feat: add seven day activity overview" || exit 0
+          git push
