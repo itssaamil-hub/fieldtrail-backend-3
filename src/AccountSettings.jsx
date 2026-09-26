@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { X, UserRound, ShieldCheck, KeyRound, Eye, EyeOff } from "lucide-react";
-import { getApiBase, getSession, setSession } from "./api.js";
+import { getApiBase, getSession, setSession, clearSession } from "./api.js";
 
 async function accountRequest(path, options = {}) {
   const session = getSession();
@@ -103,8 +103,13 @@ function AccountSettingsModal({ onClose }) {
     if (pw.newPassword.length < 8) { setError("New password must be at least 8 characters."); return; }
     setChangingPassword(true);
     try {
-      await accountRequest("/auth/change-password", { method:"POST", body:{ currentPassword:pw.currentPassword, newPassword:pw.newPassword } });
+      const data = await accountRequest("/auth/change-password", { method:"POST", body:{ currentPassword:pw.currentPassword, newPassword:pw.newPassword } });
       setPw({ currentPassword:"", newPassword:"", confirmPassword:"" });
+      if (data?.reauthenticate) {
+        clearSession();
+        window.location.reload();
+        return;
+      }
       setPasswordMessage("Password changed successfully.");
     } catch (err) { setError(err.message); }
     finally { setChangingPassword(false); }
@@ -158,7 +163,7 @@ function AccountSettingsModal({ onClose }) {
                 {passwordField("newPassword", "New password", "next")}
                 {passwordField("confirmPassword", "Confirm new password", "confirm")}
               </div>
-              <div style={{ fontSize:11, color:"#6B7280" }}>Use at least 8 characters. Your current password is required before a new password can be saved.</div>
+              <div style={{ fontSize:11, color:"#6B7280" }}>Use at least 8 characters. Changing your password securely signs out existing sessions, so you will log in again.</div>
             </div>
             <div style={{ marginTop:16, display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
               <span style={{ fontSize:12, color:"#16805C", fontWeight:700 }}>{passwordMessage}</span>
