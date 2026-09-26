@@ -1986,6 +1986,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
         <StatCard variant="dashboard" label="Upcoming Follow-up" value={upcomingFollowUps.length} icon={CalendarClock} color={T.warn} onClick={() => setStatLeadsModal({ title: "Upcoming Follow-ups", leads: upcomingFollowUps })} />
         <StatCard variant="dashboard" label="Renewals Due" sub="next 30 days" value={upcomingRenewals.length} icon={RefreshCw} color={T.accent} onClick={() => setStatLeadsModal({ title: "Renewals Due (Next 30 Days)", leads: upcomingRenewals })} />
       </div>
+      {showDashboard && !phone && <AdminActivityOverview salesmen={salesmen} />} 
       {phone && <AdminMobileLeadTrend leads={dashboardLeads} />}
 
       {conversationError && <p role="alert" style={{color:T.danger}}>{conversationError}</p>}
@@ -1993,8 +1994,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
 
       </div>
       <div hidden={!showDashboard && section !== "employees"}>
-      {section === "employees" && !phone && <AdminActivityOverview salesmen={salesmen} />}
-      {mapView === "live" || (sectionNavigation && section === "employees") ? (
+            {mapView === "live" || (sectionNavigation && section === "employees") ? (
         <div className={sectionNavigation && section === "employees" ? undefined : "ft-dashboard-grid"}>
           {(showDashboard || (sectionNavigation && section === "employees")) && <LiveMap
             salesmen={salesmen}
