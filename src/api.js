@@ -217,6 +217,11 @@ export const api = {
   health: () => request("/health", { auth: false }),
 
   adminSummary: () => request("/admin/dashboard/summary"),
+  adminActivityOverview: (params = {}) => {
+    const entries = Object.entries(params).filter(([, v]) => v != null && v !== "" && v !== "all");
+    const qs = new URLSearchParams(entries).toString();
+    return request(`/admin/activity-centre/overview${qs ? `?${qs}` : ""}`);
+  },
   adminSalesmen: () => request("/admin/salesmen"),
   adminCreateSalesman: (payload) => request("/admin/salesmen", { method: "POST", body: payload }),
   adminUpdateSalesman: (id, payload) => request(`/admin/salesmen/${id}`, { method: "PATCH", body: payload }),

@@ -5,6 +5,7 @@ import SaveFeedback from "./SaveFeedback.jsx";
 import { showSaveFeedback } from "./saveFeedback.js";
 import AdminMobileNav, { useAdminPhone, salesmanTabs } from "./AdminMobileNav.jsx";
 import useUnreadNotifications from "./useUnreadNotifications.js";
+import AdminActivityOverview from "./AdminActivityOverview.jsx";
 import React, { lazy, Suspense, useState, useEffect, useRef, useCallback } from "react";
 import {
   MapPin,
@@ -1991,6 +1992,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
       <div style={{ display: "none" }} aria-hidden="true"><TasksEntry onPendingChange={setAdminPendingTasks} /></div>
 
       </div>
+      {showDashboard && !phone && <AdminActivityOverview salesmen={salesmen} salesmanId={dashboardSalesman} />}
       <div hidden={!showDashboard && section !== "employees"}>
       {mapView === "live" || (sectionNavigation && section === "employees") ? (
         <div className={sectionNavigation && section === "employees" ? undefined : "ft-dashboard-grid"}>
