@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'tools/strong_frontend_cleanup.py'
+      - '.github/workflows/strong-frontend-cleanup.yml'
   workflow_dispatch:
 
 permissions:
