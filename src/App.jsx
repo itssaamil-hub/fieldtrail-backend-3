@@ -996,6 +996,8 @@ function SettingsModal({ apiBase, onClose, onSave, onLogout, onOpenCrmSettings, 
 // Shared small pieces
 // ---------------------------------------------------------------------------
 function StatCard({ label, value, sub, color, icon: IconC, onClick, comparison, comparisonPeriod, variant }) {
+  const labelText = typeof label === "string" ? label : "";
+  const salesmanKpi = ["Today", "Hot", "Conversation", "Negotiation", "Won", "Renewals"].includes(labelText);
   const c = color || T.ink;
   const dashboardCard = variant === "dashboard";
 
@@ -1031,7 +1033,7 @@ function StatCard({ label, value, sub, color, icon: IconC, onClick, comparison, 
 
   return (
     <div
-      className={onClick ? "ft-card ft-row" : "ft-card"}
+      className={`${onClick ? "ft-card ft-row" : "ft-card"}${salesmanKpi ? " engage-salesman-water-card" : ""}`} data-kpi={salesmanKpi ? labelText.toLowerCase() : undefined}
       onClick={onClick}
       style={{
         background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, padding: "14px 16px",
@@ -1246,26 +1248,6 @@ function CrmSettingsModal({ onClose }) {
           <SettingToggle label="Check Contact Number" checked={leadSettings.duplicateCheckPhone !== false} onChange={toggleLead("duplicateCheckPhone")} />
           <SettingToggle label="Check Business Name + Sub Location" checked={leadSettings.duplicateCheckBusinessLocation !== false} onChange={toggleLead("duplicateCheckBusinessLocation")} />
           <SettingToggle label="Allow employee to add anyway" description="When off, an exact contact-number match is blocked." checked={leadSettings.allowDuplicateOverride === true} onChange={toggleLead("allowDuplicateOverride")} />
-
-          <div style={{ fontSize: 11, textTransform: "uppercase", color: T.inkSoft, fontWeight: 700, letterSpacing: 0.4, marginTop: 22, marginBottom: 4 }}>Location Settings</div>
-          <SettingToggle
-            label="GPS Location"
-            description="If off, leads can be saved with no location at all."
-            checked={locationSettings.gpsLocation}
-            onChange={toggleLocation("gpsLocation")}
-          />
-          <SettingToggle
-            label="Location Mandatory for New Lead"
-            description="Only applies when GPS Location is on — employee must capture location before saving."
-            checked={locationSettings.locationMandatoryForNewLead}
-            onChange={toggleLocation("locationMandatoryForNewLead")}
-          />
-          <SettingToggle
-            label="Continuous GPS Tracking"
-            description="Live location pings while the employee's day is active."
-            checked={locationSettings.continuousGpsTracking}
-            onChange={toggleLocation("continuousGpsTracking")}
-          />
 
           <FieldOptionsSection />
 
@@ -1925,6 +1907,20 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
       )}
 
       <div hidden={!showDashboard}>
+      {!phone && (
+        <div className="engage-dashboard-greeting" style={{ minHeight: 44, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "0 2px", marginBottom: 8 }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 20, lineHeight: 1.2, fontWeight: 700, letterSpacing: "-.25px", color: T.ink }}>
+              {new Date().getHours() < 12 ? "Good morning" : new Date().getHours() < 17 ? "Good afternoon" : "Good evening"}, {(getSession()?.fullName || getSession()?.full_name || getSession()?.name || "Admin").split(/\s+/)[0]} 👋
+            </div>
+            <div style={{ fontSize: 13, color: T.inkSoft, marginTop: 2 }}>A quick look at what needs your attention today.</div>
+          </div>
+          <select aria-label="Dashboard employee desktop" value={dashboardSalesman} onChange={(e) => setDashboardSalesman(e.target.value)} style={{ minWidth: 128, height: 34, padding: "5px 30px 5px 10px", borderRadius: 9, fontSize: 12.5, fontWeight: 600, background: "#fff", border: `1px solid ${T.line}`, color: T.ink }}>
+            <option value="all">👥 All Team</option>
+            {salesmen.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        </div>
+      )}
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
         <StatCard variant="dashboard" label="Total Employees" value={salesmen.length} sub={<span style={{color:T.verified}}>{activeSalesmen} active now</span>} icon={Contact2} color="#64748B" />
         <StatCard variant="dashboard" label="Conversation" value={conversationCount ?? "—"} comparison={conversationComparison} comparisonPeriod={comparisonPeriod} icon={MessageSquare} color={T.route} onClick={async () => { try { setConversationError(""); const result=await api.adminLeads({status:"conversation"}); setStatLeadsModal({title:conversationCount>500?"Conversation Leads · Latest 500":"Conversation Leads",leads:(result.leads||[]).map(mapLeadRow)}); } catch(e) { setConversationError(e.message); } }} />
@@ -1939,6 +1935,21 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
 
       {conversationError && <p role="alert" style={{color:T.danger}}>{conversationError}</p>}
       <TasksEntry />
+      {!phone && salesmen.length > 0 && (
+        <div className="engage-map-team-pulse" style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", margin: "0 0 10px", border: `1px solid ${T.line}`, borderRadius: 11, background: "#FBFCFC", overflowX: "auto" }}>
+          <strong style={{ fontSize: 11.5, color: T.ink, whiteSpace: "nowrap" }}>{salesmen.filter((s) => s.status === "online").length} live</strong>
+          {salesmen.slice().sort((a,b)=>(a.status === "online" ? 0 : 1)-(b.status === "online" ? 0 : 1)).map((s) => (
+            <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 7, padding: "6px 8px", borderRadius: 9, background: "#fff", border: `1px solid ${s.status === "online" ? "#D9EAE4" : T.line}`, flex: "none" }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: s.status === "online" ? T.verified : "#A4AAAC" }} />
+              <div style={{ lineHeight: 1.15 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: T.ink, whiteSpace: "nowrap" }}>{s.name}</div>
+                <div style={{ fontSize: 9.5, color: T.inkSoft, whiteSpace: "nowrap" }}>{(s.distanceM / 1000).toFixed(1)} km · {fmtTime(s.lastUpdate)}</div>
+              </div>
+              <button type="button" onClick={() => setRouteSalesman(s)} style={{ border: 0, background: "#EDF7F5", color: T.route, borderRadius: 7, padding: "5px 7px", fontSize: 9.5, fontWeight: 750, cursor: "pointer" }}>Route</button>
+            </div>
+          ))}
+        </div>
+      )}
       <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: phone ? "nowrap" : "wrap", alignItems: "center", width: phone ? "100%" : "auto" }}>
         <div style={{ flex: phone ? "1 1 0" : "0 0 auto", minWidth: 0 }}><Tab active={mapView === "live"} onClick={() => setMapView("live")} label="Live Map" /></div>
         <div style={{ flex: phone ? "1.25 1 0" : "0 0 auto", minWidth: 0 }}><Tab active={mapView === "leads"} onClick={() => setMapView("leads")} label="Lead Locations" /></div>
