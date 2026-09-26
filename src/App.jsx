@@ -14,6 +14,7 @@ import { TasksEntry, TasksModal } from "./Tasks.jsx";
 import LeadBriefPopup from "./LeadBriefPopup.jsx";
 import useUnreadNotifications from "./useUnreadNotifications.js";
 import NotificationsPanel from "./NotificationsPanel.jsx";
+import { AdminMobileLeadTrend, AdminTeamActivitySheet } from "./AdminMobileEnhancements.jsx";
 import ExceptionCentre from "./ExceptionCentre.jsx";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
@@ -1794,6 +1795,7 @@ function AdminApp({ desktopSection, session, online, page, notificationLead }) {
 function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatusChange, onUpdateLead, onDeleteLead, onAddLead, onAddSalesman, onEditSalesman, onDeleteSalesman, onToggleSalesmanActive, loadError, wsConnected, online, page, notificationLead }) {
   const phone = useAdminPhone();
   const [mobileTab, setMobileTab] = useState("dashboard");
+  const [showTeamActivity, setShowTeamActivity] = useState(false);
   const [tasksVisited, setTasksVisited] = useState(false);
   const desktopPositions = useRef({});
   const previousDesktopSection = useRef(null);
@@ -1924,8 +1926,19 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
           </select>
         </div>
       )}
+      {phone && (
+        <div className="engage-admin-mobile-dashboard-utility">
+          <div className="engage-admin-mobile-greeting">{new Date().getHours() < 12 ? "Good morning" : new Date().getHours() < 17 ? "Good afternoon" : "Good evening"}, {(getSession()?.fullName || getSession()?.full_name || getSession()?.name || "Admin").split(/\s+/)[0]} 👋</div>
+          <div className="engage-admin-mobile-team-slot">
+            <select aria-label="Dashboard employee" value={dashboardSalesman} onChange={(e)=>setDashboardSalesman(e.target.value)}>
+              <option value="all">All Team</option>
+              {salesmen.map((s)=><option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          </div>
+        </div>
+      )}
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
-        <StatCard variant="dashboard" label="Total Employees" value={salesmen.length} sub={<span style={{color:T.verified}}>{activeSalesmen} active now</span>} icon={Contact2} color="#64748B" />
+        <StatCard variant="dashboard" label="Total Employees" value={salesmen.length} sub={<span style={{color:T.verified}}>{activeSalesmen} active now</span>} icon={Contact2} color="#64748B" onClick={phone ? () => setShowTeamActivity(true) : undefined} />
         <StatCard variant="dashboard" label="Conversation" value={conversationCount ?? "—"} comparison={conversationComparison} comparisonPeriod={comparisonPeriod} icon={MessageSquare} color={T.route} onClick={async () => { try { setConversationError(""); const result=await api.adminLeads({status:"conversation"}); setStatLeadsModal({title:conversationCount>500?"Conversation Leads · Latest 500":"Conversation Leads",leads:(result.leads||[]).map(mapLeadRow)}); } catch(e) { setConversationError(e.message); } }} />
         <StatCard variant="dashboard" label="Leads Today" value={todayLeads.length} comparison={leadsTodayComparison} comparisonPeriod={comparisonPeriod} icon={TargetIcon} color="#3B82F6" onClick={() => setStatLeadsModal({ title: "Leads Today", leads: todayLeads })} />
         <StatCard variant="dashboard" label={<>Hot Leads <span style={{ fontSize: 8.5, opacity: 0.65 }}>TODAY</span></>} value={hotLeadsToday.length} icon={Flame} comparison={hotComparison} comparisonPeriod={comparisonPeriod} color={T.danger} onClick={() => setStatLeadsModal({ title: "Hot Leads Today", leads: hotLeadsToday })} />
@@ -1935,6 +1948,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
         <StatCard variant="dashboard" label="Upcoming Follow-up" value={upcomingFollowUps.length} icon={CalendarClock} color={T.warn} onClick={() => setStatLeadsModal({ title: "Upcoming Follow-ups", leads: upcomingFollowUps })} />
         <StatCard variant="dashboard" label="Renewals Due" sub="next 30 days" value={upcomingRenewals.length} icon={RefreshCw} color={T.accent} onClick={() => setStatLeadsModal({ title: "Renewals Due (Next 30 Days)", leads: upcomingRenewals })} />
       </div>
+      {phone && <AdminMobileLeadTrend leads={dashboardLeads} />}
 
       {conversationError && <p role="alert" style={{color:T.danger}}>{conversationError}</p>}
       <TasksEntry />
@@ -2153,6 +2167,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
       {tasksVisited && <div hidden={desktopSection !== "tasks"}><TasksModal embedded active={desktopSection === "tasks"} /></div>}
       <AdminMobileNav active={mobileTab} onChange={switchMobileTab} />
 
+      {showTeamActivity && <AdminTeamActivitySheet salesmen={salesmen} onClose={() => setShowTeamActivity(false)} />}
       {selectedLead && <LeadDetailDrawer lead={leads.find((l) => l.id === selectedLead.id) || selectedLead} onClose={() => setSelectedLead(null)} onStatusChange={onStatusChange} onUpdate={onUpdateLead} onDelete={onDeleteLead} fetchHistory={api.adminLeadHistory} isAdmin />}
       {routeSalesman && <SalesmanRouteModal salesman={routeSalesman} onClose={() => setRouteSalesman(null)} />}
       {showAdminAddLead && (
