@@ -1,0 +1,29 @@
+name: Employee mobile leads cleanup 2
+
+on:
+  push:
+    branches:
+      - employee-mobile-leads-ui
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: employee-mobile-leads-ui
+          fetch-depth: 0
+      - name: Match generated folders to main exactly
+        run: |
+          git fetch origin main
+          git rm -r -f dist node_modules
+          git checkout origin/main -- dist node_modules
+          rm .github/workflows/employee-mobile-leads-cleanup2.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Restore generated folders to main state"
+          git push origin employee-mobile-leads-ui
