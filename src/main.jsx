@@ -6,7 +6,6 @@ import "./index.css";
 import "./salesman-dashboard-cards.css";
 import "./admin-mobile-lead-trend.css";
 import "./admin-team-activity.css";
-import "./expenseReportEnhance.js";
 import "./expense-report-enhance.css";
 import "./employee-panel-enhance.css";
 import "./performanceReportEnhance.js";

@@ -250,6 +250,7 @@ export const api = {
   },
   adminCreateExpense: (payload) => request(`/admin/expenses`, { method: "POST", body: payload }),
   adminDeleteExpense: (id) => request(`/admin/expenses/${id}`, { method: "DELETE" }),
+  adminUpdateExpense: (id, payload) => request(`/admin/expenses/${id}`, { method: "PATCH", body: payload }),
 
   // Push notifications — shared across both roles.
   notificationsUnread: () => request('/notifications/unread'),
