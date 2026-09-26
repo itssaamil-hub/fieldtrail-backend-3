@@ -1996,7 +1996,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
       <div hidden={!showDashboard && section !== "employees"}>
             {mapView === "live" || (sectionNavigation && section === "employees") ? (
         <div className={sectionNavigation && section === "employees" ? undefined : "ft-dashboard-grid"}>
-          {(showDashboard || (sectionNavigation && section === "employees")) && <LiveMap
+          {showDashboard && <LiveMap
             salesmen={salesmen}
             leads={leads}
             onSelectLead={setSelectedLead}
@@ -2019,7 +2019,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
           />
         </div>
       ) : (
-        <LiveMap
+        showDashboard && <LiveMap
           salesmen={[]}
           leads={filteredLeads}
           onSelectLead={setSelectedLead}
