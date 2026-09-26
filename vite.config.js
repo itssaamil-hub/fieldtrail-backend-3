@@ -9,7 +9,15 @@ export default defineConfig({
       // macOS-only native fsevents watcher; without this, an unrelated
       // internal Rollup/vite-plugin-pwa error-handling path tries to resolve
       // it anyway and fails the whole build.
-      external: ["fsevents"],
+external: ["fsevents"],
+output: {
+  manualChunks(id) {
+    if (!id.includes("node_modules")) return;
+    if (id.includes("react") || id.includes("scheduler")) return "vendor-react";
+    if (id.includes("leaflet")) return "vendor-map";
+    if (id.includes("lucide-react")) return "vendor-icons";
+  },
+},
     },
   },
   plugins: [

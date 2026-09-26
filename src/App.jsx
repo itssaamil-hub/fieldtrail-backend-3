@@ -4,20 +4,8 @@ import DesktopSidebar, { useDesktopSidebar } from "./DesktopSidebar.jsx";
 import SaveFeedback from "./SaveFeedback.jsx";
 import { showSaveFeedback } from "./saveFeedback.js";
 import AdminMobileNav, { useAdminPhone, salesmanTabs } from "./AdminMobileNav.jsx";
-import CollectionsPanel, {CollectionsEntry} from "./Collections.jsx";
-import SalesmanBriefPopup from "./SalesmanBrief.jsx";
-import {EmployeeSettings, DayClosingForm, DayClosingReports, DayClosingReportsEntry} from "./DayClosing.jsx";
-import QuotationsPanel, { QuotationSettings } from "./Quotations.jsx";
-import OnboardingPanel, { AppMenu, OnboardingTemplateEditor } from "./Onboarding.jsx";
-import DealValueReport from "./DealValueReport.jsx";
-import { TasksEntry, TasksModal } from "./Tasks.jsx";
-import LeadBriefPopup from "./LeadBriefPopup.jsx";
 import useUnreadNotifications from "./useUnreadNotifications.js";
-import NotificationsPanel from "./NotificationsPanel.jsx";
-import { AdminMobileLeadTrend, AdminTeamActivitySheet } from "./AdminMobileEnhancements.jsx";
-import ExceptionCentre from "./ExceptionCentre.jsx";
-import DataHealth from "./DataHealth.jsx";
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { lazy, Suspense, useState, useEffect, useRef, useCallback } from "react";
 import {
   MapPin,
   Battery,
@@ -81,6 +69,44 @@ import {
   mapLeadRow,
   buildExportUrl,
 } from "./api.js";
+
+// Feature-level lazy boundaries keep infrequently used admin/report screens out
+// of the startup bundle. Each wrapper owns its Suspense boundary so opening one
+// feature never blanks the rest of the CRM while its chunk is fetched.
+const withLazyBoundary = (LazyComponent) => {
+  function LazyFeature(props) {
+    return (
+      <Suspense fallback={<div style={{ padding: 24, textAlign: "center", color: "#6B7280", fontSize: 13 }}>Loading…</div>}>
+        <LazyComponent {...props} />
+      </Suspense>
+    );
+  }
+  return LazyFeature;
+};
+const lazyDefault = (loader) => withLazyBoundary(lazy(loader));
+const lazyNamed = (loader, exportName) => withLazyBoundary(lazy(() => loader().then((mod) => ({ default: mod[exportName] }))));
+
+const CollectionsPanel = lazyDefault(() => import("./Collections.jsx"));
+const CollectionsEntry = lazyNamed(() => import("./Collections.jsx"), "CollectionsEntry");
+const SalesmanBriefPopup = lazyDefault(() => import("./SalesmanBrief.jsx"));
+const EmployeeSettings = lazyNamed(() => import("./DayClosing.jsx"), "EmployeeSettings");
+const DayClosingForm = lazyNamed(() => import("./DayClosing.jsx"), "DayClosingForm");
+const DayClosingReports = lazyNamed(() => import("./DayClosing.jsx"), "DayClosingReports");
+const DayClosingReportsEntry = lazyNamed(() => import("./DayClosing.jsx"), "DayClosingReportsEntry");
+const QuotationsPanel = lazyDefault(() => import("./Quotations.jsx"));
+const QuotationSettings = lazyNamed(() => import("./Quotations.jsx"), "QuotationSettings");
+const OnboardingPanel = lazyDefault(() => import("./Onboarding.jsx"));
+const AppMenu = lazyNamed(() => import("./Onboarding.jsx"), "AppMenu");
+const OnboardingTemplateEditor = lazyNamed(() => import("./Onboarding.jsx"), "OnboardingTemplateEditor");
+const DealValueReport = lazyDefault(() => import("./DealValueReport.jsx"));
+const TasksEntry = lazyNamed(() => import("./Tasks.jsx"), "TasksEntry");
+const TasksModal = lazyNamed(() => import("./Tasks.jsx"), "TasksModal");
+const LeadBriefPopup = lazyDefault(() => import("./LeadBriefPopup.jsx"));
+const NotificationsPanel = lazyDefault(() => import("./NotificationsPanel.jsx"));
+const AdminMobileLeadTrend = lazyNamed(() => import("./AdminMobileEnhancements.jsx"), "AdminMobileLeadTrend");
+const AdminTeamActivitySheet = lazyNamed(() => import("./AdminMobileEnhancements.jsx"), "AdminTeamActivitySheet");
+const ExceptionCentre = lazyDefault(() => import("./ExceptionCentre.jsx"));
+const DataHealth = lazyDefault(() => import("./DataHealth.jsx"));
 
 // ---------------------------------------------------------------------------
 // Design tokens — "field ledger": a working paper trail, not a generic SaaS
