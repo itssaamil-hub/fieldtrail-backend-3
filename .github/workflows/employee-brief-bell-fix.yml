@@ -21,8 +21,9 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Apply employee phone UI fixes
-        shell: python
+        shell: bash
         run: |
+          python - <<'PY'
           from pathlib import Path
 
           app = Path('src/App.jsx')
@@ -37,7 +38,6 @@ jobs:
           new_bell = 'title="Notifications" aria-label={unreadCount ? `Notifications, ${unreadCount} unread` : "Notifications"} className={session?.role === "salesman" ? "employee-notification-button" : undefined} style={{ position: "relative", display: "flex"'
           assert old_bell in text, 'Notification button not found'
           text = text.replace(old_bell, new_bell, 1)
-
           app.write_text(text)
 
           css = Path('src/index.css')
@@ -55,9 +55,7 @@ jobs:
   color: #7450C7 !important;
   stroke: #7450C7 !important;
 }
-.employee-notification-button {
-  overflow: visible !important;
-}
+.employee-notification-button { overflow: visible !important; }
 .employee-notification-button .ft-notification-badge {
   position: absolute !important;
   top: -7px !important;
@@ -80,6 +78,7 @@ jobs:
 }
 '''
               css.write_text(css_text)
+          PY
       - run: npm run build
       - run: npm audit --audit-level=moderate
       - name: Commit verified source changes
