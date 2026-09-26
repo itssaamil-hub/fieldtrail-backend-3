@@ -16,9 +16,23 @@ function formatDate(value){
   return `${d}/${m}/${String(y).slice(-2)}`;
 }
 
+function generatedDateValue(){
+  const inputs = [...document.querySelectorAll('[data-renewal-generated-date="true"]')];
+  const active = inputs.find((el) => el.isConnected && el.value);
+  return active?.value || '';
+}
+
 function normalizePayload(payload = {}){
   if (!payload || typeof payload !== 'object') return payload;
-  if (payload.renewalDate) return { ...payload, renewalMonth: monthFromDate(payload.renewalDate) || payload.renewalMonth || null };
+  const generated = !payload.renewalDate ? generatedDateValue() : '';
+  const renewalDate = payload.renewalDate || generated || null;
+  if (renewalDate) {
+    return {
+      ...payload,
+      renewalDate,
+      renewalMonth: monthFromDate(renewalDate) || payload.renewalMonth || null,
+    };
+  }
   return payload;
 }
 
@@ -54,27 +68,79 @@ function commonAncestor(a, b, maxDepth = 4){
   return null;
 }
 
+function buildGeneratedDateField(monthField){
+  const monthWrap = monthField?.parentElement;
+  if(!monthWrap?.parentElement) return null;
+  const row = monthWrap.parentElement;
+  if(row.querySelector('[data-renewal-generated-date-wrap="true"]')) {
+    const wrap = row.querySelector('[data-renewal-generated-date-wrap="true"]');
+    return {
+      dateWrap: wrap,
+      dateField: wrap.querySelector('[data-renewal-date-field="true"]'),
+      dateLabel: wrap.querySelector('[data-renewal-date-label="true"]'),
+      dateInput: wrap.querySelector('input[type="date"]'),
+    };
+  }
+
+  const dateWrap = document.createElement('div');
+  dateWrap.dataset.renewalDateWrap = 'true';
+  dateWrap.dataset.renewalGeneratedDateWrap = 'true';
+  dateWrap.style.minWidth = '0';
+
+  const dateField = document.createElement('div');
+  dateField.dataset.renewalDateField = 'true';
+
+  const dateLabel = document.createElement('div');
+  dateLabel.dataset.renewalDateLabel = 'true';
+  dateLabel.textContent = '';
+
+  const dateInput = document.createElement('input');
+  dateInput.type = 'date';
+  dateInput.dataset.renewalGeneratedDate = 'true';
+  dateInput.dataset.renewalNativeDate = 'true';
+  dateInput.setAttribute('aria-label','Exact renewal or expiry date');
+
+  dateField.appendChild(dateLabel);
+  dateField.appendChild(dateInput);
+  dateWrap.appendChild(dateField);
+  monthWrap.insertAdjacentElement('afterend', dateWrap);
+  row.dataset.renewalExpiryRow = 'true';
+
+  return { dateWrap, dateField, dateLabel, dateInput };
+}
+
 function enhanceContainer(root){
   if(!visible(root)) return;
   const labelNodes = [...root.querySelectorAll('div')].filter(visible);
   const monthLabel = labelNodes.find(n => text(n) === 'Renewal Month' || text(n) === 'Renewal / Expiry Month' || text(n) === 'Renewal / Expiry');
-  const dateLabel = labelNodes.find(n => text(n) === 'Renewal Date' || text(n) === 'Exact Date (optional)');
-  if(!monthLabel || !dateLabel) return;
+  if(!monthLabel) return;
 
   const monthField = monthLabel.parentElement;
-  const dateField = dateLabel.parentElement;
   const monthSelect = monthField?.querySelector('select');
-  const dateInput = dateField?.querySelector('input[type="date"]');
-  if(!monthSelect || !dateInput) return;
+  if(!monthSelect) return;
+
+  let dateLabel = labelNodes.find(n => text(n) === 'Renewal Date' || text(n) === 'Exact Date (optional)');
+  let dateField = dateLabel?.parentElement || null;
+  let dateInput = dateField?.querySelector('input[type="date"]') || null;
+  let dateWrap = dateField?.parentElement || null;
+
+  // Some Add Lead variants render only Renewal Month. Create the exact-date
+  // picker beside it so the combined control is always available.
+  if(!dateInput){
+    const generated = buildGeneratedDateField(monthField);
+    if(!generated) return;
+    ({ dateWrap, dateField, dateLabel, dateInput } = generated);
+  }
 
   monthLabel.textContent = 'Renewal / Expiry';
-  dateLabel.textContent = '';
-  dateLabel.dataset.renewalDateLabel = 'true';
+  if(dateLabel){
+    dateLabel.textContent = '';
+    dateLabel.dataset.renewalDateLabel = 'true';
+  }
   monthField.dataset.renewalMonthField = 'true';
   dateField.dataset.renewalDateField = 'true';
 
   const monthWrap = monthField.parentElement;
-  const dateWrap = dateField.parentElement;
   if(monthWrap) monthWrap.dataset.renewalMonthWrap = 'true';
   if(dateWrap) dateWrap.dataset.renewalDateWrap = 'true';
   const commonRow = commonAncestor(monthWrap, dateWrap, 3);
@@ -136,7 +202,7 @@ function apply(){
   [...document.querySelectorAll('body *')].filter(node => {
     if(!visible(node)) return false;
     const t = text(node);
-    return (t.includes('Renewal Month') || t.includes('Renewal / Expiry Month') || t.includes('Renewal / Expiry')) && (t.includes('Renewal Date') || t.includes('Exact Date (optional)'));
+    return t.includes('Renewal Month') || t.includes('Renewal / Expiry Month') || t.includes('Renewal / Expiry');
   }).forEach(enhanceContainer);
 }
 function queue(){ if(queued) return; queued = true; requestAnimationFrame(apply); }
