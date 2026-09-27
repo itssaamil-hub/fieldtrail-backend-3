@@ -50,7 +50,11 @@
     display: flex;
     gap: 7px;
     overflow-x: auto;
-    padding: 1px 0 8px;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+    scroll-snap-type: x proximity;
+    padding: 1px 4px 8px 0;
     scrollbar-width: none;
   }
 
@@ -69,17 +73,65 @@
     line-height: 1;
     font-weight: 750;
     white-space: nowrap;
+    scroll-snap-align: start;
+  }
+
+  .engage-salesman-kanban-stage[data-stage="cold"] {
+    background: #F3F4F6;
+    border-color: #E2E5E9;
+    color: #4B5563;
+  }
+
+  .engage-salesman-kanban-stage[data-stage="conversation"] {
+    background: #EAF1FF;
+    border-color: #D8E3FA;
+    color: #315FB4;
+  }
+
+  .engage-salesman-kanban-stage[data-stage="hot"] {
+    background: #FDECEC;
+    border-color: #F4D2D2;
+    color: #C33F3F;
+  }
+
+  .engage-salesman-kanban-stage[data-stage="demo"] {
+    background: #F2ECFF;
+    border-color: #E3D8FA;
+    color: #7350A5;
+  }
+
+  .engage-salesman-kanban-stage[data-stage="negotiation"] {
+    background: #FFF4DA;
+    border-color: #F0D69A;
+    color: #A06B12;
+  }
+
+  .engage-salesman-kanban-stage[data-stage="won"] {
+    background: #E6F6EF;
+    border-color: #CFE9DE;
+    color: #12805C;
+  }
+
+  .engage-salesman-kanban-stage[data-stage="lost"] {
+    background: #F4F4F5;
+    border-color: #E4E4E7;
+    color: #71717A;
+  }
+
+  .engage-salesman-kanban-stage[data-stage="nurture"] {
+    background: #EAF6F8;
+    border-color: #D7EBEF;
+    color: #287C88;
   }
 
   .engage-salesman-kanban-stage.is-active {
-    border-color: #145C5D;
-    background: #EAF5F0;
-    color: #145C5D;
+    box-shadow: inset 0 0 0 1px currentColor, 0 1px 2px rgba(20, 20, 30, .06);
+    font-weight: 800;
   }
 
   .engage-salesman-kanban-stage-count {
     margin-left: 5px;
-    opacity: .72;
+    opacity: .76;
   }
 
   .engage-salesman-kanban-column {
@@ -87,6 +139,38 @@
     border-radius: 13px;
     background: #F8FAF9;
     padding: 9px;
+  }
+
+  .engage-salesman-kanban-column[data-stage="cold"] {
+    border-top: 3px solid #6B7280;
+  }
+
+  .engage-salesman-kanban-column[data-stage="conversation"] {
+    border-top: 3px solid #315FB4;
+  }
+
+  .engage-salesman-kanban-column[data-stage="hot"] {
+    border-top: 3px solid #C33F3F;
+  }
+
+  .engage-salesman-kanban-column[data-stage="demo"] {
+    border-top: 3px solid #7350A5;
+  }
+
+  .engage-salesman-kanban-column[data-stage="negotiation"] {
+    border-top: 3px solid #A06B12;
+  }
+
+  .engage-salesman-kanban-column[data-stage="won"] {
+    border-top: 3px solid #12805C;
+  }
+
+  .engage-salesman-kanban-column[data-stage="lost"] {
+    border-top: 3px solid #71717A;
+  }
+
+  .engage-salesman-kanban-column[data-stage="nurture"] {
+    border-top: 3px solid #287C88;
   }
 
   .engage-salesman-kanban-column-head {
