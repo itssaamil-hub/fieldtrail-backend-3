@@ -60,6 +60,7 @@ function buildKanban(section, rows, selectedStage) {
   STAGES.forEach((stage) => {
     const btn = document.createElement('button');
     btn.type = 'button';
+    btn.dataset.stage = stage.toLowerCase();
     btn.className = `engage-salesman-kanban-stage${stage === active ? ' is-active' : ''}`;
     btn.innerHTML = `${stage}<span class="engage-salesman-kanban-stage-count">${counts[stage] || 0}</span>`;
     btn.addEventListener('click', () => buildKanban(section, rows, stage));
@@ -67,8 +68,14 @@ function buildKanban(section, rows, selectedStage) {
   });
   board.appendChild(stages);
 
+  requestAnimationFrame(() => {
+    const activeButton = stages.querySelector('.engage-salesman-kanban-stage.is-active');
+    activeButton?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  });
+
   const column = document.createElement('div');
   column.className = 'engage-salesman-kanban-column';
+  column.dataset.stage = active.toLowerCase();
   const head = document.createElement('div');
   head.className = 'engage-salesman-kanban-column-head';
   head.innerHTML = `<span>${active}</span><span>${counts[active] || 0} deal${counts[active] === 1 ? '' : 's'}</span>`;
