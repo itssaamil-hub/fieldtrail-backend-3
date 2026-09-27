@@ -1,0 +1,87 @@
+name: Fix admin lead field options
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-admin-lead-field-options.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Patch admin Add Lead options
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/AdminAddLeadModal.jsx')
+          s = p.read_text()
+
+          old = '''    salesmanId: activeSalesmen[0]?.id || "", business:"", subLocation:"", posName:"",
+    renewalMonth:"", renewalDate:"", owner:"", phone:"", status:"cold", notes:"",
+    dealValue:"", nextFollowUpDate:"",
+  });
+  const [leadSettings, setLeadSettings] = useState(null);'''
+          new = '''    salesmanId: activeSalesmen[0]?.id || "", business:"", subLocation:"", posName:"", category:"",
+    renewalMonth:"", renewalDate:"", owner:"", phone:"", status:"cold", notes:"",
+    dealValue:"", nextFollowUpDate:"",
+  });
+  const [leadSettings, setLeadSettings] = useState(null);
+  const [fieldOptions, setFieldOptions] = useState({ category:[], pos_name:[], sub_location:[] });'''
+          assert old in s, 'form state anchor missing'
+          s = s.replace(old, new, 1)
+
+          old = '''  useEffect(() => {
+    api.adminGetSettings().then((res) => setLeadSettings(res.leadSettings || null)).catch(() => {});
+  }, []);'''
+          new = '''  useEffect(() => {
+    api.adminGetSettings().then((res) => setLeadSettings(res.leadSettings || null)).catch(() => {});
+    api.adminGetLeadOptions().then((res) => {
+      const options = res.options || {};
+      const values = (key) => (options[key] || []).map((item) => typeof item === "string" ? item : item.value).filter(Boolean);
+      setFieldOptions({ category:values("category"), pos_name:values("pos_name"), sub_location:values("sub_location") });
+    }).catch(() => {});
+  }, []);'''
+          assert old in s, 'settings effect anchor missing'
+          s = s.replace(old, new, 1)
+
+          old = '''        posName:form.posName || null,
+        renewalMonth:form.renewalMonth || null,'''
+          new = '''        posName:form.posName || null,
+        category:form.category || null,
+        renewalMonth:form.renewalMonth || null,'''
+          assert old in s, 'payload anchor missing'
+          s = s.replace(old, new, 1)
+
+          old = '''                <Field label="Business Name" required><input autoFocus value={form.business} onChange={set("business")} placeholder="e.g. Cafe 91" style={input}/></Field>
+                <Field label="Sub Location / Branch"><input value={form.subLocation} onChange={set("subLocation")} placeholder="e.g. Gomti Nagar, Lucknow" style={input}/></Field>
+                <Field label="Current POS"><input value={form.posName} onChange={set("posName")} placeholder="e.g. Petpooja" style={input}/></Field>
+                <Field label="Renewal Month"><select value={form.renewalMonth} onChange={set("renewalMonth")} style={input}><option value="">Select renewal month</option>{MONTHS.map((m)=><option key={m}>{m}</option>)}</select></Field>'''
+          new = '''                <Field label="Business Name" required><input autoFocus value={form.business} onChange={set("business")} placeholder="e.g. Cafe 91" style={input}/></Field>
+                <Field label="Sub Location / Branch"><input value={form.subLocation} onChange={set("subLocation")} placeholder="e.g. Gomti Nagar, Lucknow" style={input} list="admin-sub-location-options"/><datalist id="admin-sub-location-options">{fieldOptions.sub_location.map((v)=><option key={v} value={v}/>)}</datalist></Field>
+                <Field label="Current POS"><input value={form.posName} onChange={set("posName")} placeholder="e.g. Petpooja" style={input} list="admin-pos-name-options"/><datalist id="admin-pos-name-options">{fieldOptions.pos_name.map((v)=><option key={v} value={v}/>)}</datalist></Field>
+                <Field label="Category"><input value={form.category} onChange={set("category")} placeholder="e.g. Cafe" style={input} list="admin-category-options"/><datalist id="admin-category-options">{(fieldOptions.category.length ? fieldOptions.category : ["Cafe","QSR","Casual Dining","Fine Dining","Cloud Kitchen","Bakery"]).map((v)=><option key={v} value={v}/>)}</datalist></Field>
+                <Field label="Renewal Month"><select value={form.renewalMonth} onChange={set("renewalMonth")} style={input}><option value="">Select renewal month</option>{MONTHS.map((m)=><option key={m}>{m}</option>)}</select></Field>'''
+          assert old in s, 'business fields anchor missing'
+          s = s.replace(old, new, 1)
+
+          p.write_text(s)
+          PY
+      - name: Install and verify build
+        run: |
+          npm ci
+          npm run build
+      - name: Commit patch and cleanup workflow
+        run: |
+          rm .github/workflows/fix-admin-lead-field-options.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/AdminAddLeadModal.jsx .github/workflows/fix-admin-lead-field-options.yml
+          git commit -m 'fix: match admin lead field options with employee form'
+          git push
