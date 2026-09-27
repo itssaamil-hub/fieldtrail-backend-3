@@ -6,21 +6,13 @@ import { showSaveFeedback, savedActionMessage } from "./saveFeedback.js";
 // than silently falling back to fake numbers.
 // ---------------------------------------------------------------------------
 
-const LS_API_BASE = "fieldtrail:apiBase";
 const LS_SESSION = "fieldtrail:session";
 const LS_DEVICE_ID = "fieldtrail:deviceId";
 const LS_QUEUED_LEADS = "fieldtrail:queuedLeads";
 const LS_DAY_STARTED = "fieldtrail:dayStarted";
 
 export function getApiBase() {
-  return localStorage.getItem(LS_API_BASE) || import.meta.env.VITE_API_BASE_URL || "";
-}
-export function setApiBase(url) {
-  const clean = url.trim().replace(/\/+$/, "");
-  localStorage.setItem(LS_API_BASE, clean);
-}
-export function clearApiBase() {
-  localStorage.removeItem(LS_API_BASE);
+  return String(import.meta.env.VITE_API_BASE_URL || "").trim().replace(/\/+$/, "");
 }
 export function getWsBase() {
   const base = getApiBase();

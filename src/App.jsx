@@ -55,7 +55,6 @@ import {
   api,
   ApiError,
   getApiBase,
-  setApiBase,
   getSession,
   setSession,
   clearSession,
@@ -506,7 +505,7 @@ function usePushNotifications(session) {
 
 // ---------------------------------------------------------------------------
 export default function App() {
-  const [apiBase, setApiBaseState] = useState(getApiBase());
+  const apiBase = getApiBase();
   const [session, setSessionState] = useState(getSession());
   const [showSettings, setShowSettings] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -576,15 +575,6 @@ export default function App() {
     if (window.location.hash === "#sales-briefing") window.history.replaceState(null, "", window.location.pathname + window.location.search);
   };
 
-  const handleSaveApiBase = (url) => {
-    const changed = url !== apiBase;
-    setApiBase(url);
-    setApiBaseState(url);
-    if (changed && session) {
-      clearSession();
-      setSessionState(null);
-    }
-  };
 
   const handleLoggedIn = (sess) => {
     setSession(sess);
@@ -620,7 +610,12 @@ export default function App() {
 
   let body;
   if (!apiBase) {
-    body = <ConnectBackendScreen onSave={handleSaveApiBase} />;
+    body = <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: T.paper, padding: 24 }}>
+      <div style={{ maxWidth: 460, width: "100%", background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, padding: 24, textAlign: "center" }}>
+        <div style={{ fontSize: 18, fontWeight: 800, color: T.ink }}>Backend unavailable</div>
+        <div style={{ fontSize: 13, color: T.inkSoft, marginTop: 8 }}>The production backend is not configured for this app. Please contact the administrator.</div>
+      </div>
+    </div>;
   } else if (!session) {
     body = <LoginScreen apiBase={apiBase} online={online} onLoggedIn={handleLoggedIn} onOpenSettings={() => setShowSettings(true)} />;
   } else if (session.role === "admin") {
@@ -657,9 +652,7 @@ export default function App() {
       }} />}
       {showSettings && (
         <SettingsModal
-          apiBase={apiBase}
           onClose={() => setShowSettings(false)}
-          onSave={(url) => { handleSaveApiBase(url); setShowSettings(false); }}
           onLogout={session ? () => { setShowSettings(false); handleLogout(); } : undefined}
           onOpenCrmSettings={session?.role === "admin" ? () => { setShowSettings(false); setShowCrmSettings(true); } : undefined}
           onOpenDataHealth={session?.role === "admin" ? () => { setShowSettings(false); setShowDataHealth(true); } : undefined}
@@ -911,8 +904,7 @@ function LoginScreen({ apiBase, online, onLoggedIn, onOpenSettings }) {
   );
 }
 
-function SettingsModal({ apiBase, onClose, onSave, onLogout, onOpenCrmSettings, onOpenDataHealth, onOpenOnboardingSettings, onOpenQuotationSettings, canInstall, installed, promptInstall, push }) {
-  const [url, setUrl] = useState(apiBase || "");
+function SettingsModal({ onClose, onLogout, onOpenCrmSettings, onOpenDataHealth, onOpenOnboardingSettings, onOpenQuotationSettings, canInstall, installed, promptInstall, push }) {
   const isIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
   const [showIosHint, setShowIosHint] = useState(false);
 
@@ -1003,20 +995,6 @@ function SettingsModal({ apiBase, onClose, onSave, onLogout, onOpenCrmSettings, 
         </div>
       )}
 
-      <div style={{ fontSize: 11, fontWeight: 700, color: T.inkSoft, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 8 }}>Backend</div>
-      <div style={{ fontSize: 12, color: T.inkSoft, marginBottom: 12 }}>
-        Changing this will sign you out, since sessions are tied to a specific backend.
-      </div>
-      <Field label="Backend URL">
-        <input style={inputStyle} value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://your-backend.up.railway.app" autoCapitalize="none" autoCorrect="off" />
-      </Field>
-      <button
-        onClick={() => onSave(url.trim().replace(/\/+$/, ""))}
-        disabled={!url.trim()}
-        style={{ width: "100%", padding: "12px", borderRadius: 11, border: "none", cursor: url.trim() ? "pointer" : "not-allowed", background: url.trim() ? T.route : "#C7CDD6", color: "#fff", fontWeight: 700, fontSize: 14.5 }}
-      >
-        Save
-      </button>
       {onLogout && (
         <>
           <div style={{ height: 1, background: T.line, margin: "18px 0 14px" }} />
