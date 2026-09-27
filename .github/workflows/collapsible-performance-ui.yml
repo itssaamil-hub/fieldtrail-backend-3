@@ -1,0 +1,64 @@
+name: Make employee performance collapsible
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/collapsible-performance-ui.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Patch Employee Performance cards
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('src/App.jsx')
+          s=p.read_text()
+          start=s.index('function SalesmanPerformanceReport({ salesmen }) {')
+          end=s.index('\n\nfunction FunnelReport({ leads }) {', start)
+          old=s[start:end]
+          new=old
+          new=new.replace('const [error,setError]=useState("");', 'const [error,setError]=useState("");\n            const [expandedEmployee,setExpandedEmployee]=useState(null);', 1)
+          new=new.replace('.then(([p,t,i])=>{setData(p);setTargets(t.targets||[]);setInsights(i)})', '.then(([p,t,i])=>{setData(p);setTargets(t.targets||[]);setInsights(i);setExpandedEmployee(prev=>prev&&p.rows?.some(x=>x.id===prev)?prev:(p.rows?.[0]?.id||null))})', 1)
+          marker='data.rows.map(r=>{const tg=targetFor(r.id);const ins=insightFor(r.id);const state=progressState(r,tg);const avgDeal=Number(r.won||0)>0?Number(r.sales_value||0)/Number(r.won||1):0;return <div'
+          repl='data.rows.map(r=>{const tg=targetFor(r.id);const ins=insightFor(r.id);const state=progressState(r,tg);const avgDeal=Number(r.won||0)>0?Number(r.sales_value||0)/Number(r.won||1):0;const isOpen=expandedEmployee===r.id;return <div'
+          if marker not in new: raise SystemExit('employee map marker not found')
+          new=new.replace(marker,repl,1)
+          header='<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,paddingBottom:12,borderBottom:`1px solid ${T.line}`}}>'
+          if header not in new: raise SystemExit('employee header marker not found')
+          new=new.replace(header, '<button type="button" onClick={()=>setExpandedEmployee(isOpen?null:r.id)} aria-expanded={isOpen} style={{width:"100%",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,padding:0,paddingBottom:isOpen?12:0,border:"none",borderBottom:isOpen?`1px solid ${T.line}`:"none",background:"transparent",cursor:"pointer",textAlign:"left"}}>',1)
+          status='<span style={{fontSize:10.5,fontWeight:850,padding:"5px 9px",borderRadius:999,background:state.tone===\'strong\'?"#E6F6EF":state.tone===\'behind\'?"#FFF0EA":"#F1F3F4",color:state.tone===\'strong\'?T.verified:state.tone===\'behind\'?"#B45309":T.inkSoft,whiteSpace:"nowrap"}}>{state.label}</span>\n                    </div>'
+          status_repl='<div style={{display:"flex",alignItems:"center",gap:9,flexShrink:0}}><span style={{fontSize:10.5,fontWeight:850,padding:"5px 9px",borderRadius:999,background:state.tone===\'strong\'?"#E6F6EF":state.tone===\'behind\'?"#FFF0EA":"#F1F3F4",color:state.tone===\'strong\'?T.verified:state.tone===\'behind\'?"#B45309":T.inkSoft,whiteSpace:"nowrap"}}>{state.label}</span><span aria-hidden="true" style={{fontSize:15,color:T.inkSoft,lineHeight:1}}>{isOpen?"▴":"▾"}</span></div>\n                    </button>'
+          if status not in new: raise SystemExit('status/header close marker not found')
+          new=new.replace(status,status_repl,1)
+          details='<div style={{display:"grid",gridTemplateColumns:"minmax(0,1.15fr) minmax(300px,.85fr)",gap:18,paddingTop:12}}>'
+          if details not in new: raise SystemExit('details marker not found')
+          new=new.replace(details,'{isOpen&&<div style={{display:"grid",gridTemplateColumns:"minmax(0,1.15fr) minmax(300px,.85fr)",gap:18,paddingTop:12}}>',1)
+          # Close the conditional immediately before the employee card's closing div.
+          close_marker='                      </div>\n                    </div>})}'
+          if close_marker not in new: raise SystemExit('employee details close marker not found')
+          new=new.replace(close_marker,'                      </div>\n                    </div>}\n                  </div>})}',1)
+          s=s[:start]+new+s[end:]
+          p.write_text(s)
+          PY
+      - name: Verify frontend build
+        run: npm ci && npm run build
+      - name: Commit collapsible UI
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm .github/workflows/collapsible-performance-ui.yml
+          git add -A src/App.jsx .github/workflows/collapsible-performance-ui.yml
+          git commit -m "ui: make employee performance cards collapsible"
+          git push origin HEAD:main
