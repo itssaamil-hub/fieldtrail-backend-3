@@ -1,0 +1,44 @@
+name: Wire redesigned admin lead form
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/wire-admin-add-lead-v2.yml']
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Wire new admin lead form
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/App.jsx')
+          s=p.read_text()
+          anchor='import AdminActivityOverview from "./AdminActivityOverview.jsx";'
+          ins='import AdminActivityOverview from "./AdminActivityOverview.jsx";\nimport AdminAddLeadModalV2 from "./AdminAddLeadModal.jsx";'
+          if 'AdminAddLeadModalV2' not in s:
+              if anchor not in s: raise SystemExit('import anchor not found')
+              s=s.replace(anchor,ins,1)
+          target='''      {showAdminAddLead && (\n        <AdminAddLeadModal\n          salesmen={salesmen}'''
+          repl='''      {showAdminAddLead && (\n        <AdminAddLeadModalV2\n          salesmen={salesmen}'''
+          if target not in s: raise SystemExit('admin modal usage not found')
+          s=s.replace(target,repl,1)
+          p.write_text(s)
+          PY
+      - name: Install and verify build
+        run: |
+          npm ci
+          npm run build
+      - name: Commit verified change and remove workflow
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          rm .github/workflows/wire-admin-add-lead-v2.yml
+          git add src/App.jsx .github/workflows/wire-admin-add-lead-v2.yml
+          git commit -m "ui: use redesigned admin lead form" || exit 0
+          git push
