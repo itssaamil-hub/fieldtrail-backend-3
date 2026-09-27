@@ -1,4 +1,5 @@
 import DesktopContacts from './DesktopContacts.jsx';
+import MobileContacts from './MobileContacts.jsx';
 import DesktopDealsBoard from './DesktopDealsBoard';
 import DesktopSidebar, { useDesktopSidebar } from "./DesktopSidebar.jsx";
 import SaveFeedback from "./SaveFeedback.jsx";
@@ -2017,7 +2018,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
       <div hidden={!showLeads}>
       <div className={`ft-card${desktopDeals ? " engage-desktop-deals" : desktopContacts ? " engage-desktop-contacts" : ""}`} style={{ marginTop: 20, background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, padding: 18 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
-          <div><div className={desktopDeals ? "engage-deals-title" : desktopContacts ? "engage-contacts-heading" : undefined} style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16 }}>{sectionNavigation && section === "deals" ? (desktopSection ? "Pipeline" : "Deals") : desktopContacts ? "Contacts" : "Leads"}</div>{desktopContacts && <div className="engage-contacts-summary">{filteredLeads.length} contact records · Your restaurant connections</div>}{desktopDeals && <div className="engage-deals-summary">{filteredLeads.length} deals · {fmtMoney(filteredLeads.reduce((sum, lead) => sum + (Number(lead.dealValue) || 0), 0))} recorded value</div>}</div>
+          <div><div className={desktopDeals ? "engage-deals-title" : desktopContacts ? "engage-contacts-heading" : undefined} style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16 }}>{sectionNavigation && section === "deals" ? (desktopSection ? "Pipeline" : "Deals") : (desktopContacts || (phone && section === "leads")) ? "Contacts" : "Leads"}</div>{(desktopContacts || (phone && section === "leads")) && <div className="engage-contacts-summary">{filteredLeads.length} contact records · Your restaurant connections</div>}{desktopDeals && <div className="engage-deals-summary">{filteredLeads.length} deals · {fmtMoney(filteredLeads.reduce((sum, lead) => sum + (Number(lead.dealValue) || 0), 0))} recorded value</div>}</div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ display: sectionNavigation && section !== "dashboard" && !desktopDeals ? "none" : "flex", gap: 2, background: T.paperDeep, borderRadius: 8, padding: 2 }}>
               <button
@@ -2115,7 +2116,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
 
         {(sectionNavigation && section === "leads") || ((desktopDeals || !(sectionNavigation && section === "deals")) && leadsViewMode === "list") ? (
           <>
-        {desktopContacts ? <DesktopContacts leads={pagedLeads} onSelectLead={setSelectedLead} renderVerification={l=>l.hasLocation ? <VerificationStamp status={l.verification} small /> : <NoLocationBadge small />} /> : (
+        {phone && section === "leads" ? <MobileContacts leads={pagedLeads} onSelectLead={setSelectedLead} renderVerification={l=>l.hasLocation ? <VerificationStamp status={l.verification} small /> : <NoLocationBadge small />} /> : desktopContacts ? <DesktopContacts leads={pagedLeads} onSelectLead={setSelectedLead} renderVerification={l=>l.hasLocation ? <VerificationStamp status={l.verification} small /> : <NoLocationBadge small />} /> : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {pagedLeads.map((l) => (
             <div key={l.id} className="ft-row" onClick={() => setSelectedLead(l)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "10px 12px", border: `1px solid ${T.line}`, borderRadius: 11, cursor: "pointer", background: "#fff" }}>
