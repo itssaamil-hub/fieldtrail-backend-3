@@ -1,48 +1,60 @@
 @media (max-width: 899px) {
   .engage-salesman-target-card {
     padding: 9px 12px 8px !important;
-    margin-bottom: 9px !important;
+    margin-bottom: 8px !important;
     border-radius: 14px !important;
+    box-sizing: border-box !important;
   }
 
   .engage-salesman-target-card > div:first-child {
-    margin-bottom: 5px !important;
+    margin-bottom: 6px !important;
     gap: 6px !important;
+  }
+
+  .engage-salesman-target-card > div:first-child svg {
+    width: 13px !important;
+    height: 13px !important;
   }
 
   .engage-salesman-target-card > div:first-child > div {
     font-size: 12.5px !important;
+    line-height: 1.05 !important;
   }
 
   .engage-salesman-target-card > div:nth-child(2),
   .engage-salesman-target-card > div:nth-child(5) {
-    margin-bottom: 2px !important;
+    margin-bottom: 3px !important;
     font-size: 10.5px !important;
-    line-height: 1.15 !important;
+    line-height: 1.05 !important;
   }
 
-  .engage-salesman-target-card > div:nth-child(2) > span:last-child,
-  .engage-salesman-target-card > div:nth-child(5) > span:last-child {
-    font-size: 12.5px !important;
+  .engage-salesman-target-card > div:nth-child(2) span:last-child,
+  .engage-salesman-target-card > div:nth-child(5) span:last-child {
+    font-size: 12px !important;
   }
 
-  .engage-salesman-target-card .engage-target-divider {
-    margin: 4px 0 !important;
-  }
-
+  .engage-salesman-target-card > div:nth-child(3),
+  .engage-salesman-target-card > div:nth-child(6),
   .engage-salesman-target-card .engage-target-progress {
-    height: 5px !important;
-    margin: 2px 0 3px !important;
-    border-radius: 999px !important;
+    height: 4px !important;
+    margin: 0 !important;
+    border-radius: 8px !important;
   }
 
+  .engage-salesman-target-card > div:nth-child(3) > div,
+  .engage-salesman-target-card > div:nth-child(6) > div,
   .engage-salesman-target-card .engage-target-progress > div {
-    height: 5px !important;
-    border-radius: 999px !important;
+    height: 4px !important;
   }
 
+  .engage-salesman-target-card > div:nth-child(4),
+  .engage-salesman-target-card .engage-target-divider {
+    margin: 6px 0 !important;
+  }
+
+  .engage-salesman-target-card > div:nth-child(7),
   .engage-salesman-target-card .engage-target-remaining {
-    margin-top: 1px !important;
+    margin-top: 3px !important;
     margin-bottom: 0 !important;
     font-size: 10px !important;
     line-height: 1.1 !important;
