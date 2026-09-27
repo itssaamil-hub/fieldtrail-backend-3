@@ -78,11 +78,12 @@ function DuplicateWarning({ result }) {
 export default function AdminAddLeadModal({ salesmen, onClose, onSubmit }) {
   const activeSalesmen = useMemo(() => salesmen.filter((s) => s.isActive), [salesmen]);
   const [form, setForm] = useState({
-    salesmanId: activeSalesmen[0]?.id || "", business:"", subLocation:"", posName:"",
+    salesmanId: activeSalesmen[0]?.id || "", business:"", subLocation:"", posName:"", category:"",
     renewalMonth:"", renewalDate:"", owner:"", phone:"", status:"cold", notes:"",
     dealValue:"", nextFollowUpDate:"",
   });
   const [leadSettings, setLeadSettings] = useState(null);
+  const [fieldOptions, setFieldOptions] = useState({ category:[], pos_name:[], sub_location:[] });
   const [duplicateResult, setDuplicateResult] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -91,6 +92,11 @@ export default function AdminAddLeadModal({ salesmen, onClose, onSubmit }) {
 
   useEffect(() => {
     api.adminGetSettings().then((res) => setLeadSettings(res.leadSettings || null)).catch(() => {});
+    api.adminGetLeadOptions().then((res) => {
+      const options = res.options || {};
+      const values = (key) => (options[key] || []).map((item) => typeof item === "string" ? item : item.value).filter(Boolean);
+      setFieldOptions({ category:values("category"), pos_name:values("pos_name"), sub_location:values("sub_location") });
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -114,6 +120,7 @@ export default function AdminAddLeadModal({ salesmen, onClose, onSubmit }) {
         businessName:form.business.trim(),
         subLocation:form.subLocation || null,
         posName:form.posName || null,
+        category:form.category || null,
         renewalMonth:form.renewalMonth || null,
         renewalDate:form.renewalDate || null,
         contactName:form.owner || null,
@@ -147,8 +154,9 @@ export default function AdminAddLeadModal({ salesmen, onClose, onSubmit }) {
             <Card icon={BriefcaseBusiness} title="Business Information" subtitle="Basic details about the restaurant or business.">
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
                 <Field label="Business Name" required><input autoFocus value={form.business} onChange={set("business")} placeholder="e.g. Cafe 91" style={input}/></Field>
-                <Field label="Sub Location / Branch"><input value={form.subLocation} onChange={set("subLocation")} placeholder="e.g. Gomti Nagar, Lucknow" style={input}/></Field>
-                <Field label="Current POS"><input value={form.posName} onChange={set("posName")} placeholder="e.g. Petpooja" style={input}/></Field>
+                <Field label="Sub Location / Branch"><input value={form.subLocation} onChange={set("subLocation")} placeholder="e.g. Gomti Nagar, Lucknow" style={input} list="admin-sub-location-options"/><datalist id="admin-sub-location-options">{fieldOptions.sub_location.map((v)=><option key={v} value={v}/>)}</datalist></Field>
+                <Field label="Current POS"><input value={form.posName} onChange={set("posName")} placeholder="e.g. Petpooja" style={input} list="admin-pos-name-options"/><datalist id="admin-pos-name-options">{fieldOptions.pos_name.map((v)=><option key={v} value={v}/>)}</datalist></Field>
+                <Field label="Category"><input value={form.category} onChange={set("category")} placeholder="e.g. Cafe" style={input} list="admin-category-options"/><datalist id="admin-category-options">{(fieldOptions.category.length ? fieldOptions.category : ["Cafe","QSR","Casual Dining","Fine Dining","Cloud Kitchen","Bakery"]).map((v)=><option key={v} value={v}/>)}</datalist></Field>
                 <Field label="Renewal Month"><select value={form.renewalMonth} onChange={set("renewalMonth")} style={input}><option value="">Select renewal month</option>{MONTHS.map((m)=><option key={m}>{m}</option>)}</select></Field>
               </div>
             </Card>
