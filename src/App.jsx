@@ -6,6 +6,7 @@ import { showSaveFeedback } from "./saveFeedback.js";
 import AdminMobileNav, { useAdminPhone, salesmanTabs } from "./AdminMobileNav.jsx";
 import useUnreadNotifications from "./useUnreadNotifications.js";
 import AdminActivityOverview from "./AdminActivityOverview.jsx";
+import AdminAddLeadModalV2 from "./AdminAddLeadModal.jsx";
 import React, { lazy, Suspense, useState, useEffect, useRef, useCallback } from "react";
 import {
   MapPin,
@@ -2181,7 +2182,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
       {selectedLead && <LeadDetailDrawer lead={leads.find((l) => l.id === selectedLead.id) || selectedLead} onClose={() => setSelectedLead(null)} onStatusChange={onStatusChange} onUpdate={onUpdateLead} onDelete={onDeleteLead} fetchHistory={api.adminLeadHistory} isAdmin />}
       {routeSalesman && <SalesmanRouteModal salesman={routeSalesman} onClose={() => setRouteSalesman(null)} />}
       {showAdminAddLead && (
-        <AdminAddLeadModal
+        <AdminAddLeadModalV2
           salesmen={salesmen}
           onClose={() => setShowAdminAddLead(false)}
           onSubmit={async (payload) => {
