@@ -13,7 +13,7 @@ export function useAdminPhone() {
   return phone;
 }
 
-const tabs = [["dashboard", "Dashboard", Gauge], ["leads", "Leads", Contact2], ["deals", "Deals", Handshake], ["employees", "Employees", Users], ["expenses", "Expenses", Wallet]];
+const tabs = [["dashboard", "Dashboard", Gauge], ["leads", "Contacts", Contact2], ["deals", "Deals", Handshake], ["employees", "Employees", Users], ["expenses", "Expenses", Wallet]];
 export const salesmanTabs = [["dashboard", "Dashboard", Gauge], ["leads", "My Leads", List], ["tasks", "Tasks", ClipboardList], ["messages", "Messages", MessageSquare], ["more", "More", Menu]];
 export default function AdminMobileNav({ active, onChange, items = tabs, counts = {}, label = "Admin navigation" }) {
   const phone = useAdminPhone();
