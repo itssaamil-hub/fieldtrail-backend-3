@@ -16,6 +16,7 @@ import "./onboarding-live-share.css";
 import "./quotation-settings-enhance.css";
 import "./exception-centre-fixes.css";
 import "./add-lead-polish.css";
+import "./lead-status-colors.css";
 
 // Silent auto-update: check for a new worker as soon as the app opens so an
 // installed PWA does not stay on an older cached dashboard bundle.
