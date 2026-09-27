@@ -1,0 +1,11 @@
+.exception-centre .exception-actions-v2 > button.exception-snooze {
+  background: #FFF4DA !important;
+  color: #A06B12 !important;
+  border-color: #E8C96A !important;
+}
+
+.exception-centre .exception-actions-v2 > button.exception-snooze:hover {
+  background: #FFE9AE !important;
+  color: #8A5B0E !important;
+  border-color: #D9B447 !important;
+}
