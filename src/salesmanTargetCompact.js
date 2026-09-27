@@ -36,6 +36,26 @@ function applyCompactTargetCard() {
       child.classList.add('engage-target-remaining');
     }
   }
+
+  const addLead = [...document.querySelectorAll('button')].find((node) =>
+    isVisible(node) && (node.textContent || '').trim() === 'Add Lead'
+  );
+  const myLeads = [...document.querySelectorAll('button')].find((node) =>
+    isVisible(node) && (node.textContent || '').trim() === 'My Leads'
+  );
+
+  if (addLead) {
+    const labelNode = [...addLead.querySelectorAll('*')].find((node) =>
+      (node.textContent || '').trim() === 'Add Lead' && node.children.length === 0
+    );
+    if (labelNode) labelNode.textContent = 'Add Deal';
+    else addLead.textContent = 'Add Deal';
+
+    const grid = addLead.parentElement;
+    if (grid && myLeads && myLeads.parentElement === grid) {
+      grid.classList.add('engage-salesman-action-grid');
+    }
+  }
 }
 
 function queueApply() {
