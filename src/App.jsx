@@ -110,6 +110,7 @@ const AdminTeamActivitySheet = lazyNamed(() => import("./AdminMobileEnhancements
 const ExceptionCentre = lazyDefault(() => import("./ExceptionCentre.jsx"));
 const DataHealth = lazyDefault(() => import("./DataHealth.jsx"));
 const AttendanceReport = lazyDefault(() => import("./AttendanceReport.jsx"));
+const EnhancedDailyActivityReport = lazyDefault(() => import("./EnhancedDailyActivityReport.jsx"));
 
 // ---------------------------------------------------------------------------
 // Design tokens — "field ledger": a working paper trail, not a generic SaaS
@@ -2332,7 +2333,7 @@ function ReportsPage({ salesmen, leads }) {
       {active === "payments" && <CollectionsPanel embedded />}
       {active === "expenses" && <ExpensesReport salesmen={salesmen} />}
       {active === "attendance" && <AttendanceReport salesmen={salesmen} />}
-      {active === "daily" && <DailyActivityReport salesmen={salesmen} />}
+      {active === "daily" && <EnhancedDailyActivityReport salesmen={salesmen} />}
       {active === "stage" && <TimeInStageReport />}
       {active === "quality" && <DataQualityReport salesmen={salesmen} />}
       {active === "export" && <LeadExportReport salesmen={salesmen} />}
