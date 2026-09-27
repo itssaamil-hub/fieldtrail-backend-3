@@ -1,0 +1,43 @@
+name: Wire enhanced daily activity report
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/wire-enhanced-daily-activity.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Patch App report import and render
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('src/App.jsx'); s=p.read_text()
+          old='const AttendanceReport = lazyDefault(() => import("./AttendanceReport.jsx"));'
+          new=old+'\nconst EnhancedDailyActivityReport = lazyDefault(() => import("./EnhancedDailyActivityReport.jsx"));'
+          assert old in s, 'attendance import anchor missing'
+          s=s.replace(old,new,1)
+          old='{active === "daily" && <DailyActivityReport salesmen={salesmen} />}'
+          new='{active === "daily" && <EnhancedDailyActivityReport salesmen={salesmen} />}'
+          assert old in s, 'daily report render anchor missing'
+          s=s.replace(old,new,1)
+          p.write_text(s)
+          PY
+      - name: Verify build
+        run: |
+          npm ci
+          npm run build
+      - name: Commit and cleanup
+        run: |
+          rm .github/workflows/wire-enhanced-daily-activity.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/App.jsx .github/workflows/wire-enhanced-daily-activity.yml
+          git commit -m 'ui: upgrade daily activity report'
+          git push
