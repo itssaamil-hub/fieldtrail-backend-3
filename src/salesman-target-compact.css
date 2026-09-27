@@ -1,7 +1,7 @@
 @media (max-width: 899px) {
   .engage-salesman-target-card {
     padding: 12px 14px 11px !important;
-    margin-bottom: 8px !important;
+    margin-bottom: 7px !important;
     border-radius: 15px !important;
     box-sizing: border-box !important;
   }
@@ -66,14 +66,22 @@
 
   .engage-salesman-action-grid > button,
   .engage-salesman-action-grid > div[role="button"] {
-    min-height: 88px !important;
-    height: 88px !important;
-    padding-top: 12px !important;
-    padding-bottom: 12px !important;
+    min-height: 78px !important;
+    height: 78px !important;
+    padding-top: 9px !important;
+    padding-bottom: 9px !important;
+    gap: 5px !important;
   }
 
   .engage-salesman-action-grid svg {
-    width: 25px !important;
-    height: 25px !important;
+    width: 22px !important;
+    height: 22px !important;
+  }
+
+  .engage-salesman-greeting {
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+    color: #6B7280 !important;
+    white-space: nowrap !important;
   }
 }
