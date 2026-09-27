@@ -43,11 +43,11 @@ function selectedFilterStage(section) {
 
 function buildKanban(section, rows, selectedStage) {
   let board = section.querySelector('.engage-salesman-kanban');
+  const isNewBoard = !board;
   if (!board) {
     board = document.createElement('div');
     board.className = 'engage-salesman-kanban';
   }
-  board.innerHTML = '';
 
   const items = rows.map((row) => ({ row, ...leadInfo(row) }));
   const counts = Object.fromEntries(STAGES.map((s) => [s, items.filter((x) => x.stage === s).length]));
@@ -55,13 +55,29 @@ function buildKanban(section, rows, selectedStage) {
   const active = filterStage || (STAGES.includes(selectedStage) ? selectedStage : (STAGES.find((s) => counts[s] > 0) || 'Conversation'));
   section.dataset.kanbanStage = active;
 
+  // MutationObserver runs again when this board is rendered. Without this
+  // guard the strip was rebuilt repeatedly, resetting scrollLeft to 0 and
+  // making finger swipes appear broken on Android Chrome.
+  const signature = JSON.stringify({
+    active,
+    filterStage,
+    items: items.map(({ name, stage, attention }) => [name, stage, attention]),
+  });
+  if (!isNewBoard && board.dataset.signature === signature) return;
+  board.dataset.signature = signature;
+  board.innerHTML = '';
+
   const stages = document.createElement('div');
   stages.className = 'engage-salesman-kanban-stages';
+  stages.setAttribute('role', 'tablist');
+  stages.setAttribute('aria-label', 'Deal stages');
   STAGES.forEach((stage) => {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.dataset.stage = stage.toLowerCase();
     btn.className = `engage-salesman-kanban-stage${stage === active ? ' is-active' : ''}`;
+    btn.setAttribute('role', 'tab');
+    btn.setAttribute('aria-selected', String(stage === active));
     btn.innerHTML = `${stage}<span class="engage-salesman-kanban-stage-count">${counts[stage] || 0}</span>`;
     btn.addEventListener('click', () => buildKanban(section, rows, stage));
     stages.appendChild(btn);
@@ -104,7 +120,7 @@ function buildKanban(section, rows, selectedStage) {
   const listContainer = rows[0]?.parentElement;
   if (listContainer) {
     listContainer.style.display = 'none';
-    listContainer.insertAdjacentElement('afterend', board);
+    if (isNewBoard) listContainer.insertAdjacentElement('afterend', board);
   }
 }
 
