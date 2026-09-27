@@ -1,0 +1,66 @@
+name: Wire admin mobile contacts
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/wire-mobile-contacts.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Patch App mobile contacts view
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/App.jsx')
+          s = p.read_text()
+
+          old = "import DesktopContacts from './DesktopContacts.jsx';"
+          new = "import DesktopContacts from './DesktopContacts.jsx';\nimport MobileContacts from './MobileContacts.jsx';"
+          assert old in s, 'contacts import anchor missing'
+          s = s.replace(old, new, 1)
+
+          old = '''{sectionNavigation && section === "deals" ? (desktopSection ? "Pipeline" : "Deals") : desktopContacts ? "Contacts" : "Leads"}'''
+          new = '''{sectionNavigation && section === "deals" ? (desktopSection ? "Pipeline" : "Deals") : (desktopContacts || (phone && section === "leads")) ? "Contacts" : "Leads"}'''
+          assert old in s, 'title anchor missing'
+          s = s.replace(old, new, 1)
+
+          old = '''{desktopContacts && <div className="engage-contacts-summary">{filteredLeads.length} contact records · Your restaurant connections</div>}'''
+          new = '''{(desktopContacts || (phone && section === "leads")) && <div className="engage-contacts-summary">{filteredLeads.length} contact records · Your restaurant connections</div>}'''
+          assert old in s, 'summary anchor missing'
+          s = s.replace(old, new, 1)
+
+          old = '''aria-label={desktopContacts ? "Search contacts" : "Search leads"}
+            placeholder={desktopContacts ? "Search by contact, company, phone, or area…" : "Search leads by business, contact, phone, or area…"}'''
+          new = '''aria-label={(desktopContacts || (phone && section === "leads")) ? "Search contacts" : "Search leads"}
+            placeholder={(desktopContacts || (phone && section === "leads")) ? "Search by contact, company, phone, or area…" : "Search leads by business, contact, phone, or area…"}'''
+          assert old in s, 'search anchor missing'
+          s = s.replace(old, new, 1)
+
+          old = '''{desktopContacts ? <DesktopContacts leads={pagedLeads} onSelectLead={setSelectedLead} renderVerification={l=>l.hasLocation ? <VerificationStamp status={l.verification} small /> : <NoLocationBadge small />} /> : ('''
+          new = '''{phone && section === "leads" ? <MobileContacts leads={pagedLeads} onSelectLead={setSelectedLead} renderVerification={l=>l.hasLocation ? <VerificationStamp status={l.verification} small /> : <NoLocationBadge small />} /> : desktopContacts ? <DesktopContacts leads={pagedLeads} onSelectLead={setSelectedLead} renderVerification={l=>l.hasLocation ? <VerificationStamp status={l.verification} small /> : <NoLocationBadge small />} /> : ('''
+          assert old in s, 'contacts render anchor missing'
+          s = s.replace(old, new, 1)
+
+          p.write_text(s)
+          PY
+      - name: Verify build
+        run: |
+          npm ci
+          npm run build
+      - name: Commit and cleanup
+        run: |
+          rm .github/workflows/wire-mobile-contacts.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/App.jsx .github/workflows/wire-mobile-contacts.yml
+          git commit -m 'ui: add admin mobile contacts experience'
+          git push
