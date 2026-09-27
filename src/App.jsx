@@ -107,6 +107,7 @@ const AdminMobileLeadTrend = lazyNamed(() => import("./AdminMobileEnhancements.j
 const AdminTeamActivitySheet = lazyNamed(() => import("./AdminMobileEnhancements.jsx"), "AdminTeamActivitySheet");
 const ExceptionCentre = lazyDefault(() => import("./ExceptionCentre.jsx"));
 const DataHealth = lazyDefault(() => import("./DataHealth.jsx"));
+const AttendanceReport = lazyDefault(() => import("./AttendanceReport.jsx"));
 
 // ---------------------------------------------------------------------------
 // Design tokens — "field ledger": a working paper trail, not a generic SaaS
@@ -2273,6 +2274,7 @@ const REPORT_CARDS = [
   { key: "renewals", title: "Renewals due", desc: "Everything renewing in the next 30, 60 or 90 days.", icon: CalendarClock, color: "#B8791F" },
   { key: "payments", title: "Payments", desc: "Collections, pending balances, overdue payments and receipts in one place.", icon: Wallet, color: "#C0392B" },
   { key: "expenses", title: "Expenses", desc: "Salary and other spending, broken down by category.", icon: Receipt, color: "#993C1D" },
+  { key: "attendance", title: "Attendance Report", desc: "Start day, end day, working duration and day closing status.", icon: Clock, color: "#145C5D" },
   { key: "daily", title: "Daily activity", desc: "Visits, leads touched and distance travelled per day.", icon: MapPin, color: "#12805C" },
   { key: "stage", title: "Time in stage", desc: "Average days a lead spends at each status.", icon: Clock, color: "#8B5E00" },
   { key: "quality", title: "Data quality", desc: "Find leads missing important sales information and fix them.", icon: AlertTriangle, color: "#B8791F" },
@@ -2327,6 +2329,7 @@ function ReportsPage({ salesmen, leads }) {
       {active === "renewals" && <RenewalsReport leads={leads} />}
       {active === "payments" && <CollectionsPanel embedded />}
       {active === "expenses" && <ExpensesReport salesmen={salesmen} />}
+      {active === "attendance" && <AttendanceReport salesmen={salesmen} />}
       {active === "daily" && <DailyActivityReport salesmen={salesmen} />}
       {active === "stage" && <TimeInStageReport />}
       {active === "quality" && <DataQualityReport salesmen={salesmen} />}
