@@ -15,7 +15,9 @@ function visible(node) {
 
 function getLeadRows(section) {
   return [...section.querySelectorAll('.ft-row')].filter((row) => {
-    if (!visible(row)) return false;
+    // In Kanban mode the source list is intentionally display:none. Do not
+    // discard those rows, because they are still the source of truth for the
+    // board and its stage counts.
     return !!row.querySelector('.employee-mobile-lead-meta, .employee-mobile-brief-pill, .ft-lead-brief-pill');
   });
 }
@@ -32,6 +34,13 @@ function leadInfo(row) {
   return { name, stage, attention };
 }
 
+function selectedFilterStage(section) {
+  const select = section.querySelector('select[aria-label="Lead status"]');
+  if (!select || select.value === 'all') return null;
+  const label = select.options[select.selectedIndex]?.textContent?.trim();
+  return STAGES.includes(label) ? label : null;
+}
+
 function buildKanban(section, rows, selectedStage) {
   let board = section.querySelector('.engage-salesman-kanban');
   if (!board) {
@@ -42,7 +51,8 @@ function buildKanban(section, rows, selectedStage) {
 
   const items = rows.map((row) => ({ row, ...leadInfo(row) }));
   const counts = Object.fromEntries(STAGES.map((s) => [s, items.filter((x) => x.stage === s).length]));
-  const active = STAGES.includes(selectedStage) ? selectedStage : (STAGES.find((s) => counts[s] > 0) || 'Conversation');
+  const filterStage = selectedFilterStage(section);
+  const active = filterStage || (STAGES.includes(selectedStage) ? selectedStage : (STAGES.find((s) => counts[s] > 0) || 'Conversation'));
   section.dataset.kanbanStage = active;
 
   const stages = document.createElement('div');
