@@ -18,39 +18,89 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - name: Patch Employee Performance cards
+      - name: Replace Employee Performance with collapsible cards
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
           p=Path('src/App.jsx')
           s=p.read_text()
           start=s.index('function SalesmanPerformanceReport({ salesmen }) {')
           end=s.index('\n\nfunction FunnelReport({ leads }) {', start)
-          old=s[start:end]
-          new=old
-          new=new.replace('const [error,setError]=useState("");', 'const [error,setError]=useState("");\n            const [expandedEmployee,setExpandedEmployee]=useState(null);', 1)
-          new=new.replace('.then(([p,t,i])=>{setData(p);setTargets(t.targets||[]);setInsights(i)})', '.then(([p,t,i])=>{setData(p);setTargets(t.targets||[]);setInsights(i);setExpandedEmployee(prev=>prev&&p.rows?.some(x=>x.id===prev)?prev:(p.rows?.[0]?.id||null))})', 1)
-          marker='data.rows.map(r=>{const tg=targetFor(r.id);const ins=insightFor(r.id);const state=progressState(r,tg);const avgDeal=Number(r.won||0)>0?Number(r.sales_value||0)/Number(r.won||1):0;return <div'
-          repl='data.rows.map(r=>{const tg=targetFor(r.id);const ins=insightFor(r.id);const state=progressState(r,tg);const avgDeal=Number(r.won||0)>0?Number(r.sales_value||0)/Number(r.won||1):0;const isOpen=expandedEmployee===r.id;return <div'
-          if marker not in new: raise SystemExit('employee map marker not found')
-          new=new.replace(marker,repl,1)
-          header='<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,paddingBottom:12,borderBottom:`1px solid ${T.line}`}}>'
-          if header not in new: raise SystemExit('employee header marker not found')
-          new=new.replace(header, '<button type="button" onClick={()=>setExpandedEmployee(isOpen?null:r.id)} aria-expanded={isOpen} style={{width:"100%",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,padding:0,paddingBottom:isOpen?12:0,border:"none",borderBottom:isOpen?`1px solid ${T.line}`:"none",background:"transparent",cursor:"pointer",textAlign:"left"}}>',1)
-          status='<span style={{fontSize:10.5,fontWeight:850,padding:"5px 9px",borderRadius:999,background:state.tone===\'strong\'?"#E6F6EF":state.tone===\'behind\'?"#FFF0EA":"#F1F3F4",color:state.tone===\'strong\'?T.verified:state.tone===\'behind\'?"#B45309":T.inkSoft,whiteSpace:"nowrap"}}>{state.label}</span>\n                    </div>'
-          status_repl='<div style={{display:"flex",alignItems:"center",gap:9,flexShrink:0}}><span style={{fontSize:10.5,fontWeight:850,padding:"5px 9px",borderRadius:999,background:state.tone===\'strong\'?"#E6F6EF":state.tone===\'behind\'?"#FFF0EA":"#F1F3F4",color:state.tone===\'strong\'?T.verified:state.tone===\'behind\'?"#B45309":T.inkSoft,whiteSpace:"nowrap"}}>{state.label}</span><span aria-hidden="true" style={{fontSize:15,color:T.inkSoft,lineHeight:1}}>{isOpen?"▴":"▾"}</span></div>\n                    </button>'
-          if status not in new: raise SystemExit('status/header close marker not found')
-          new=new.replace(status,status_repl,1)
-          details='<div style={{display:"grid",gridTemplateColumns:"minmax(0,1.15fr) minmax(300px,.85fr)",gap:18,paddingTop:12}}>'
-          if details not in new: raise SystemExit('details marker not found')
-          new=new.replace(details,'{isOpen&&<div style={{display:"grid",gridTemplateColumns:"minmax(0,1.15fr) minmax(300px,.85fr)",gap:18,paddingTop:12}}>',1)
-          # Close the conditional immediately before the employee card's closing div.
-          close_marker='                      </div>\n                    </div>})}'
-          if close_marker not in new: raise SystemExit('employee details close marker not found')
-          new=new.replace(close_marker,'                      </div>\n                    </div>}\n                  </div>})}',1)
-          s=s[:start]+new+s[end:]
-          p.write_text(s)
+          new=r'''function SalesmanPerformanceReport({ salesmen }) {
+            const now = new Date();
+            const localDay = new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"}).format(now);
+            const [anchor,setAnchor]=useState(localDay);
+            const [employee,setEmployee]=useState("");
+            const [data,setData]=useState(null);
+            const [targets,setTargets]=useState([]);
+            const [insights,setInsights]=useState(null);
+            const [loading,setLoading]=useState(true);
+            const [error,setError]=useState("");
+            const [expandedEmployee,setExpandedEmployee]=useState(null);
+
+            const money=n=>fmtMoney(Number(n||0));
+            const conversion=(a,b)=>Number(a)>0?Math.round(Number(b||0)/Number(a)*100):0;
+            const pct=(value,target)=>Number(target)>0?Math.min(100,Math.round(Number(value||0)/Number(target)*100)):null;
+            const monthLabel=new Date(`${anchor.slice(0,7)}-01T00:00:00`).toLocaleDateString("en-IN",{month:"long",year:"numeric"});
+            const targetFor=id=>targets.find(t=>t.salesman_id===id)||{};
+            const insightFor=id=>(insights?.employees||[]).find(x=>String(x.id||x.salesman_id)===String(id))||null;
+
+            const progressState=(r,tg)=>{
+              if(Number(r.leads||0)===0&&Number(r.visits||0)===0)return {label:"No activity",tone:"quiet"};
+              const vals=[pct(r.leads,tg.leads_target),pct(r.demos,tg.demos_target),pct(r.won,tg.won_target),pct(r.sales_value,tg.sales_value_target)];
+              if(vals.some(v=>v!=null&&v>=100))return {label:"On target",tone:"strong"};
+              if(vals.filter(v=>v!=null).length&&vals.filter(v=>v!=null).every(v=>v<60))return {label:"Behind",tone:"behind"};
+              if(vals.every(v=>v==null))return {label:"No target",tone:"quiet"};
+              return {label:"Active",tone:"active"};
+            };
+
+            const metric=(label,value,target,format=false)=>{const progress=pct(value,target);return <div style={{padding:"9px 0",borderBottom:`1px solid ${T.line}`}}><div style={{display:"flex",justifyContent:"space-between",gap:10,fontSize:12}}><span style={{color:T.inkSoft}}>{label}</span><strong style={{color:T.ink}}>{format?money(value):value}{Number(target)>0?` / ${format?money(target):target}`:""}</strong></div>{progress!=null&&<div style={{display:"flex",alignItems:"center",gap:8,marginTop:6}}><div style={{height:6,background:"#E9EFEC",borderRadius:99,overflow:"hidden",flex:1}}><div style={{height:"100%",width:`${progress}%`,background:T.route,borderRadius:99}}/></div><span style={{fontSize:10,color:T.inkSoft,minWidth:30,textAlign:"right"}}>{progress}%</span></div>}</div>};
+
+            const load=useCallback(()=>{
+              setLoading(true);setError("");
+              Promise.all([
+                api.performanceReport({period:"month",anchor,...(employee?{salesmanId:employee}:{})}),
+                api.performanceTargets({month:anchor}),
+                api.performanceInsights({month:anchor.slice(0,7),...(employee?{salesmanId:employee}:{})}).catch(()=>null)
+              ]).then(([p,t,i])=>{setData(p);setTargets(t.targets||[]);setInsights(i);setExpandedEmployee(prev=>prev&&p.rows?.some(x=>x.id===prev)?prev:(p.rows?.[0]?.id||null));}).catch(e=>setError(e.message||"Couldn't load performance.")).finally(()=>setLoading(false));
+            },[anchor,employee]);
+            useEffect(()=>{load()},[load]);
+
+            return <div className="engage-performance-report-page">
+              <div className="engage-performance-hero" style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",gap:14,flexWrap:"wrap",marginBottom:18}}>
+                <div><div className="engage-performance-kicker">SALES PERFORMANCE</div><div style={{fontSize:22,fontWeight:850,color:T.ink}}>Monthly Performance</div><div style={{fontSize:12.5,color:T.inkSoft,marginTop:4}}>{monthLabel} · Restaurant visits → Leads → Demos → Won → Sales value.</div></div>
+                <div className="engage-performance-filters" style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                  <input type="month" value={anchor.slice(0,7)} onChange={e=>setAnchor(`${e.target.value}-01`)} style={{height:40,border:`1px solid ${T.line}`,borderRadius:10,padding:"0 11px",background:"#fff",color:T.ink}}/>
+                  <select value={employee} onChange={e=>setEmployee(e.target.value)} style={{height:40,border:`1px solid ${T.line}`,borderRadius:10,padding:"0 11px",background:"#fff",color:T.ink,minWidth:155}}><option value="">All employees</option>{salesmen.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select>
+                  <button type="button" onClick={load} disabled={loading} style={{height:40,border:`1px solid ${T.line}`,borderRadius:10,padding:"0 13px",background:"#fff",color:T.route,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}><RefreshCw size={14}/> Refresh</button>
+                </div>
+              </div>
+              {error&&<div style={{padding:11,borderRadius:10,background:"#fff3f0",color:T.danger,marginBottom:12,fontSize:12.5}}>{error}</div>}
+              {loading?<div style={{padding:24,color:T.inkSoft}}>Loading performance…</div>:data&&<>
+                <div style={{background:"#fff",border:`1px solid ${T.line}`,borderRadius:16,padding:"14px 16px",marginBottom:14,overflowX:"auto"}}><div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr auto 1fr auto 1fr auto 1fr",alignItems:"center",gap:10,minWidth:760}}>{[["Restaurant visits",data.totals.visits],["Leads",data.totals.leads],["Demos",data.totals.demos],["Won",data.totals.won],["Sales",money(data.totals.sales_value)]].map(([label,value],idx)=><React.Fragment key={label}><div style={{background:"#F8FAF9",border:`1px solid ${T.line}`,borderRadius:12,padding:"11px 12px"}}><div style={{fontSize:9.5,color:T.inkSoft,fontWeight:800,textTransform:"uppercase",letterSpacing:.4}}>{label}</div><div style={{fontSize:20,fontWeight:850,color:T.ink,marginTop:3}}>{value}</div></div>{idx<4&&<div style={{fontSize:13,color:T.inkSoft,fontWeight:800}}>→</div>}</React.Fragment>)}</div></div>
+
+                <div style={{display:"grid",gridTemplateColumns:"repeat(5,minmax(0,1fr))",gap:10,marginBottom:20}}>{[["Leads",data.totals.leads,T.route],["Restaurant visits",data.totals.visits,"#52778A"],["Demos",data.totals.demos,"#7561A8"],["Won",data.totals.won,T.verified],["Sales value",money(data.totals.sales_value),T.warn]].map(([l,v,c])=><div key={l} style={{background:"#fff",border:`1px solid ${T.line}`,borderRadius:14,padding:"13px 14px",minWidth:0}}><div style={{fontSize:10,color:T.inkSoft,textTransform:"uppercase",letterSpacing:.45,fontWeight:800}}>{l}</div><div style={{fontSize:23,fontWeight:850,color:c,marginTop:5}}>{v}</div></div>)}</div>
+
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,marginBottom:9}}><div style={{fontSize:11,textTransform:"uppercase",letterSpacing:.6,color:T.inkSoft,fontWeight:850}}>Employee performance</div><div style={{fontSize:11.5,color:T.inkSoft}}>{data.rows.length} employee{data.rows.length===1?'':'s'}</div></div>
+                <div style={{display:"grid",gap:10}}>{data.rows.map(r=>{const tg=targetFor(r.id);const ins=insightFor(r.id);const state=progressState(r,tg);const isOpen=expandedEmployee===r.id;const avgDeal=Number(r.won||0)>0?Number(r.sales_value||0)/Number(r.won):0;return <div key={r.id} className="engage-performance-employee-card" style={{background:"#fff",border:`1px solid ${T.line}`,borderRadius:16,padding:16,boxShadow:"0 1px 2px rgba(20,20,30,.025)"}}>
+                  <button type="button" onClick={()=>setExpandedEmployee(isOpen?null:r.id)} aria-expanded={isOpen} style={{width:"100%",border:"none",background:"transparent",padding:0,cursor:"pointer",textAlign:"left"}}>
+                    <div style={{display:"grid",gridTemplateColumns:"minmax(220px,1.3fr) repeat(5,minmax(70px,.55fr)) auto",gap:12,alignItems:"center"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}><div style={{...leadAvatarStyle(r.full_name),width:36,height:36,minWidth:36,fontSize:12}}>{leadInitials(r.full_name)}</div><div><div style={{fontSize:15.5,fontWeight:850,color:T.ink}}>{r.full_name}</div><div style={{fontSize:11.5,color:T.inkSoft,marginTop:2}}>{r.won} won · {money(r.sales_value)} sales</div></div></div>
+                      {[["Visits",r.visits],["Leads",r.leads],["Demos",r.demos],["Won",r.won],["Sales",money(r.sales_value)]].map(([l,v])=><div key={l}><div style={{fontSize:9,color:T.inkSoft,textTransform:"uppercase",fontWeight:800}}>{l}</div><div style={{fontSize:13,fontWeight:800,color:T.ink,marginTop:2}}>{v}</div></div>)}
+                      <div style={{display:"flex",alignItems:"center",gap:8,justifyContent:"flex-end"}}><span style={{fontSize:10.5,fontWeight:850,padding:"5px 9px",borderRadius:999,background:state.tone==='strong'?"#E6F6EF":state.tone==='behind'?"#FFF0EA":"#F1F3F4",color:state.tone==='strong'?T.verified:state.tone==='behind'?"#B45309":T.inkSoft,whiteSpace:"nowrap"}}>{state.label}</span><span style={{fontSize:16,color:T.inkSoft}}>{isOpen?"▴":"▾"}</span></div>
+                    </div>
+                  </button>
+
+                  {isOpen&&<div style={{display:"grid",gridTemplateColumns:"minmax(0,1.15fr) minmax(280px,.85fr)",gap:18,paddingTop:14,marginTop:13,borderTop:`1px solid ${T.line}`}}>
+                    <div><div style={{fontSize:10,textTransform:"uppercase",letterSpacing:.5,fontWeight:850,color:T.inkSoft,marginBottom:2}}>Performance overview</div>{metric("Restaurant visits",r.visits,tg.visits_target)}{metric("New leads",r.leads,tg.leads_target)}{metric("Demos",r.demos,tg.demos_target)}{metric("Deals won",r.won,tg.won_target)}{metric("Sales value",r.sales_value,tg.sales_value_target,true)}</div>
+                    <div style={{display:"flex",flexDirection:"column",gap:10}}><div><div style={{fontSize:10,textTransform:"uppercase",letterSpacing:.5,fontWeight:850,color:T.inkSoft,marginBottom:7}}>Conversion rates</div><div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:7}}>{[["Lead → Demo",`${conversion(r.leads,r.demos)}%`],["Demo → Won",`${conversion(r.demos,r.won)}%`],["Lead → Won",`${conversion(r.leads,r.won)}%`]].map(([l,v])=><div key={l} style={{background:"#F7FAF9",border:`1px solid ${T.line}`,borderRadius:10,padding:"10px 9px"}}><strong style={{fontSize:17,color:T.ink}}>{v}</strong><div style={{fontSize:9.5,color:T.inkSoft,marginTop:2}}>{l}</div></div>)}</div></div><div style={{background:"#F8FAFC",border:`1px solid ${T.line}`,borderRadius:11,padding:"11px 12px"}}><div style={{fontSize:10,color:T.inkSoft,fontWeight:800,textTransform:"uppercase"}}>Average deal value</div><div style={{fontSize:20,fontWeight:850,color:T.ink,marginTop:4}}>{money(avgDeal)}</div></div>{ins&&<div style={{background:"#F8FAFC",border:`1px solid ${T.line}`,borderRadius:11,padding:"10px 11px"}}><div style={{fontSize:10,fontWeight:850,color:T.inkSoft,textTransform:"uppercase",marginBottom:6}}>Manager view</div><div style={{display:"flex",gap:8,flexWrap:"wrap",fontSize:10.5,color:T.inkSoft}}><span>{Number(ins.followups_completed||0)} follow-ups</span><span>{Number(ins.followups_overdue||ins.overdue_followups||0)} overdue</span><span>{Number(ins.negotiations||0)} negotiations</span><span>{Number(ins.active_days||0)} active days</span></div></div>}</div>
+                  </div>}
+                </div>})}</div>
+                {!data.rows.length&&<EmptyReportState text="No employees found for this filter."/>}
+              </>}
+            </div>;
+          }'''
+          p.write_text(s[:start]+new+s[end:])
           PY
       - name: Verify frontend build
         run: npm ci && npm run build
