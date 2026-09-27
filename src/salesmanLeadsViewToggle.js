@@ -22,6 +22,25 @@ function getLeadRows(section) {
   });
 }
 
+function parseCompactMoney(text) {
+  const match = String(text || '').match(/₹\s*([\d,.]+(?:\.\d+)?)\s*(Cr|L|K)?/i);
+  if (!match) return 0;
+  const number = Number(match[1].replace(/,/g, '')) || 0;
+  const unit = (match[2] || '').toLowerCase();
+  if (unit === 'cr') return number * 1e7;
+  if (unit === 'l') return number * 1e5;
+  if (unit === 'k') return number * 1e3;
+  return number;
+}
+
+function formatCompactMoney(value) {
+  const n = Number(value) || 0;
+  if (n >= 1e7) return `₹${(n / 1e7).toFixed(1).replace(/\.0$/, '')}Cr`;
+  if (n >= 1e5) return `₹${(n / 1e5).toFixed(1).replace(/\.0$/, '')}L`;
+  if (n >= 1e3) return `₹${(n / 1e3).toFixed(1).replace(/\.0$/, '')}K`;
+  return `₹${Math.round(n).toLocaleString('en-IN')}`;
+}
+
 function leadInfo(row) {
   const name = [...row.querySelectorAll('div')].find((n) => {
     const style = n.getAttribute('style') || '';
@@ -29,9 +48,11 @@ function leadInfo(row) {
   })?.textContent?.trim() || row.textContent?.trim().split(/Brief|Cold|Conversation|Hot|Demo|Negotiation|Won|Lost|Nurture/)[0]?.trim() || 'Lead';
 
   const meta = row.querySelector('.employee-mobile-lead-meta');
+  const metaText = meta?.textContent?.trim() || row.textContent?.trim() || '';
   const stage = meta?.querySelector('span')?.textContent?.trim() || STAGES.find((s) => row.textContent?.includes(s)) || 'Cold';
-  const attention = meta?.textContent?.trim()?.replace(stage, '').replace(/^\s*·\s*/, '') || '';
-  return { name, stage, attention };
+  const attention = metaText.replace(stage, '').replace(/^\s*·\s*/, '') || '';
+  const dealValue = parseCompactMoney(metaText);
+  return { name, stage, attention, dealValue };
 }
 
 function selectedFilterStage(section) {
@@ -51,6 +72,7 @@ function buildKanban(section, rows, selectedStage) {
 
   const items = rows.map((row) => ({ row, ...leadInfo(row) }));
   const counts = Object.fromEntries(STAGES.map((s) => [s, items.filter((x) => x.stage === s).length]));
+  const values = Object.fromEntries(STAGES.map((s) => [s, items.filter((x) => x.stage === s).reduce((sum, x) => sum + (Number(x.dealValue) || 0), 0)]));
   const filterStage = selectedFilterStage(section);
   const active = filterStage || (STAGES.includes(selectedStage) ? selectedStage : (STAGES.find((s) => counts[s] > 0) || 'Conversation'));
   section.dataset.kanbanStage = active;
@@ -61,7 +83,7 @@ function buildKanban(section, rows, selectedStage) {
   const signature = JSON.stringify({
     active,
     filterStage,
-    items: items.map(({ name, stage, attention }) => [name, stage, attention]),
+    items: items.map(({ name, stage, attention, dealValue }) => [name, stage, attention, dealValue]),
   });
   if (!isNewBoard && board.dataset.signature === signature) return;
   board.dataset.signature = signature;
@@ -94,7 +116,7 @@ function buildKanban(section, rows, selectedStage) {
   column.dataset.stage = active.toLowerCase();
   const head = document.createElement('div');
   head.className = 'engage-salesman-kanban-column-head';
-  head.innerHTML = `<span>${active}</span><span>${counts[active] || 0} deal${counts[active] === 1 ? '' : 's'}</span>`;
+  head.innerHTML = `<span>${active}</span><span>${counts[active] || 0} deal${counts[active] === 1 ? '' : 's'} · ${formatCompactMoney(values[active])}</span>`;
   column.appendChild(head);
 
   const stageItems = items.filter((x) => x.stage === active);
