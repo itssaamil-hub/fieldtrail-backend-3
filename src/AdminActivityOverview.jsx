@@ -84,7 +84,7 @@ function SparkChart({ rows, activeKeys, days }) {
   const y = v => top + (h-top-bottom) * (1 - Number(v||0)/yMax);
   const grid = [0,.25,.5,.75,1].map(p => Math.round(yMax*p));
   const labelEvery = days === 30 ? 4 : days === 15 ? 2 : 1;
-  return <div style={{width:'100%',overflowX:'auto',marginTop:4}}>
+  return <div style={{width:'100%',overflowX:'auto',marginTop:'auto',paddingTop:4}}>
     <svg viewBox={`0 0 ${w} ${h}`} style={{width:days===30?'auto':'100%',minWidth:days===30?920:620,height:300,display:'block'}} role="img" aria-label={`${days} day lead activity chart`}>
       {grid.map(v => <g key={v}><line x1={left} x2={w-right} y1={y(v)} y2={y(v)} stroke="#EDEFF2" strokeWidth="1"/><text x={left-10} y={y(v)+4} textAnchor="end" fontSize="10" fill="#98A2B3">{v}</text></g>)}
       {rows.map((r,i)=> (i%labelEvery===0 || i===rows.length-1) ? <text key={r.day} x={x(i)} y={h-9} textAnchor="middle" fontSize="10.5" fill="#667085">{fmtDay(r.day)}</text> : null)}
@@ -129,7 +129,7 @@ export default function AdminActivityOverview({ salesmen=[] }) {
   return <div style={{display:'grid',gridTemplateColumns:'minmax(0,1.42fr) minmax(380px,.86fr)',gap:14,marginBottom:18}} className="engage-activity-overview">
     <style>{`@media(max-width:1180px){.engage-activity-overview{grid-template-columns:minmax(0,1.28fr) minmax(370px,.92fr)!important}} @media(max-width:920px){.engage-activity-overview{grid-template-columns:1fr!important}.engage-activity-feed{max-height:none!important}}`}</style>
 
-    <section style={{background:C.card,border:`1px solid ${C.line}`,borderRadius:16,padding:16,minWidth:0,boxShadow:'0 1px 2px rgba(15,23,42,.03)'}}>
+    <section style={{background:C.card,border:`1px solid ${C.line}`,borderRadius:16,padding:16,minWidth:0,boxShadow:'0 1px 2px rgba(15,23,42,.03)',display:'flex',flexDirection:'column'}}>
       <div style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'flex-start',marginBottom:10,flexWrap:'wrap'}}>
         <div style={{minWidth:180,paddingLeft:2}}>
           <div style={{fontSize:16,fontWeight:800,color:C.ink}}>Lead Activity</div>
