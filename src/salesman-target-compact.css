@@ -1,34 +1,50 @@
 @media (max-width: 899px) {
   .engage-salesman-target-card {
-    padding: 12px 14px !important;
-    margin-bottom: 12px !important;
-    border-radius: 15px !important;
+    padding: 9px 12px 8px !important;
+    margin-bottom: 9px !important;
+    border-radius: 14px !important;
   }
 
   .engage-salesman-target-card > div:first-child {
-    margin-bottom: 8px !important;
+    margin-bottom: 5px !important;
+    gap: 6px !important;
   }
 
-  .engage-salesman-target-card > div:not(:first-child) {
-    margin-bottom: 5px !important;
+  .engage-salesman-target-card > div:first-child > div {
+    font-size: 12.5px !important;
+  }
+
+  .engage-salesman-target-card > div:nth-child(2),
+  .engage-salesman-target-card > div:nth-child(5) {
+    margin-bottom: 2px !important;
+    font-size: 10.5px !important;
+    line-height: 1.15 !important;
+  }
+
+  .engage-salesman-target-card > div:nth-child(2) > span:last-child,
+  .engage-salesman-target-card > div:nth-child(5) > span:last-child {
+    font-size: 12.5px !important;
   }
 
   .engage-salesman-target-card .engage-target-divider {
-    margin: 7px 0 !important;
+    margin: 4px 0 !important;
   }
 
   .engage-salesman-target-card .engage-target-progress {
-    height: 7px !important;
-    margin: 3px 0 5px !important;
+    height: 5px !important;
+    margin: 2px 0 3px !important;
+    border-radius: 999px !important;
   }
 
   .engage-salesman-target-card .engage-target-progress > div {
-    height: 7px !important;
+    height: 5px !important;
+    border-radius: 999px !important;
   }
 
   .engage-salesman-target-card .engage-target-remaining {
-    margin-top: 2px !important;
+    margin-top: 1px !important;
     margin-bottom: 0 !important;
-    line-height: 1.2 !important;
+    font-size: 10px !important;
+    line-height: 1.1 !important;
   }
 }
