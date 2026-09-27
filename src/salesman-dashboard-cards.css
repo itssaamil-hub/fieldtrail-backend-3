@@ -1,19 +1,18 @@
 @media (max-width: 899px) {
-  /* The salesman dashboard still has a 3-column inline grid in App.jsx.
-     Force only the direct KPI-card parent to the same 2-column mobile layout
-     used by Admin, without touching the rest of the salesman dashboard. */
   div:has(> .engage-salesman-water-card) {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 10px !important;
+    gap: 8px !important;
+    margin-bottom: 12px !important;
   }
 
   .engage-salesman-water-card {
     width: auto !important;
     max-width: none !important;
     min-width: 0 !important;
-    min-height: 86px !important;
+    min-height: 76px !important;
+    height: 76px !important;
     box-sizing: border-box !important;
-    padding: 10px 11px 9px !important;
+    padding: 8px 10px 7px !important;
     border-radius: 13px !important;
     background: #fff !important;
     border: 1px solid #E7EBED !important;
@@ -22,9 +21,7 @@
     position: relative !important;
   }
 
-  .engage-salesman-water-card::before {
-    content: none !important;
-  }
+  .engage-salesman-water-card::before { content: none !important; }
 
   .engage-salesman-water-card[data-kpi="today"],
   .engage-salesman-water-card[data-kpi="hot"],
@@ -41,7 +38,7 @@
     align-items: center !important;
     justify-content: flex-start !important;
     gap: 6px !important;
-    margin-bottom: 5px !important;
+    margin-bottom: 3px !important;
     min-width: 0 !important;
   }
 
@@ -58,41 +55,12 @@
     box-shadow: none !important;
   }
 
-  .engage-salesman-water-card[data-kpi="today"] > div:first-child > div:last-child {
-    color: #3B82F6 !important;
-    background: #EEF4FF !important;
-    border: 1px solid #DCE8FF !important;
-  }
-
-  .engage-salesman-water-card[data-kpi="hot"] > div:first-child > div:last-child {
-    color: #C0392B !important;
-    background: #FDEDEC !important;
-    border: 1px solid #F7D9D6 !important;
-  }
-
-  .engage-salesman-water-card[data-kpi="conversation"] > div:first-child > div:last-child {
-    color: #145C5D !important;
-    background: #EDF7F5 !important;
-    border: 1px solid #D9ECE8 !important;
-  }
-
-  .engage-salesman-water-card[data-kpi="negotiation"] > div:first-child > div:last-child {
-    color: #8B5CF6 !important;
-    background: #F3EFFF !important;
-    border: 1px solid #E6DDFC !important;
-  }
-
-  .engage-salesman-water-card[data-kpi="won"] > div:first-child > div:last-child {
-    color: #12805C !important;
-    background: #EAF7F2 !important;
-    border: 1px solid #D4EDE4 !important;
-  }
-
-  .engage-salesman-water-card[data-kpi="renewals"] > div:first-child > div:last-child {
-    color: #F5793B !important;
-    background: #FFF1E8 !important;
-    border: 1px solid #F7DED0 !important;
-  }
+  .engage-salesman-water-card[data-kpi="today"] > div:first-child > div:last-child { color:#3B82F6 !important; background:#EEF4FF !important; border:1px solid #DCE8FF !important; }
+  .engage-salesman-water-card[data-kpi="hot"] > div:first-child > div:last-child { color:#C0392B !important; background:#FDEDEC !important; border:1px solid #F7D9D6 !important; }
+  .engage-salesman-water-card[data-kpi="conversation"] > div:first-child > div:last-child { color:#145C5D !important; background:#EDF7F5 !important; border:1px solid #D9ECE8 !important; }
+  .engage-salesman-water-card[data-kpi="negotiation"] > div:first-child > div:last-child { color:#8B5CF6 !important; background:#F3EFFF !important; border:1px solid #E6DDFC !important; }
+  .engage-salesman-water-card[data-kpi="won"] > div:first-child > div:last-child { color:#12805C !important; background:#EAF7F2 !important; border:1px solid #D4EDE4 !important; }
+  .engage-salesman-water-card[data-kpi="renewals"] > div:first-child > div:last-child { color:#F5793B !important; background:#FFF1E8 !important; border:1px solid #F7DED0 !important; }
 
   .engage-salesman-water-card > div:first-child > div:last-child svg {
     width: 12px !important;
@@ -105,7 +73,7 @@
     min-width: 0 !important;
     color: #6F7B7D !important;
     font-size: 9px !important;
-    line-height: 1.15 !important;
+    line-height: 1.1 !important;
     font-weight: 700 !important;
     letter-spacing: .1px !important;
     text-transform: none !important;
@@ -116,18 +84,18 @@
 
   .engage-salesman-water-card > div:nth-child(2) {
     font-family: 'Space Grotesk', sans-serif !important;
-    font-size: 24px !important;
-    line-height: 1 !important;
+    font-size: 23px !important;
+    line-height: .95 !important;
     font-weight: 700 !important;
     letter-spacing: -.3px !important;
     color: #173738 !important;
   }
 
   .engage-salesman-water-card > div:nth-child(3) {
-    margin-top: 3px !important;
+    margin-top: 2px !important;
     color: #70817E !important;
     font-size: 9px !important;
-    line-height: 1.12 !important;
+    line-height: 1.05 !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
