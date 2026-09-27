@@ -2453,7 +2453,6 @@ function SalesmanPerformanceReport({ salesmen }) {
   const [error,setError]=useState("");
 
   const money=n=>fmtMoney(Number(n||0));
-
   const load=useCallback(()=>{
     setLoading(true);setError("");
     Promise.all([
@@ -2482,75 +2481,75 @@ function SalesmanPerformanceReport({ salesmen }) {
   const managerNotes=(r,tg,i)=>{const state=progressState(r,tg),notes=[];if(state.tone==='strong')notes.push('Strong progress against target this month.');else if(state.tone==='behind')notes.push('Core funnel activity is behind target and needs attention.');else if(state.tone==='quiet')notes.push('Very little recorded sales activity this month.');if(Number(i?.overdue_tasks||i?.tasks_overdue||0)>0)notes.push(`${Number(i?.overdue_tasks||i?.tasks_overdue)} overdue task${Number(i?.overdue_tasks||i?.tasks_overdue)===1?'':'s'} should be cleared.`);if(Number(i?.followups_overdue||i?.overdue_followups||0)>0)notes.push(`${Number(i?.followups_overdue||i?.overdue_followups)} follow-up${Number(i?.followups_overdue||i?.overdue_followups)===1?' is':'s are'} overdue.`);if(Number(i?.negotiations||0)>0)notes.push(`${Number(i.negotiations)} deal${Number(i.negotiations)===1?' is':'s are'} currently in negotiation.`);if(conversion(r.leads,r.won)>=25&&Number(r.won||0)>0)notes.push('Lead-to-win conversion is strong.');return notes.length?notes:['Performance is steady; keep activity and follow-ups consistent.'];};
   const metric=(label,value,target,format=false)=>{
     const progress=pct(value,target);
-    return <div style={{marginTop:10}}>
-      <div style={{display:"flex",justifyContent:"space-between",gap:8,fontSize:11.5}}>
+    return <div style={{padding:"10px 0",borderBottom:`1px solid ${T.line}`}}>
+      <div style={{display:"flex",justifyContent:"space-between",gap:10,fontSize:12}}>
         <span style={{color:T.inkSoft}}>{label}</span>
-        <span style={{fontWeight:750,color:T.ink}}>{format?money(value):value}{target>0?` / ${format?money(target):target}`:""}</span>
+        <span style={{fontWeight:800,color:T.ink}}>{format?money(value):value}{target>0?` / ${format?money(target):target}`:""}</span>
       </div>
-      {target>0&&<><div style={{height:5,borderRadius:99,background:"#E9EFEC",overflow:"hidden",marginTop:5}}><div style={{height:"100%",width:`${progress}%`,background:T.route,borderRadius:99}}/></div><div style={{fontSize:10,color:T.inkSoft,textAlign:"right",marginTop:2}}>{progress}%</div></>}
+      {target>0&&<div style={{display:"flex",alignItems:"center",gap:8,marginTop:7}}><div style={{height:6,borderRadius:99,background:"#E9EFEC",overflow:"hidden",flex:1}}><div style={{height:"100%",width:`${progress}%`,background:T.route,borderRadius:99}}/></div><span style={{fontSize:10.5,color:T.inkSoft,minWidth:32,textAlign:"right"}}>{progress}%</span></div>}
     </div>
   };
 
   return <div className="engage-performance-report-page">
-    <div className="engage-performance-hero" style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",gap:10,flexWrap:"wrap",marginBottom:15}}>
-      <div><div className="engage-performance-kicker">SALES PERFORMANCE</div><div style={{fontSize:18,fontWeight:800,color:T.ink}}>Monthly Performance</div><div style={{fontSize:12,color:T.inkSoft,marginTop:3}}>{monthLabel} · Restaurant visits → Leads → Demos → Won → Sales value.</div></div>
-      <div className="engage-performance-filters" style={{display:"flex",gap:7}}>
-        <input type="month" value={anchor.slice(0,7)} onChange={e=>setAnchor(`${e.target.value}-01`)} style={{height:36,border:`1px solid ${T.line}`,borderRadius:9,padding:"0 9px",background:"#fff",color:T.ink}}/>
-        <select value={employee} onChange={e=>setEmployee(e.target.value)} style={{height:36,border:`1px solid ${T.line}`,borderRadius:9,padding:"0 9px",background:"#fff",color:T.ink}}>
+    <div className="engage-performance-hero" style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",gap:14,flexWrap:"wrap",marginBottom:18}}>
+      <div>
+        <div className="engage-performance-kicker">SALES PERFORMANCE</div>
+        <div style={{fontSize:22,fontWeight:850,color:T.ink}}>Monthly Performance</div>
+        <div style={{fontSize:12.5,color:T.inkSoft,marginTop:4}}>{monthLabel} · Restaurant visits → Leads → Demos → Won → Sales value.</div>
+      </div>
+      <div className="engage-performance-filters" style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+        <input type="month" value={anchor.slice(0,7)} onChange={e=>setAnchor(`${e.target.value}-01`)} style={{height:40,border:`1px solid ${T.line}`,borderRadius:10,padding:"0 11px",background:"#fff",color:T.ink}}/>
+        <select value={employee} onChange={e=>setEmployee(e.target.value)} style={{height:40,border:`1px solid ${T.line}`,borderRadius:10,padding:"0 11px",background:"#fff",color:T.ink,minWidth:155}}>
           <option value="">All employees</option>{salesmen.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}
         </select>
-        <button type="button" onClick={load} disabled={loading} style={{height:36,border:`1px solid ${T.line}`,borderRadius:9,padding:"0 11px",background:"#fff",color:T.route,fontWeight:750,cursor:"pointer"}}><RefreshCw size={13}/> Refresh</button>
+        <button type="button" onClick={load} disabled={loading} style={{height:40,border:`1px solid ${T.line}`,borderRadius:10,padding:"0 13px",background:"#fff",color:T.route,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}><RefreshCw size={14}/> Refresh</button>
       </div>
     </div>
     {error&&<div style={{padding:11,borderRadius:10,background:"#fff3f0",color:T.danger,marginBottom:12,fontSize:12.5}}>{error}</div>}
     {loading?<div style={{padding:24,color:T.inkSoft}}>Loading performance…</div>:data&&<>
-      <div className="engage-performance-funnel" style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:8,marginBottom:10}}>
-        {[["Leads",data.totals.leads],["Demos",data.totals.demos],["Won",data.totals.won],["Sales",money(data.totals.sales_value)]].map(([label,value],idx)=><div key={label} style={{background:"#F7FAF9",border:`1px solid ${T.line}`,borderRadius:10,padding:"9px 10px",position:"relative"}}><div style={{fontSize:9.5,color:T.inkSoft,fontWeight:800,textTransform:"uppercase"}}>{label}</div><strong style={{fontSize:16}}>{value}</strong>{idx<3&&<span style={{position:"absolute",right:-7,top:"50%",color:T.inkSoft}}>→</span>}</div>)}
-      </div>
-      <div className="engage-performance-summary" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(135px,1fr))",gap:8,marginBottom:17}}>
-        {[
-          ["Leads",data.totals.leads],
-          ["Restaurant visits",data.totals.visits],
-          ["Demos",data.totals.demos],
-          ["Won",data.totals.won],
-          ["Sales value",money(data.totals.sales_value)]
-        ].map(([l,v])=><div key={l} style={{background:"#fff",border:`1px solid ${T.line}`,borderRadius:12,padding:"12px 13px"}}><div style={{fontSize:10.5,color:T.inkSoft,textTransform:"uppercase",letterSpacing:.4,fontWeight:700}}>{l}</div><div style={{fontSize:20,fontWeight:800,color:T.ink,marginTop:4}}>{v}</div></div>)}
+      <div style={{background:"#fff",border:`1px solid ${T.line}`,borderRadius:16,padding:"14px 16px",marginBottom:14,overflowX:"auto"}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr auto 1fr auto 1fr auto 1fr",alignItems:"center",gap:10,minWidth:760}}>
+          {[["Restaurant visits",data.totals.visits],["Leads",data.totals.leads],["Demos",data.totals.demos],["Won",data.totals.won],["Sales",money(data.totals.sales_value)]].map(([label,value],idx)=><React.Fragment key={label}>
+            <div style={{background:"#F8FAF9",border:`1px solid ${T.line}`,borderRadius:12,padding:"11px 12px"}}><div style={{fontSize:9.5,color:T.inkSoft,fontWeight:800,textTransform:"uppercase",letterSpacing:.4}}>{label}</div><div style={{fontSize:20,fontWeight:850,color:T.ink,marginTop:3}}>{value}</div></div>
+            {idx<4&&<div style={{fontSize:13,color:T.inkSoft,fontWeight:800}}>→</div>}
+          </React.Fragment>)}
+        </div>
       </div>
 
-      <div style={{fontSize:11,textTransform:"uppercase",letterSpacing:.55,color:T.inkSoft,fontWeight:800,marginBottom:9}}>Employee progress</div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(270px,1fr))",gap:10}}>
-        {data.rows.map(r=>{const tg=targetFor(r.id);const ins=insightFor(r.id);const state=progressState(r,tg);return <div key={r.id} className="engage-performance-employee-card" style={{background:"#fff",border:`1px solid ${T.line}`,borderRadius:14,padding:14,boxShadow:"0 1px 2px rgba(20,20,30,.03)"}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
-            <div><div style={{fontSize:14,fontWeight:800,color:T.ink}}>{r.full_name}</div><div style={{fontSize:11.5,color:T.inkSoft,marginTop:2}}>{r.won} won · {money(r.sales_value)} sales</div></div>
-            <span className={`engage-performance-status is-${state.tone}`} style={{fontSize:10.5,fontWeight:800,padding:"4px 8px",borderRadius:999,background:state.tone==='strong'?"#E6F6EF":state.tone==='behind'?"#FBEAE8":"#F4F5F7",color:state.tone==='strong'?T.verified:state.tone==='behind'?T.danger:T.inkSoft}}>{state.label}</span>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(5,minmax(0,1fr))",gap:10,marginBottom:20}}>
+        {[["Leads",data.totals.leads,T.route],["Restaurant visits",data.totals.visits,"#52778A"],["Demos",data.totals.demos,"#7561A8"],["Won",data.totals.won,T.verified],["Sales value",money(data.totals.sales_value),T.warn]].map(([l,v,c])=><div key={l} style={{background:"#fff",border:`1px solid ${T.line}`,borderRadius:14,padding:"13px 14px",minWidth:0}}><div style={{fontSize:10,color:T.inkSoft,textTransform:"uppercase",letterSpacing:.45,fontWeight:800}}>{l}</div><div style={{fontSize:23,fontWeight:850,color:c,marginTop:5}}>{v}</div></div>)}
+      </div>
+
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,marginBottom:9}}><div style={{fontSize:11,textTransform:"uppercase",letterSpacing:.6,color:T.inkSoft,fontWeight:850}}>Employee performance</div><div style={{fontSize:11.5,color:T.inkSoft}}>{data.rows.length} employee{data.rows.length===1?'':'s'}</div></div>
+      <div style={{display:"grid",gap:12}}>
+        {data.rows.map(r=>{const tg=targetFor(r.id);const ins=insightFor(r.id);const state=progressState(r,tg);const avgDeal=Number(r.won||0)>0?Number(r.sales_value||0)/Number(r.won||1):0;return <div key={r.id} className="engage-performance-employee-card" style={{background:"#fff",border:`1px solid ${T.line}`,borderRadius:16,padding:16,boxShadow:"0 1px 2px rgba(20,20,30,.025)"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,paddingBottom:12,borderBottom:`1px solid ${T.line}`}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}><div style={{...leadAvatarStyle(r.full_name),width:36,height:36,minWidth:36,fontSize:12}}>{leadInitials(r.full_name)}</div><div><div style={{fontSize:15.5,fontWeight:850,color:T.ink}}>{r.full_name}</div><div style={{fontSize:11.5,color:T.inkSoft,marginTop:2}}>{r.won} won · {money(r.sales_value)} sales · {r.leads} leads</div></div></div>
+            <span style={{fontSize:10.5,fontWeight:850,padding:"5px 9px",borderRadius:999,background:state.tone==='strong'?"#E6F6EF":state.tone==='behind'?"#FFF0EA":"#F1F3F4",color:state.tone==='strong'?T.verified:state.tone==='behind'?"#B45309":T.inkSoft,whiteSpace:"nowrap"}}>{state.label}</span>
           </div>
-          <>
-            {metric("Restaurant visits",r.visits,tg.visits_target)}
-            {metric("New leads",r.leads,tg.leads_target)}
-            {metric("Demos",r.demos,tg.demos_target)}
-            {metric("Deals won",r.won,tg.won_target)}
-            {metric("Sales value",r.sales_value,tg.sales_value_target,true)}
-            {(()=>{
-              const earned =
-                Math.max(0,Number(r.visits||0)-Number(tg.visits_target||0))*Number(tg.visits_incentive||0) +
-                Math.max(0,Number(r.leads||0)-Number(tg.leads_target||0))*Number(tg.leads_incentive||0) +
-                Math.max(0,Number(r.demos||0)-Number(tg.demos_target||0))*Number(tg.demos_incentive||0) +
-                Math.max(0,Number(r.won||0)-Number(tg.won_target||0))*Number(tg.won_incentive||0) +
-                Math.max(0,Number(r.sales_value||0)-Number(tg.sales_value_target||0))*Number(tg.sales_value_incentive_pct||0)/100;
-              return earned>0?<div style={{marginTop:12,padding:"9px 10px",borderRadius:9,background:"#F0F8F4",color:T.route,fontSize:12,fontWeight:750}}>Calculated incentive · {money(earned)}</div>:null;
-            })()}
-            <div className="engage-performance-at-glance" style={{marginTop:12,paddingTop:11,borderTop:`1px solid ${T.line}`}}>
-              <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:.5,fontWeight:800,color:T.inkSoft,marginBottom:7}}>At a glance</div>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:6}}>
-                {[["Lead → Demo",`${conversion(r.leads,r.demos)}%`],["Demo → Won",`${conversion(r.demos,r.won)}%`],["Lead → Won",`${conversion(r.leads,r.won)}%`]].map(([l,v])=><div key={l} style={{background:"#F7FAF9",borderRadius:8,padding:"7px 8px"}}><strong style={{fontSize:13}}>{v}</strong><div style={{fontSize:9.5,color:T.inkSoft}}>{l}</div></div>)}
-              </div>
-              {ins&&<div className="engage-performance-manager" style={{marginTop:9,background:"#F8FAFC",borderRadius:9,padding:"9px 10px"}}>
-                <div style={{fontSize:10,fontWeight:800,color:T.inkSoft,textTransform:"uppercase",marginBottom:6}}>Manager view</div>
-                <div style={{display:"flex",gap:8,flexWrap:"wrap",fontSize:10.5,color:T.inkSoft}}><span>{Number(ins.followups_completed||0)} follow-ups completed</span><span>{Number(ins.followups_overdue||ins.overdue_followups||0)} overdue</span><span>{Number(ins.negotiations||0)} negotiations</span><span>{Number(ins.active_days||0)} active days</span><span>{Number(ins.visits||r.visits||0)} visits</span></div>
-                <ul style={{margin:"7px 0 0",paddingLeft:17,fontSize:10.8,color:T.ink,lineHeight:1.45}}>{managerNotes(r,tg,ins).map((note,i)=><li key={i}>{note}</li>)}</ul>
-              </div>}
+
+          <div style={{display:"grid",gridTemplateColumns:"minmax(0,1.15fr) minmax(300px,.85fr)",gap:18,paddingTop:12}}>
+            <div>
+              <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:.5,fontWeight:850,color:T.inkSoft,marginBottom:2}}>Performance overview</div>
+              {metric("Restaurant visits",r.visits,tg.visits_target)}
+              {metric("New leads",r.leads,tg.leads_target)}
+              {metric("Demos",r.demos,tg.demos_target)}
+              {metric("Deals won",r.won,tg.won_target)}
+              {metric("Sales value",r.sales_value,tg.sales_value_target,true)}
+              {(()=>{const earned=Math.max(0,Number(r.visits||0)-Number(tg.visits_target||0))*Number(tg.visits_incentive||0)+Math.max(0,Number(r.leads||0)-Number(tg.leads_target||0))*Number(tg.leads_incentive||0)+Math.max(0,Number(r.demos||0)-Number(tg.demos_target||0))*Number(tg.demos_incentive||0)+Math.max(0,Number(r.won||0)-Number(tg.won_target||0))*Number(tg.won_incentive||0)+Math.max(0,Number(r.sales_value||0)-Number(tg.sales_value_target||0))*Number(tg.sales_value_incentive_pct||0)/100;return earned>0?<div style={{marginTop:11,padding:"9px 10px",borderRadius:9,background:"#F0F8F4",color:T.route,fontSize:12,fontWeight:800}}>Calculated incentive · {money(earned)}</div>:null;})()}
             </div>
-          </>
+
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              <div>
+                <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:.5,fontWeight:850,color:T.inkSoft,marginBottom:7}}>Conversion rates</div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:7}}>
+                  {[["Lead → Demo",`${conversion(r.leads,r.demos)}%`],["Demo → Won",`${conversion(r.demos,r.won)}%`],["Lead → Won",`${conversion(r.leads,r.won)}%`]].map(([l,v])=><div key={l} style={{background:"#F7FAF9",border:`1px solid ${T.line}`,borderRadius:10,padding:"10px 9px"}}><strong style={{fontSize:17,color:T.ink}}>{v}</strong><div style={{fontSize:9.5,color:T.inkSoft,marginTop:2}}>{l}</div></div>)}
+                </div>
+              </div>
+              <div style={{background:"#F8FAFC",border:`1px solid ${T.line}`,borderRadius:11,padding:"11px 12px"}}><div style={{fontSize:10,color:T.inkSoft,fontWeight:800,textTransform:"uppercase"}}>Average deal value</div><div style={{fontSize:20,fontWeight:850,color:T.ink,marginTop:4}}>{money(avgDeal)}</div></div>
+              {ins&&<div style={{background:"#F8FAFC",border:`1px solid ${T.line}`,borderRadius:11,padding:"10px 11px"}}><div style={{fontSize:10,fontWeight:850,color:T.inkSoft,textTransform:"uppercase",marginBottom:6}}>Manager view</div><div style={{display:"flex",gap:7,flexWrap:"wrap",fontSize:10.5,color:T.inkSoft}}><span>{Number(ins.followups_completed||0)} follow-ups</span><span>{Number(ins.followups_overdue||ins.overdue_followups||0)} overdue</span><span>{Number(ins.negotiations||0)} negotiations</span><span>{Number(ins.active_days||0)} active days</span></div><ul style={{margin:"7px 0 0",paddingLeft:16,fontSize:10.8,color:T.ink,lineHeight:1.45}}>{managerNotes(r,tg,ins).map((note,i)=><li key={i}>{note}</li>)}</ul></div>}
+            </div>
+          </div>
         </div>})}
       </div>
       {!data.rows.length&&<EmptyReportState text="No employees found for this filter."/>}
