@@ -1,16 +1,23 @@
 @media (max-width: 899px) {
+  /* The salesman dashboard still has a 3-column inline grid in App.jsx.
+     Force only the direct KPI-card parent to the same 2-column mobile layout
+     used by Admin, without touching the rest of the salesman dashboard. */
+  div:has(> .engage-salesman-water-card) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+
   .engage-salesman-water-card {
-    flex: 1 1 calc(50% - 6px) !important;
-    width: calc(50% - 6px) !important;
-    max-width: calc(50% - 6px) !important;
+    width: auto !important;
+    max-width: none !important;
     min-width: 0 !important;
     min-height: 86px !important;
     box-sizing: border-box !important;
     padding: 10px 11px 9px !important;
     border-radius: 13px !important;
-    background: linear-gradient(145deg, #F8FCFA 0%, #FFFFFF 100%) !important;
-    border: 1px solid #DDEBE5 !important;
-    box-shadow: 0 4px 14px rgba(18, 128, 92, .08) !important;
+    background: #fff !important;
+    border: 1px solid #E7EBED !important;
+    box-shadow: 0 1px 3px rgba(32,64,64,.04) !important;
     overflow: hidden !important;
     position: relative !important;
   }
@@ -25,8 +32,8 @@
   .engage-salesman-water-card[data-kpi="negotiation"],
   .engage-salesman-water-card[data-kpi="won"],
   .engage-salesman-water-card[data-kpi="renewals"] {
-    background: linear-gradient(145deg, #F8FCFA 0%, #FFFFFF 100%) !important;
-    border-color: #DDEBE5 !important;
+    background: #fff !important;
+    border-color: #E7EBED !important;
   }
 
   .engage-salesman-water-card > div:first-child {
@@ -82,9 +89,9 @@
   }
 
   .engage-salesman-water-card[data-kpi="renewals"] > div:first-child > div:last-child {
-    color: #B8791F !important;
-    background: #FFF6E8 !important;
-    border: 1px solid #F6E7C8 !important;
+    color: #F5793B !important;
+    background: #FFF1E8 !important;
+    border: 1px solid #F7DED0 !important;
   }
 
   .engage-salesman-water-card > div:first-child > div:last-child svg {
