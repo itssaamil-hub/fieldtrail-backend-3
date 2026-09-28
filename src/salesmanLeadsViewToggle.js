@@ -1,4 +1,5 @@
 import './salesman-leads-view-toggle.css';
+import { api, mapLeadRow } from './api.js';
 
 const STAGES = ['Cold', 'Conversation', 'Hot', 'Demo', 'Negotiation', 'Won', 'Lost', 'Nurture'];
 const LIST_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></svg>';
@@ -6,6 +7,8 @@ const BOARD_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" s
 
 let observer = null;
 let queued = false;
+let apiLeads = [];
+let apiLeadsPromise = null;
 
 function visible(node) {
   if (!node || !node.isConnected || node.closest('[hidden]')) return false;
@@ -17,17 +20,6 @@ function getLeadRows(section) {
   return [...section.querySelectorAll('.ft-row')].filter((row) => {
     return !!row.querySelector('.employee-mobile-lead-meta, .employee-mobile-brief-pill, .ft-lead-brief-pill');
   });
-}
-
-function parseCompactMoney(text) {
-  const match = String(text || '').match(/₹\s*([\d,.]+(?:\.\d+)?)\s*(Cr|L|K)?/i);
-  if (!match) return 0;
-  const number = Number(match[1].replace(/,/g, '')) || 0;
-  const unit = (match[2] || '').toLowerCase();
-  if (unit === 'cr') return number * 1e7;
-  if (unit === 'l') return number * 1e5;
-  if (unit === 'k') return number * 1e3;
-  return number;
 }
 
 function formatCompactMoney(value) {
@@ -49,10 +41,7 @@ function leadInfo(row) {
   const metaText = meta?.textContent?.trim() || rowText;
   const stage = meta?.querySelector('span')?.textContent?.trim() || STAGES.find((s) => rowText.includes(s)) || 'Cold';
   const attention = metaText.replace(stage, '').replace(/^\s*·\s*/, '') || '';
-  // Deal value is rendered on the lead row but is not always inside the
-  // employee-mobile-lead-meta element, so parse the complete row text.
-  const dealValue = parseCompactMoney(rowText);
-  return { name, stage, attention, dealValue };
+  return { name, stage, attention };
 }
 
 function selectedFilterStage(section) {
@@ -60,6 +49,29 @@ function selectedFilterStage(section) {
   if (!select || select.value === 'all') return null;
   const label = select.options[select.selectedIndex]?.textContent?.trim();
   return STAGES.includes(label) ? label : null;
+}
+
+async function loadApiLeads(force = false) {
+  if (!force && apiLeads.length) return apiLeads;
+  if (!force && apiLeadsPromise) return apiLeadsPromise;
+  apiLeadsPromise = api.salesmanLeads()
+    .then((result) => {
+      const rows = Array.isArray(result?.leads) ? result.leads : Array.isArray(result) ? result : [];
+      apiLeads = rows.map(mapLeadRow);
+      return apiLeads;
+    })
+    .finally(() => { apiLeadsPromise = null; });
+  return apiLeadsPromise;
+}
+
+function stageValuesFromApi() {
+  return Object.fromEntries(STAGES.map((stage) => {
+    const key = stage.toLowerCase();
+    const total = apiLeads
+      .filter((lead) => lead.status === key)
+      .reduce((sum, lead) => sum + (Number(lead.dealValue) || 0), 0);
+    return [stage, total];
+  }));
 }
 
 function buildKanban(section, rows, selectedStage) {
@@ -72,7 +84,7 @@ function buildKanban(section, rows, selectedStage) {
 
   const items = rows.map((row) => ({ row, ...leadInfo(row) }));
   const counts = Object.fromEntries(STAGES.map((s) => [s, items.filter((x) => x.stage === s).length]));
-  const values = Object.fromEntries(STAGES.map((s) => [s, items.filter((x) => x.stage === s).reduce((sum, x) => sum + (Number(x.dealValue) || 0), 0)]));
+  const values = stageValuesFromApi();
   const filterStage = selectedFilterStage(section);
   const active = filterStage || (STAGES.includes(selectedStage) ? selectedStage : (STAGES.find((s) => counts[s] > 0) || 'Conversation'));
   section.dataset.kanbanStage = active;
@@ -80,7 +92,8 @@ function buildKanban(section, rows, selectedStage) {
   const signature = JSON.stringify({
     active,
     filterStage,
-    items: items.map(({ name, stage, attention, dealValue }) => [name, stage, attention, dealValue]),
+    values,
+    items: items.map(({ name, stage, attention }) => [name, stage, attention]),
   });
   if (!isNewBoard && board.dataset.signature === signature) return;
   board.dataset.signature = signature;
@@ -143,7 +156,7 @@ function buildKanban(section, rows, selectedStage) {
   }
 }
 
-function setMode(section, mode) {
+async function setMode(section, mode) {
   section.dataset.leadsView = mode;
   const toggle = section.querySelector('.engage-salesman-leads-view-toggle');
   toggle?.querySelectorAll('button').forEach((button) => {
@@ -159,6 +172,15 @@ function setMode(section, mode) {
     if (listContainer) listContainer.style.display = '';
     board?.remove();
     return;
+  }
+
+  // Source of truth for money is now the same central path as the rest of the
+  // app: backend /salesman/leads -> mapLeadRow() -> lead.dealValue. Never infer
+  // money from rendered text.
+  try {
+    await loadApiLeads(true);
+  } catch {
+    apiLeads = [];
   }
   buildKanban(section, rows, section.dataset.kanbanStage);
 }
