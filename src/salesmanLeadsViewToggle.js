@@ -15,9 +15,6 @@ function visible(node) {
 
 function getLeadRows(section) {
   return [...section.querySelectorAll('.ft-row')].filter((row) => {
-    // In Kanban mode the source list is intentionally display:none. Do not
-    // discard those rows, because they are still the source of truth for the
-    // board and its stage counts.
     return !!row.querySelector('.employee-mobile-lead-meta, .employee-mobile-brief-pill, .ft-lead-brief-pill');
   });
 }
@@ -48,10 +45,13 @@ function leadInfo(row) {
   })?.textContent?.trim() || row.textContent?.trim().split(/Brief|Cold|Conversation|Hot|Demo|Negotiation|Won|Lost|Nurture/)[0]?.trim() || 'Lead';
 
   const meta = row.querySelector('.employee-mobile-lead-meta');
-  const metaText = meta?.textContent?.trim() || row.textContent?.trim() || '';
-  const stage = meta?.querySelector('span')?.textContent?.trim() || STAGES.find((s) => row.textContent?.includes(s)) || 'Cold';
+  const rowText = row.textContent?.trim() || '';
+  const metaText = meta?.textContent?.trim() || rowText;
+  const stage = meta?.querySelector('span')?.textContent?.trim() || STAGES.find((s) => rowText.includes(s)) || 'Cold';
   const attention = metaText.replace(stage, '').replace(/^\s*·\s*/, '') || '';
-  const dealValue = parseCompactMoney(metaText);
+  // Deal value is rendered on the lead row but is not always inside the
+  // employee-mobile-lead-meta element, so parse the complete row text.
+  const dealValue = parseCompactMoney(rowText);
   return { name, stage, attention, dealValue };
 }
 
@@ -77,9 +77,6 @@ function buildKanban(section, rows, selectedStage) {
   const active = filterStage || (STAGES.includes(selectedStage) ? selectedStage : (STAGES.find((s) => counts[s] > 0) || 'Conversation'));
   section.dataset.kanbanStage = active;
 
-  // MutationObserver runs again when this board is rendered. Without this
-  // guard the strip was rebuilt repeatedly, resetting scrollLeft to 0 and
-  // making finger swipes appear broken on Android Chrome.
   const signature = JSON.stringify({
     active,
     filterStage,
