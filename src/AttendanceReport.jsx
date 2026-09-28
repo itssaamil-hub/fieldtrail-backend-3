@@ -127,6 +127,7 @@ export default function AttendanceReport({ salesmen = [] }) {
       const attendanceDenominator=pastWorkingDates.length+(todayWorking?1:0);
       const attendanceNumerator=pastPresent+(todayPresent?1:0);
       const attendancePct=attendanceDenominator?Math.round(attendanceNumerator/attendanceDenominator*1000)/10:0;
+      const notStartedToday=todayWorking&&!todayPresent;
       let closingDone=0,totalDuration=0;
       const details=[];
       const detailDays=new Set([...workingDates,...workedDates]);
@@ -143,7 +144,7 @@ export default function AttendanceReport({ salesmen = [] }) {
       }
       const workedDays=workedDates.length;
       const closingPending=Math.max(0,workedDays-closingDone);
-      return { ...person, workedDays, workingDays:attendanceDenominator, absentDays:pastAbsent, attendancePct, closingDone, closingPending, totalDuration, details };
+      return { ...person, workedDays, workingDays:attendanceDenominator, presentWorkingDays:attendanceNumerator, absentDays:pastAbsent, notStartedToday, attendancePct, closingDone, closingPending, totalDuration, details };
     });
   },[raw,workingDates,workingSet,from,effectiveTo,today,now]);
 
@@ -155,8 +156,16 @@ export default function AttendanceReport({ salesmen = [] }) {
     return true;
   }),[rows,status]);
 
-  const summary=useMemo(()=>rows.reduce((a,r)=>({ worked:a.worked+r.workedDays, working:a.working+r.workingDays, absent:a.absent+r.absentDays, closingDone:a.closingDone+r.closingDone, closingPending:a.closingPending+r.closingPending }),{worked:0,working:0,absent:0,closingDone:0,closingPending:0}),[rows]);
-  const summaryPct=summary.working?Math.round((summary.working-summary.absent)/summary.working*1000)/10:0;
+  const summary=useMemo(()=>rows.reduce((a,r)=>({
+    worked:a.worked+r.workedDays,
+    working:a.working+r.workingDays,
+    present:a.present+r.presentWorkingDays,
+    absent:a.absent+r.absentDays,
+    notStartedToday:a.notStartedToday+(r.notStartedToday?1:0),
+    closingDone:a.closingDone+r.closingDone,
+    closingPending:a.closingPending+r.closingPending,
+  }),{worked:0,working:0,present:0,absent:0,notStartedToday:0,closingDone:0,closingPending:0}),[rows]);
+  const summaryPct=summary.working?Math.round(summary.present/summary.working*1000)/10:0;
 
   function setPreset(kind){
     if(kind==="today"){setFrom(today);setTo(today);}
@@ -192,6 +201,7 @@ export default function AttendanceReport({ salesmen = [] }) {
         <SummaryRow label="Worked Days" value={summary.worked} detail="Unique days with Start Day" tone="green"/>
         <SummaryRow label="Working Days" value={summary.working} detail="Mon–Fri through today" tone="green"/>
         <SummaryRow label="Absent Days" value={summary.absent} detail="Past working days with no Start Day" tone={summary.absent?"red":"green"}/>
+        {summary.notStartedToday>0 && <SummaryRow label="Not Started Today" value={summary.notStartedToday} detail="Employees expected today with no Start Day yet" tone="amber"/>}
         <SummaryRow label="Attendance" value={`${summaryPct}%`} detail="Present working days ÷ working days" tone={summaryPct>=90?"green":summaryPct>=75?"amber":"red"} last/>
       </Panel>
       <Panel title="Day Closing" subtitle="Closing compliance on days actually worked" icon={ClipboardCheck}>
@@ -208,7 +218,7 @@ export default function AttendanceReport({ salesmen = [] }) {
           <button className="attendance-employee-row" onClick={()=>setExpanded(open?"":r.userId)} style={{width:"100%",border:0,background:"#fff",padding:"12px 14px",cursor:"pointer",textAlign:"left",display:"grid",gridTemplateColumns:"minmax(160px,1fr) auto auto auto 18px",gap:14,alignItems:"center"}}>
             <div><div style={{fontSize:12.8,fontWeight:800,color:"#233637"}}>{r.name}</div><div style={{fontSize:10.6,color:C.soft,marginTop:3}}>{r.workedDays} worked · {r.workingDays} working days · {fmtDuration(r.totalDuration)}</div></div>
             <div className="attendance-extra" style={{textAlign:"right"}}><div style={{fontSize:10,color:C.soft}}>Attendance</div><div style={{fontSize:13,fontWeight:800,color:C.heading,marginTop:2}}>{r.attendancePct}%</div></div>
-            <span className="attendance-extra"><Pill tone={r.absentDays?"red":"green"}>{r.absentDays} absent</Pill></span>
+            <span className="attendance-extra"><Pill tone={r.absentDays?"red":r.notStartedToday?"amber":"green"}>{r.notStartedToday?"Not started":`${r.absentDays} absent`}</Pill></span>
             <span className="attendance-extra"><Pill tone={r.closingPending?"amber":"green"}>{r.closingDone}/{r.workedDays} closing</Pill></span>
             {open?<ChevronDown size={15} color="#7B8788"/>:<ChevronRight size={15} color="#A4AEAE"/>}
           </button>
