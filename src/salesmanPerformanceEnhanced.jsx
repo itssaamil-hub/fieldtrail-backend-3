@@ -1,24 +1,21 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { Trophy, IndianRupee, Target, CheckCircle2, AlertTriangle, Users, ClipboardCheck, CalendarDays } from "lucide-react";
+import { AlertTriangle, CalendarDays, ClipboardCheck, Target } from "lucide-react";
 import { api } from "./api.js";
 
 const C = {
-  ink: "#172033",
-  soft: "#64748B",
-  line: "#E6EAF0",
-  green: "#16A765",
-  greenSoft: "#EAF8F0",
-  blue: "#2D6CDF",
-  blueSoft: "#EDF3FF",
-  purple: "#8B4DD8",
-  purpleSoft: "#F5EEFF",
-  orange: "#F26A3D",
-  orangeSoft: "#FFF2EB",
-  red: "#D92D20",
-  redSoft: "#FFF0F0",
-  amber: "#B7791F",
-  amberSoft: "#FFF7E6",
+  ink: "#1A1D23",
+  heading: "#183738",
+  soft: "#6B7280",
+  line: "#E4E8EB",
+  lineSoft: "#EDF0F2",
+  green: "#145C5D",
+  green2: "#12805C",
+  greenSoft: "#EDF7F5",
+  amber: "#A15C0A",
+  amberSoft: "#FFF7ED",
+  red: "#AA3428",
+  redSoft: "#FDE9E7",
 };
 
 function fmtMoney(value) {
@@ -34,31 +31,44 @@ function pct(value, target) {
   return t > 0 ? Math.round((Number(value || 0) / t) * 100) : 0;
 }
 
-function Progress({ value, target, color }) {
+function Progress({ value, target, tone = C.green }) {
   const p = Math.max(0, Math.min(100, pct(value, target)));
-  return <div style={{ height: 7, borderRadius: 99, background: "#E8ECF1", overflow: "hidden", marginTop: 9 }}><div style={{ height: "100%", width: `${p}%`, background: color, borderRadius: 99 }} /></div>;
+  return <div style={{ height: 6, background: "#EDF2F1", borderRadius: 99, overflow: "hidden", marginTop: 8 }}><div style={{ width: `${p}%`, height: "100%", background: tone, borderRadius: 99, transition: "width .25s ease" }} /></div>;
 }
 
-function MetricCard({ icon: Icon, label, value, sub, badge, color, soft, progress, target }) {
-  return <div style={{ minWidth: 0, border: `1px solid ${C.line}`, borderRadius: 16, padding: 14, background: soft }}>
-    <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
-      <div style={{ width: 34, height: 34, borderRadius: 11, display: "grid", placeItems: "center", background: "rgba(255,255,255,.72)", color }}><Icon size={18} /></div>
-      {badge != null && <span style={{ fontSize: 11, fontWeight: 850, color, background: "rgba(255,255,255,.72)", borderRadius: 999, padding: "4px 7px" }}>{badge}</span>}
+function StatusChip({ children, tone = "good" }) {
+  const styles = tone === "risk" ? { background: C.redSoft, color: C.red } : tone === "warn" ? { background: "#FFF0DF", color: C.amber } : { background: C.greenSoft, color: C.green2 };
+  return <span style={{ ...styles, borderRadius: 999, padding: "4px 8px", fontSize: 10.5, fontWeight: 800, whiteSpace: "nowrap" }}>{children}</span>;
+}
+
+function MetricRow({ label, value, detail, chip, chipTone, progress, target, progressTone }) {
+  return <div style={{ padding: "13px 0", borderBottom: `1px solid ${C.lineSoft}` }}>
+    <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: 12, alignItems: "center" }}>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: 12.5, fontWeight: 700, color: "#233637" }}>{label}</div>
+        {detail && <div style={{ fontSize: 10.8, color: C.soft, marginTop: 3, lineHeight: 1.35 }}>{detail}</div>}
+      </div>
+      <div style={{ textAlign: "right", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, minWidth: 0 }}>
+        <strong style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, lineHeight: 1, color: "#173738" }}>{value}</strong>
+        {chip && <StatusChip tone={chipTone}>{chip}</StatusChip>}
+      </div>
     </div>
-    <div style={{ fontSize: 11.5, fontWeight: 750, color: C.soft, marginTop: 10 }}>{label}</div>
-    <div style={{ fontSize: 25, lineHeight: 1.05, fontWeight: 900, letterSpacing: "-.5px", color: C.ink, marginTop: 4 }}>{value}</div>
-    {sub && <div style={{ fontSize: 11.5, color: C.soft, marginTop: 5 }}>{sub}</div>}
-    {progress && Number(target || 0) > 0 && <Progress value={progress} target={target} color={color} />}
+    {progress != null && Number(target || 0) > 0 && <Progress value={progress} target={target} tone={progressTone || C.green} />}
   </div>;
 }
 
-function Section({ title, icon: Icon, tone, children }) {
-  return <section style={{ border: `1px solid ${C.line}`, borderRadius: 18, padding: 14, background: "#fff", boxShadow: "0 1px 3px rgba(16,24,40,.035)" }}>
-    <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 12 }}>
-      <span style={{ width: 32, height: 32, borderRadius: 11, display: "grid", placeItems: "center", background: tone, color: C.ink }}><Icon size={17} /></span>
-      <div style={{ fontSize: 15, fontWeight: 850, color: C.ink }}>{title}</div>
+function Panel({ title, subtitle, icon: Icon, accent = C.green, children }) {
+  return <section style={{ background: "#fff", border: `1px solid ${C.line}`, borderRadius: 15, overflow: "hidden" }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "13px 14px", borderBottom: `1px solid ${C.lineSoft}` }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
+        <span style={{ width: 30, height: 30, borderRadius: 9, display: "grid", placeItems: "center", background: "#F2F6F5", color: accent, flexShrink: 0 }}><Icon size={15} /></span>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 14.5, fontWeight: 700, color: "#223A3B" }}>{title}</div>
+          {subtitle && <div style={{ fontSize: 10.5, color: "#7A8385", marginTop: 2 }}>{subtitle}</div>}
+        </div>
+      </div>
     </div>
-    {children}
+    <div style={{ padding: "0 14px" }}>{children}</div>
   </section>;
 }
 
@@ -75,58 +85,57 @@ function SalesmanPerformanceEnhanced() {
     return () => { live = false; };
   }, [month]);
 
-  if (error) return <div style={{ padding: 14, border: `1px solid ${C.line}`, borderRadius: 14, color: C.red, background: C.redSoft, fontSize: 13 }}>{error}</div>;
+  if (error) return <div style={{ display: "flex", alignItems: "center", gap: 8, padding: 11, border: "1px solid #FED7AA", borderRadius: 10, color: "#9A5A16", background: C.amberSoft, fontSize: 12 }}><AlertTriangle size={15} />{error}</div>;
   if (!data) return <div style={{ padding: 18, color: C.soft, fontSize: 13 }}>Loading your performance…</div>;
 
   const won = Number(data.won || 0), wonTarget = Number(data.won_target || 0);
   const sales = Number(data.sales_value || 0), salesTarget = Number(data.sales_value_target || 0);
-  const conversion = Number(data.lead_to_won_pct || 0);
+  const conversion = Number(data.lead_to_won_pct || 0), leadsAdded = Number(data.leads_added || 0);
   const followups = Number(data.followups_completed || 0), overdue = Number(data.overdue_followups || 0);
-  const attendance = data.attendance || {};
-  const closings = data.day_closing || {};
+  const attendance = data.attendance || {}, closings = data.day_closing || {};
   const activeDays = Number(attendance.active_days || 0), workingDays = Number(attendance.working_days || 0);
   const attendancePct = Number(attendance.percent || 0), absentDays = Number(attendance.absent_days || 0);
-  const closingSubmitted = Number(closings.submitted || 0), closingPending = Number(closings.pending || 0);
-  const closingPct = Number(closings.percent || 0);
+  const closingSubmitted = Number(closings.submitted || 0), closingPending = Number(closings.pending || 0), closingPct = Number(closings.percent || 0);
   const monthLabel = new Date(`${month}-01T12:00:00`).toLocaleDateString("en-IN", { month: "long", year: "numeric" });
 
-  let todayLabel = "";
-  let todayTone = C.greenSoft;
-  let todayColor = C.green;
-  if (attendance.not_started_today) { todayLabel = "Today · Not started yet"; todayTone = C.amberSoft; todayColor = C.amber; }
-  else if (attendance.today_started && !attendance.today_ended) { todayLabel = "Today · Present · Day active"; todayTone = C.greenSoft; todayColor = C.green; }
-  else if (attendance.today_started && attendance.today_ended) { todayLabel = "Today · Present · Day ended"; }
+  let todayText = "No attendance activity today", todayTone = "warn";
+  if (attendance.not_started_today) todayText = "Not Started Yet";
+  else if (attendance.today_started && !attendance.today_ended) { todayText = "Day Active"; todayTone = "good"; }
+  else if (attendance.today_started && attendance.today_ended) { todayText = "Day Completed"; todayTone = "good"; }
 
-  return <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-    <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
-      <div><div style={{ fontSize: 18, fontWeight: 900, color: C.ink, letterSpacing: "-.25px" }}>My Performance</div><div style={{ fontSize: 12, color: C.soft, marginTop: 2 }}>{monthLabel}</div></div>
-      <input aria-label="Performance month" type="month" value={month} max={currentMonth} onChange={e => setMonth(e.target.value)} style={{ maxWidth: 148, height: 38, border: `1px solid ${C.line}`, borderRadius: 11, background: "#fff", padding: "0 9px", fontSize: 12.5, color: C.ink }} />
+  const salesPct = salesTarget > 0 ? pct(sales, salesTarget) : 0;
+  const wonPct = wonTarget > 0 ? pct(won, wonTarget) : 0;
+
+  return <div style={{ display: "flex", flexDirection: "column", gap: 12, color: C.ink }}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, padding: "2px 1px 4px" }}>
+      <div>
+        <div style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: ".11em", color: C.green, marginBottom: 5 }}>EMPLOYEE PERFORMANCE</div>
+        <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, fontWeight: 700, color: C.heading }}>My Performance</div>
+        <div style={{ fontSize: 12, color: C.soft, marginTop: 3 }}>{monthLabel}</div>
+      </div>
+      <input aria-label="Performance month" type="month" value={month} max={currentMonth} onChange={e => setMonth(e.target.value)} style={{ width: 138, height: 34, border: "1px solid #DFE5E6", borderRadius: 9, background: "#fff", padding: "0 8px", fontSize: 11.5, color: "#334B4C" }} />
     </div>
 
-    <Section title="Sales Performance" icon={Target} tone={C.blueSoft}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10 }}>
-        <MetricCard icon={Trophy} label="Won Deals" value={won} sub={wonTarget > 0 ? `Target: ${wonTarget}` : "No target set"} badge={wonTarget > 0 ? `${pct(won, wonTarget)}%` : null} color={C.green} soft={C.greenSoft} progress={won} target={wonTarget} />
-        <MetricCard icon={IndianRupee} label="Sales Value" value={fmtMoney(sales)} sub={salesTarget > 0 ? `Target: ${fmtMoney(salesTarget)}` : "No target set"} badge={salesTarget > 0 ? `${pct(sales, salesTarget)}%` : null} color={C.blue} soft={C.blueSoft} progress={sales} target={salesTarget} />
-        <MetricCard icon={Target} label="Lead → Won" value={`${conversion}%`} sub={`${won} won from ${Number(data.leads_added || 0)} leads added`} color={C.purple} soft={C.purpleSoft} />
-        <MetricCard icon={CheckCircle2} label="Target Progress" value={`${salesTarget > 0 ? pct(sales, salesTarget) : 0}%`} sub={salesTarget > 0 ? `${fmtMoney(sales)} of ${fmtMoney(salesTarget)}` : "Sales target not set"} color={C.orange} soft={C.orangeSoft} />
-      </div>
-    </Section>
+    <Panel title="Performance Summary" subtitle="Sales result and conversion for the selected month" icon={Target}>
+      <MetricRow label="Won Deals" value={won} detail={wonTarget > 0 ? `${won} of ${wonTarget} target` : "No won-deal target set"} chip={wonTarget > 0 ? `${wonPct}% target` : null} chipTone={wonPct >= 100 ? "good" : "warn"} progress={won} target={wonTarget} />
+      <MetricRow label="Sales Value" value={fmtMoney(sales)} detail={salesTarget > 0 ? `${fmtMoney(sales)} of ${fmtMoney(salesTarget)} target` : "No sales target set"} chip={salesTarget > 0 ? `${salesPct}% target` : null} chipTone={salesPct >= 100 ? "good" : "warn"} progress={sales} target={salesTarget} />
+      <MetricRow label="Lead → Won" value={`${conversion}%`} detail={`${won} won from ${leadsAdded} leads added`} />
+      <div style={{ borderBottom: 0 }}><MetricRow label="Target Progress" value={`${salesPct}%`} detail={salesTarget > 0 ? `${fmtMoney(Math.max(0, salesTarget - sales))} remaining` : "Sales target not set"} chip={salesPct >= 100 ? "Achieved" : "In Progress"} chipTone={salesPct >= 100 ? "good" : "warn"} /></div>
+    </Panel>
 
-    <Section title="Follow-up Health" icon={ClipboardCheck} tone={C.redSoft}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10 }}>
-        <MetricCard icon={CheckCircle2} label="Follow-ups Completed" value={followups} color={C.green} soft={C.greenSoft} />
-        <MetricCard icon={AlertTriangle} label="Overdue Follow-ups" value={overdue} color={overdue > 0 ? C.red : C.green} soft={overdue > 0 ? C.redSoft : C.greenSoft} />
-      </div>
-    </Section>
+    <Panel title="Follow-up Health" subtitle="Completed work and items needing attention" icon={ClipboardCheck} accent={overdue > 0 ? C.amber : C.green}>
+      <MetricRow label="Completed" value={followups} detail="Follow-ups completed this month" chip="Completed" chipTone="good" />
+      <div style={{ borderBottom: 0 }}><MetricRow label="Overdue" value={overdue} detail={overdue > 0 ? "Follow-ups currently overdue" : "No overdue follow-ups"} chip={overdue > 0 ? "Needs Attention" : "Clear"} chipTone={overdue > 0 ? "risk" : "good"} /></div>
+    </Panel>
 
-    <Section title="Attendance & Discipline" icon={CalendarDays} tone={C.amberSoft}>
-      {todayLabel && <div style={{ marginBottom: 10, borderRadius: 11, padding: "9px 11px", background: todayTone, color: todayColor, fontSize: 12, fontWeight: 800 }}>{todayLabel}</div>}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10 }}>
-        <MetricCard icon={Users} label="Attendance" value={`${activeDays} / ${workingDays}`} sub={`${attendancePct}% · ${absentDays} absent${attendance.not_started_today ? " · today not started" : ""}`} badge={`${attendancePct}%`} color={C.green} soft={C.greenSoft} progress={activeDays} target={workingDays} />
-        <MetricCard icon={ClipboardCheck} label="Day Closings" value={`${closingSubmitted} / ${activeDays}`} sub={`${closingPct}% · ${closingPending} pending`} badge={`${closingPct}%`} color={closingPending > 0 ? C.orange : C.green} soft={closingPending > 0 ? C.orangeSoft : C.greenSoft} progress={closingSubmitted} target={activeDays} />
-      </div>
-      {attendance.basis && <div style={{ fontSize: 10.5, color: C.soft, lineHeight: 1.45, marginTop: 9 }}>{attendance.basis}</div>}
-    </Section>
+    <Panel title="Attendance & Discipline" subtitle="Start Day attendance and Day Closing compliance" icon={CalendarDays}>
+      <MetricRow label="Attendance" value={`${activeDays} / ${workingDays}`} detail={`${attendancePct}% attendance · ${absentDays} absent`} chip={`${attendancePct}%`} chipTone={attendancePct >= 90 ? "good" : attendancePct >= 75 ? "warn" : "risk"} progress={activeDays} target={workingDays} />
+      <MetricRow label="Absent" value={absentDays} detail="Past working days with no Start Day" chip={absentDays > 0 ? "Review" : "Clear"} chipTone={absentDays > 0 ? "risk" : "good"} />
+      <MetricRow label="Day Closing" value={`${closingSubmitted} / ${activeDays}`} detail={`${closingPct}% submitted · ${closingPending} pending`} chip={closingPending > 0 ? `${closingPending} pending` : "Complete"} chipTone={closingPending > 0 ? "warn" : "good"} progress={closingSubmitted} target={activeDays} progressTone={closingPending > 0 ? C.amber : C.green} />
+      <div style={{ padding: "13px 0" }}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}><div><div style={{ fontSize: 12.5, fontWeight: 700, color: "#233637" }}>Today</div><div style={{ fontSize: 10.8, color: C.soft, marginTop: 3 }}>Current attendance status</div></div><StatusChip tone={todayTone}>{todayText}</StatusChip></div></div>
+    </Panel>
+
+    {attendance.basis && <div style={{ fontSize: 10.3, color: "#8B9395", lineHeight: 1.45, padding: "0 2px" }}>{attendance.basis}</div>}
   </div>;
 }
 
