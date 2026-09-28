@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { AlertTriangle, CalendarDays, ClipboardCheck, Target } from "lucide-react";
-import { api } from "./api.js";
+import { getApiBase, getSession } from "./api.js";
 
 const C = {
   ink: "#1A1D23",
@@ -29,6 +29,45 @@ function fmtMoney(value) {
 function pct(value, target) {
   const t = Number(target || 0);
   return t > 0 ? Math.round((Number(value || 0) / t) * 100) : 0;
+}
+
+function istDay(date = new Date()) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
+}
+
+function shiftDay(day, amount) {
+  const d = new Date(`${day}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + amount);
+  return d.toISOString().slice(0, 10);
+}
+
+function monthStart(day) { return `${day.slice(0, 7)}-01`; }
+function previousMonth(day) {
+  const [y, m] = day.slice(0, 7).split("-").map(Number);
+  const start = new Date(Date.UTC(y, m - 2, 1, 12));
+  const end = new Date(Date.UTC(y, m - 1, 0, 12));
+  return { from: start.toISOString().slice(0, 10), to: end.toISOString().slice(0, 10) };
+}
+
+function rangeLabel(from, to) {
+  const f = new Date(`${from}T12:00:00Z`), t = new Date(`${to}T12:00:00Z`);
+  const sameYear = from.slice(0, 4) === to.slice(0, 4);
+  const sameMonth = from.slice(0, 7) === to.slice(0, 7);
+  if (sameMonth) return `${f.toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "UTC" })} – ${t.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })}`;
+  if (sameYear) return `${f.toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "UTC" })} – ${t.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })}`;
+  return `${f.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })} – ${t.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })}`;
+}
+
+async function loadPerformance(from, to) {
+  const base = getApiBase();
+  const token = getSession()?.token || "";
+  if (!base) throw new Error("No backend configured yet.");
+  const qs = new URLSearchParams({ from, to });
+  const response = await fetch(`${base}/salesman/my-performance?${qs}`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
+  let data = null;
+  try { data = await response.json(); } catch { /* no body */ }
+  if (!response.ok) throw new Error(data?.error || `Request failed (${response.status})`);
+  return data;
 }
 
 function Progress({ value, target, tone = C.green }) {
@@ -73,20 +112,51 @@ function Panel({ title, subtitle, icon: Icon, accent = C.green, children }) {
 }
 
 function SalesmanPerformanceEnhanced() {
-  const currentMonth = useMemo(() => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit" }).format(new Date()), []);
-  const [month, setMonth] = useState(currentMonth);
+  const today = useMemo(() => istDay(), []);
+  const [from, setFrom] = useState(() => monthStart(today));
+  const [to, setTo] = useState(today);
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (!from || !to || from > to) return;
     let live = true;
     setData(null); setError("");
-    api.myPerformance(`${month}-01`).then(v => { if (live) setData(v); }).catch(e => { if (live) setError(e.message || "Couldn't load performance."); });
+    loadPerformance(from, to).then(v => { if (live) setData(v); }).catch(e => { if (live) setError(e.message || "Couldn't load performance."); });
     return () => { live = false; };
-  }, [month]);
+  }, [from, to]);
 
-  if (error) return <div style={{ display: "flex", alignItems: "center", gap: 8, padding: 11, border: "1px solid #FED7AA", borderRadius: 10, color: "#9A5A16", background: C.amberSoft, fontSize: 12 }}><AlertTriangle size={15} />{error}</div>;
-  if (!data) return <div style={{ padding: 18, color: C.soft, fontSize: 13 }}>Loading your performance…</div>;
+  const applyQuick = key => {
+    if (key === "this-month") { setFrom(monthStart(today)); setTo(today); return; }
+    if (key === "last-month") { const r = previousMonth(today); setFrom(r.from); setTo(r.to); return; }
+    if (key === "7-days") { setFrom(shiftDay(today, -6)); setTo(today); return; }
+    if (key === "30-days") { setFrom(shiftDay(today, -29)); setTo(today); }
+  };
+
+  const invalidRange = from && to && from > to;
+  const quickButton = (key, label) => <button type="button" onClick={() => applyQuick(key)} style={{ border: "1px solid #DFE5E6", background: "#fff", color: "#526264", borderRadius: 8, padding: "6px 8px", fontSize: 10.5, fontWeight: 700, cursor: "pointer" }}>{label}</button>;
+
+  const rangeControls = <div style={{ background: "#fff", border: `1px solid ${C.line}`, borderRadius: 13, padding: 11 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+      <label style={{ minWidth: 0 }}><span style={{ display: "block", fontSize: 9.5, fontWeight: 800, color: C.soft, marginBottom: 4, textTransform: "uppercase", letterSpacing: ".06em" }}>From</span><input aria-label="Performance from date" type="date" value={from} max={to || today} onChange={e => setFrom(e.target.value)} style={{ width: "100%", boxSizing: "border-box", height: 34, border: "1px solid #DFE5E6", borderRadius: 8, background: "#fff", padding: "0 8px", fontSize: 11.5, color: "#334B4C" }} /></label>
+      <label style={{ minWidth: 0 }}><span style={{ display: "block", fontSize: 9.5, fontWeight: 800, color: C.soft, marginBottom: 4, textTransform: "uppercase", letterSpacing: ".06em" }}>To</span><input aria-label="Performance to date" type="date" value={to} min={from || undefined} max={today} onChange={e => setTo(e.target.value)} style={{ width: "100%", boxSizing: "border-box", height: 34, border: "1px solid #DFE5E6", borderRadius: 8, background: "#fff", padding: "0 8px", fontSize: 11.5, color: "#334B4C" }} /></label>
+    </div>
+    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>{quickButton("this-month", "This Month")}{quickButton("last-month", "Last Month")}{quickButton("7-days", "Last 7 Days")}{quickButton("30-days", "Last 30 Days")}</div>
+    {invalidRange && <div style={{ marginTop: 8, fontSize: 10.8, color: C.red }}>From date must be before To date.</div>}
+  </div>;
+
+  if (error) return <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>{rangeControls}<div style={{ display: "flex", alignItems: "center", gap: 8, padding: 11, border: "1px solid #FED7AA", borderRadius: 10, color: "#9A5A16", background: C.amberSoft, fontSize: 12 }}><AlertTriangle size={15} />{error}</div></div>;
+
+  const header = <>
+    <div style={{ padding: "2px 1px 4px" }}>
+      <div style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: ".11em", color: C.green, marginBottom: 5 }}>EMPLOYEE PERFORMANCE</div>
+      <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, fontWeight: 700, color: C.heading }}>My Performance</div>
+      <div style={{ fontSize: 12, color: C.soft, marginTop: 3 }}>{rangeLabel(from, to)}</div>
+    </div>
+    {rangeControls}
+  </>;
+
+  if (!data) return <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>{header}<div style={{ padding: 18, color: C.soft, fontSize: 13 }}>Loading your performance…</div></div>;
 
   const won = Number(data.won || 0), wonTarget = Number(data.won_target || 0);
   const sales = Number(data.sales_value || 0), salesTarget = Number(data.sales_value_target || 0);
@@ -96,46 +166,41 @@ function SalesmanPerformanceEnhanced() {
   const activeDays = Number(attendance.active_days || 0), workingDays = Number(attendance.working_days || 0);
   const attendancePct = Number(attendance.percent || 0), absentDays = Number(attendance.absent_days || 0);
   const closingSubmitted = Number(closings.submitted || 0), closingPending = Number(closings.pending || 0), closingPct = Number(closings.percent || 0);
-  const monthLabel = new Date(`${month}-01T12:00:00`).toLocaleDateString("en-IN", { month: "long", year: "numeric" });
 
-  let todayText = "No attendance activity today", todayTone = "warn";
-  if (attendance.not_started_today) todayText = "Not Started Yet";
-  else if (attendance.today_started && !attendance.today_ended) { todayText = "Day Active"; todayTone = "good"; }
-  else if (attendance.today_started && attendance.today_ended) { todayText = "Day Completed"; todayTone = "good"; }
+  let todayText = "Outside selected range", todayTone = "warn";
+  if (today >= from && today <= to) {
+    todayText = "No attendance activity today";
+    if (attendance.not_started_today) todayText = "Not Started Yet";
+    else if (attendance.today_started && !attendance.today_ended) { todayText = "Day Active"; todayTone = "good"; }
+    else if (attendance.today_started && attendance.today_ended) { todayText = "Day Completed"; todayTone = "good"; }
+  }
 
   const salesPct = salesTarget > 0 ? pct(sales, salesTarget) : 0;
   const wonPct = wonTarget > 0 ? pct(won, wonTarget) : 0;
 
   return <div style={{ display: "flex", flexDirection: "column", gap: 12, color: C.ink }}>
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, padding: "2px 1px 4px" }}>
-      <div>
-        <div style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: ".11em", color: C.green, marginBottom: 5 }}>EMPLOYEE PERFORMANCE</div>
-        <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, fontWeight: 700, color: C.heading }}>My Performance</div>
-        <div style={{ fontSize: 12, color: C.soft, marginTop: 3 }}>{monthLabel}</div>
-      </div>
-      <input aria-label="Performance month" type="month" value={month} max={currentMonth} onChange={e => setMonth(e.target.value)} style={{ width: 138, height: 34, border: "1px solid #DFE5E6", borderRadius: 9, background: "#fff", padding: "0 8px", fontSize: 11.5, color: "#334B4C" }} />
-    </div>
+    {header}
 
-    <Panel title="Performance Summary" subtitle="Sales result and conversion for the selected month" icon={Target}>
-      <MetricRow label="Won Deals" value={won} detail={wonTarget > 0 ? `${won} of ${wonTarget} target` : "No won-deal target set"} chip={wonTarget > 0 ? `${wonPct}% target` : null} chipTone={wonPct >= 100 ? "good" : "warn"} progress={won} target={wonTarget} />
-      <MetricRow label="Sales Value" value={fmtMoney(sales)} detail={salesTarget > 0 ? `${fmtMoney(sales)} of ${fmtMoney(salesTarget)} target` : "No sales target set"} chip={salesTarget > 0 ? `${salesPct}% target` : null} chipTone={salesPct >= 100 ? "good" : "warn"} progress={sales} target={salesTarget} />
-      <MetricRow label="Lead → Won" value={`${conversion}%`} detail={`${won} won from ${leadsAdded} leads added`} />
-      <div style={{ borderBottom: 0 }}><MetricRow label="Target Progress" value={`${salesPct}%`} detail={salesTarget > 0 ? `${fmtMoney(Math.max(0, salesTarget - sales))} remaining` : "Sales target not set"} chip={salesPct >= 100 ? "Achieved" : "In Progress"} chipTone={salesPct >= 100 ? "good" : "warn"} /></div>
+    <Panel title="Performance Summary" subtitle="Sales result and conversion for the selected date range" icon={Target}>
+      <MetricRow label="Won Deals" value={won} detail={wonTarget > 0 ? `${won} of ${wonTarget} prorated target` : "No won-deal target set"} chip={wonTarget > 0 ? `${wonPct}% target` : null} chipTone={wonPct >= 100 ? "good" : "warn"} progress={won} target={wonTarget} />
+      <MetricRow label="Sales Value" value={fmtMoney(sales)} detail={salesTarget > 0 ? `${fmtMoney(sales)} of ${fmtMoney(salesTarget)} prorated target` : "No sales target set"} chip={salesTarget > 0 ? `${salesPct}% target` : null} chipTone={salesPct >= 100 ? "good" : "warn"} progress={sales} target={salesTarget} />
+      <MetricRow label="Lead → Won" value={`${conversion}%`} detail={`${won} won from ${leadsAdded} leads added in range`} />
+      <div style={{ borderBottom: 0 }}><MetricRow label="Target Progress" value={`${salesPct}%`} detail={salesTarget > 0 ? `${fmtMoney(Math.max(0, salesTarget - sales))} remaining for selected range` : "Sales target not set"} chip={salesPct >= 100 ? "Achieved" : "In Progress"} chipTone={salesPct >= 100 ? "good" : "warn"} /></div>
     </Panel>
 
-    <Panel title="Follow-up Health" subtitle="Completed work and items needing attention" icon={ClipboardCheck} accent={overdue > 0 ? C.amber : C.green}>
-      <MetricRow label="Completed" value={followups} detail="Follow-ups completed this month" chip="Completed" chipTone="good" />
-      <div style={{ borderBottom: 0 }}><MetricRow label="Overdue" value={overdue} detail={overdue > 0 ? "Follow-ups currently overdue" : "No overdue follow-ups"} chip={overdue > 0 ? "Needs Attention" : "Clear"} chipTone={overdue > 0 ? "risk" : "good"} /></div>
+    <Panel title="Follow-up Health" subtitle="Completed work and overdue items as of the selected range end" icon={ClipboardCheck} accent={overdue > 0 ? C.amber : C.green}>
+      <MetricRow label="Completed" value={followups} detail="Follow-ups completed inside the selected range" chip="Completed" chipTone="good" />
+      <div style={{ borderBottom: 0 }}><MetricRow label="Overdue" value={overdue} detail={overdue > 0 ? "Follow-ups overdue as of range end" : "No overdue follow-ups as of range end"} chip={overdue > 0 ? "Needs Attention" : "Clear"} chipTone={overdue > 0 ? "risk" : "good"} /></div>
     </Panel>
 
-    <Panel title="Attendance & Discipline" subtitle="Start Day attendance and Day Closing compliance" icon={CalendarDays}>
+    <Panel title="Attendance & Discipline" subtitle="Start Day attendance and Day Closing compliance in this range" icon={CalendarDays}>
       <MetricRow label="Attendance" value={`${activeDays} / ${workingDays}`} detail={`${attendancePct}% attendance · ${absentDays} absent`} chip={`${attendancePct}%`} chipTone={attendancePct >= 90 ? "good" : attendancePct >= 75 ? "warn" : "risk"} progress={activeDays} target={workingDays} />
-      <MetricRow label="Absent" value={absentDays} detail="Past working days with no Start Day" chip={absentDays > 0 ? "Review" : "Clear"} chipTone={absentDays > 0 ? "risk" : "good"} />
+      <MetricRow label="Absent" value={absentDays} detail="Past working days in range with no Start Day" chip={absentDays > 0 ? "Review" : "Clear"} chipTone={absentDays > 0 ? "risk" : "good"} />
       <MetricRow label="Day Closing" value={`${closingSubmitted} / ${activeDays}`} detail={`${closingPct}% submitted · ${closingPending} pending`} chip={closingPending > 0 ? `${closingPending} pending` : "Complete"} chipTone={closingPending > 0 ? "warn" : "good"} progress={closingSubmitted} target={activeDays} progressTone={closingPending > 0 ? C.amber : C.green} />
       <div style={{ padding: "13px 0" }}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}><div><div style={{ fontSize: 12.5, fontWeight: 700, color: "#233637" }}>Today</div><div style={{ fontSize: 10.8, color: C.soft, marginTop: 3 }}>Current attendance status</div></div><StatusChip tone={todayTone}>{todayText}</StatusChip></div></div>
     </Panel>
 
-    {attendance.basis && <div style={{ fontSize: 10.3, color: "#8B9395", lineHeight: 1.45, padding: "0 2px" }}>{attendance.basis}</div>}
+    <div style={{ fontSize: 10.3, color: "#8B9395", lineHeight: 1.45, padding: "0 2px" }}>{attendance.basis}{data.target_basis ? ` Targets: ${data.target_basis}` : ""}</div>
   </div>;
 }
 
