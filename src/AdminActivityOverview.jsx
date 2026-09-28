@@ -127,7 +127,14 @@ export default function AdminActivityOverview({ salesmen=[] }) {
   const toggle=k=>setActiveKeys(prev=>prev.includes(k)?(prev.length===1?prev:prev.filter(x=>x!==k)):[...prev,k]);
 
   return <div style={{display:'grid',gridTemplateColumns:'minmax(0,1.42fr) minmax(380px,.86fr)',gap:14,marginBottom:18}} className="engage-activity-overview">
-    <style>{`@media(max-width:1180px){.engage-activity-overview{grid-template-columns:minmax(0,1.28fr) minmax(370px,.92fr)!important}} @media(max-width:920px){.engage-activity-overview{grid-template-columns:1fr!important}.engage-activity-feed{max-height:none!important}}`}</style>
+    <style>{`
+      @media(max-width:1180px){.engage-activity-overview{grid-template-columns:minmax(0,1.28fr) minmax(370px,.92fr)!important}}
+      @media(max-width:920px){.engage-activity-overview{grid-template-columns:1fr!important}.engage-activity-feed{max-height:none!important}}
+      .engage-activity-row{transition:background .14s ease}
+      .engage-activity-row:hover{background:#FBFCFC}
+      .engage-activity-row .activity-chevron{transition:transform .14s ease,color .14s ease}
+      .engage-activity-row:hover .activity-chevron{transform:translateX(1px);color:#647C7D!important}
+    `}</style>
 
     <section style={{background:C.card,border:`1px solid ${C.line}`,borderRadius:16,padding:16,minWidth:0,boxShadow:'0 1px 2px rgba(15,23,42,.03)',display:'flex',flexDirection:'column'}}>
       <div style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'flex-start',marginBottom:10,flexWrap:'wrap'}}>
@@ -166,37 +173,37 @@ export default function AdminActivityOverview({ salesmen=[] }) {
     <section style={{background:C.card,border:`1px solid ${C.line}`,borderRadius:16,padding:'15px 0 0',minWidth:0,boxShadow:'0 1px 2px rgba(15,23,42,.03)',overflow:'hidden'}}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:10,padding:'0 12px 11px'}}>
         <div>
-          <div style={{fontSize:16,fontWeight:800,color:C.ink}}>Activity Centre</div>
-          <div style={{fontSize:12,color:C.soft,marginTop:3}}>Latest activities across your team · {person}</div>
+          <div style={{fontFamily:"'Space Grotesk', sans-serif",fontSize:16,fontWeight:800,color:'#223A3B',letterSpacing:'-.1px'}}>Activity Centre</div>
+          <div style={{fontSize:12,color:'#7A8385',marginTop:3}}>Latest activities across your team · {person}</div>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:6}}>
-          <span style={{fontSize:10.5,fontWeight:800,color:C.teal,background:'#EAF4F2',padding:'5px 8px',borderRadius:999}}>LIVE</span>
-          <span style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:11,fontWeight:750,color:C.teal,background:'#F5FAF9',border:'1px solid #DCECE8',padding:'6px 8px',borderRadius:8}}>Latest <ArrowRight size={12}/></span>
+          <span style={{display:'inline-flex',alignItems:'center',gap:5,fontSize:10,fontWeight:850,color:C.teal,background:'#EEF7F5',border:'1px solid #D7E8E4',padding:'4px 7px',borderRadius:999,letterSpacing:'.04em'}}><span style={{width:6,height:6,borderRadius:'50%',background:C.green}}/>LIVE</span>
+          <span style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:10.8,fontWeight:750,color:C.teal,background:'#F8FBFA',border:'1px solid #DFE9E7',padding:'5px 7px',borderRadius:8}}>Latest <ArrowRight size={12}/></span>
         </div>
       </div>
 
-      <div className="engage-activity-feed" style={{maxHeight:350,overflowY:'auto',borderTop:`1px solid ${C.line}`}}>
+      <div className="engage-activity-feed" style={{maxHeight:350,overflowY:'auto',borderTop:'1px solid #EDF0F2'}}>
         {error ? <div style={{padding:16,fontSize:12.5,color:'#B42318'}}>{error}</div> : activities.length ? activities.map((a,i)=>{
           const [bg,fg]=moduleTone[a.module]||moduleTone.Activity;
           const Icon=moduleIcons[a.module]||Activity;
-          return <div key={a.id} style={{display:'grid',gridTemplateColumns:'32px 54px 30px 64px minmax(0,1fr) auto 16px',gap:7,alignItems:'center',padding:'9px 10px',borderTop:i?`1px solid ${C.line}`:'none',minHeight:58}}>
-            <div style={{width:28,height:28,borderRadius:8,background:bg,color:fg,display:'grid',placeItems:'center'}}><Icon size={14}/></div>
-            <div style={{fontSize:10.3,color:'#8A94A3',whiteSpace:'nowrap'}}>{fmtTime(a.createdAt)}</div>
-            <div style={{width:28,height:28,borderRadius:'50%',background:'#E9EDF6',color:'#566481',display:'grid',placeItems:'center',fontSize:9.2,fontWeight:850}}>{initials(a.actorName)}</div>
-            <div style={{fontSize:10.5,fontWeight:750,color:'#475467',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{a.actorName}</div>
+          return <div key={a.id} className="engage-activity-row" style={{display:'grid',gridTemplateColumns:'32px 54px 30px 64px minmax(0,1fr) auto 16px',gap:7,alignItems:'center',padding:'9px 10px',borderTop:i?'1px solid #EFF2F3':'none',minHeight:58}}>
+            <div style={{width:28,height:28,borderRadius:8,background:bg,color:fg,display:'grid',placeItems:'center',boxShadow:'inset 0 0 0 1px rgba(20,44,44,.035)'}}><Icon size={14}/></div>
+            <div style={{fontSize:10.3,color:'#8A9495',fontWeight:600,whiteSpace:'nowrap'}}>{fmtTime(a.createdAt)}</div>
+            <div style={{width:28,height:28,borderRadius:'50%',background:'#EEF2F3',color:'#466061',display:'grid',placeItems:'center',fontSize:9.2,fontWeight:850,boxShadow:'inset 0 0 0 1px #E1E8E7'}}>{initials(a.actorName)}</div>
+            <div style={{fontSize:10.6,fontWeight:800,color:'#344B4C',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{a.actorName}</div>
             <div style={{minWidth:0}}>
-              <div style={{fontSize:11.6,fontWeight:800,color:C.ink,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{a.title}</div>
-              <div style={{fontSize:10.5,color:C.soft,marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{a.detail || 'Recorded in Engage'}</div>
+              <div style={{fontSize:11.8,fontWeight:800,color:'#223A3B',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{a.title}</div>
+              <div style={{fontSize:10.5,color:'#7A8385',marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{a.detail || 'Recorded in Engage'}</div>
             </div>
-            <span style={{fontSize:9.4,fontWeight:800,color:fg,background:bg,padding:'5px 6px',borderRadius:7,whiteSpace:'nowrap'}}>{a.module}</span>
-            <ChevronRight size={14} color="#A9B1BD"/>
+            <span style={{fontSize:9.2,fontWeight:800,color:fg,background:bg,border:`1px solid ${fg}1F`,padding:'4px 7px',borderRadius:999,whiteSpace:'nowrap'}}>{a.module}</span>
+            <ChevronRight className="activity-chevron" size={14} color="#A4AEAE"/>
           </div>;
         }) : !loading ? <div style={{padding:'38px 16px',textAlign:'center',fontSize:12.5,color:C.soft}}>No recorded activity yet.</div> : <div style={{padding:'38px 16px',textAlign:'center',fontSize:12.5,color:C.soft}}>Loading activity…</div>}
       </div>
 
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'9px 10px',borderTop:`1px solid ${C.line}`,background:'#FBFCFD'}}>
-        <div style={{display:'flex',alignItems:'center',gap:5,fontSize:10.3,color:C.soft}}><MapPin size={12}/> Recorded CRM events only</div>
-        <div style={{fontSize:10.3,color:C.soft}}>Auto-refreshes every minute</div>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'9px 10px',borderTop:'1px solid #EDF0F2',background:'#FCFDFD'}}>
+        <div style={{display:'flex',alignItems:'center',gap:5,fontSize:10.3,color:'#7A8586'}}><MapPin size={12}/> Recorded CRM events only</div>
+        <div style={{fontSize:10.3,color:'#7A8586'}}>Auto-refreshes every minute</div>
       </div>
     </section>
   </div>;
