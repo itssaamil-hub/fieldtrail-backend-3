@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
   Activity,
-  ArrowRight,
   CalendarDays,
   CheckCircle2,
   ChevronRight,
@@ -35,65 +34,57 @@ const metricDefs = [
 ];
 
 const moduleTone = {
-  Lead:['#EAF2FF','#2563EB'],
-  Task:['#EEF8F7','#0F766E'],
-  Attendance:['#E8F7EF','#14805E'],
-  Employee:['#EEF2FF','#4F46E5'],
-  Onboarding:['#FFF3E8','#C96A18'],
-  Message:['#EEF7FA','#0E7490'],
-  Settings:['#F2F4F7','#475467'],
-  Quotation:['#F2ECFF','#7C3AED'],
-  Payment:['#EAF8EE','#15803D'],
-  Activity:['#F2F4F7','#475467'],
-  'Data Health':['#FDECEC','#D92D20'],
-  System:['#FDECEC','#D92D20'],
+  Lead:['#EAF2FF','#2563EB'], Task:['#EEF8F7','#0F766E'], Attendance:['#E8F7EF','#14805E'],
+  Employee:['#EEF2FF','#4F46E5'], Onboarding:['#FFF3E8','#C96A18'], Message:['#EEF7FA','#0E7490'],
+  Settings:['#F2F4F7','#475467'], Quotation:['#F2ECFF','#7C3AED'], Payment:['#EAF8EE','#15803D'],
+  Activity:['#F2F4F7','#475467'], 'Data Health':['#FDECEC','#D92D20'], System:['#FDECEC','#D92D20'],
 };
 
 const moduleIcons = {
-  Lead: UserPlus,
-  Task: ListChecks,
-  Attendance: ClipboardCheck,
-  Employee: Activity,
-  Onboarding: CheckCircle2,
-  Message: MessageSquare,
-  Settings,
-  Quotation: FileText,
-  Payment: CircleDollarSign,
-  Activity,
-  'Data Health': ShieldAlert,
-  System: ShieldAlert,
+  Lead:UserPlus, Task:ListChecks, Attendance:ClipboardCheck, Employee:Activity,
+  Onboarding:CheckCircle2, Message:MessageSquare, Settings, Quotation:FileText,
+  Payment:CircleDollarSign, Activity, 'Data Health':ShieldAlert, System:ShieldAlert,
 };
 
+const avatarPalette = [
+  ['#E8F3F1','#145C5D'],
+  ['#EEF2FF','#4F46E5'],
+  ['#F4EEFF','#7C3AED'],
+  ['#FFF3E8','#B45309'],
+  ['#EAF4FF','#2563EB'],
+  ['#FDEEEF','#BE3455'],
+];
+
 function fmtDay(day) {
-  const d = new Date(`${day}T00:00:00`);
-  return d.toLocaleDateString('en-IN', { day:'numeric', month:'short' });
+  return new Date(`${day}T00:00:00`).toLocaleDateString('en-IN',{day:'numeric',month:'short'});
 }
 function fmtTime(value) {
-  return new Date(value).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
+  return new Date(value).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
 }
 function initials(name='') {
   return name.trim().split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase() || '?';
 }
+function avatarTone(name='') {
+  let hash=0;
+  for (const ch of String(name)) hash=((hash<<5)-hash+ch.charCodeAt(0))|0;
+  return avatarPalette[Math.abs(hash)%avatarPalette.length];
+}
 
 function SparkChart({ rows, activeKeys, days }) {
-  const w=Math.max(760, rows.length*42),h=300,left=42,right=18,top=18,bottom=34;
-  const values = rows.flatMap(r => activeKeys.map(k => Number(r[k]||0)));
-  const max = Math.max(4, ...values);
-  const yMax = Math.ceil(max/4)*4;
-  const x = i => left + (rows.length<=1?0:i*(w-left-right)/(rows.length-1));
-  const y = v => top + (h-top-bottom) * (1 - Number(v||0)/yMax);
-  const grid = [0,.25,.5,.75,1].map(p => Math.round(yMax*p));
-  const labelEvery = days === 30 ? 4 : days === 15 ? 2 : 1;
+  const w=Math.max(760,rows.length*42),h=300,left=42,right=18,top=18,bottom=34;
+  const values=rows.flatMap(r=>activeKeys.map(k=>Number(r[k]||0)));
+  const max=Math.max(4,...values), yMax=Math.ceil(max/4)*4;
+  const x=i=>left+(rows.length<=1?0:i*(w-left-right)/(rows.length-1));
+  const y=v=>top+(h-top-bottom)*(1-Number(v||0)/yMax);
+  const grid=[0,.25,.5,.75,1].map(p=>Math.round(yMax*p));
+  const labelEvery=days===30?4:days===15?2:1;
   return <div style={{width:'100%',overflowX:'auto',marginTop:'auto',paddingTop:4}}>
     <svg viewBox={`0 0 ${w} ${h}`} style={{width:days===30?'auto':'100%',minWidth:days===30?920:620,height:300,display:'block'}} role="img" aria-label={`${days} day lead activity chart`}>
-      {grid.map(v => <g key={v}><line x1={left} x2={w-right} y1={y(v)} y2={y(v)} stroke="#EDEFF2" strokeWidth="1"/><text x={left-10} y={y(v)+4} textAnchor="end" fontSize="10" fill="#98A2B3">{v}</text></g>)}
-      {rows.map((r,i)=> (i%labelEvery===0 || i===rows.length-1) ? <text key={r.day} x={x(i)} y={h-9} textAnchor="middle" fontSize="10.5" fill="#667085">{fmtDay(r.day)}</text> : null)}
+      {grid.map(v=><g key={v}><line x1={left} x2={w-right} y1={y(v)} y2={y(v)} stroke="#EDEFF2" strokeWidth="1"/><text x={left-10} y={y(v)+4} textAnchor="end" fontSize="10" fill="#98A2B3">{v}</text></g>)}
+      {rows.map((r,i)=>(i%labelEvery===0||i===rows.length-1)?<text key={r.day} x={x(i)} y={h-9} textAnchor="middle" fontSize="10.5" fill="#667085">{fmtDay(r.day)}</text>:null)}
       {metricDefs.filter(m=>activeKeys.includes(m.key)).map(m=>{
         const pts=rows.map((r,i)=>`${x(i)},${y(r[m.key])}`).join(' ');
-        return <g key={m.key}>
-          <polyline fill="none" stroke={m.color} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" points={pts}/>
-          {rows.map((r,i)=><circle key={r.day} cx={x(i)} cy={y(r[m.key])} r="3.2" fill="#fff" stroke={m.color} strokeWidth="2"><title>{`${fmtDay(r.day)} · ${m.label}: ${r[m.key]}`}</title></circle>)}
-        </g>;
+        return <g key={m.key}><polyline fill="none" stroke={m.color} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" points={pts}/>{rows.map((r,i)=><circle key={r.day} cx={x(i)} cy={y(r[m.key])} r="3.2" fill="#fff" stroke={m.color} strokeWidth="2"><title>{`${fmtDay(r.day)} · ${m.label}: ${r[m.key]}`}</title></circle>)}</g>;
       })}
     </svg>
   </div>;
@@ -110,101 +101,64 @@ export default function AdminActivityOverview({ salesmen=[] }) {
   useEffect(()=>{
     let alive=true;
     setLoading(true); setError('');
-    api.adminActivityOverview({ salesmanId, days })
-      .then(v=>{ if(alive) setData(v); })
-      .catch(e=>{ if(alive) setError(e.message || 'Could not load activity.'); })
-      .finally(()=>{ if(alive) setLoading(false); });
-    const timer=setInterval(()=>{
-      api.adminActivityOverview({ salesmanId, days }).then(v=>{ if(alive) setData(v); }).catch(()=>{});
-    },60000);
+    api.adminActivityOverview({salesmanId,days}).then(v=>{if(alive)setData(v);}).catch(e=>{if(alive)setError(e.message||'Could not load activity.');}).finally(()=>{if(alive)setLoading(false);});
+    const timer=setInterval(()=>api.adminActivityOverview({salesmanId,days}).then(v=>{if(alive)setData(v);}).catch(()=>{}),60000);
     return()=>{alive=false;clearInterval(timer);};
   },[salesmanId,days]);
 
-  const person = salesmanId==='all' ? 'All employees' : (salesmen.find(s=>s.id===salesmanId)?.name || 'Employee');
-  const totals=data?.totals||{};
-  const rows=data?.trend||[];
-  const activities=data?.activities||[];
+  const person=salesmanId==='all'?'All employees':(salesmen.find(s=>s.id===salesmanId)?.name||'Employee');
+  const totals=data?.totals||{}, rows=data?.trend||[], activities=data?.activities||[];
   const toggle=k=>setActiveKeys(prev=>prev.includes(k)?(prev.length===1?prev:prev.filter(x=>x!==k)):[...prev,k]);
 
   return <div style={{display:'grid',gridTemplateColumns:'minmax(0,1.42fr) minmax(380px,.86fr)',gap:14,marginBottom:18}} className="engage-activity-overview">
     <style>{`
       @media(max-width:1180px){.engage-activity-overview{grid-template-columns:minmax(0,1.28fr) minmax(370px,.92fr)!important}}
       @media(max-width:920px){.engage-activity-overview{grid-template-columns:1fr!important}.engage-activity-feed{max-height:none!important}}
-      .engage-activity-row{transition:background .14s ease}
-      .engage-activity-row:hover{background:#FBFCFC}
+      .engage-activity-row{transition:background .14s ease}.engage-activity-row:hover{background:#FBFCFC}
       .engage-activity-row .activity-chevron{transition:transform .14s ease,color .14s ease}
       .engage-activity-row:hover .activity-chevron{transform:translateX(1px);color:#647C7D!important}
     `}</style>
 
     <section style={{background:C.card,border:`1px solid ${C.line}`,borderRadius:16,padding:16,minWidth:0,boxShadow:'0 1px 2px rgba(15,23,42,.03)',display:'flex',flexDirection:'column'}}>
       <div style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'flex-start',marginBottom:10,flexWrap:'wrap'}}>
-        <div style={{minWidth:180,paddingLeft:2}}>
-          <div style={{fontSize:16,fontWeight:800,color:C.ink}}>Lead Activity</div>
-          <div style={{fontSize:12,color:C.soft,marginTop:3}}>Real activity recorded in Engage · {person}</div>
-        </div>
+        <div style={{minWidth:180,paddingLeft:2}}><div style={{fontSize:16,fontWeight:800,color:C.ink}}>Lead Activity</div><div style={{fontSize:12,color:C.soft,marginTop:3}}>Real activity recorded in Engage · {person}</div></div>
         <div style={{display:'flex',alignItems:'center',gap:7,flexWrap:'wrap',justifyContent:'flex-end',marginLeft:'auto'}}>
-          <select aria-label="Activity period" value={days} onChange={e=>setDays(Number(e.target.value))} style={{height:34,border:`1px solid ${C.line}`,borderRadius:9,background:'#fff',color:C.ink,fontSize:11.5,fontWeight:650,padding:'0 28px 0 9px'}}>
-            <option value={7}>7 Days</option>
-            <option value={15}>15 Days</option>
-            <option value={30}>1 Month</option>
-          </select>
-          <select aria-label="Activity employee" value={salesmanId} onChange={e=>setSalesmanId(e.target.value)} style={{height:34,border:`1px solid ${C.line}`,borderRadius:9,background:'#fff',color:C.ink,fontSize:11.5,fontWeight:650,padding:'0 28px 0 9px'}}>
-            <option value="all">All Employees</option>
-            {salesmen.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
+          <select aria-label="Activity period" value={days} onChange={e=>setDays(Number(e.target.value))} style={{height:34,border:`1px solid ${C.line}`,borderRadius:9,background:'#fff',color:C.ink,fontSize:11.5,fontWeight:650,padding:'0 28px 0 9px'}}><option value={7}>7 Days</option><option value={15}>15 Days</option><option value={30}>1 Month</option></select>
+          <select aria-label="Activity employee" value={salesmanId} onChange={e=>setSalesmanId(e.target.value)} style={{height:34,border:`1px solid ${C.line}`,borderRadius:9,background:'#fff',color:C.ink,fontSize:11.5,fontWeight:650,padding:'0 28px 0 9px'}}><option value="all">All Employees</option>{salesmen.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select>
           <div style={{height:34,padding:'0 9px',border:`1px solid ${C.line}`,borderRadius:9,background:'#F8FBFA',fontSize:11.2,color:C.soft,display:'flex',alignItems:'center',gap:6,whiteSpace:'nowrap'}}>{loading?<><RefreshCw size={12} className="spin"/> Refreshing</>:<><span style={{width:7,height:7,borderRadius:'50%',background:C.green}}/> Live data</>}</div>
         </div>
       </div>
 
-      {error ? <div style={{padding:'18px 4px',fontSize:12.5,color:'#B42318'}}>{error}</div> : <>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(5,minmax(82px,1fr))',gap:6,overflowX:'auto',paddingBottom:0}}>
-          {metricDefs.map(m=>{
-            const on=activeKeys.includes(m.key); const Icon=m.Icon;
-            return <button key={m.key} onClick={()=>toggle(m.key)} style={{minWidth:82,textAlign:'left',padding:'6px 8px',borderRadius:9,border:`1px solid ${on?m.color+'55':C.line}`,background:on?`${m.color}0D`:'#fff',cursor:'pointer'}}>
-              <div style={{display:'flex',alignItems:'center',gap:4,fontSize:9.2,fontWeight:750,color:C.soft,whiteSpace:'nowrap'}}><Icon size={11.5} color={m.color}/>{m.label}</div>
-              <div style={{fontSize:17,fontWeight:850,color:C.ink,marginTop:2,lineHeight:1.05}}>{Number(totals[m.key]||0)}</div>
-            </button>;
-          })}
-        </div>
-        {rows.length ? <SparkChart rows={rows} activeKeys={activeKeys} days={days}/> : !loading && <div style={{padding:'72px 12px',textAlign:'center',color:C.soft,fontSize:12.5}}>No lead activity recorded in this period.</div>}
+      {error?<div style={{padding:'18px 4px',fontSize:12.5,color:'#B42318'}}>{error}</div>:<>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(5,minmax(82px,1fr))',gap:6,overflowX:'auto'}}>{metricDefs.map(m=>{const on=activeKeys.includes(m.key),Icon=m.Icon;return <button key={m.key} onClick={()=>toggle(m.key)} style={{minWidth:82,textAlign:'left',padding:'6px 8px',borderRadius:9,border:`1px solid ${on?m.color+'55':C.line}`,background:on?`${m.color}0D`:'#fff',cursor:'pointer'}}><div style={{display:'flex',alignItems:'center',gap:4,fontSize:9.2,fontWeight:750,color:C.soft,whiteSpace:'nowrap'}}><Icon size={11.5} color={m.color}/>{m.label}</div><div style={{fontSize:17,fontWeight:850,color:C.ink,marginTop:2,lineHeight:1.05}}>{Number(totals[m.key]||0)}</div></button>;})}</div>
+        {rows.length?<SparkChart rows={rows} activeKeys={activeKeys} days={days}/>:!loading&&<div style={{padding:'72px 12px',textAlign:'center',color:C.soft,fontSize:12.5}}>No lead activity recorded in this period.</div>}
       </>}
     </section>
 
     <section style={{background:C.card,border:`1px solid ${C.line}`,borderRadius:16,padding:'15px 0 0',minWidth:0,boxShadow:'0 1px 2px rgba(15,23,42,.03)',overflow:'hidden'}}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:10,padding:'0 12px 11px'}}>
-        <div>
-          <div style={{fontFamily:"'Space Grotesk', sans-serif",fontSize:16,fontWeight:800,color:'#223A3B',letterSpacing:'-.1px'}}>Activity Centre</div>
-          <div style={{fontSize:12,color:'#7A8385',marginTop:3}}>Latest activities across your team · {person}</div>
-        </div>
-        <div style={{display:'flex',alignItems:'center',gap:6}}>
-          <span style={{display:'inline-flex',alignItems:'center',gap:5,fontSize:10,fontWeight:850,color:C.teal,background:'#EEF7F5',border:'1px solid #D7E8E4',padding:'4px 7px',borderRadius:999,letterSpacing:'.04em'}}><span style={{width:6,height:6,borderRadius:'50%',background:C.green}}/>LIVE</span>
-          <span style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:10.8,fontWeight:750,color:C.teal,background:'#F8FBFA',border:'1px solid #DFE9E7',padding:'5px 7px',borderRadius:8}}>Latest <ArrowRight size={12}/></span>
-        </div>
+        <div><div style={{fontFamily:"'Space Grotesk', sans-serif",fontSize:16,fontWeight:800,color:'#223A3B',letterSpacing:'-.1px'}}>Activity Centre</div><div style={{fontSize:12,color:'#7A8385',marginTop:3}}>Latest activities across your team</div></div>
+        <span style={{display:'inline-flex',alignItems:'center',gap:5,fontSize:10,fontWeight:850,color:C.teal,background:'#EEF7F5',border:'1px solid #D7E8E4',padding:'5px 8px',borderRadius:999,letterSpacing:'.04em'}}><span style={{width:6,height:6,borderRadius:'50%',background:C.green}}/>LIVE</span>
       </div>
 
       <div className="engage-activity-feed" style={{maxHeight:350,overflowY:'auto',borderTop:'1px solid #EDF0F2'}}>
-        {error ? <div style={{padding:16,fontSize:12.5,color:'#B42318'}}>{error}</div> : activities.length ? activities.map((a,i)=>{
+        {error?<div style={{padding:16,fontSize:12.5,color:'#B42318'}}>{error}</div>:activities.length?activities.map((a,i)=>{
           const [bg,fg]=moduleTone[a.module]||moduleTone.Activity;
+          const [avatarBg,avatarFg]=avatarTone(a.actorName);
           const Icon=moduleIcons[a.module]||Activity;
           return <div key={a.id} className="engage-activity-row" style={{display:'grid',gridTemplateColumns:'32px 54px 30px 64px minmax(0,1fr) auto 16px',gap:7,alignItems:'center',padding:'9px 10px',borderTop:i?'1px solid #EFF2F3':'none',minHeight:58}}>
             <div style={{width:28,height:28,borderRadius:8,background:bg,color:fg,display:'grid',placeItems:'center',boxShadow:'inset 0 0 0 1px rgba(20,44,44,.035)'}}><Icon size={14}/></div>
             <div style={{fontSize:10.3,color:'#8A9495',fontWeight:600,whiteSpace:'nowrap'}}>{fmtTime(a.createdAt)}</div>
-            <div style={{width:28,height:28,borderRadius:'50%',background:'#EEF2F3',color:'#466061',display:'grid',placeItems:'center',fontSize:9.2,fontWeight:850,boxShadow:'inset 0 0 0 1px #E1E8E7'}}>{initials(a.actorName)}</div>
+            <div style={{width:28,height:28,borderRadius:'50%',background:avatarBg,color:avatarFg,display:'grid',placeItems:'center',fontSize:9.2,fontWeight:850,boxShadow:`inset 0 0 0 1px ${avatarFg}18`}}>{initials(a.actorName)}</div>
             <div style={{fontSize:10.6,fontWeight:800,color:'#344B4C',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{a.actorName}</div>
-            <div style={{minWidth:0}}>
-              <div style={{fontSize:11.8,fontWeight:800,color:'#223A3B',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{a.title}</div>
-              <div style={{fontSize:10.5,color:'#7A8385',marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{a.detail || 'Recorded in Engage'}</div>
-            </div>
+            <div style={{minWidth:0}}><div style={{fontSize:11.8,fontWeight:800,color:'#223A3B',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{a.title}</div><div style={{fontSize:10.5,color:'#7A8385',marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{a.detail||'Recorded in Engage'}</div></div>
             <span style={{fontSize:9.2,fontWeight:800,color:fg,background:bg,border:`1px solid ${fg}1F`,padding:'4px 7px',borderRadius:999,whiteSpace:'nowrap'}}>{a.module}</span>
             <ChevronRight className="activity-chevron" size={14} color="#A4AEAE"/>
           </div>;
-        }) : !loading ? <div style={{padding:'38px 16px',textAlign:'center',fontSize:12.5,color:C.soft}}>No recorded activity yet.</div> : <div style={{padding:'38px 16px',textAlign:'center',fontSize:12.5,color:C.soft}}>Loading activity…</div>}
+        }):!loading?<div style={{padding:'38px 16px',textAlign:'center',fontSize:12.5,color:C.soft}}>No recorded activity yet.</div>:<div style={{padding:'38px 16px',textAlign:'center',fontSize:12.5,color:C.soft}}>Loading activity…</div>}
       </div>
 
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'9px 10px',borderTop:'1px solid #EDF0F2',background:'#FCFDFD'}}>
-        <div style={{display:'flex',alignItems:'center',gap:5,fontSize:10.3,color:'#7A8586'}}><MapPin size={12}/> Recorded CRM events only</div>
-        <div style={{fontSize:10.3,color:'#7A8586'}}>Auto-refreshes every minute</div>
-      </div>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'9px 10px',borderTop:'1px solid #EDF0F2',background:'#FCFDFD'}}><div style={{display:'flex',alignItems:'center',gap:5,fontSize:10.3,color:'#7A8586'}}><MapPin size={12}/> Recorded CRM events only</div><div style={{fontSize:10.3,color:'#7A8586'}}>Auto-refreshes every minute</div></div>
     </section>
   </div>;
 }
