@@ -32,22 +32,24 @@
 .ft-q:has(> .ft-q-box + form)>form>.ft-ob-actions>button:not(.ft-ob-primary){grid-column:1;grid-row:2;width:100%;min-height:44px;border-radius:11px!important;font-weight:700}
 .ft-q:has(> .ft-q-box + form)>form+button{width:calc(50% - 4.5px);min-height:44px;margin-top:-44px!important;margin-left:calc(50% + 4.5px)!important;position:relative;display:block;border-radius:11px!important;color:#3d5551!important;border-color:#d8e2df!important;background:#fafcfb!important;font-weight:700!important}
 .ft-q:has(> .ft-q-box + form)>[role='status']{margin:12px 0 0;padding:10px 12px;border-radius:10px;background:#edf7f3;color:#275f56;font-size:12.5px}
+
 @media(max-width:480px){
- .ft-q:has(> .ft-q-box + form)>.ft-ob-muted{margin-bottom:12px;padding:6px 10px;font-size:11.5px}
- .ft-q:has(> .ft-q-box + form)>.ft-q-box{margin-bottom:15px;padding:10px;border-radius:15px}
- .ft-q:has(> .ft-q-box + form)>.ft-q-box>h3{margin-bottom:9px}
- .ft-q:has(> .ft-q-box + form)>.ft-q-box>h3::before{font-size:14px}
- .ft-q:has(> .ft-q-box + form)>.ft-q-box>h3::after{font-size:10.5px}
- .ft-q:has(> .ft-q-box + form)>.ft-q-box .ft-q-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
- .ft-q:has(> .ft-q-box + form)>.ft-q-box .ft-q-grid>div{padding:7px 2px 8px;font-size:8.8px;border-radius:11px;line-height:1.15}
- .ft-q:has(> .ft-q-box + form)>.ft-q-box .ft-q-grid>div::before{width:27px;height:27px;margin-bottom:5px;font-size:12px}
- .ft-q:has(> .ft-q-box + form)>.ft-q-box .ft-q-grid>div strong{margin-bottom:3px;font-size:17px}
- .ft-q:has(> .ft-q-box + form)>form>.ft-ob-field{margin-bottom:13px;padding-left:40px;font-size:13px;line-height:1.2}
- .ft-q:has(> .ft-q-box + form)>form>.ft-ob-field::before{width:29px;height:29px;font-size:13px}
- .ft-q:has(> .ft-q-box + form)>form>.ft-ob-field::after{margin:2px 0 6px;font-size:10.8px}
- .ft-q:has(> .ft-q-box + form)>form>.ft-ob-field textarea{width:calc(100% + 40px);min-height:68px;margin-left:-40px;padding:9px 10px;border-radius:11px;font-size:15px;line-height:1.35}
- .ft-q:has(> .ft-q-box + form)>form>.ft-ob-actions{gap:7px;margin-top:0}
- .ft-q:has(> .ft-q-box + form)>form>.ft-ob-actions .ft-ob-primary{min-height:46px;border-radius:11px;font-size:14px}
- .ft-q:has(> .ft-q-box + form)>form>.ft-ob-actions>button:not(.ft-ob-primary){min-height:40px}
- .ft-q:has(> .ft-q-box + form)>form+button{min-height:40px;margin-top:-40px!important}
+ .ft-q:has(> .ft-q-box + form){font-size:12.5px!important;line-height:1.25!important}
+ .ft-q:has(> .ft-q-box + form)>.ft-ob-muted{margin:0 0 8px!important;padding:5px 9px!important;font-size:10.5px!important}
+ .ft-q:has(> .ft-q-box + form)>.ft-q-box{margin:0 0 10px!important;padding:8px!important;border-radius:13px!important}
+ .ft-q:has(> .ft-q-box + form)>.ft-q-box>h3{margin:0 0 7px!important}
+ .ft-q:has(> .ft-q-box + form)>.ft-q-box>h3::before{font-size:13px!important}
+ .ft-q:has(> .ft-q-box + form)>.ft-q-box>h3::after{font-size:9.5px!important}
+ .ft-q:has(> .ft-q-box + form)>.ft-q-box .ft-q-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:3px!important}
+ .ft-q:has(> .ft-q-box + form)>.ft-q-box .ft-q-grid>div{min-height:70px!important;padding:5px 2px 6px!important;font-size:8px!important;border-radius:10px!important;line-height:1.05!important}
+ .ft-q:has(> .ft-q-box + form)>.ft-q-box .ft-q-grid>div::before{width:24px!important;height:24px!important;margin-bottom:3px!important;font-size:11px!important}
+ .ft-q:has(> .ft-q-box + form)>.ft-q-box .ft-q-grid>div strong{margin-bottom:2px!important;font-size:15px!important}
+ .ft-q:has(> .ft-q-box + form)>form>.ft-ob-field{margin:0 0 9px!important;padding-left:34px!important;font-size:12px!important;line-height:1.1!important}
+ .ft-q:has(> .ft-q-box + form)>form>.ft-ob-field::before{top:-1px!important;width:25px!important;height:25px!important;font-size:11px!important}
+ .ft-q:has(> .ft-q-box + form)>form>.ft-ob-field::after{margin:1px 0 4px!important;font-size:10px!important;line-height:1.15!important}
+ .ft-q:has(> .ft-q-box + form)>form>.ft-ob-field textarea{width:calc(100% + 34px)!important;min-height:54px!important;height:54px!important;margin-left:-34px!important;padding:7px 8px!important;border-radius:9px!important;font-size:14px!important;line-height:1.2!important;resize:vertical!important}
+ .ft-q:has(> .ft-q-box + form)>form>.ft-ob-actions{gap:5px!important;margin-top:0!important}
+ .ft-q:has(> .ft-q-box + form)>form>.ft-ob-actions .ft-ob-primary{min-height:42px!important;border-radius:10px!important;font-size:13px!important}
+ .ft-q:has(> .ft-q-box + form)>form>.ft-ob-actions>button:not(.ft-ob-primary){min-height:36px!important;font-size:12px!important}
+ .ft-q:has(> .ft-q-box + form)>form+button{min-height:36px!important;margin-top:-36px!important;font-size:12px!important}
 }
