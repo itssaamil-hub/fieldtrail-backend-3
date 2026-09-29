@@ -1,4 +1,4 @@
-const fs = require('fs');
+import fs from 'fs';
 
 const leadPath = 'src/lead/LeadFeatures.jsx';
 let lead = fs.readFileSync(leadPath, 'utf8');
