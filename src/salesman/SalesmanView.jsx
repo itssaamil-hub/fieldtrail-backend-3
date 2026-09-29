@@ -14,7 +14,7 @@ const lazyNamed = (loader, exportName) => {
 const TasksEntry = lazyNamed(() => import("../Tasks.jsx"), "TasksEntry");
 const TasksModal = lazyNamed(() => import("../Tasks.jsx"), "TasksModal");
 
-export default function SalesmanView({ notificationLead, session, leads, dayStarted, allowLeadWithoutStartDay, onToggleDay, togglingDay, justToggledDay, onAddLead, onUpdateLeadStatus, onUpdateLeadDetails, online, gpsStatus, queuedCount, loadError, messages, onMarkMessageRead, onDeleteMessage, onReplyMessage, employeeRepliesEnabled = true, dailyTarget, monthlyTarget, page, shared }) {
+export default function SalesmanView({ notificationLead, session, leads, leadSummary, hasMoreLeads, loadMoreLeads, loadingMoreLeads, totalLeadCount, dayStarted, allowLeadWithoutStartDay, onToggleDay, togglingDay, justToggledDay, onAddLead, onUpdateLeadStatus, onUpdateLeadDetails, online, gpsStatus, queuedCount, loadError, messages, onMarkMessageRead, onDeleteMessage, onReplyMessage, employeeRepliesEnabled = true, dailyTarget, monthlyTarget, page, shared }) {
   const { T, fmtMoney, isToday, isThisMonth, isWithinDays, isUpcomingRenewalMonth, SalesmanReportsPage, StatCard, MessagesSection, MyLeadsModal, AddLeadModal, LeadDetailDrawer } = shared;
   const { pendingTasks, handlePendingTasksChange } = useSalesmanTasks();
   const phone = useAdminPhone();
@@ -70,6 +70,19 @@ export default function SalesmanView({ notificationLead, session, leads, dayStar
   );
   const target = dailyTarget || 8;
   const monthTarget = monthlyTarget || 200;
+  const todayCount = leadSummary?.today ?? todayLeads.length;
+  const monthCount = leadSummary?.month ?? monthLeads.length;
+  const hotCount = leadSummary?.hot ?? allHotLeads.length;
+  const conversationCount = leadSummary?.conversation ?? inConversation.length;
+  const negotiationCount = leadSummary?.negotiation ?? inNegotiation.length;
+  const wonCount = leadSummary?.won ?? converted;
+  const wonValue = leadSummary?.wonValue ?? convertedValue;
+  const renewalCount = leadSummary?.renewalsDue ?? upcomingRenewals.length;
+  const leadPagingProps = { hasMore: hasMoreLeads, onLoadMore: loadMoreLeads, loadingMore: loadingMoreLeads, totalCount: totalLeadCount };
+
+  useEffect(() => {
+    if (page === "reports" && hasMoreLeads && !loadingMoreLeads) loadMoreLeads?.();
+  }, [page, hasMoreLeads, loadingMoreLeads, loadMoreLeads, leads.length]);
 
   return (
     <div className={phone && page !== "reports" ? "engage-admin-mobile-content" : undefined} style={{ maxWidth: 480, margin: "0 auto", padding: "18px 16px 40px" }}>
@@ -115,12 +128,12 @@ export default function SalesmanView({ notificationLead, session, leads, dayStar
       )}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8, marginBottom: 16 }}>
-        <StatCard label="Today" value={todayLeads.length} icon={TargetIcon} color={T.route} onClick={() => setShowTodayLeads(true)} />
-        <StatCard label="Hot" value={allHotLeads.length} icon={Flame} color={T.danger} onClick={() => setShowHotLeads(true)} />
-        <StatCard label="Conversation" value={inConversation.length} icon={MessageSquare} color={T.accent} onClick={() => setShowConversation(true)} />
-        <StatCard label="Negotiation" value={inNegotiation.length} icon={Handshake} color={T.warn} onClick={() => setShowNegotiation(true)} />
-        <StatCard label="Won" value={converted} sub={convertedValue > 0 ? fmtMoney(convertedValue) : undefined} icon={CheckCircle2} color={T.verified} onClick={() => setShowConverted(true)} />
-        <StatCard label="Renewals" value={upcomingRenewals.length} sub="next 30 days" icon={CalendarClock} color={T.accent} onClick={() => setShowRenewals(true)} />
+        <StatCard label="Today" value={todayCount} icon={TargetIcon} color={T.route} onClick={() => setShowTodayLeads(true)} />
+        <StatCard label="Hot" value={hotCount} icon={Flame} color={T.danger} onClick={() => setShowHotLeads(true)} />
+        <StatCard label="Conversation" value={conversationCount} icon={MessageSquare} color={T.accent} onClick={() => setShowConversation(true)} />
+        <StatCard label="Negotiation" value={negotiationCount} icon={Handshake} color={T.warn} onClick={() => setShowNegotiation(true)} />
+        <StatCard label="Won" value={wonCount} sub={wonValue > 0 ? fmtMoney(wonValue) : undefined} icon={CheckCircle2} color={T.verified} onClick={() => setShowConverted(true)} />
+        <StatCard label="Renewals" value={renewalCount} sub="next 30 days" icon={CalendarClock} color={T.accent} onClick={() => setShowRenewals(true)} />
       </div>
 
       <div
@@ -138,23 +151,23 @@ export default function SalesmanView({ notificationLead, session, leads, dayStar
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 12, color: T.inkSoft, marginBottom: 6 }}>
           <span>Today</span>
-          <span style={{ fontWeight: 700, fontSize: 13.5, color: T.ink }}>{Math.min(todayLeads.length, target)} / {target}</span>
+          <span style={{ fontWeight: 700, fontSize: 13.5, color: T.ink }}>{Math.min(todayCount, target)} / {target}</span>
         </div>
         <div style={{ height: 7, background: T.paperDeep, borderRadius: 11, overflow: "hidden" }}>
-          <div style={{ height: "100%", width: `${Math.min(100, (todayLeads.length / target) * 100)}%`, background: T.route, transition: "width 0.3s ease", borderRadius: 11 }} />
+          <div style={{ height: "100%", width: `${Math.min(100, (todayCount / target) * 100)}%`, background: T.route, transition: "width 0.3s ease", borderRadius: 11 }} />
         </div>
 
         <div style={{ height: 1, background: T.line, margin: "16px 0 14px" }} />
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 12, color: T.inkSoft, marginBottom: 6 }}>
           <span>This month</span>
-          <span style={{ fontWeight: 700, fontSize: 13.5, color: T.ink }}>{monthLeads.length} / {monthTarget}</span>
+          <span style={{ fontWeight: 700, fontSize: 13.5, color: T.ink }}>{monthCount} / {monthTarget}</span>
         </div>
         <div style={{ height: 7, background: T.paperDeep, borderRadius: 11, overflow: "hidden" }}>
-          <div style={{ height: "100%", width: `${Math.min(100, (monthLeads.length / monthTarget) * 100)}%`, background: T.accent, transition: "width 0.3s ease", borderRadius: 11 }} />
+          <div style={{ height: "100%", width: `${Math.min(100, (monthCount / monthTarget) * 100)}%`, background: T.accent, transition: "width 0.3s ease", borderRadius: 11 }} />
         </div>
         <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 6 }}>
-          {monthLeads.length >= monthTarget ? "🎉 Target reached!" : `${monthTarget - monthLeads.length} more to hit this month's target`}
+          {monthCount >= monthTarget ? "🎉 Target reached!" : `${monthTarget - monthCount} more to hit this month's target`}
         </div>
       </div>
 
@@ -171,7 +184,7 @@ export default function SalesmanView({ notificationLead, session, leads, dayStar
       </div>
       <div hidden={!dashboard}><TasksEntry onPendingChange={handlePendingTasksChange} /></div>
       {visited.leads && <div hidden={!phone || mobileTab !== "leads"}>
-        <MyLeadsModal embedded leads={leads} onSelectLead={setViewingLead} allowDateFilter employeeMobile />
+        <MyLeadsModal {...leadPagingProps} embedded leads={leads} onSelectLead={setViewingLead} allowDateFilter employeeMobile />
       </div>}
       {visited.tasks && <div hidden={!phone || mobileTab !== "tasks"}><TasksModal embedded active={phone && mobileTab === "tasks"} /></div>}
       {phone && mobileTab === "more" && <section className="engage-salesman-more"><h2>More</h2>
@@ -188,9 +201,9 @@ export default function SalesmanView({ notificationLead, session, leads, dayStar
           onSaved={(lead) => { showSaveFeedback(lead.syncStatus === "queued" ? "Lead saved on device · Sync pending" : "Lead saved"); setShowAddLead(false); setViewingLead(lead); }}
         />
       )}
-      {showMyLeads && <MyLeadsModal leads={leads} onClose={() => setShowMyLeads(false)} onSelectLead={setViewingLead} allowDateFilter />}
+      {showMyLeads && <MyLeadsModal {...leadPagingProps} leads={leads} onClose={() => setShowMyLeads(false)} onSelectLead={setViewingLead} allowDateFilter />}
       {showTodayLeads && (
-        <MyLeadsModal
+        <MyLeadsModal {...leadPagingProps}
           leads={todayLeads}
           title="Today's Leads"
           onClose={() => setShowTodayLeads(false)}
@@ -198,7 +211,7 @@ export default function SalesmanView({ notificationLead, session, leads, dayStar
         />
       )}
       {showHotLeads && (
-        <MyLeadsModal
+        <MyLeadsModal {...leadPagingProps}
           leads={allHotLeads}
           title="🔥 Hot Leads"
           onClose={() => setShowHotLeads(false)}
@@ -206,7 +219,7 @@ export default function SalesmanView({ notificationLead, session, leads, dayStar
         />
       )}
       {showConverted && (
-        <MyLeadsModal
+        <MyLeadsModal {...leadPagingProps}
           leads={leads.filter((l) => l.status === "won")}
           title="Won Leads"
           onClose={() => setShowConverted(false)}
@@ -214,7 +227,7 @@ export default function SalesmanView({ notificationLead, session, leads, dayStar
         />
       )}
       {showNegotiation && (
-        <MyLeadsModal
+        <MyLeadsModal {...leadPagingProps}
           leads={inNegotiation}
           title="In Negotiation"
           onClose={() => setShowNegotiation(false)}
@@ -222,7 +235,7 @@ export default function SalesmanView({ notificationLead, session, leads, dayStar
         />
       )}
       {showConversation && (
-        <MyLeadsModal
+        <MyLeadsModal {...leadPagingProps}
           leads={inConversation}
           title="In Conversation"
           onClose={() => setShowConversation(false)}
@@ -230,7 +243,7 @@ export default function SalesmanView({ notificationLead, session, leads, dayStar
         />
       )}
       {showRenewals && (
-        <MyLeadsModal
+        <MyLeadsModal {...leadPagingProps}
           leads={upcomingRenewals}
           title="Renewals Due (Next 30 Days)"
           onClose={() => setShowRenewals(false)}

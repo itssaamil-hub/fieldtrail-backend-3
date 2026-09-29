@@ -458,7 +458,12 @@ export const api = {
     rememberAttendanceLocation(payload?.lat, payload?.lng, payload?.accuracyM, payload?.capturedAt || Date.now());
     return request("/salesman/location/ping", { method: "POST", body: payload });
   },
-  salesmanLeads: () => request("/salesman/leads"),
+  salesmanLeads: (params = {}) => {
+    const entries = Object.entries(params).filter(([, v]) => v != null && v !== "" && v !== "all");
+    const qs = new URLSearchParams(entries).toString();
+    return request(`/salesman/leads${qs ? `?${qs}` : ""}`);
+  },
+  salesmanLeadSummary: () => request("/salesman/leads-summary"),
   salesmanLead: (id) => request(`/salesman/leads/${id}`),
   salesmanLeadHistory: (id) => request(`/salesman/leads/${id}/history`),
   salesmanCreateLead: (payload) => request("/salesman/leads", { method: "POST", body: normalizeRenewalPayload(payload) }),

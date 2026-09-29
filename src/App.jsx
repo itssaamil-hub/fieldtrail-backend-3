@@ -4120,8 +4120,13 @@ function SalesmanApp({ session, online, page, notificationLead }) {
 
   const {
     leads,
+    leadSummary,
     loading,
+    loadingMore,
     queuedCount,
+    totalLeadCount,
+    hasMoreLeads,
+    loadMoreLeads,
     handleAddLead,
     handleUpdateLeadStatus,
     handleUpdateLeadDetails,
@@ -4160,6 +4165,11 @@ function SalesmanApp({ session, online, page, notificationLead }) {
       notificationLead={notificationLead}
       session={session}
       leads={leads}
+      leadSummary={leadSummary}
+      hasMoreLeads={hasMoreLeads}
+      loadMoreLeads={loadMoreLeads}
+      loadingMoreLeads={loadingMore}
+      totalLeadCount={totalLeadCount}
       dayStarted={dayStarted}
       allowLeadWithoutStartDay={allowLeadWithoutStartDay}
       onToggleDay={()=>handleToggleDay()}
@@ -4588,7 +4598,7 @@ function GpsStatus({ gps, verification }) {
   );
 }
 
-function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads", allowDateFilter = false, embedded = false, employeeMobile = false }) {
+function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads", allowDateFilter = false, embedded = false, employeeMobile = false, hasMore = false, onLoadMore, loadingMore = false, totalCount = null }) {
   const [briefLead, setBriefLead] = useState(null);
   const [filterDate, setFilterDate] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -4788,6 +4798,11 @@ function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads", allowD
           </div>
         ))}
       </div>
+      {hasMore && onLoadMore && (
+        <button type="button" disabled={loadingMore} onClick={onLoadMore} style={{ width:"100%", marginTop:12, padding:"10px 12px", borderRadius:9, border:`1px solid ${T.line}`, background:"#fff", color:T.route, fontWeight:800, cursor:loadingMore?"default":"pointer", opacity:loadingMore?.65:1 }}>
+          {loadingMore ? "Loading more…" : `Load more leads${totalCount != null ? ` · ${Math.max(0, totalCount - leads.length)} remaining` : ""}`}
+        </button>
+      )}
       {briefLead && <LeadBriefPopup key={briefLead.id} lead={briefLead} buildBrief={buildLeadBrief} onClose={() => setBriefLead(null)} />}
     </Frame>
   );
