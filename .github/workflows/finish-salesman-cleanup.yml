@@ -1,0 +1,31 @@
+name: Finish salesman cleanup
+
+on:
+  push:
+    paths:
+      - 'scripts/finish-salesman-cleanup.py'
+      - '.github/workflows/finish-salesman-cleanup.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  refactor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - run: python scripts/finish-salesman-cleanup.py
+      - run: npm ci
+      - run: npm run build
+      - name: Commit cleanup
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f scripts/finish-salesman-cleanup.py .github/workflows/finish-salesman-cleanup.yml
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -m "finish salesman settings and task polling cleanup"
+          git push origin HEAD:main
