@@ -1,0 +1,18 @@
+name: Trace Day Closing Entry
+
+on:
+  push:
+    paths:
+      - '.github/workflows/trace-day-closing-entry.yml'
+
+jobs:
+  trace:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Find day closing entry references
+        run: |
+          echo '--- DayClosing*Entry references ---'
+          grep -RInE 'DayClosing[A-Za-z]*Entry|day closing entry|Day Closing Entry' src || true
+          echo '--- Employee panel / settings references ---'
+          grep -RInE 'AdminEmployeesPanel|EmployeeSettings|DayClosingReportsEntry' src || true
