@@ -15,5 +15,21 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - name: Guard React source against undefined runtime identifiers
+        run: |
+          FILES=$(find src -type f \( -name '*.jsx' -o -name '*.tsx' \) -print | tr '\n' ' ')
+          npx --yes eslint@8 $FILES \
+            --no-eslintrc \
+            --env es6,browser \
+            --parser-options '{"ecmaVersion":2022,"sourceType":"module","ecmaFeatures":{"jsx":true}}' \
+            --rule 'no-undef:error'
+      - name: Guard JS source against undefined identifiers
+        run: |
+          FILES=$(find src -type f -name '*.js' ! -name '*sw*' ! -name 'service-worker.js' -print | tr '\n' ' ')
+          npx --yes eslint@8 $FILES \
+            --no-eslintrc \
+            --env es6,browser,node \
+            --parser-options '{"ecmaVersion":2022,"sourceType":"module"}' \
+            --rule 'no-undef:error'
       - run: npm audit --omit=dev --audit-level=critical
       - run: npm run build
