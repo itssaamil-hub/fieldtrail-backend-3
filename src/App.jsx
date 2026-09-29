@@ -18,6 +18,7 @@ import AdminEmployeesPanel from "./admin/AdminEmployeesPanel.jsx";
 import AdminDashboardPanel from "./admin/AdminDashboardPanel.jsx";
 import AdminLeadsPanel from "./admin/AdminLeadsPanel.jsx";
 import AdminReportsPage from "./admin/AdminReportsPage.jsx";
+import useAdminData from "./admin/useAdminData.js";
 import React, { lazy, Suspense, useState, useEffect, useRef, useCallback } from "react";
 import {
   MapPin,
@@ -1644,150 +1645,22 @@ function LiveMap({ salesmen, leads, onSelectLead, title = "Live Employees & Lead
 // back to a periodic refetch as a safety net if the socket drops.
 // ---------------------------------------------------------------------------
 function AdminApp({ desktopSection, session, online, page, notificationLead }) {
-  const [conversationCount, setConversationCount] = useState(null);
-  const [salesmen, setSalesmen] = useState([]);
-  const [leads, setLeads] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
-  const [wsConnected, setWsConnected] = useState(false);
-  const wsRef = useRef(null);
-
-  const loadAll = useCallback(async () => {
-    try {
-      const [salesmenRes, leadsRes, summaryRes] = await Promise.all([api.adminSalesmen(), api.adminLeads(), api.adminSummary()]);
-      setConversationCount(summaryRes.conversationLeads ?? null);
-      setSalesmen((salesmenRes.salesmen || []).map(mapSalesmanRow));
-      setLeads((leadsRes.leads || []).map(mapLeadRow));
-      setLoadError("");
-    } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : "Couldn't load data.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { loadAll(); }, [loadAll]);
-
-  // Periodic safety-net refetch (covers any missed WS events / a dropped socket)
-  useEffect(() => {
-    if (!online) return;
-    const iv = setInterval(loadAll, 15000);
-    return () => clearInterval(iv);
-  }, [online, loadAll]);
-
-  // WebSocket for instant pushes
-  useEffect(() => {
-    if (!online) return;
-    let cancelled = false;
-    let retryTimer = null;
-
-    const connect = () => {
-      if (cancelled) return;
-      const wsBase = getWsBase();
-      if (!wsBase) return;
-      const ws = new WebSocket(`${wsBase}/realtime/admin?token=${encodeURIComponent(session.token)}`);
-      wsRef.current = ws;
-      ws.onopen = () => setWsConnected(true);
-      ws.onclose = () => {
-        setWsConnected(false);
-        if (!cancelled) retryTimer = setTimeout(connect, 4000);
-      };
-      ws.onerror = () => ws.close();
-      ws.onmessage = (evt) => {
-        let msg;
-        try { msg = JSON.parse(evt.data); } catch { return; }
-        if (msg.type === "location_update" || msg.type === "salesman_status") {
-          const s = msg.salesman;
-          setSalesmen((prev) => prev.map((p) => (p.id === s.id ? {
-            ...p,
-            lat: s.lat != null ? s.lat : p.lat,
-            lng: s.lng != null ? s.lng : p.lng,
-            battery: s.batteryPct != null ? s.batteryPct : p.battery,
-            speed: s.speedMps != null ? s.speedMps * 3.6 : p.speed,
-            status: s.status || p.status,
-            lastUpdate: s.lastSeenAt ? new Date(s.lastSeenAt) : p.lastUpdate,
-          } : p)));
-        } else if (msg.type === "new_lead") {
-          setLeads((prev) => (prev.some((l) => l.id === msg.lead.id) ? prev : [mapLeadRow(msg.lead), ...prev]));
-        } else if (msg.type === "lead_status_changed") {
-          setLeads((prev) => prev.map((l) => (l.id === msg.leadId ? { ...l, status: msg.status } : l)));
-        }
-      };
-    };
-    connect();
-    return () => {
-      cancelled = true;
-      clearTimeout(retryTimer);
-      wsRef.current?.close();
-    };
-  }, [online, session.token]);
-
-  const onStatusChange = async (id, status) => {
-    setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, status } : l))); // optimistic
-    try {
-      await api.adminUpdateLeadStatus(id, status);
-    } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : "Couldn't update status.");
-      loadAll(); // revert to server truth
-    }
-  };
-
-  const onUpdateLead = async (id, payload) => {
-    setLeads((prev) => prev.map((l) => (l.id === id ? {
-      ...l,
-      business: payload.businessName ?? l.business,
-      subLocation: payload.subLocation, posName: payload.posName,
-      renewalMonth: payload.renewalMonth, renewalDate: payload.renewalDate || "",
-      owner: payload.contactName, phone: payload.phone, notes: payload.notes,
-      dealValue: payload.dealValue,
-    } : l))); // optimistic
-    try {
-      await api.adminUpdateLead(id, payload);
-    } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : "Couldn't save changes.");
-      loadAll();
-    }
-  };
-
-  const onDeleteLead = async (id) => {
-    setLeads((prev) => prev.filter((l) => l.id !== id)); // optimistic
-    try {
-      await api.adminDeleteLead(id);
-    } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : "Couldn't delete the lead.");
-      loadAll(); // revert to server truth if the delete actually failed
-    }
-  };
-
-  const onAddLead = async (payload) => {
-    await api.adminCreateLead(payload);
-    await loadAll(); // simplest way to get the new lead mapped + inserted in the right sorted position
-  };
-
-  const onAddSalesman = async (payload) => {
-    await api.adminCreateSalesman(payload);
-    await loadAll();
-  };
-
-  const onToggleSalesmanActive = async (id, nextIsActive) => {
-    setSalesmen((prev) => prev.map((s) => (s.id === id ? { ...s, isActive: nextIsActive } : s))); // optimistic
-    try {
-      await api.adminUpdateSalesman(id, { isActive: nextIsActive });
-    } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : "Couldn't update employee.");
-      loadAll();
-    }
-  };
-
-  const onEditSalesman = async (id, payload) => {
-    await api.adminUpdateSalesman(id, payload);
-    await loadAll();
-  };
-
-  const onDeleteSalesman = async (id) => {
-    await api.adminDeleteSalesman(id); // no optimistic removal — surfaces the "still has leads" error cleanly if blocked
-    await loadAll();
-  };
+  const {
+    conversationCount,
+    salesmen,
+    leads,
+    loading,
+    loadError,
+    wsConnected,
+    onStatusChange,
+    onUpdateLead,
+    onDeleteLead,
+    onAddLead,
+    onAddSalesman,
+    onEditSalesman,
+    onDeleteSalesman,
+    onToggleSalesmanActive,
+  } = useAdminData({ online, session });
 
   if (loading) {
     return (
