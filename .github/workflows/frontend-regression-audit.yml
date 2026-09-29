@@ -1,0 +1,39 @@
+name: Frontend Regression Audit
+
+on:
+  push:
+    paths:
+      - '.github/workflows/frontend-regression-audit.yml'
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm ci
+      - name: Audit all React source files for undefined identifiers
+        run: |
+          FILES=$(find src -type f \( -name '*.jsx' -o -name '*.tsx' \) -print | tr '\n' ' ')
+          npx --yes eslint@8 $FILES \
+            --no-eslintrc \
+            --env es6,browser \
+            --parser-options '{"ecmaVersion":2022,"sourceType":"module","ecmaFeatures":{"jsx":true}}' \
+            --rule 'no-undef:error'
+      - name: Audit main browser JS hooks and API files
+        run: |
+          FILES=$(find src -type f -name '*.js' ! -name '*sw*' ! -name 'service-worker.js' -print | tr '\n' ' ')
+          npx --yes eslint@8 $FILES \
+            --no-eslintrc \
+            --env es6,browser \
+            --parser-options '{"ecmaVersion":2022,"sourceType":"module"}' \
+            --rule 'no-undef:error'
+      - name: Production build
+        run: npm run build
+      - name: Dependency audit
+        run: npm audit --audit-level=critical
