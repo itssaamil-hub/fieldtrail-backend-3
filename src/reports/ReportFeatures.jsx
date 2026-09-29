@@ -3,7 +3,7 @@ import React from "react";
 // Extracted from App.jsx without changing report behavior.
 // Dependencies stay explicit so report UI remains testable and App.jsx stays orchestration-only.
 export function createReportFeatures(deps) {
-  const { React, useState, useEffect, useRef, useCallback, api, T, fmtMoney, fmtTime, isToday, isThisMonth, STATUS_LABEL, STATUSES, inputStyle, Select, Overlay, Field, DownloadMenu, buildExportUrl, LeadBriefPopup, buildLeadBrief, leadAvatarStyle, leadInitials, L, EXPENSE_CATEGORIES, Loader2, CalendarClock, PhoneIcon, MapPin, Receipt, Wallet, CheckCircle2, RefreshCw, Route, Pencil, Trash2, Search, X } = deps;
+  const { React, useState, useEffect, useRef, useCallback, api, ApiError, T, fmtMoney, fmtTime, isToday, isThisMonth, isWithinDays, isUpcomingRenewalMonth, STATUS_LABEL, STATUSES, inputStyle, Select, Overlay, Field, DownloadMenu, buildExportUrl, LeadBriefPopup, buildLeadBrief, leadAvatarStyle, leadInitials, L, EXPENSE_CATEGORIES, Loader2, CalendarClock, TargetIcon, Contact2, PhoneIcon, MapPin, Receipt, Wallet, CheckCircle2, RefreshCw, Route, Pencil, Trash2, Search, X } = deps;
 
 function DataQualityReport({ salesmen }) {
   const [employee, setEmployee] = useState("");
@@ -974,7 +974,7 @@ function SalesmanLeadsModal({ salesman, leads, onClose, onSelectLead }) {
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
                   <div style={{ fontWeight: 600, fontSize: 13.5, minWidth: 0, overflowWrap: "anywhere" }}>{l.business}</div>
-                  <button type="button" className={employeeMobile ? "ft-lead-brief-pill employee-mobile-brief-pill" : "ft-lead-brief-pill"} aria-label={`Brief for ${l.business}`} onClick={event => { event.stopPropagation(); setBriefLead(l); }}><Sparkles size={11} /> Brief</button>
+                  <button type="button" className="ft-lead-brief-pill" aria-label={`Brief for ${l.business}`} onClick={event => { event.stopPropagation(); setBriefLead(l); }}><Sparkles size={11} /> Brief</button>
                 </div>
                 <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 3, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                   <span>{STATUS_LABEL[l.status]} · {fmtTime(l.createdAt)}{l.dealValue != null ? ` · ${fmtMoney(l.dealValue)}` : ""}</span>

@@ -2,7 +2,7 @@ import React from "react";
 
 // Shared application shell/settings UI extracted from App.jsx without changing behavior.
 export function createAppShellFeatures(deps) {
-  const { useState, useEffect, useRef, useCallback, api, ApiError, T, DASHBOARD_DISPLAY_KEY, getDashboardDisplaySettings, mapSalesmanRow, AppMenu, Loader2, Gauge, BarChart3, Wallet, Bell, WifiOff, Settings, LogOut, Download, RefreshCw, X, Plus, CheckCircle2, AlertTriangle } = deps;
+  const { useState, useEffect, useRef, useCallback, api, ApiError, getSession, T, DASHBOARD_DISPLAY_KEY, getDashboardDisplaySettings, mapSalesmanRow, AppMenu, Loader2, Gauge, BarChart3, Wallet, Bell, WifiOff, Settings, LogOut, Download, RefreshCw, X, Plus, CheckCircle2, AlertTriangle } = deps;
 
 function LogoMark({ size = 20 }) {
   return (
