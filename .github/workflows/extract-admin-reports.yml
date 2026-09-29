@@ -1,0 +1,36 @@
+name: Extract admin reports
+
+on:
+  push:
+    paths:
+      - 'scripts/extract-admin-reports.py'
+      - '.github/workflows/extract-admin-reports.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  refactor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - run: python scripts/extract-admin-reports.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm audit --omit=dev --audit-level=critical
+      - run: npm run build
+      - name: Commit extraction
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f scripts/extract-admin-reports.py .github/workflows/extract-admin-reports.yml
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -m "extract admin reports feature module"
+          git push origin HEAD:main
