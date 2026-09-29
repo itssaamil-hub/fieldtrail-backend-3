@@ -10,6 +10,7 @@ import useAttendanceGps from "./useAttendanceGps.js";
 import useAttendanceDay from "./useAttendanceDay.js";
 import useSalesmanMessages from "./useSalesmanMessages.js";
 import useSalesmanLeads from "./useSalesmanLeads.js";
+import useSalesmanTasks from "./useSalesmanTasks.js";
 import AdminActivityOverview from "./AdminActivityOverview.jsx";
 import AdminAddLeadModalV2 from "./AdminAddLeadModal.jsx";
 import React, { lazy, Suspense, useState, useEffect, useRef, useCallback } from "react";
@@ -4748,7 +4749,7 @@ function adHocLeadFromPayload(payload, session) {
 }
 
 function SalesmanView({ notificationLead, session, leads, dayStarted, allowLeadWithoutStartDay, onToggleDay, togglingDay, justToggledDay, onAddLead, onUpdateLeadStatus, onUpdateLeadDetails, online, gpsStatus, queuedCount, loadError, messages, onMarkMessageRead, onDeleteMessage, onReplyMessage, employeeRepliesEnabled = true, dailyTarget, monthlyTarget, page }) {
-  const [pendingTasks, setPendingTasks] = useState(null);
+  const { pendingTasks, handlePendingTasksChange } = useSalesmanTasks();
   const phone = useAdminPhone();
   const [mobileTab, setMobileTab] = useState("dashboard");
   const [visited, setVisited] = useState({});
@@ -4901,7 +4902,7 @@ function SalesmanView({ notificationLead, session, leads, dayStarted, allowLeadW
       <div hidden={!dashboard && mobileTab !== "messages"}>
       <MessagesSection messages={messages} onMarkRead={onMarkMessageRead} onDelete={onDeleteMessage} onReply={onReplyMessage} employeeRepliesEnabled={employeeRepliesEnabled} onOpenLead={(id) => { const found = leads.find(l => l.id === id); if (found) setViewingLead(found); else api.salesmanLead(id).then(r => setViewingLead(mapLeadRow(r.lead))).catch(() => setNotificationLeadError("Couldn't open this lead.")); }} />
       </div>
-      <div hidden={!dashboard}><TasksEntry onPendingChange={setPendingTasks} /></div>
+      <div hidden={!dashboard}><TasksEntry onPendingChange={handlePendingTasksChange} /></div>
       {visited.leads && <div hidden={!phone || mobileTab !== "leads"}>
         <MyLeadsModal embedded leads={leads} onSelectLead={setViewingLead} allowDateFilter employeeMobile />
       </div>}
