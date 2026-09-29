@@ -1,0 +1,21 @@
+name: Runtime lead audit
+on:
+  push:
+    paths:
+      - '.github/workflows/runtime-lead-audit.yml'
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - name: Check undefined identifiers in LeadFeatures
+        run: >-
+          npx --yes eslint@8 src/lead/LeadFeatures.jsx
+          --no-eslintrc
+          --env es6,browser
+          --parser-options '{"ecmaVersion":2022,"sourceType":"module","ecmaFeatures":{"jsx":true}}'
+          --rule 'no-undef:error'
