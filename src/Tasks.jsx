@@ -9,8 +9,26 @@ const time = value => new Date(value).toLocaleString('en-IN', { timeZone: 'Asia/
 export function TasksEntry({ lead, compact = false, onPendingChange }) {
  const [open,setOpen]=useState(false),[count,setCount]=useState(null),[error,setError]=useState('');
  const admin=getSession()?.role==='admin';
- const refresh=useCallback(()=>{ if(lead)return; api.tasks({filter:'all'}).then(r=>{setCount(r.pending);onPendingChange?.(r.pending);setError('')}).catch(()=>{onPendingChange?.(null);setError('Could not refresh tasks')}); },[lead,onPendingChange]);
- useEffect(()=>{let alive=true;const load=()=>{if(alive)refresh()};load();const timer=setInterval(load,60000);window.addEventListener('fieldtrail:tasks',load);return()=>{alive=false;clearInterval(timer);window.removeEventListener('fieldtrail:tasks',load)}},[refresh]);
+ const flight=useRef(null),mounted=useRef(true);
+ const refresh=useCallback(()=>{
+  if(lead)return Promise.resolve();
+  if(flight.current)return flight.current;
+  const request=api.tasks({filter:'all'}).then(r=>{if(mounted.current){setCount(r.pending);onPendingChange?.(r.pending);setError('')}}).catch(()=>{if(mounted.current){onPendingChange?.(null);setError('Could not refresh tasks')}}).finally(()=>{if(flight.current===request)flight.current=null});
+  flight.current=request;
+  return request;
+ },[lead,onPendingChange]);
+ useEffect(()=>{
+  mounted.current=true;
+  if(lead)return()=>{mounted.current=false};
+  let stopped=false,timer=null;
+  const load=()=>{if(!stopped&&document.visibilityState==='visible')refresh()};
+  const schedule=()=>{if(stopped)return;timer=window.setTimeout(async()=>{load();schedule()},60000+Math.floor(Math.random()*15000))};
+  const resume=()=>{if(document.visibilityState==='visible')load()};
+  load();schedule();
+  window.addEventListener('fieldtrail:tasks',load);
+  document.addEventListener('visibilitychange',resume);
+  return()=>{stopped=true;mounted.current=false;if(timer)window.clearTimeout(timer);window.removeEventListener('fieldtrail:tasks',load);document.removeEventListener('visibilitychange',resume)};
+ },[lead,refresh]);
  return <><button className={compact?'ft-task-link':'ft-task-entry'} type="button" onClick={()=>setOpen(true)} disabled={lead?.syncStatus==='queued'}>
  <span><ClipboardList size={compact?13:16}/>{compact?'+ Add task':admin?'Team Tasks':'My Tasks'}{!compact&&count!==null&&<span className="ft-task-count">{count} pending</span>}</span>{!compact&&<ChevronRight size={16}/>}</button>{error&&!compact&&<div className="ft-task-muted">{error}. Open to retry.</div>}
  {open&&<TasksModal lead={lead} startCreate={compact} onClose={()=>setOpen(false)}/>}</>;

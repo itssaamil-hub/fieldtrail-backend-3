@@ -11,6 +11,7 @@ import useAttendanceDay from "./useAttendanceDay.js";
 import useSalesmanMessages from "./useSalesmanMessages.js";
 import useSalesmanLeads from "./useSalesmanLeads.js";
 import useSalesmanTasks from "./useSalesmanTasks.js";
+import useSalesmanSettings from "./useSalesmanSettings.js";
 import AdminActivityOverview from "./AdminActivityOverview.jsx";
 import AdminAddLeadModalV2 from "./AdminAddLeadModal.jsx";
 import React, { lazy, Suspense, useState, useEffect, useRef, useCallback } from "react";
@@ -4588,11 +4589,6 @@ function SalesmanApp({ session, online, page, notificationLead }) {
   const [loadError, setLoadError] = useState("");
   const [dayStarted, setDayStartedState] = useState(getDayStarted(session.id));
   const [gpsStatus, setGpsStatus] = useState("idle"); // idle | tracking | denied | unavailable
-  const [continuousTracking, setContinuousTracking] = useState(true); // safe default until settings load
-  const [allowLeadWithoutStartDay, setAllowLeadWithoutStartDay] = useState(false);
-  const [attendanceLocationPolicy, setAttendanceLocationPolicy] = useState({ start: true, end: true });
-  const [dailyTarget, setDailyTarget] = useState(8); // overwritten by the salesman's actual profile below
-  const [monthlyTarget, setMonthlyTarget] = useState(200);
 
   useEffect(() => {
     let live=true;
@@ -4600,33 +4596,6 @@ function SalesmanApp({ session, online, page, notificationLead }) {
     sync();window.addEventListener('focus',sync);
     return()=>{live=false;window.removeEventListener('focus',sync);};
   },[session.id]);
-
-  useEffect(() => {
-    api.salesmanGetProfile()
-      .then((res) => {
-        setDailyTarget(res.profile?.daily_target || 8);
-        setMonthlyTarget(res.profile?.monthly_target || 200);
-      })
-      .catch(() => { /* keep defaults on failure */ });
-  }, []);
-
-  useEffect(() => {
-    api.salesmanGetSettings()
-      .then((res) => {
-        setContinuousTracking(res.locationSettings?.continuousGpsTracking ?? true);
-        setAttendanceLocationPolicy({
-          start: res.locationSettings?.requireLocationToStartDay !== false,
-          end: res.locationSettings?.requireLocationToEndDay !== false,
-        });
-        setAllowLeadWithoutStartDay(!!res.employeePermissions?.allowLeadWithoutStartDay);
-        setEmployeeRepliesEnabled(res.messageSettings?.employeeRepliesEnabled !== false);
-      })
-      .catch(() => {
-        // Fail closed: if settings cannot load, Start Day remains required.
-        setAllowLeadWithoutStartDay(false);
-      });
-  }, []);
-
 
   const {
     messages,
@@ -4636,6 +4605,14 @@ function SalesmanApp({ session, online, page, notificationLead }) {
     deleteMessage,
     replyToMessage,
   } = useSalesmanMessages();
+
+  const {
+    continuousTracking,
+    allowLeadWithoutStartDay,
+    attendanceLocationPolicy,
+    dailyTarget,
+    monthlyTarget,
+  } = useSalesmanSettings({ setEmployeeRepliesEnabled });
 
   const getBatteryPct = useCallback(async () => {
     try {
