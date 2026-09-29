@@ -1,0 +1,33 @@
+name: Extract report features
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/extract-report-features.py
+      - .github/workflows/extract-report-features.yml
+permissions:
+  contents: write
+jobs:
+  extract:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: python scripts/extract-report-features.py
+      - run: npm ci
+      - run: npm audit --omit=dev --audit-level=critical
+      - run: npm run build
+      - name: Commit validated extraction
+        run: |
+          rm scripts/extract-report-features.py
+          rm .github/workflows/extract-report-features.yml
+          rm -f scripts/report-app-structure.py
+          rm -f .github/workflows/report-app-structure.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "extract report features from App"
+          git push
