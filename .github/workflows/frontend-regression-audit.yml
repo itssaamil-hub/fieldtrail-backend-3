@@ -25,12 +25,12 @@ jobs:
             --env es6,browser \
             --parser-options '{"ecmaVersion":2022,"sourceType":"module","ecmaFeatures":{"jsx":true}}' \
             --rule 'no-undef:error'
-      - name: Audit main browser JS hooks and API files
+      - name: Audit JS source files for undefined identifiers
         run: |
           FILES=$(find src -type f -name '*.js' ! -name '*sw*' ! -name 'service-worker.js' -print | tr '\n' ' ')
           npx --yes eslint@8 $FILES \
             --no-eslintrc \
-            --env es6,browser \
+            --env es6,browser,node \
             --parser-options '{"ecmaVersion":2022,"sourceType":"module"}' \
             --rule 'no-undef:error'
       - name: Production build
