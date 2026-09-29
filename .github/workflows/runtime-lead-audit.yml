@@ -38,3 +38,4 @@ jobs:
           git diff --cached --quiet && exit 0
           git commit -m "fix Add Lead drawer dependency"
           git push origin HEAD:main
+# rerun after module-mode fix
