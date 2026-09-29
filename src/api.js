@@ -92,46 +92,62 @@ export class ApiError extends Error {
   }
 }
 
-// Attendance GPS reliability layer.
-// Continuous tracking feeds this cache while a day is active. Start/End Day
-// can reuse a recent accurate fix instantly instead of waking GPS from zero.
-const ATTENDANCE_LOCATION_MAX_AGE_MS = 30000;
+// Attendance GPS reliability layer. One resolver owns all Start/End location
+// acquisition so the UI never runs a second competing GPS request.
+const ATTENDANCE_FRESH_MAX_AGE_MS = 30000;
+const ATTENDANCE_FALLBACK_MAX_AGE_MS = 120000;
 const ATTENDANCE_PREFERRED_ACCURACY_M = 50;
-const ATTENDANCE_ACCEPTABLE_ACCURACY_M = 100;
-const ATTENDANCE_GPS_TIMEOUT_MS = 4500;
+const ATTENDANCE_FALLBACK_ACCURACY_M = 100;
+const ATTENDANCE_GPS_TIMEOUT_MS = 5000;
 let latestAttendanceLocation = null;
+let attendanceLocationInFlight = null;
 
 function validCoordinatePair(lat, lng) {
   const a = Number(lat), b = Number(lng);
   return Number.isFinite(a) && Number.isFinite(b) && a >= -90 && a <= 90 && b >= -180 && b <= 180;
 }
 
+function normalizeCapturedAt(capturedAt) {
+  const parsed = typeof capturedAt === "number" ? capturedAt : Date.parse(capturedAt);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function rememberAttendanceLocation(lat, lng, accuracy, capturedAt = Date.now()) {
   if (!validCoordinatePair(lat, lng)) return null;
   const parsedAccuracy = Number(accuracy);
+  const parsedCapturedAt = normalizeCapturedAt(capturedAt);
+  if (!Number.isFinite(parsedAccuracy) || parsedAccuracy < 0 || parsedCapturedAt == null) return null;
   const fix = {
     lat: Number(lat),
     lng: Number(lng),
-    accuracy: Number.isFinite(parsedAccuracy) ? parsedAccuracy : null,
-    capturedAt: typeof capturedAt === "number" ? capturedAt : (Date.parse(capturedAt) || Date.now()),
+    accuracy: parsedAccuracy,
+    capturedAt: parsedCapturedAt,
   };
-  latestAttendanceLocation = fix;
+  if (!latestAttendanceLocation || fix.capturedAt >= latestAttendanceLocation.capturedAt) {
+    latestAttendanceLocation = fix;
+  }
   return fix;
 }
 
-function freshCachedAttendanceLocation(maxAccuracy = ATTENDANCE_ACCEPTABLE_ACCURACY_M) {
+function cachedAttendanceLocation(maxAgeMs, maxAccuracy) {
   const fix = latestAttendanceLocation;
-  if (!fix || Date.now() - fix.capturedAt > ATTENDANCE_LOCATION_MAX_AGE_MS) return null;
-  if (fix.accuracy != null && fix.accuracy > maxAccuracy) return null;
+  if (!fix) return null;
+  const age = Date.now() - fix.capturedAt;
+  if (age < 0 || age > maxAgeMs || fix.accuracy > maxAccuracy) return null;
   return fix;
 }
 
-function browserPosition(timeout = ATTENDANCE_GPS_TIMEOUT_MS) {
-  return new Promise((resolve, reject) => {
-    if (typeof navigator === "undefined" || !navigator.geolocation) {
-      reject(Object.assign(new Error("Location unavailable"), { code: 2 }));
-      return;
-    }
+function geolocationTimeoutError() {
+  return Object.assign(new Error("Location request timed out"), { code: 3 });
+}
+
+function browserPositionOnce() {
+  if (typeof navigator === "undefined" || !navigator.geolocation) {
+    return Promise.reject(Object.assign(new Error("Location unavailable"), { code: 2 }));
+  }
+
+  let timeoutId;
+  const geolocationRequest = new Promise((resolve, reject) => {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const fix = rememberAttendanceLocation(
@@ -144,45 +160,98 @@ function browserPosition(timeout = ATTENDANCE_GPS_TIMEOUT_MS) {
         else reject(Object.assign(new Error("Invalid location"), { code: 2 }));
       },
       reject,
-      { enableHighAccuracy: true, maximumAge: 5000, timeout }
+      { enableHighAccuracy: true, maximumAge: 0, timeout: ATTENDANCE_GPS_TIMEOUT_MS }
     );
   });
+  const hardTimeout = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(geolocationTimeoutError()), ATTENDANCE_GPS_TIMEOUT_MS);
+  });
+  return Promise.race([geolocationRequest, hardTimeout]).finally(() => clearTimeout(timeoutId));
 }
 
-async function resolveAttendanceLocation(lat, lng) {
-  // If the caller already captured a valid position, never delay the request.
-  if (validCoordinatePair(lat, lng)) return rememberAttendanceLocation(lat, lng, null);
+function attendanceLocationError(err) {
+  if (err instanceof ApiError) return err;
+  if (err?.code === 1) return new ApiError("Location permission is required. Please allow location access.", 0);
+  if (err?.code === 2) return new ApiError("Location is unavailable. Please turn on Location/GPS and try again.", 0);
+  return new ApiError("Couldn't get your location. Please retry.", 0);
+}
 
-  // Continuous tracking normally makes Start/End effectively instant.
-  const preferred = freshCachedAttendanceLocation(ATTENDANCE_PREFERRED_ACCURACY_M);
-  if (preferred) return preferred;
+function asResolvedFix(fix, source, lowAccuracy) {
+  return { ...fix, source, lowAccuracy };
+}
 
-  // If the newest tracking fix is still reasonably accurate, keep it as a
-  // fallback while asking the device for a sharper high-accuracy reading.
-  const fallback = freshCachedAttendanceLocation(ATTENDANCE_ACCEPTABLE_ACCURACY_M);
-  let lastError = null;
+function betterFallback(current, candidate) {
+  if (!candidate) return current;
+  const age = Date.now() - candidate.capturedAt;
+  if (age < 0 || age > ATTENDANCE_FALLBACK_MAX_AGE_MS || candidate.accuracy > ATTENDANCE_FALLBACK_ACCURACY_M) return current;
+  if (!current) return candidate;
+  if (candidate.capturedAt > current.capturedAt) return candidate;
+  if (candidate.capturedAt === current.capturedAt && candidate.accuracy < current.accuracy) return candidate;
+  return current;
+}
 
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    try {
-      const fix = await browserPosition();
-      if (fix.accuracy == null || fix.accuracy <= ATTENDANCE_ACCEPTABLE_ACCURACY_M) return fix;
-      lastError = Object.assign(new Error("Location accuracy is too low"), { code: 2 });
-    } catch (err) {
-      lastError = err;
-      // A denied permission cannot improve with an automatic retry. Returning
-      // no coordinates lets the existing backend attendance policy decide
-      // whether location is mandatory for this employee.
-      if (err?.code === 1) break;
+async function resolveAttendanceLocation() {
+  const preferred = cachedAttendanceLocation(ATTENDANCE_FRESH_MAX_AGE_MS, ATTENDANCE_PREFERRED_ACCURACY_M);
+  if (preferred) return asResolvedFix(preferred, "cached", false);
+
+  if (attendanceLocationInFlight) return attendanceLocationInFlight;
+
+  attendanceLocationInFlight = (async () => {
+    let fallback = cachedAttendanceLocation(ATTENDANCE_FALLBACK_MAX_AGE_MS, ATTENDANCE_FALLBACK_ACCURACY_M);
+    let lastError = null;
+
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        const fix = await browserPositionOnce();
+        const age = Date.now() - fix.capturedAt;
+        if (age >= 0 && age <= ATTENDANCE_FRESH_MAX_AGE_MS && fix.accuracy <= ATTENDANCE_PREFERRED_ACCURACY_M) {
+          return asResolvedFix(fix, "fresh", false);
+        }
+        fallback = betterFallback(fallback, fix);
+        lastError = Object.assign(new Error("Location accuracy is too low"), { code: 3 });
+      } catch (err) {
+        lastError = err;
+        if (err?.code === 1) throw attendanceLocationError(err);
+      }
     }
-  }
 
-  return fallback || null;
+    fallback = betterFallback(
+      fallback,
+      cachedAttendanceLocation(ATTENDANCE_FALLBACK_MAX_AGE_MS, ATTENDANCE_FALLBACK_ACCURACY_M)
+    );
+    if (fallback) return asResolvedFix(fallback, "fallback", true);
+    throw attendanceLocationError(lastError);
+  })();
+
+  try {
+    return await attendanceLocationInFlight;
+  } finally {
+    attendanceLocationInFlight = null;
+  }
 }
 
-async function attendanceBodyWithLocation(body = {}) {
-  const fix = await resolveAttendanceLocation(body.lat, body.lng);
-  if (!fix) return body;
-  return { ...body, lat: fix.lat, lng: fix.lng };
+function locationAuditBody(body, fix) {
+  return {
+    ...body,
+    lat: fix.lat,
+    lng: fix.lng,
+    accuracy: Math.round(fix.accuracy),
+    fix_timestamp: new Date(fix.capturedAt).toISOString(),
+    source: fix.source,
+    low_accuracy: !!fix.lowAccuracy,
+  };
+}
+
+async function attendanceBodyWithLocation(body = {}, { required = true } = {}) {
+  if (!required) {
+    const preferred = cachedAttendanceLocation(ATTENDANCE_FRESH_MAX_AGE_MS, ATTENDANCE_PREFERRED_ACCURACY_M);
+    if (preferred) return locationAuditBody(body, asResolvedFix(preferred, "cached", false));
+    const fallback = cachedAttendanceLocation(ATTENDANCE_FALLBACK_MAX_AGE_MS, ATTENDANCE_FALLBACK_ACCURACY_M);
+    if (fallback) return locationAuditBody(body, asResolvedFix(fallback, "fallback", true));
+    return body;
+  }
+  const fix = await resolveAttendanceLocation();
+  return locationAuditBody(body, fix);
 }
 
 async function request(path, { method = "GET", body, auth = true } = {}) {
@@ -224,7 +293,7 @@ export const api = {
  currentClosing:()=>request('/day-closing/current'),
  saveClosingDraft:body=>request('/day-closing/draft',{method:'PUT',body}),
  closingReports:params=>request('/day-closing/reports?'+new URLSearchParams(params)),
- endDayWithClosing:async body=>request('/salesman/day/end',{method:'POST',body:await attendanceBodyWithLocation(body)}),
+ endDayWithClosing:async (body,options={})=>request('/salesman/day/end',{method:'POST',body:await attendanceBodyWithLocation(body,{required:options.locationRequired!==false})}),
   quoteSettings: () => request('/quotations/settings'),
   saveQuoteSettings: body => request('/quotations/settings',{method:'PUT',body}),
   quoteCustomers: search => request('/quotations/customers?'+new URLSearchParams({search})),
@@ -237,7 +306,7 @@ export const api = {
   collectionDelete:(key,id,body)=>request('/collections/'+encodeURIComponent(key)+'/payments/'+id,{method:'DELETE',body}),
   collectionReceipt:(key,id)=>request('/collections/'+encodeURIComponent(key)+'/payments/'+id+'/receipt'),
   collectionReceiptPDF:async(key,id)=>{
-    const r=await fetch(`${getApiBase()}/collections/${encodeURIComponent(key)}/payments/${id}/receipt?format=pdf`,{headers:{Authorization:`Bearer ${getSession()?.token||''}`}});
+    const r=await fetch(`${getApiBase()}/collections/${encodeURIComponent(key)}/${id}/receipt?format=pdf`,{headers:{Authorization:`Bearer ${getSession()?.token||''}`}});
     if(!r.ok){let data;try{data=await r.json()}catch{}throw new ApiError(data?.error||'Could not download receipt',r.status)}return r.blob();
   },
   quotes: params => request('/quotations?'+new URLSearchParams(params)),
@@ -376,14 +445,15 @@ export const api = {
   adminAddLeadOption: (fieldKey, value) => request("/admin/lead-options", { method: "POST", body: { fieldKey, value } }),
   adminDeleteLeadOption: (id) => request(`/admin/lead-options/${id}`, { method: "DELETE" }),
 
-  salesmanDayStart: async (lat, lng) => {
-    const fix = await resolveAttendanceLocation(lat, lng);
-    return request("/salesman/day/start", { method: "POST", body: { lat: fix?.lat, lng: fix?.lng } });
-  },
-  salesmanDayEnd: async (lat, lng) => {
-    const fix = await resolveAttendanceLocation(lat, lng);
-    return request("/salesman/day/end", { method: "POST", body: { lat: fix?.lat, lng: fix?.lng } });
-  },
+  cacheAttendanceLocation: (payload = {}) => rememberAttendanceLocation(payload.lat, payload.lng, payload.accuracy, payload.capturedAt),
+  salesmanDayStart: async (options = {}) => request("/salesman/day/start", {
+    method: "POST",
+    body: await attendanceBodyWithLocation({}, { required: options.locationRequired !== false }),
+  }),
+  salesmanDayEnd: async (options = {}) => request("/salesman/day/end", {
+    method: "POST",
+    body: await attendanceBodyWithLocation({}, { required: options.locationRequired !== false }),
+  }),
   salesmanPing: (payload) => {
     rememberAttendanceLocation(payload?.lat, payload?.lng, payload?.accuracyM, payload?.capturedAt || Date.now());
     return request("/salesman/location/ping", { method: "POST", body: payload });
