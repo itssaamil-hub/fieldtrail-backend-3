@@ -17,6 +17,7 @@ import AdminAddLeadModalV2 from "./AdminAddLeadModal.jsx";
 import AdminEmployeesPanel from "./admin/AdminEmployeesPanel.jsx";
 import AdminDashboardPanel from "./admin/AdminDashboardPanel.jsx";
 import AdminLeadsPanel from "./admin/AdminLeadsPanel.jsx";
+import AdminReportsPage from "./admin/AdminReportsPage.jsx";
 import React, { lazy, Suspense, useState, useEffect, useRef, useCallback } from "react";
 import {
   MapPin,
@@ -1896,7 +1897,14 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
   return (
     <div className={phone && page !== "reports" ? "engage-admin-mobile-content" : undefined} style={{ padding: desktopDeals || desktopContacts ? "20px 28px" : "20px 24px", maxWidth: desktopDeals || desktopContacts ? 1500 : 1180, margin: "0 auto" }}>
       {page === "reports" ? (
-        <ReportsPage salesmen={salesmen} leads={leads} />
+        <AdminReportsPage
+          salesmen={salesmen}
+          leads={leads}
+          shared={{
+            T, SalesmanPerformanceReport, FunnelReport, RenewalsReport, ExpensesReport,
+            TimeInStageReport, DataQualityReport, LeadExportReport,
+          }}
+        />
       ) : (
         <>
       {loadError && (
@@ -2092,78 +2100,6 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
 // chip that shifts to green once the target's hit, and a trophy nod for it.
 // Tap a salesman's name to see just their leads, broken out by Hot/Warm/
 // Cold/Converted/Pending — instead of hunting through the main filtered list.
-const REPORT_CARDS = [
-  { key: "deal-values", title: "Deal Value", desc: "Total deal value for Cold, Hot, Negotiation and every stage.", icon: Wallet, color: "#145C5D" },
-  { key: "performance", title: "Employee performance", desc: "Weekly/monthly leads, follow-ups, quotations, wins, sales and collections.", icon: Contact2, color: "#145C5D" },
-  { key: "funnel", title: "Funnel and conversion", desc: "Lead count and drop-off at each pipeline stage.", icon: Handshake, color: "#7B4FC9" },
-  { key: "renewals", title: "Renewals due", desc: "Everything renewing in the next 30, 60 or 90 days.", icon: CalendarClock, color: "#B8791F" },
-  { key: "payments", title: "Payments", desc: "Collections, pending balances, overdue payments and receipts in one place.", icon: Wallet, color: "#C0392B" },
-  { key: "expenses", title: "Expenses", desc: "Salary and other spending, broken down by category.", icon: Receipt, color: "#993C1D" },
-  { key: "attendance", title: "Attendance Report", desc: "Start day, end day, working duration and day closing status.", icon: Clock, color: "#145C5D" },
-  { key: "daily", title: "Daily activity", desc: "Visits, leads touched and distance travelled per day.", icon: MapPin, color: "#12805C" },
-  { key: "stage", title: "Time in stage", desc: "Average days a lead spends at each status.", icon: Clock, color: "#8B5E00" },
-  { key: "quality", title: "Data quality", desc: "Find leads missing important sales information and fix them.", icon: AlertTriangle, color: "#B8791F" },
-  { key: "export", title: "Lead export", desc: "Download leads as CSV, Excel, or push to Google Sheets.", icon: Download, color: "#1D7A8C" },
-];
-
-function ReportsPage({ salesmen, leads }) {
-  const [active, setActive] = useState(null);
-  const activeCard = REPORT_CARDS.find((c) => c.key === active);
-
-  if (!active) {
-    return (
-      <div>
-        <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 18, marginBottom: 4 }}>Reports</div>
-        <div style={{ fontSize: 13, color: T.inkSoft, marginBottom: 16 }}>Choose a report to view</div>
-        <DayClosingReportsEntry />
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
-          {REPORT_CARDS.map((c) => (
-            <div
-              key={c.key}
-              onClick={() => setActive(c.key)}
-              className="ft-card"
-              style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, padding: 16, cursor: "pointer", boxShadow: "0 1px 2px rgba(20,20,30,0.04)" }}
-            >
-              <div style={{ width: 32, height: 32, borderRadius: 9, background: `${c.color}1A`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
-                <c.icon size={17} color={c.color} />
-              </div>
-              <div style={{ fontSize: 14.5, fontWeight: 700, marginBottom: 4 }}>{c.title}</div>
-              <div style={{ fontSize: 12, color: T.inkSoft, lineHeight: 1.5 }}>{c.desc}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <button
-        onClick={() => setActive(null)}
-        style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: T.inkSoft, background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: 16 }}
-      >
-        ← Back to reports
-      </button>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
-        {activeCard && <activeCard.icon size={18} color={activeCard.color} />}
-        <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 17 }}>{activeCard?.title}</div>
-      </div>
-      {active === "deal-values" && <DealValueReport />}
-      {active === "performance" && <SalesmanPerformanceReport salesmen={salesmen} leads={leads} />}
-      {active === "funnel" && <FunnelReport leads={leads} />}
-      {active === "renewals" && <RenewalsReport leads={leads} />}
-      {active === "payments" && <CollectionsPanel embedded />}
-      {active === "expenses" && <ExpensesReport salesmen={salesmen} />}
-      {active === "attendance" && <AttendanceReport salesmen={salesmen} />}
-      {active === "daily" && <EnhancedDailyActivityReport salesmen={salesmen} />}
-      {active === "stage" && <TimeInStageReport />}
-      {active === "quality" && <DataQualityReport salesmen={salesmen} />}
-      {active === "export" && <LeadExportReport salesmen={salesmen} />}
-    </div>
-  );
-}
-
-
 function DataQualityReport({ salesmen }) {
   const [employee, setEmployee] = useState("");
   const [issue, setIssue] = useState("all");
