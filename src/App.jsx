@@ -9,6 +9,7 @@ import useUnreadNotifications from "./useUnreadNotifications.js";
 import useAttendanceGps from "./useAttendanceGps.js";
 import useAttendanceDay from "./useAttendanceDay.js";
 import useSalesmanMessages from "./useSalesmanMessages.js";
+import useSalesmanLeads from "./useSalesmanLeads.js";
 import AdminActivityOverview from "./AdminActivityOverview.jsx";
 import AdminAddLeadModalV2 from "./AdminAddLeadModal.jsx";
 import React, { lazy, Suspense, useState, useEffect, useRef, useCallback } from "react";
@@ -4583,12 +4584,9 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
 // the server (backend dedupes on client_uuid, so retries are always safe).
 // ---------------------------------------------------------------------------
 function SalesmanApp({ session, online, page, notificationLead }) {
-  const [leads, setLeads] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [dayStarted, setDayStartedState] = useState(getDayStarted(session.id));
   const [gpsStatus, setGpsStatus] = useState("idle"); // idle | tracking | denied | unavailable
-  const [queuedCount, setQueuedCount] = useState(getQueuedLeads().length);
   const [continuousTracking, setContinuousTracking] = useState(true); // safe default until settings load
   const [allowLeadWithoutStartDay, setAllowLeadWithoutStartDay] = useState(false);
   const [attendanceLocationPolicy, setAttendanceLocationPolicy] = useState({ start: true, end: true });
@@ -4628,19 +4626,6 @@ function SalesmanApp({ session, online, page, notificationLead }) {
       });
   }, []);
 
-  const loadLeads = useCallback(async () => {
-    try {
-      const res = await api.salesmanLeads();
-      setLeads((res.leads || []).map((r) => mapLeadRow({ ...r, salesman_name: session.fullName })));
-      setLoadError("");
-    } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : "Couldn't load your leads.");
-    } finally {
-      setLoading(false);
-    }
-  }, [session.fullName]);
-
-  useEffect(() => { loadLeads(); }, [loadLeads]);
 
   const {
     messages,
@@ -4669,34 +4654,19 @@ function SalesmanApp({ session, online, page, notificationLead }) {
     getBatteryPct,
   });
 
-  // Flush the offline lead queue whenever we're online.
-  const flushQueue = useCallback(async () => {
-    const queue = getQueuedLeads();
-    if (queue.length === 0) return;
-    for (const payload of queue) {
-      try {
-        const res = await api.salesmanCreateLead(payload);
-        removeQueuedLead(payload.clientUuid);
-        setLeads((prev) => prev.map((l) => (l.clientUuid === payload.clientUuid ? mapLeadRow({ ...res.lead, salesman_name: session.fullName }) : l)));
-      } catch (err) {
-        if (err instanceof ApiError && err.status >= 400 && err.status < 500 && err.status !== 0) {
-          // Rejected by the server (not just offline) — drop it so it doesn't loop forever silently.
-          removeQueuedLead(payload.clientUuid);
-        }
-        break; // stop on first failure this round; try the rest next time
-      }
-    }
-    setQueuedCount(getQueuedLeads().length);
-  }, [session.fullName]);
-
-  useEffect(() => {
-    if (online) flushQueue();
-  }, [online, flushQueue]);
-  useEffect(() => {
-    if (!online) return;
-    const iv = setInterval(flushQueue, 20000);
-    return () => clearInterval(iv);
-  }, [online, flushQueue]);
+  const {
+    leads,
+    loading,
+    queuedCount,
+    handleAddLead,
+    handleUpdateLeadStatus,
+    handleUpdateLeadDetails,
+  } = useSalesmanLeads({
+    online,
+    session,
+    setLoadError,
+    makeQueuedLead: (payload) => adHocLeadFromPayload(payload, session),
+  });
 
   const [showClosing,setShowClosing]=useState(false);
   const [justToggled, setJustToggled] = useState(false); // brief "Started"/"Ended" confirmation flash
@@ -4710,58 +4680,6 @@ function SalesmanApp({ session, online, page, notificationLead }) {
     setJustToggled,
     setLoadError,
   });
-
-  const handleAddLead = async (payload) => {
-    if (online) {
-      try {
-        const res = await api.salesmanCreateLead(payload);
-        const mapped = mapLeadRow({ ...res.lead, salesman_name: session.fullName });
-        setLeads((prev) => [mapped, ...prev]);
-        return { ok: true, lead: mapped };
-      } catch (err) {
-        if (!(err instanceof ApiError) || err.status === 0) {
-          // Network-level failure even though `online` said true (flaky connection) — queue it.
-          pushQueuedLead(payload);
-          setQueuedCount(getQueuedLeads().length);
-          const queued = { ...adHocLeadFromPayload(payload, session), syncStatus: "queued" };
-          setLeads((prev) => [queued, ...prev]);
-          return { ok: true, lead: queued };
-        }
-        return { ok: false, error: err.message };
-      }
-    } else {
-      pushQueuedLead(payload);
-      setQueuedCount(getQueuedLeads().length);
-      const queued = { ...adHocLeadFromPayload(payload, session), syncStatus: "queued" };
-      setLeads((prev) => [queued, ...prev]);
-      return { ok: true, lead: queued };
-    }
-  };
-
-  const handleUpdateLeadStatus = async (id, status) => {
-    setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, status } : l))); // optimistic
-    try {
-      await api.salesmanUpdateLead(id, { status });
-    } catch {
-      /* left optimistic on failure — background refetch will reconcile */
-    }
-  };
-
-  const handleUpdateLeadDetails = async (id, payload) => {
-    setLeads((prev) => prev.map((l) => (l.id === id ? {
-      ...l,
-      business: payload.businessName ?? l.business,
-      subLocation: payload.subLocation, posName: payload.posName,
-      renewalMonth: payload.renewalMonth, renewalDate: payload.renewalDate || "",
-      owner: payload.contactName, phone: payload.phone, notes: payload.notes,
-      dealValue: payload.dealValue,
-    } : l))); // optimistic
-    try {
-      await api.salesmanUpdateLead(id, payload);
-    } catch {
-      /* left optimistic on failure */
-    }
-  };
 
   if (loading) {
     return (
