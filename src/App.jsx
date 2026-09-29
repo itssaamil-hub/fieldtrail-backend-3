@@ -7,6 +7,7 @@ import { showSaveFeedback } from "./saveFeedback.js";
 import AdminMobileNav, { useAdminPhone, salesmanTabs } from "./AdminMobileNav.jsx";
 import useUnreadNotifications from "./useUnreadNotifications.js";
 import useAttendanceGps from "./useAttendanceGps.js";
+import useAttendanceDay from "./useAttendanceDay.js";
 import AdminActivityOverview from "./AdminActivityOverview.jsx";
 import AdminAddLeadModalV2 from "./AdminAddLeadModal.jsx";
 import React, { lazy, Suspense, useState, useEffect, useRef, useCallback } from "react";
@@ -4585,7 +4586,6 @@ function SalesmanApp({ session, online, page, notificationLead }) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [dayStarted, setDayStartedState] = useState(getDayStarted(session.id));
-  const [togglingDay, setTogglingDay] = useState(false);
   const [gpsStatus, setGpsStatus] = useState("idle"); // idle | tracking | denied | unavailable
   const [queuedCount, setQueuedCount] = useState(getQueuedLeads().length);
   const [continuousTracking, setContinuousTracking] = useState(true); // safe default until settings load
@@ -4593,7 +4593,6 @@ function SalesmanApp({ session, online, page, notificationLead }) {
   const [attendanceLocationPolicy, setAttendanceLocationPolicy] = useState({ start: true, end: true });
   const [dailyTarget, setDailyTarget] = useState(8); // overwritten by the salesman's actual profile below
   const [monthlyTarget, setMonthlyTarget] = useState(200);
-  const dayToggleInFlightRef = useRef(false);
 
   useEffect(() => {
     let live=true;
@@ -4732,35 +4731,15 @@ function SalesmanApp({ session, online, page, notificationLead }) {
   const [showClosing,setShowClosing]=useState(false);
   const [justToggled, setJustToggled] = useState(false); // brief "Started"/"Ended" confirmation flash
 
-  const handleToggleDay = async closing => {
-    if(dayStarted && !closing){setShowClosing(true);return;}
-    if (dayToggleInFlightRef.current || togglingDay) return; // synchronous + UI guard against double taps
-    dayToggleInFlightRef.current = true;
-    setTogglingDay(true);
-    try {
-      if (dayStarted) {
-        await api.endDayWithClosing(
-          { ...closing },
-          { locationRequired: attendanceLocationPolicy.end }
-        );
-        setShowClosing(false);
-        setDayStartedFlag(session.id, false);
-        setDayStartedState(false);
-      } else {
-        await api.salesmanDayStart({ locationRequired: attendanceLocationPolicy.start });
-        setDayStartedFlag(session.id, true);
-        setDayStartedState(true);
-      }
-      setJustToggled(true);
-      setTimeout(() => setJustToggled(false), 1600);
-    } catch (err) {
-      if(closing)throw err;
-      setLoadError(err instanceof ApiError ? err.message : "Couldn't reach the server — try again.");
-    } finally {
-      dayToggleInFlightRef.current = false;
-      setTogglingDay(false);
-    }
-  };
+  const { togglingDay, handleToggleDay } = useAttendanceDay({
+    dayStarted,
+    attendanceLocationPolicy,
+    sessionId: session.id,
+    setShowClosing,
+    setDayStartedState,
+    setJustToggled,
+    setLoadError,
+  });
 
   const handleAddLead = async (payload) => {
     if (online) {
