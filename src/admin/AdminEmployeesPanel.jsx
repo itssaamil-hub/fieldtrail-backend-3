@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Battery, Gauge, Clock, Plus, MessageSquare, Sparkles, Search, Settings, Route } from "lucide-react";
 import { getApiBase, getSession } from "../api.js";
 
+const BRIEF_CONCURRENCY = 5;
 const fmtTime = (d) => (d ? d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "—");
 const isThisMonth = (d) => {
   const now = new Date();
@@ -46,17 +47,40 @@ export default function AdminEmployeesPanel({ salesmen, leads, onAddClick, onSet
 
   useEffect(() => {
     let live = true;
+    const controller = new AbortController();
     const token = getSession()?.token;
     const base = getApiBase();
     if (!token || !base || !salesmen.length) { setBriefs({}); return undefined; }
+
     const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
-    Promise.all(salesmen.map(async (person) => {
-      try {
-        const res = await fetch(`${base}/admin/salesmen/${encodeURIComponent(person.id)}/brief?date=${day}`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
-        return [person.id, res.ok ? await res.json() : null];
-      } catch { return [person.id, null]; }
-    })).then((rows) => { if (live) setBriefs(Object.fromEntries(rows)); });
-    return () => { live = false; };
+    setBriefs({});
+
+    const loadBriefs = async () => {
+      for (let index = 0; index < salesmen.length && live; index += BRIEF_CONCURRENCY) {
+        const batch = salesmen.slice(index, index + BRIEF_CONCURRENCY);
+        const rows = await Promise.all(batch.map(async (person) => {
+          try {
+            const res = await fetch(`${base}/admin/salesmen/${encodeURIComponent(person.id)}/brief?date=${day}`, {
+              headers: { Authorization: `Bearer ${token}` },
+              cache: 'no-store',
+              signal: controller.signal,
+            });
+            return [person.id, res.ok ? await res.json() : null];
+          } catch (err) {
+            if (err?.name === 'AbortError') return [person.id, null];
+            return [person.id, null];
+          }
+        }));
+        if (!live) return;
+        setBriefs((current) => ({ ...current, ...Object.fromEntries(rows) }));
+      }
+    };
+
+    loadBriefs();
+    return () => {
+      live = false;
+      controller.abort();
+    };
   }, [salesmen]);
 
   const employeeStatus = (s) => {
