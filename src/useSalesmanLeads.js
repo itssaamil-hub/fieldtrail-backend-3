@@ -66,6 +66,11 @@ export default function useSalesmanLeads({ online, session, setLoadError, makeQu
   const queueFlightRef = useRef(null);
   const loadMoreFlightRef = useRef(null);
   const mountedRef = useRef(true);
+  const makeQueuedLeadRef = useRef(makeQueuedLead);
+
+  useEffect(() => {
+    makeQueuedLeadRef.current = makeQueuedLead;
+  }, [makeQueuedLead]);
 
   const refreshSummary = useCallback(async (fallbackLeads = null) => {
     try {
@@ -83,7 +88,7 @@ export default function useSalesmanLeads({ online, session, setLoadError, makeQu
       const res = await api.salesmanLeads({ page: 1, limit: PAGE_SIZE });
       if (!mountedRef.current) return;
       const mapped = (res.leads || []).map((r) => mapLeadRow({ ...r, salesman_name: session.fullName }));
-      const queued = getQueuedLeads().map((payload) => ({ ...makeQueuedLead(payload), syncStatus: "queued" }));
+      const queued = getQueuedLeads().map((payload) => ({ ...makeQueuedLeadRef.current(payload), syncStatus: "queued" }));
       const next = mergeUnique(queued, mapped);
       setLeads(next);
       setLoadedPage(1);
@@ -96,7 +101,7 @@ export default function useSalesmanLeads({ online, session, setLoadError, makeQu
     } finally {
       if (mountedRef.current) setLoading(false);
     }
-  }, [session.fullName, setLoadError, makeQueuedLead, refreshSummary]);
+  }, [session.fullName, setLoadError, refreshSummary]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -212,7 +217,7 @@ export default function useSalesmanLeads({ online, session, setLoadError, makeQu
         if (!(err instanceof ApiError) || err.status === 0) {
           pushQueuedLead(payload);
           setQueuedCount(getQueuedLeads().length);
-          const queued = { ...makeQueuedLead(payload), syncStatus: "queued" };
+          const queued = { ...makeQueuedLeadRef.current(payload), syncStatus: "queued" };
           setLeads((prev) => mergeUnique([queued], prev));
           return { ok: true, lead: queued };
         }
@@ -222,7 +227,7 @@ export default function useSalesmanLeads({ online, session, setLoadError, makeQu
 
     pushQueuedLead(payload);
     setQueuedCount(getQueuedLeads().length);
-    const queued = { ...makeQueuedLead(payload), syncStatus: "queued" };
+    const queued = { ...makeQueuedLeadRef.current(payload), syncStatus: "queued" };
     setLeads((prev) => mergeUnique([queued], prev));
     return { ok: true, lead: queued };
   };
