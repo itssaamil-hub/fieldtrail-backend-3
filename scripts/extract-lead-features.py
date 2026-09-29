@@ -20,13 +20,13 @@ for name in expected + helper_names:
 
 deps = [
   'React','useState','useEffect','useRef','useCallback','api','ApiError','T','inputStyle','STATUSES','STATUS_LABEL','MONTH_NAMES',
-  'DEFAULT_LEAD_SETTINGS','DEFAULT_LOCATION_SETTINGS','uuid','fmtMoney','fmtTime','isToday','isThisMonth','isWithinDays',
-  'isUpcomingRenewalMonth','LeadBriefPopup','buildLeadBrief','leadAvatarStyle','leadInitials','VerificationStamp','SyncBadge',
-  'Overlay','Select','Field','StatCard','SalesmanReportsPage','showSaveFeedback','getDeviceId','getDayStarted','setDayStartedFlag',
-  'mapLeadRow','useSalesmanMessages','useSalesmanSettings','useAttendanceGps','useSalesmanLeads','useAttendanceDay','SalesmanView',
-  'DayClosingForm','Loader2','AlertTriangle','WifiOff','Navigation','Contact2','Search','List','Sparkles','Trash2','Pencil',
-  'PhoneIcon','WhatsAppIcon','CalendarClock','CheckCircle2','MessageSquare','Handshake','Flame','TargetIcon','X','Clock','MapPin',
-  'Wallet','Receipt','Route','Gauge','Battery','Plus','Square','Play'
+  'uuid','fmtMoney','fmtTime','isToday','isThisMonth','isWithinDays','isUpcomingRenewalMonth','LeadBriefPopup','buildLeadBrief',
+  'leadAvatarStyle','leadInitials','VerificationStamp','SyncBadge','Overlay','Select','Field','StatCard','SalesmanReportsPage',
+  'showSaveFeedback','getDeviceId','getDayStarted','setDayStartedFlag','mapLeadRow','useSalesmanMessages','useSalesmanSettings',
+  'useAttendanceGps','useSalesmanLeads','useAttendanceDay','SalesmanView','DayClosingForm','Loader2','AlertTriangle','WifiOff',
+  'Navigation','Contact2','Search','List','Sparkles','Trash2','Pencil','PhoneIcon','WhatsAppIcon','CalendarClock',
+  'CheckCircle2','MessageSquare','Handshake','Flame','TargetIcon','X','Clock','MapPin','Wallet','Receipt','Route','Gauge',
+  'Battery','Plus','Square','Play'
 ]
 used = [name for name in deps if re.search(rf'\b{re.escape(name)}\b', block)]
 module = '''import React from "react";\n\n// Lead and salesman UI extracted from App.jsx without changing business behavior.\nexport function createLeadFeatures(deps) {\n  const { %s } = deps;\n\n%s\n\n  return { %s };\n}\n''' % (', '.join(used), block, ', '.join(expected))
