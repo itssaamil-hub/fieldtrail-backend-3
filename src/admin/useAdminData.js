@@ -19,7 +19,7 @@ function mappedLeadFromResponse(result) {
 function mappedSalesmanFromResponse(result) {
   const row = result?.salesman || result?.employee || result?.data?.salesman || result;
   if (!row?.id) return null;
-  if (row.full_name != null || row.last_seen_at != null) return mapSalesmanRow(row);
+  if (row.full_name != null) return mapSalesmanRow(row);
   if (row.name != null) return row;
   return null;
 }
@@ -33,16 +33,19 @@ export default function useAdminData({ online, session }) {
   const [wsConnected, setWsConnected] = useState(false);
 
   const loadAllInFlightRef = useRef(null);
+  const summaryInFlightRef = useRef(null);
   const lastRefreshAtRef = useRef(0);
   const wsRef = useRef(null);
 
-  const refreshSummary = useCallback(async () => {
-    try {
-      const summary = await api.adminSummary();
-      setConversationCount(summary?.conversationLeads ?? null);
-    } catch {
-      // A targeted summary refresh is best-effort; the safety refresh will reconcile it.
-    }
+  const refreshSummary = useCallback(() => {
+    if (summaryInFlightRef.current) return summaryInFlightRef.current;
+    const request = api.adminSummary()
+      .then((summary) => setConversationCount(summary?.conversationLeads ?? null))
+      .catch(() => null);
+    summaryInFlightRef.current = request.finally(() => {
+      summaryInFlightRef.current = null;
+    });
+    return summaryInFlightRef.current;
   }, []);
 
   const refreshSalesmen = useCallback(async () => {
@@ -212,16 +215,11 @@ export default function useAdminData({ online, session }) {
   }, [loadAll]);
 
   const onDeleteLead = useCallback(async (id) => {
-    let previous = null;
-    setLeads((prev) => {
-      previous = prev;
-      return prev.filter((lead) => lead.id !== id);
-    });
+    setLeads((prev) => prev.filter((lead) => lead.id !== id));
     try {
       await api.adminDeleteLead(id);
       refreshSummary();
     } catch (err) {
-      if (previous) setLeads(previous);
       setLoadError(errorMessage(err, "Couldn't delete the lead."));
       loadAll();
     }
