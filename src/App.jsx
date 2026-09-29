@@ -15,6 +15,7 @@ import SalesmanView from "./salesman/SalesmanView.jsx";
 import AdminActivityOverview from "./AdminActivityOverview.jsx";
 import AdminAddLeadModalV2 from "./AdminAddLeadModal.jsx";
 import AdminEmployeesPanel from "./admin/AdminEmployeesPanel.jsx";
+import AdminDashboardPanel from "./admin/AdminDashboardPanel.jsx";
 import React, { lazy, Suspense, useState, useEffect, useRef, useCallback } from "react";
 import {
   MapPin,
@@ -1822,7 +1823,6 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
   const [mobileTab, setMobileTab] = useState("dashboard");
   const [showTeamActivity, setShowTeamActivity] = useState(false);
   const [tasksVisited, setTasksVisited] = useState(false);
-  const [adminPendingTasks, setAdminPendingTasks] = useState(null);
   const desktopPositions = useRef({});
   const previousDesktopSection = useRef(null);
   useEffect(() => {
@@ -1852,7 +1852,6 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
   const desktopContacts = desktopSection === "leads";
   const showDashboard = !sectionNavigation || section === "dashboard";
   const showLeads = showDashboard || section === "leads" || section === "deals";
-  const [conversationError, setConversationError] = useState("");
   const [filterSalesman, setFilterSalesman] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterDate, setFilterDate] = useState("");
@@ -1877,34 +1876,9 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
   const [routeSalesman, setRouteSalesman] = useState(null);
   const [viewingSalesmanLeads, setViewingSalesmanLeads] = useState(null);
   const [mapView, setMapView] = useState("live"); // "live" | "leads"
-  const [dashboardSalesman, setDashboardSalesman] = useState("all");
-  const [dashboardDisplay, setDashboardDisplay] = useState(getDashboardDisplaySettings);
-  useEffect(() => { const sync=()=>setDashboardDisplay(getDashboardDisplaySettings()); window.addEventListener("engage-display-settings",sync); return()=>window.removeEventListener("engage-display-settings",sync); }, []);
   const [sheetsInfo, setSheetsInfo] = useState(null);
   const [sheetsError, setSheetsError] = useState("");
   const [statLeadsModal, setStatLeadsModal] = useState(null); // { title, leads } | null
-
-  const dashboardLeads = dashboardSalesman === "all" ? leads : leads.filter((l) => l.salesmanId === dashboardSalesman);
-  const todayLeads = dashboardLeads.filter((l) => isToday(l.createdAt));
-  const hotLeadsToday = todayLeads.filter((l) => l.status === "hot");
-  const inNegotiation = dashboardLeads.filter((l) => l.status === "negotiation");
-  const upcomingRenewals = dashboardLeads.filter((l) =>
-    (l.renewalDate && isWithinDays(new Date(l.renewalDate), 30)) ||
-    (!l.renewalDate && isUpcomingRenewalMonth(l.renewalMonth))
-  );
-  const converted = dashboardLeads.filter((l) => l.status === "won").length;
-  const convertedValue = dashboardLeads.filter((l) => l.status === "won" && l.dealValue != null).reduce((sum, l) => sum + l.dealValue, 0);
-  const pending = dashboardLeads.filter((l) => !["won", "lost"].includes(l.status)).length;
-  const upcomingFollowUps = dashboardLeads.filter((l) => l.nextFollowUpDate && new Date(l.nextFollowUpDate) >= new Date(new Date().toDateString()));
-  const activeSalesmen = salesmen.filter((s) => s.status === "online").length;
-  const comparisonPeriod = dashboardDisplay.comparisonPeriod || "weekly";
-  const comparisonsEnabled = dashboardDisplay.showComparisons !== false;
-  const dashboardComparison = comparisonsEnabled ? comparisonFor(dashboardLeads, comparisonPeriod) : null;
-  const conversationComparison = comparisonsEnabled ? comparisonFor(dashboardLeads, comparisonPeriod, (l) => l.status === "conversation") : null;
-  const leadsTodayComparison = comparisonsEnabled ? dailyComparisonFor(dashboardLeads, comparisonPeriod) : null;
-  const hotComparison = comparisonsEnabled ? dailyComparisonFor(dashboardLeads, comparisonPeriod, (l) => l.status === "hot") : null;
-  const negotiationComparison = comparisonsEnabled ? comparisonFor(dashboardLeads, comparisonPeriod, (l) => l.status === "negotiation") : null;
-  const wonComparison = comparisonsEnabled ? comparisonFor(dashboardLeads, comparisonPeriod, (l) => l.status === "won") : null;
 
   const filteredLeads = leads.filter(
     (l) =>
@@ -1937,51 +1911,19 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
         </div>
       )}
 
-      <div hidden={!showDashboard}>
-      {!phone && (
-        <div className="engage-dashboard-greeting" style={{ minHeight: 44, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "0 2px", marginBottom: 8 }}>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 20, lineHeight: 1.2, fontWeight: 700, letterSpacing: "-.25px", color: T.ink }}>
-              {new Date().getHours() < 12 ? "Good morning" : new Date().getHours() < 17 ? "Good afternoon" : "Good evening"}, {(getSession()?.fullName || getSession()?.full_name || getSession()?.name || "Admin").split(/\s+/)[0]} 👋
-            </div>
-            <div style={{ fontSize: 13, color: T.inkSoft, marginTop: 2 }}>A quick look at what needs your attention today.</div>
-          </div>
-          <select aria-label="Dashboard employee desktop" value={dashboardSalesman} onChange={(e) => setDashboardSalesman(e.target.value)} style={{ minWidth: 128, height: 34, padding: "5px 30px 5px 10px", borderRadius: 9, fontSize: 12.5, fontWeight: 600, background: "#fff", border: `1px solid ${T.line}`, color: T.ink }}>
-            <option value="all">👥 All Team</option>
-            {salesmen.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-        </div>
-      )}
-      {phone && (
-        <div id="engage-admin-mobile-dashboard-utility" className="engage-admin-mobile-dashboard-utility">
-          <div className="engage-admin-mobile-greeting">{new Date().getHours() < 12 ? "Good morning" : new Date().getHours() < 17 ? "Good afternoon" : "Good evening"}, {(getSession()?.fullName || getSession()?.full_name || getSession()?.name || "Admin").split(/\s+/)[0]} 👋</div>
-          <div className="engage-admin-mobile-team-slot">
-            <select aria-label="Dashboard employee" value={dashboardSalesman} onChange={(e)=>setDashboardSalesman(e.target.value)}>
-              <option value="all">All Team</option>
-              {salesmen.map((s)=><option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </div>
-        </div>
-      )}
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
-        <StatCard variant="dashboard" label="Total Employees" value={salesmen.length} sub={<span style={{color:T.verified}}>{activeSalesmen} active now</span>} icon={Contact2} color="#64748B" onClick={phone ? () => setShowTeamActivity(true) : undefined} />
-        <StatCard variant="dashboard" label="Conversation" value={conversationCount ?? "—"} comparison={conversationComparison} comparisonPeriod={comparisonPeriod} icon={MessageSquare} color={T.route} onClick={async () => { try { setConversationError(""); const result=await api.adminLeads({status:"conversation"}); setStatLeadsModal({title:conversationCount>500?"Conversation Leads · Latest 500":"Conversation Leads",leads:(result.leads||[]).map(mapLeadRow)}); } catch(e) { setConversationError(e.message); } }} />
-        <StatCard variant="dashboard" label="Leads Today" value={todayLeads.length} comparison={leadsTodayComparison} comparisonPeriod={comparisonPeriod} icon={TargetIcon} color="#3B82F6" onClick={() => setStatLeadsModal({ title: "Leads Today", leads: todayLeads })} />
-        <StatCard variant="dashboard" label={<>Hot Leads <span style={{ fontSize: 8.5, opacity: 0.65 }}>TODAY</span></>} value={hotLeadsToday.length} icon={Flame} comparison={hotComparison} comparisonPeriod={comparisonPeriod} color={T.danger} onClick={() => setStatLeadsModal({ title: "Hot Leads Today", leads: hotLeadsToday })} />
-        <StatCard variant="dashboard" label="In Negotiation" value={inNegotiation.length} comparison={negotiationComparison} comparisonPeriod={comparisonPeriod} icon={Handshake} color="#8B5CF6" onClick={() => setStatLeadsModal({ title: "In Negotiation", leads: inNegotiation })} />
-        <StatCard variant="dashboard" label="Total Leads" value={dashboardLeads.length} comparison={dashboardComparison} comparisonPeriod={comparisonPeriod} icon={Contact2} color="#0891B2" />
-        <StatCard variant="dashboard" label="Won" value={converted} sub={fmtMoney(convertedValue)} comparison={wonComparison} comparisonPeriod={comparisonPeriod} icon={CheckCircle2} color={T.verified} onClick={() => setStatLeadsModal({ title: "Won Leads", leads: dashboardLeads.filter((l) => l.status === "won") })} />
-        <StatCard variant="dashboard" label="Tasks" value={adminPendingTasks ?? 0} sub="pending" icon={List} color="#145C5D" />
-        <StatCard variant="dashboard" label="Upcoming Follow-up" value={upcomingFollowUps.length} icon={CalendarClock} color={T.warn} onClick={() => setStatLeadsModal({ title: "Upcoming Follow-ups", leads: upcomingFollowUps })} />
-        <StatCard variant="dashboard" label="Renewals Due" sub="next 30 days" value={upcomingRenewals.length} icon={RefreshCw} color={T.accent} onClick={() => setStatLeadsModal({ title: "Renewals Due (Next 30 Days)", leads: upcomingRenewals })} />
-      </div>
-      {showDashboard && !phone && <AdminActivityOverview salesmen={salesmen} />} 
-      {phone && <AdminMobileLeadTrend leads={dashboardLeads} />}
-
-      {conversationError && <p role="alert" style={{color:T.danger}}>{conversationError}</p>}
-      <div style={{ display: "none" }} aria-hidden="true"><TasksEntry onPendingChange={setAdminPendingTasks} /></div>
-
-      </div>
+      <AdminDashboardPanel
+        phone={phone}
+        showDashboard={showDashboard}
+        salesmen={salesmen}
+        leads={leads}
+        conversationCount={conversationCount}
+        onShowTeamActivity={() => setShowTeamActivity(true)}
+        onOpenStatLeads={setStatLeadsModal}
+        shared={{
+          T, fmtMoney, isToday, isWithinDays, isUpcomingRenewalMonth,
+          comparisonFor, dailyComparisonFor, getDashboardDisplaySettings,
+        }}
+      />
       <div hidden={!showDashboard && section !== "employees"}>
             {mapView === "live" || (sectionNavigation && section === "employees") ? (
         <div className={sectionNavigation && section === "employees" ? undefined : "ft-dashboard-grid"}>
