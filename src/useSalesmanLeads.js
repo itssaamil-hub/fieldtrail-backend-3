@@ -76,7 +76,7 @@ export default function useSalesmanLeads({ online, session, setLoadError, makeQu
           setLeads((prev) => [queued, ...prev]);
           return { ok: true, lead: queued };
         }
-        throw err;
+        return { ok: false, error: err.message };
       }
     }
 
