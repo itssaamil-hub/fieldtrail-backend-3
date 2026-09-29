@@ -3,7 +3,7 @@ import React from "react";
 // Extracted from App.jsx without changing report behavior.
 // Dependencies stay explicit so report UI remains testable and App.jsx stays orchestration-only.
 export function createReportFeatures(deps) {
-  const { React, useState, useEffect, useRef, useCallback, api, ApiError, T, fmtMoney, fmtTime, isToday, isThisMonth, isWithinDays, isUpcomingRenewalMonth, STATUS_LABEL, STATUSES, inputStyle, Select, Overlay, Field, DownloadMenu, buildExportUrl, LeadBriefPopup, buildLeadBrief, leadAvatarStyle, leadInitials, L, EXPENSE_CATEGORIES, Loader2, CalendarClock, TargetIcon, Contact2, PhoneIcon, MapPin, Receipt, Wallet, CheckCircle2, RefreshCw, Route, Pencil, Trash2, Search, X } = deps;
+  const { React, useState, useEffect, useRef, useCallback, api, ApiError, T, fmtMoney, fmtTime, isToday, isThisMonth, isWithinDays, isUpcomingRenewalMonth, STATUS_LABEL, STATUSES, inputStyle, Select, Overlay, Field, DownloadMenu, buildExportUrl, LeadBriefPopup, buildLeadBrief, leadAvatarStyle, leadInitials, L, EXPENSE_CATEGORIES, Loader2, CalendarClock, TargetIcon, Contact2, PhoneIcon, MapPin, Receipt, Wallet, CheckCircle2, RefreshCw, Route, Pencil, Trash2, Search, X, DayClosingReportsEntry } = deps;
 
 function DataQualityReport({ salesmen }) {
   const [employee, setEmployee] = useState("");
