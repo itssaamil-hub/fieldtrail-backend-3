@@ -6,6 +6,7 @@ import SaveFeedback from "./SaveFeedback.jsx";
 import { showSaveFeedback } from "./saveFeedback.js";
 import AdminMobileNav, { useAdminPhone, salesmanTabs } from "./AdminMobileNav.jsx";
 import useUnreadNotifications from "./useUnreadNotifications.js";
+import useAttendanceGps from "./useAttendanceGps.js";
 import AdminActivityOverview from "./AdminActivityOverview.jsx";
 import AdminAddLeadModalV2 from "./AdminAddLeadModal.jsx";
 import React, { lazy, Suspense, useState, useEffect, useRef, useCallback } from "react";
@@ -4579,8 +4580,6 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
 // day is active, and an offline lead queue that actually retries against
 // the server (backend dedupes on client_uuid, so retries are always safe).
 // ---------------------------------------------------------------------------
-const PING_MIN_INTERVAL_MS = 12000;
-
 function SalesmanApp({ session, online, page, notificationLead }) {
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -4594,7 +4593,6 @@ function SalesmanApp({ session, online, page, notificationLead }) {
   const [attendanceLocationPolicy, setAttendanceLocationPolicy] = useState({ start: true, end: true });
   const [dailyTarget, setDailyTarget] = useState(8); // overwritten by the salesman's actual profile below
   const [monthlyTarget, setMonthlyTarget] = useState(200);
-  const lastPingSentRef = useRef(0);
   const dayToggleInFlightRef = useRef(false);
 
   useEffect(() => {
@@ -4694,96 +4692,13 @@ function SalesmanApp({ session, online, page, notificationLead }) {
     return null;
   }, []);
 
-  // Real GPS tracking loop while the day is active.
-  useEffect(() => {
-    if (!dayStarted) { setGpsStatus("idle"); return; }
-    if (!continuousTracking) { setGpsStatus("idle"); return; } // Continuous GPS Tracking turned off in settings
-    if (!navigator.geolocation) { setGpsStatus("unavailable"); return; }
-
-    const watchId = navigator.geolocation.watchPosition(
-      async (pos) => {
-        setGpsStatus("tracking");
-        const { latitude: lat, longitude: lng, speed, accuracy } = pos.coords;
-        const capturedAt = pos.timestamp || Date.now();
-        api.cacheAttendanceLocation({ lat, lng, accuracy, capturedAt });
-        const now = Date.now();
-        if (now - lastPingSentRef.current < PING_MIN_INTERVAL_MS) return; // throttle network pings only
-        lastPingSentRef.current = now;
-        const batteryPct = await getBatteryPct();
-        try {
-          await api.salesmanPing({
-            lat, lng,
-            accuracyM: Math.round(accuracy),
-            speedMps: speed || 0,
-            batteryPct,
-            isMockSuspected: false,
-            capturedAt: new Date(capturedAt).toISOString(),
-          });
-        } catch {
-          // A missed ping isn't fatal — the next watchPosition fix will retry.
-        }
-      },
-      (err) => setGpsStatus(err.code === err.PERMISSION_DENIED ? "denied" : "unavailable"),
-      { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
-    );
-    return () => navigator.geolocation.clearWatch(watchId);
-  }, [dayStarted, continuousTracking, getBatteryPct]);
-
-  // Warm one accurate attendance fix without turning optional continuous tracking
-  // into all-day tracking. Before Start Day this helps both modes; after Start Day
-  // it only runs when Continuous GPS Tracking is OFF. Stop after 60s or <=50m.
-  useEffect(() => {
-    if (!navigator.geolocation) return;
-    if (!attendanceLocationPolicy.start && !attendanceLocationPolicy.end) return;
-    if (dayStarted && continuousTracking) return; // the active-day watcher above already keeps GPS warm
-
-    let watchId = null;
-    let stopTimer = null;
-
-    const stopWarmup = () => {
-      if (watchId != null) navigator.geolocation.clearWatch(watchId);
-      watchId = null;
-      if (stopTimer) clearTimeout(stopTimer);
-      stopTimer = null;
-    };
-
-    const startWarmup = () => {
-      if (document.hidden || watchId != null) return;
-      watchId = navigator.geolocation.watchPosition(
-        (pos) => {
-          const { latitude: lat, longitude: lng, accuracy } = pos.coords;
-          api.cacheAttendanceLocation({
-            lat,
-            lng,
-            accuracy,
-            capturedAt: pos.timestamp || Date.now(),
-          });
-          if (Number.isFinite(accuracy) && accuracy <= 50) stopWarmup();
-        },
-        (err) => {
-          // Do not keep prompting/retrying a denied warm-up. The attendance
-          // resolver will surface the precise error if Start/End is tapped.
-          if (err.code === err.PERMISSION_DENIED) stopWarmup();
-        },
-        { enableHighAccuracy: true, maximumAge: 30000, timeout: 15000 }
-      );
-      stopTimer = setTimeout(stopWarmup, 60000);
-    };
-
-    const onVisibility = () => {
-      if (document.hidden) stopWarmup();
-      else startWarmup();
-    };
-
-    startWarmup();
-    document.addEventListener("visibilitychange", onVisibility);
-    window.addEventListener("focus", startWarmup);
-    return () => {
-      stopWarmup();
-      document.removeEventListener("visibilitychange", onVisibility);
-      window.removeEventListener("focus", startWarmup);
-    };
-  }, [dayStarted, continuousTracking, attendanceLocationPolicy.start, attendanceLocationPolicy.end]);
+  useAttendanceGps({
+    dayStarted,
+    continuousTracking,
+    attendanceLocationPolicy,
+    setGpsStatus,
+    getBatteryPct,
+  });
 
   // Flush the offline lead queue whenever we're online.
   const flushQueue = useCallback(async () => {
