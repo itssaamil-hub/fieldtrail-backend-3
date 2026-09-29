@@ -1,0 +1,31 @@
+name: Extract salesman tasks
+
+on:
+  push:
+    paths:
+      - 'scripts/extract-salesman-tasks.py'
+      - '.github/workflows/extract-salesman-tasks.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - run: python scripts/extract-salesman-tasks.py
+      - run: npm ci
+      - run: npm run build
+      - name: Commit extraction
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f scripts/extract-salesman-tasks.py .github/workflows/extract-salesman-tasks.yml
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -m "extract salesman tasks bridge from App"
+          git push origin HEAD:main
