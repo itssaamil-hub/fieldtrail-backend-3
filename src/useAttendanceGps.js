@@ -1,7 +1,9 @@
 import { useEffect, useRef } from "react";
 import { api } from "./api.js";
 
-const PING_MIN_INTERVAL_MS = 12000;
+// Keep Start/End GPS resolution fast, but persist continuous route history at a
+// calmer cadence so dozens of active devices do not create avoidable write load.
+const PING_MIN_INTERVAL_MS = 30000;
 
 export default function useAttendanceGps({
   dayStarted,
