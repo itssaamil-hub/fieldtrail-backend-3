@@ -1,15 +1,16 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { LayoutGrid, List, Plus, Search, X } from "lucide-react";
 import DesktopContacts from "../DesktopContacts.jsx";
 import MobileContacts from "../MobileContacts.jsx";
 import DesktopDealsBoard from "../DesktopDealsBoard";
 import { api, buildExportUrl } from "../api.js";
+import useAdminLeadPage from "./useAdminLeadPage.js";
 
 export default function AdminLeadsPanel({
   showLeads, desktopDeals, desktopContacts, sectionNavigation, section, desktopSection, phone,
   salesmen, filteredLeads, pagedLeads, leadsViewMode, setLeadsViewMode,
   filterSalesman, setFilterSalesman, filterStatus, setFilterStatus, filterDate, setFilterDate,
-  searchQuery, setSearchQuery, LEADS_PER_PAGE, currentPage, setLeadsPage, totalPages,
+  searchQuery, setSearchQuery, LEADS_PER_PAGE,
   onStatusChange, onSelectLead, onAddClick, shared,
 }) {
   const {
@@ -19,11 +20,42 @@ export default function AdminLeadsPanel({
   const [sheetsInfo, setSheetsInfo] = useState(null);
   const [sheetsError, setSheetsError] = useState("");
 
+  const listMode = (sectionNavigation && section === "leads")
+    || ((desktopDeals || !(sectionNavigation && section === "deals")) && leadsViewMode === "list");
+  const refreshKey = `${filteredLeads.length}:${filteredLeads[0]?.id || ""}:${filteredLeads[0]?.status || ""}`;
+  const serverPage = useAdminLeadPage({
+    enabled: showLeads && listMode,
+    salesmanId: filterSalesman,
+    status: filterStatus,
+    date: filterDate,
+    search: searchQuery,
+    limit: LEADS_PER_PAGE,
+    refreshKey,
+  });
+
+  const localById = useMemo(() => new Map(filteredLeads.map((lead) => [lead.id, lead])), [filteredLeads]);
+  const serverRows = useMemo(
+    () => serverPage.rows.map((lead) => localById.get(lead.id) || lead),
+    [serverPage.rows, localById]
+  );
+  const listRows = serverPage.loading && serverRows.length === 0 ? pagedLeads : serverRows;
+  const listTotal = serverPage.error && serverRows.length === 0 ? filteredLeads.length : serverPage.total;
+  const listTotalPages = serverPage.error && serverRows.length === 0
+    ? Math.max(1, Math.ceil(filteredLeads.length / LEADS_PER_PAGE))
+    : serverPage.totalPages;
+  const listCurrentPage = serverPage.error && serverRows.length === 0 ? 1 : serverPage.page;
+
   return (
-      <div hidden={!showLeads}>
+    <div hidden={!showLeads}>
       <div className={`ft-card${desktopDeals ? " engage-desktop-deals" : desktopContacts ? " engage-desktop-contacts" : ""}`} style={{ marginTop: 20, background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, padding: 18 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
-          <div><div className={desktopDeals ? "engage-deals-title" : desktopContacts ? "engage-contacts-heading" : undefined} style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16 }}>{sectionNavigation && section === "deals" ? (desktopSection ? "Pipeline" : "Deals") : (desktopContacts || (phone && section === "leads")) ? "Contacts" : "Leads"}</div>{(desktopContacts || (phone && section === "leads")) && <div className="engage-contacts-summary">{filteredLeads.length} contact records · Your restaurant connections</div>}{desktopDeals && <div className="engage-deals-summary">{filteredLeads.length} deals · {fmtMoney(filteredLeads.reduce((sum, lead) => sum + (Number(lead.dealValue) || 0), 0))} recorded value</div>}</div>
+          <div>
+            <div className={desktopDeals ? "engage-deals-title" : desktopContacts ? "engage-contacts-heading" : undefined} style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16 }}>
+              {sectionNavigation && section === "deals" ? (desktopSection ? "Pipeline" : "Deals") : (desktopContacts || (phone && section === "leads")) ? "Contacts" : "Leads"}
+            </div>
+            {(desktopContacts || (phone && section === "leads")) && <div className="engage-contacts-summary">{listMode ? listTotal : filteredLeads.length} contact records · Your restaurant connections</div>}
+            {desktopDeals && <div className="engage-deals-summary">{listMode ? listTotal : filteredLeads.length} deals · {fmtMoney(filteredLeads.reduce((sum, lead) => sum + (Number(lead.dealValue) || 0), 0))} recorded value</div>}
+          </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ display: sectionNavigation && section !== "dashboard" && !desktopDeals ? "none" : "flex", gap: 2, background: T.paperDeep, borderRadius: 8, padding: 2 }}>
               <button
@@ -51,6 +83,7 @@ export default function AdminLeadsPanel({
             )}
           </div>
         </div>
+
         <div style={{ position: "relative", marginBottom: 12 }}>
           <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: T.inkSoft }} />
           <input
@@ -66,6 +99,7 @@ export default function AdminLeadsPanel({
             </button>
           )}
         </div>
+
         <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
             <Select value={filterSalesman} onChange={setFilterSalesman} options={[["all", "All employees"], ...salesmen.map((s) => [s.id, s.name])]} />
@@ -105,6 +139,7 @@ export default function AdminLeadsPanel({
             />
           </div>
         </div>
+
         {sheetsError && <div style={{ fontSize: 12, color: T.danger, marginBottom: 10 }}>{sheetsError}</div>}
         {sheetsInfo && (
           <div style={{ fontSize: 12, background: T.paperDeep, borderRadius: 11, padding: "10px 12px", marginBottom: 12 }}>
@@ -119,66 +154,73 @@ export default function AdminLeadsPanel({
           </div>
         )}
 
-        {(sectionNavigation && section === "leads") || ((desktopDeals || !(sectionNavigation && section === "deals")) && leadsViewMode === "list") ? (
+        {serverPage.error && listMode && <div style={{ fontSize: 12, color: T.danger, marginBottom: 10 }}>{serverPage.error}</div>}
+
+        {listMode ? (
           <>
-        {phone && section === "leads" ? <MobileContacts leads={pagedLeads} onSelectLead={onSelectLead} renderVerification={l=>l.hasLocation ? <VerificationStamp status={l.verification} small /> : <NoLocationBadge small />} /> : desktopContacts ? <DesktopContacts leads={pagedLeads} onSelectLead={onSelectLead} renderVerification={l=>l.hasLocation ? <VerificationStamp status={l.verification} small /> : <NoLocationBadge small />} /> : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {pagedLeads.map((l) => (
-            <div key={l.id} className="ft-row" onClick={() => onSelectLead(l)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "10px 12px", border: `1px solid ${T.line}`, borderRadius: 11, cursor: "pointer", background: "#fff" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                <div aria-hidden="true" style={leadAvatarStyle(l.business)}>{leadInitials(l.business)}</div>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 14 }}>{l.business}</div>
-                  <div style={{ fontSize: 12, color: T.inkSoft, fontFamily: "'IBM Plex Mono', monospace" }}>
-                    {l.salesmanName} · {fmtTime(l.createdAt)}{l.hasLocation ? ` · ${l.lat.toFixed(5)}, ${l.lng.toFixed(5)}` : ""}
+            {phone && section === "leads" ? (
+              <MobileContacts leads={listRows} onSelectLead={onSelectLead} renderVerification={l => l.hasLocation ? <VerificationStamp status={l.verification} small /> : <NoLocationBadge small />} />
+            ) : desktopContacts ? (
+              <DesktopContacts leads={listRows} onSelectLead={onSelectLead} renderVerification={l => l.hasLocation ? <VerificationStamp status={l.verification} small /> : <NoLocationBadge small />} />
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {listRows.map((l) => (
+                  <div key={l.id} className="ft-row" onClick={() => onSelectLead(l)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "10px 12px", border: `1px solid ${T.line}`, borderRadius: 11, cursor: "pointer", background: "#fff" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                      <div aria-hidden="true" style={leadAvatarStyle(l.business)}>{leadInitials(l.business)}</div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, fontSize: 14 }}>{l.business}</div>
+                        <div style={{ fontSize: 12, color: T.inkSoft, fontFamily: "'IBM Plex Mono', monospace" }}>
+                          {l.salesmanName} · {fmtTime(l.createdAt)}{l.hasLocation ? ` · ${l.lat.toFixed(5)}, ${l.lng.toFixed(5)}` : ""}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                      {l.hasLocation ? <VerificationStamp status={l.verification} small /> : <NoLocationBadge small />}
+                      <span style={{ fontSize: 12, fontWeight: 700, color: T.route, background: "#EEF1FD", padding: "5px 12px", borderRadius: 999 }}>{STATUS_LABEL[l.status]}</span>
+                    </div>
                   </div>
+                ))}
+                {!serverPage.loading && listTotal === 0 && (
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, color: T.inkSoft, fontSize: 13, padding: "36px 8px" }}>
+                    <List size={22} style={{ opacity: 0.5 }} />
+                    No leads match these filters.
+                  </div>
+                )}
+              </div>
+            )}
+
+            {listTotal > LEADS_PER_PAGE && (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 14, paddingTop: 14, borderTop: `1px solid ${T.line}` }}>
+                <div style={{ fontSize: 12, color: T.inkSoft }}>
+                  Showing {(listCurrentPage - 1) * LEADS_PER_PAGE + 1}–{Math.min(listCurrentPage * LEADS_PER_PAGE, listTotal)} of {listTotal}
+                </div>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <button
+                    disabled={listCurrentPage <= 1 || serverPage.loading}
+                    onClick={() => serverPage.setPage((p) => Math.max(1, p - 1))}
+                    style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontWeight: 700, fontSize: 12.5, cursor: listCurrentPage <= 1 || serverPage.loading ? "not-allowed" : "pointer", opacity: listCurrentPage <= 1 || serverPage.loading ? 0.5 : 1 }}
+                  >
+                    Previous
+                  </button>
+                  <span style={{ fontSize: 12.5, color: T.inkSoft }}>Page {listCurrentPage} of {listTotalPages}</span>
+                  <button
+                    disabled={listCurrentPage >= listTotalPages || serverPage.loading}
+                    onClick={() => serverPage.setPage((p) => Math.min(listTotalPages, p + 1))}
+                    style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontWeight: 700, fontSize: 12.5, cursor: listCurrentPage >= listTotalPages || serverPage.loading ? "not-allowed" : "pointer", opacity: listCurrentPage >= listTotalPages || serverPage.loading ? 0.5 : 1 }}
+                  >
+                    Next
+                  </button>
                 </div>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-                {l.hasLocation ? <VerificationStamp status={l.verification} small /> : <NoLocationBadge small />}
-                <span style={{ fontSize: 12, fontWeight: 700, color: T.route, background: "#EEF1FD", padding: "5px 12px", borderRadius: 999 }}>{STATUS_LABEL[l.status]}</span>
-              </div>
-            </div>
-          ))}
-          {filteredLeads.length === 0 && (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, color: T.inkSoft, fontSize: 13, padding: "36px 8px" }}>
-              <List size={22} style={{ opacity: 0.5 }} />
-              No leads match these filters.
-            </div>
-          )}
-        </div>
-        )}
-
-        {filteredLeads.length > LEADS_PER_PAGE && (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 14, paddingTop: 14, borderTop: `1px solid ${T.line}` }}>
-            <div style={{ fontSize: 12, color: T.inkSoft }}>
-              Showing {(currentPage - 1) * LEADS_PER_PAGE + 1}–{Math.min(currentPage * LEADS_PER_PAGE, filteredLeads.length)} of {filteredLeads.length}
-            </div>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <button
-                disabled={currentPage <= 1}
-                onClick={() => setLeadsPage((p) => Math.max(1, p - 1))}
-                style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontWeight: 700, fontSize: 12.5, cursor: currentPage <= 1 ? "not-allowed" : "pointer", opacity: currentPage <= 1 ? 0.5 : 1 }}
-              >
-                Previous
-              </button>
-              <span style={{ fontSize: 12.5, color: T.inkSoft }}>Page {currentPage} of {totalPages}</span>
-              <button
-                disabled={currentPage >= totalPages}
-                onClick={() => setLeadsPage((p) => Math.min(totalPages, p + 1))}
-                style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontWeight: 700, fontSize: 12.5, cursor: currentPage >= totalPages ? "not-allowed" : "pointer", opacity: currentPage >= totalPages ? 0.5 : 1 }}
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
+            )}
           </>
         ) : (
-          desktopDeals ? <DesktopDealsBoard leads={filteredLeads} visibleStatus={filterStatus} onStatusChange={onStatusChange} onSelectLead={onSelectLead} /> : <LeadsBoardView leads={filteredLeads} onStatusChange={onStatusChange} onSelectLead={onSelectLead} />
+          desktopDeals
+            ? <DesktopDealsBoard leads={filteredLeads} visibleStatus={filterStatus} onStatusChange={onStatusChange} onSelectLead={onSelectLead} />
+            : <LeadsBoardView leads={filteredLeads} onStatusChange={onStatusChange} onSelectLead={onSelectLead} />
         )}
       </div>
-
-      </div>
+    </div>
   );
 }
