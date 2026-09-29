@@ -92,6 +92,99 @@ export class ApiError extends Error {
   }
 }
 
+// Attendance GPS reliability layer.
+// Continuous tracking feeds this cache while a day is active. Start/End Day
+// can reuse a recent accurate fix instantly instead of waking GPS from zero.
+const ATTENDANCE_LOCATION_MAX_AGE_MS = 30000;
+const ATTENDANCE_PREFERRED_ACCURACY_M = 50;
+const ATTENDANCE_ACCEPTABLE_ACCURACY_M = 100;
+const ATTENDANCE_GPS_TIMEOUT_MS = 4500;
+let latestAttendanceLocation = null;
+
+function validCoordinatePair(lat, lng) {
+  const a = Number(lat), b = Number(lng);
+  return Number.isFinite(a) && Number.isFinite(b) && a >= -90 && a <= 90 && b >= -180 && b <= 180;
+}
+
+function rememberAttendanceLocation(lat, lng, accuracy, capturedAt = Date.now()) {
+  if (!validCoordinatePair(lat, lng)) return null;
+  const parsedAccuracy = Number(accuracy);
+  const fix = {
+    lat: Number(lat),
+    lng: Number(lng),
+    accuracy: Number.isFinite(parsedAccuracy) ? parsedAccuracy : null,
+    capturedAt: typeof capturedAt === "number" ? capturedAt : (Date.parse(capturedAt) || Date.now()),
+  };
+  latestAttendanceLocation = fix;
+  return fix;
+}
+
+function freshCachedAttendanceLocation(maxAccuracy = ATTENDANCE_ACCEPTABLE_ACCURACY_M) {
+  const fix = latestAttendanceLocation;
+  if (!fix || Date.now() - fix.capturedAt > ATTENDANCE_LOCATION_MAX_AGE_MS) return null;
+  if (fix.accuracy != null && fix.accuracy > maxAccuracy) return null;
+  return fix;
+}
+
+function browserPosition(timeout = ATTENDANCE_GPS_TIMEOUT_MS) {
+  return new Promise((resolve, reject) => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      reject(Object.assign(new Error("Location unavailable"), { code: 2 }));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const fix = rememberAttendanceLocation(
+          pos.coords.latitude,
+          pos.coords.longitude,
+          pos.coords.accuracy,
+          pos.timestamp || Date.now()
+        );
+        if (fix) resolve(fix);
+        else reject(Object.assign(new Error("Invalid location"), { code: 2 }));
+      },
+      reject,
+      { enableHighAccuracy: true, maximumAge: 5000, timeout }
+    );
+  });
+}
+
+async function resolveAttendanceLocation(lat, lng) {
+  // If the caller already captured a valid position, never delay the request.
+  if (validCoordinatePair(lat, lng)) return rememberAttendanceLocation(lat, lng, null);
+
+  // Continuous tracking normally makes Start/End effectively instant.
+  const preferred = freshCachedAttendanceLocation(ATTENDANCE_PREFERRED_ACCURACY_M);
+  if (preferred) return preferred;
+
+  // If the newest tracking fix is still reasonably accurate, keep it as a
+  // fallback while asking the device for a sharper high-accuracy reading.
+  const fallback = freshCachedAttendanceLocation(ATTENDANCE_ACCEPTABLE_ACCURACY_M);
+  let lastError = null;
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const fix = await browserPosition();
+      if (fix.accuracy == null || fix.accuracy <= ATTENDANCE_ACCEPTABLE_ACCURACY_M) return fix;
+      lastError = Object.assign(new Error("Location accuracy is too low"), { code: 2 });
+    } catch (err) {
+      lastError = err;
+      // A denied permission cannot improve with an automatic retry. Returning
+      // no coordinates lets the existing backend attendance policy decide
+      // whether location is mandatory for this employee.
+      if (err?.code === 1) break;
+    }
+  }
+
+  return fallback || null;
+}
+
+async function attendanceBodyWithLocation(body = {}) {
+  const fix = await resolveAttendanceLocation(body.lat, body.lng);
+  if (!fix) return body;
+  return { ...body, lat: fix.lat, lng: fix.lng };
+}
+
 async function request(path, { method = "GET", body, auth = true } = {}) {
   const base = getApiBase();
   if (!base) throw new ApiError("No backend configured yet.", 0);
@@ -131,7 +224,7 @@ export const api = {
  currentClosing:()=>request('/day-closing/current'),
  saveClosingDraft:body=>request('/day-closing/draft',{method:'PUT',body}),
  closingReports:params=>request('/day-closing/reports?'+new URLSearchParams(params)),
- endDayWithClosing:body=>request('/salesman/day/end',{method:'POST',body}),
+ endDayWithClosing:async body=>request('/salesman/day/end',{method:'POST',body:await attendanceBodyWithLocation(body)}),
   quoteSettings: () => request('/quotations/settings'),
   saveQuoteSettings: body => request('/quotations/settings',{method:'PUT',body}),
   quoteCustomers: search => request('/quotations/customers?'+new URLSearchParams({search})),
@@ -241,7 +334,7 @@ export const api = {
   adminLeadPayments: (leadId) => request(`/admin/leads/${leadId}/payments`),
   adminRecordPayment: (leadId, payload) => request(`/admin/leads/${leadId}/payments`, { method: "POST", body: payload }),
   adminEditPayment: (leadId, paymentId, payload) => request(`/admin/leads/${leadId}/payments/${paymentId}`, { method: "PATCH", body: payload }),
-  adminDeletePayment: (leadId, paymentId) => request(`/admin/leads/${leadId}/payments/${paymentId}`, { method: "DELETE" }),
+  adminDeletePayment: (leadId, paymentId, payload) => request(`/admin/leads/${leadId}/payments/${paymentId}`, { method: "DELETE", body: payload }),
   adminExpenses: (params) => {
     const qs = new URLSearchParams(Object.entries(params || {}).filter(([, v]) => v != null && v !== "" && v !== "all")).toString();
     return request(`/admin/expenses${qs ? `?${qs}` : ""}`);
@@ -283,9 +376,18 @@ export const api = {
   adminAddLeadOption: (fieldKey, value) => request("/admin/lead-options", { method: "POST", body: { fieldKey, value } }),
   adminDeleteLeadOption: (id) => request(`/admin/lead-options/${id}`, { method: "DELETE" }),
 
-  salesmanDayStart: (lat, lng) => request("/salesman/day/start", { method: "POST", body: { lat, lng } }),
-  salesmanDayEnd: (lat, lng) => request("/salesman/day/end", { method: "POST", body: { lat, lng } }),
-  salesmanPing: (payload) => request("/salesman/location/ping", { method: "POST", body: payload }),
+  salesmanDayStart: async (lat, lng) => {
+    const fix = await resolveAttendanceLocation(lat, lng);
+    return request("/salesman/day/start", { method: "POST", body: { lat: fix?.lat, lng: fix?.lng } });
+  },
+  salesmanDayEnd: async (lat, lng) => {
+    const fix = await resolveAttendanceLocation(lat, lng);
+    return request("/salesman/day/end", { method: "POST", body: { lat: fix?.lat, lng: fix?.lng } });
+  },
+  salesmanPing: (payload) => {
+    rememberAttendanceLocation(payload?.lat, payload?.lng, payload?.accuracyM, payload?.capturedAt || Date.now());
+    return request("/salesman/location/ping", { method: "POST", body: payload });
+  },
   salesmanLeads: () => request("/salesman/leads"),
   salesmanLead: (id) => request(`/salesman/leads/${id}`),
   salesmanLeadHistory: (id) => request(`/salesman/leads/${id}/history`),
