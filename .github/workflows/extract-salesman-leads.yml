@@ -1,5 +1,6 @@
 name: Extract salesman leads
 
+# One-time workflow; removes itself after a successful build.
 on:
   push:
     paths:
