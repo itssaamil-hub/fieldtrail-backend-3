@@ -815,5 +815,5 @@ function Overlay({ title, onClose, children }) {
 // ---------------------------------------------------------------------------
 
 
-  return { LogoMark, TopBar, ConnectionPill, ConnectBackendScreen, LoginScreen, SettingsModal, StatCard, VerificationStamp, SyncBadge, NoLocationBadge, SettingToggle, AddExpenseModal, CrmSettingsModal, FieldOptionsSection, DownloadMenu, Tab, Select, LegendDot, Field, Overlay };
+  return { LogoMark, TopBar, ConnectionPill, ConnectBackendScreen, LoginScreen, SettingsModal, StatCard, VerificationStamp, SyncBadge, NoLocationBadge, SettingToggle, AddExpenseModal, CrmSettingsModal, FieldOptionsSection, DownloadMenu, Tab, Select, LegendDot, Field, Overlay, inputStyle, EXPENSE_CATEGORIES };
 }

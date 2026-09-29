@@ -695,7 +695,7 @@ export default function App() {
 }
 
 // ---------------------------------------------------------------------------
-const { LogoMark, TopBar, ConnectionPill, ConnectBackendScreen, LoginScreen, SettingsModal, StatCard, VerificationStamp, SyncBadge, NoLocationBadge, SettingToggle, AddExpenseModal, CrmSettingsModal, FieldOptionsSection, DownloadMenu, Tab, Select, LegendDot, Field, Overlay } = createAppShellFeatures({ useState, useEffect, useRef, useCallback, api, ApiError, T, DASHBOARD_DISPLAY_KEY, getDashboardDisplaySettings, mapSalesmanRow, AppMenu, Loader2, Gauge, BarChart3, Wallet, Bell, WifiOff, Settings, LogOut, Download, RefreshCw, X, Plus, CheckCircle2, AlertTriangle });
+const { LogoMark, TopBar, ConnectionPill, ConnectBackendScreen, LoginScreen, SettingsModal, StatCard, VerificationStamp, SyncBadge, NoLocationBadge, SettingToggle, AddExpenseModal, CrmSettingsModal, FieldOptionsSection, DownloadMenu, Tab, Select, LegendDot, Field, Overlay, inputStyle, EXPENSE_CATEGORIES } = createAppShellFeatures({ useState, useEffect, useRef, useCallback, api, ApiError, T, DASHBOARD_DISPLAY_KEY, getDashboardDisplaySettings, mapSalesmanRow, AppMenu, Loader2, Gauge, BarChart3, Wallet, Bell, WifiOff, Settings, LogOut, Download, RefreshCw, X, Plus, CheckCircle2, AlertTriangle });
 
 function LiveMap({ salesmen, leads, onSelectLead, title = "Live Employees & Lead Map", subtitle, headerControls }) {
   const containerRef = useRef(null);
