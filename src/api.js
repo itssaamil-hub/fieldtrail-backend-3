@@ -306,7 +306,7 @@ export const api = {
   collectionDelete:(key,id,body)=>request('/collections/'+encodeURIComponent(key)+'/payments/'+id,{method:'DELETE',body}),
   collectionReceipt:(key,id)=>request('/collections/'+encodeURIComponent(key)+'/payments/'+id+'/receipt'),
   collectionReceiptPDF:async(key,id)=>{
-    const r=await fetch(`${getApiBase()}/collections/${encodeURIComponent(key)}/${id}/receipt?format=pdf`,{headers:{Authorization:`Bearer ${getSession()?.token||''}`}});
+    const r=await fetch(`${getApiBase()}/collections/${encodeURIComponent(key)}/payments/${id}/receipt?format=pdf`,{headers:{Authorization:`Bearer ${getSession()?.token||''}`}});
     if(!r.ok){let data;try{data=await r.json()}catch{}throw new ApiError(data?.error||'Could not download receipt',r.status)}return r.blob();
   },
   quotes: params => request('/quotations?'+new URLSearchParams(params)),
