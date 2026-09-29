@@ -1,0 +1,13 @@
+name: Report App Structure
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/report-app-structure.py
+      - .github/workflows/report-app-structure.yml
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python scripts/report-app-structure.py
