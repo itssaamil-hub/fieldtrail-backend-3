@@ -1,0 +1,80 @@
+name: One-time attendance day controller extraction
+
+on:
+  push:
+    paths:
+      - '.github/workflows/extract-attendance-day-controller.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Extract attendance day controller
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          app_path = Path('src/App.jsx')
+          app = app_path.read_text()
+
+          def once(old, new, label):
+              global app
+              count = app.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected one match, found {count}')
+              app = app.replace(old, new, 1)
+
+          once(
+              'import useAttendanceGps from "./useAttendanceGps.js";\n',
+              'import useAttendanceGps from "./useAttendanceGps.js";\nimport useAttendanceDay from "./useAttendanceDay.js";\n',
+              'controller import'
+          )
+
+          once(
+              '  const [dayStarted, setDayStartedState] = useState(getDayStarted(session.id));\n  const [togglingDay, setTogglingDay] = useState(false);\n',
+              '  const [dayStarted, setDayStartedState] = useState(getDayStarted(session.id));\n',
+              'toggle state'
+          )
+
+          once(
+              '  const [monthlyTarget, setMonthlyTarget] = useState(200);\n  const dayToggleInFlightRef = useRef(false);\n',
+              '  const [monthlyTarget, setMonthlyTarget] = useState(200);\n',
+              'toggle ref'
+          )
+
+          start = app.index('  const [showClosing,setShowClosing]=useState(false);')
+          end_marker = '  const handleAddLead = async (payload) => {'
+          end = app.index(end_marker, start)
+          old_block = app[start:end]
+
+          if 'const handleToggleDay = async closing =>' not in old_block:
+              raise SystemExit('handleToggleDay block was not found in expected section')
+
+          new_block = '''  const [showClosing,setShowClosing]=useState(false);\n  const [justToggled, setJustToggled] = useState(false); // brief "Started"/"Ended" confirmation flash\n\n  const { togglingDay, handleToggleDay } = useAttendanceDay({\n    dayStarted,\n    attendanceLocationPolicy,\n    sessionId: session.id,\n    setShowClosing,\n    setDayStartedState,\n    setJustToggled,\n    setLoadError,\n  });\n\n'''
+          app = app[:start] + new_block + app[end:]
+          app_path.write_text(app)
+
+          Path('src/useAttendanceDay.js').write_text('''import { useCallback, useRef, useState } from "react";\nimport { api, ApiError, setDayStartedFlag } from "./api.js";\n\n/**\n * Owns the Start Day / End Day request lifecycle while leaving presentation\n * state (dayStarted, closing modal, confirmation flash, errors) in SalesmanApp.\n * This preserves the existing UI contract while keeping attendance orchestration\n * out of the main App.jsx file.\n */\nexport default function useAttendanceDay({\n  dayStarted,\n  attendanceLocationPolicy,\n  sessionId,\n  setShowClosing,\n  setDayStartedState,\n  setJustToggled,\n  setLoadError,\n}) {\n  const [togglingDay, setTogglingDay] = useState(false);\n  const inFlightRef = useRef(false);\n\n  const handleToggleDay = useCallback(async (closing) => {\n    if (dayStarted && !closing) {\n      setShowClosing(true);\n      return;\n    }\n\n    if (inFlightRef.current || togglingDay) return;\n    inFlightRef.current = true;\n    setTogglingDay(true);\n\n    try {\n      if (dayStarted) {\n        await api.endDayWithClosing(\n          { ...closing },\n          { locationRequired: attendanceLocationPolicy.end }\n        );\n        setShowClosing(false);\n        setDayStartedFlag(sessionId, false);\n        setDayStartedState(false);\n      } else {\n        await api.salesmanDayStart({ locationRequired: attendanceLocationPolicy.start });\n        setDayStartedFlag(sessionId, true);\n        setDayStartedState(true);\n      }\n\n      setJustToggled(true);\n      setTimeout(() => setJustToggled(false), 1600);\n    } catch (err) {\n      if (closing) throw err;\n      setLoadError(err instanceof ApiError ? err.message : "Couldn't reach the server — try again.");\n    } finally {\n      inFlightRef.current = false;\n      setTogglingDay(false);\n    }\n  }, [\n    attendanceLocationPolicy.end,\n    attendanceLocationPolicy.start,\n    dayStarted,\n    sessionId,\n    setDayStartedState,\n    setJustToggled,\n    setLoadError,\n    setShowClosing,\n    togglingDay,\n  ]);\n\n  return { togglingDay, handleToggleDay };\n}\n''')
+          PY
+
+      - name: Verify frontend build
+        run: npm ci && npm run build
+
+      - name: Commit extraction and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f .github/workflows/extract-attendance-day-controller.yml
+          git add -A src/App.jsx src/useAttendanceDay.js .github/workflows/extract-attendance-day-controller.yml
+          git diff --cached --quiet && exit 0
+          git commit -m "extract attendance day controller from App"
+          git push origin HEAD:main
