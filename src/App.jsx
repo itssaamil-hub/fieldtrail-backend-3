@@ -8,6 +8,7 @@ import AdminMobileNav, { useAdminPhone, salesmanTabs } from "./AdminMobileNav.js
 import useUnreadNotifications from "./useUnreadNotifications.js";
 import useAttendanceGps from "./useAttendanceGps.js";
 import useAttendanceDay from "./useAttendanceDay.js";
+import useSalesmanMessages from "./useSalesmanMessages.js";
 import AdminActivityOverview from "./AdminActivityOverview.jsx";
 import AdminAddLeadModalV2 from "./AdminAddLeadModal.jsx";
 import React, { lazy, Suspense, useState, useEffect, useRef, useCallback } from "react";
@@ -4641,45 +4642,14 @@ function SalesmanApp({ session, online, page, notificationLead }) {
 
   useEffect(() => { loadLeads(); }, [loadLeads]);
 
-  const [messages, setMessages] = useState([]);
-  const [employeeRepliesEnabled, setEmployeeRepliesEnabled] = useState(true);
-  const loadMessages = useCallback(async () => {
-    try {
-      const res = await api.salesmanGetMessages();
-      setMessages(res.messages || []);
-    } catch {
-      /* messages are non-critical — fail silently, next poll retries */
-    }
-  }, []);
-  useEffect(() => {
-    loadMessages();
-    const iv = setInterval(loadMessages, 30000); // light polling, no push infra for this yet
-    return () => clearInterval(iv);
-  }, [loadMessages]);
-
-  const markMessageRead = async (id) => {
-    setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, read_at: m.read_at || new Date().toISOString() } : m))); // optimistic
-    try {
-      await api.salesmanMarkMessageRead(id);
-    } catch {
-      /* not critical if this fails silently — next load reconciles */
-    }
-  };
-
-  const deleteMessage = async (id) => {
-    setMessages((prev) => prev.filter((m) => m.id !== id)); // optimistic
-    try {
-      await api.salesmanDeleteMessage(id);
-    } catch {
-      loadMessages(); // reconcile if it actually failed
-    }
-  };
-
-  const replyToMessage = async (id, body) => {
-    const res = await api.salesmanReplyMessage(id, body);
-    await loadMessages();
-    return res;
-  };
+  const {
+    messages,
+    employeeRepliesEnabled,
+    setEmployeeRepliesEnabled,
+    markMessageRead,
+    deleteMessage,
+    replyToMessage,
+  } = useSalesmanMessages();
 
   const getBatteryPct = useCallback(async () => {
     try {
