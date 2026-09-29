@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   api,
   ApiError,
@@ -8,58 +8,109 @@ import {
   mapLeadRow,
 } from "./api.js";
 
+const QUEUE_RETRY_BASE_MS = 20000;
+const QUEUE_RETRY_JITTER_MS = 10000;
+
 export default function useSalesmanLeads({ online, session, setLoadError, makeQueuedLead }) {
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [queuedCount, setQueuedCount] = useState(getQueuedLeads().length);
+  const queueFlightRef = useRef(null);
+  const mountedRef = useRef(true);
 
   const loadLeads = useCallback(async () => {
     try {
       const res = await api.salesmanLeads();
+      if (!mountedRef.current) return;
       setLeads((res.leads || []).map((r) => mapLeadRow({ ...r, salesman_name: session.fullName })));
       setLoadError("");
     } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : "Couldn't load your leads.");
+      if (mountedRef.current) {
+        setLoadError(err instanceof ApiError ? err.message : "Couldn't load your leads.");
+      }
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   }, [session.fullName, setLoadError]);
 
-  useEffect(() => { loadLeads(); }, [loadLeads]);
+  useEffect(() => {
+    mountedRef.current = true;
+    loadLeads();
+    return () => { mountedRef.current = false; };
+  }, [loadLeads]);
 
-  const flushQueue = useCallback(async () => {
+  const flushQueue = useCallback(() => {
+    if (queueFlightRef.current) return queueFlightRef.current;
     const queue = getQueuedLeads();
-    if (queue.length === 0) return;
-
-    for (const payload of queue) {
-      try {
-        const res = await api.salesmanCreateLead(payload);
-        removeQueuedLead(payload.clientUuid);
-        setLeads((prev) => prev.map((l) => (
-          l.clientUuid === payload.clientUuid
-            ? mapLeadRow({ ...res.lead, salesman_name: session.fullName })
-            : l
-        )));
-      } catch (err) {
-        if (err instanceof ApiError && err.status >= 400 && err.status < 500 && err.status !== 0) {
-          removeQueuedLead(payload.clientUuid);
-        }
-        break;
-      }
+    if (queue.length === 0) {
+      if (mountedRef.current) setQueuedCount(0);
+      return Promise.resolve();
     }
 
-    setQueuedCount(getQueuedLeads().length);
+    const request = (async () => {
+      for (const payload of queue) {
+        try {
+          const res = await api.salesmanCreateLead(payload);
+          removeQueuedLead(payload.clientUuid);
+          if (mountedRef.current) {
+            setLeads((prev) => prev.map((l) => (
+              l.clientUuid === payload.clientUuid
+                ? mapLeadRow({ ...res.lead, salesman_name: session.fullName })
+                : l
+            )));
+          }
+        } catch (err) {
+          if (err instanceof ApiError && err.status >= 400 && err.status < 500 && err.status !== 0) {
+            removeQueuedLead(payload.clientUuid);
+          }
+          break;
+        }
+      }
+
+      if (mountedRef.current) setQueuedCount(getQueuedLeads().length);
+    })().finally(() => {
+      if (queueFlightRef.current === request) queueFlightRef.current = null;
+    });
+
+    queueFlightRef.current = request;
+    return request;
   }, [session.fullName]);
 
   useEffect(() => {
-    if (online) flushQueue();
-  }, [online, flushQueue]);
+    if (online && queuedCount > 0 && document.visibilityState === "visible") flushQueue();
+  }, [online, queuedCount, flushQueue]);
 
   useEffect(() => {
-    if (!online) return;
-    const iv = setInterval(flushQueue, 20000);
-    return () => clearInterval(iv);
-  }, [online, flushQueue]);
+    if (!online || queuedCount === 0) return undefined;
+    let timerId = null;
+    let stopped = false;
+
+    const schedule = () => {
+      if (stopped || getQueuedLeads().length === 0) return;
+      const jitter = Math.floor(Math.random() * QUEUE_RETRY_JITTER_MS);
+      timerId = window.setTimeout(run, QUEUE_RETRY_BASE_MS + jitter);
+    };
+
+    const run = async () => {
+      if (stopped) return;
+      if (document.visibilityState === "visible" && navigator.onLine !== false) await flushQueue();
+      schedule();
+    };
+
+    const onResume = () => {
+      if (!stopped && document.visibilityState === "visible" && navigator.onLine !== false) flushQueue();
+    };
+
+    schedule();
+    document.addEventListener("visibilitychange", onResume);
+    window.addEventListener("online", onResume);
+    return () => {
+      stopped = true;
+      if (timerId) window.clearTimeout(timerId);
+      document.removeEventListener("visibilitychange", onResume);
+      window.removeEventListener("online", onResume);
+    };
+  }, [online, queuedCount, flushQueue]);
 
   const handleAddLead = async (payload) => {
     if (online) {
