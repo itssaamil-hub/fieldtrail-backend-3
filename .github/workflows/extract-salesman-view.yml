@@ -1,0 +1,31 @@
+name: Extract salesman view
+
+on:
+  push:
+    paths:
+      - 'scripts/extract-salesman-view.py'
+      - '.github/workflows/extract-salesman-view.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  refactor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - run: python scripts/extract-salesman-view.py
+      - run: npm ci
+      - run: npm run build
+      - name: Commit extraction
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f scripts/extract-salesman-view.py .github/workflows/extract-salesman-view.yml
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -m "extract salesman view feature module"
+          git push origin HEAD:main
