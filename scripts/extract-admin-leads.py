@@ -27,14 +27,18 @@ out.write_text(header + signature + block + footer)
 replacement = '''      <AdminLeadsPanel\n        showLeads={showLeads}\n        desktopDeals={desktopDeals}\n        desktopContacts={desktopContacts}\n        sectionNavigation={sectionNavigation}\n        section={section}\n        desktopSection={desktopSection}\n        phone={phone}\n        salesmen={salesmen}\n        filteredLeads={filteredLeads}\n        pagedLeads={pagedLeads}\n        leadsViewMode={leadsViewMode}\n        setLeadsViewMode={setLeadsViewMode}\n        filterSalesman={filterSalesman}\n        setFilterSalesman={setFilterSalesman}\n        filterStatus={filterStatus}\n        setFilterStatus={setFilterStatus}\n        filterDate={filterDate}\n        setFilterDate={setFilterDate}\n        searchQuery={searchQuery}\n        setSearchQuery={setSearchQuery}\n        LEADS_PER_PAGE={LEADS_PER_PAGE}\n        currentPage={currentPage}\n        setLeadsPage={setLeadsPage}\n        totalPages={totalPages}\n        onStatusChange={onStatusChange}\n        onSelectLead={setSelectedLead}\n        onAddClick={onAddLead ? () => setShowAdminAddLead(true) : null}\n        shared={{\n          T, fmtMoney, Select, STATUSES, STATUS_LABEL, DownloadMenu, VerificationStamp,\n          NoLocationBadge, LeadsBoardView, leadAvatarStyle, leadInitials, fmtTime,\n        }}\n      />\n'''
 app = app[:start] + replacement + app[end:]
 
-# Sheets export state is now local to the leads module.
+# Sheets export state is now local to this leads module. Remove only the AdminView pair.
+admin_start = app.index('function AdminView(')
+admin_return = app.index('\n  return (', admin_start)
 for line in [
     '  const [sheetsInfo, setSheetsInfo] = useState(null);\n',
     '  const [sheetsError, setSheetsError] = useState(\"\");\n',
 ]:
-    if app.count(line) != 1:
-        raise SystemExit(f'sheets state mismatch: {line.strip()} -> {app.count(line)}')
-    app = app.replace(line, '', 1)
+    pos = app.find(line, admin_start, admin_return)
+    if pos == -1:
+        raise SystemExit(f'AdminView sheets state not found: {line.strip()}')
+    app = app[:pos] + app[pos + len(line):]
+    admin_return -= len(line)
 
 anchor = 'import AdminDashboardPanel from "./admin/AdminDashboardPanel.jsx";\n'
 if app.count(anchor) != 1:
