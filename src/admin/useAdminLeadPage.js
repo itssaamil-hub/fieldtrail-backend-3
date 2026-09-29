@@ -63,13 +63,37 @@ export default function useAdminLeadPage({
       limit,
     }).then((result) => {
       if (requestVersion !== requestVersionRef.current) return;
-      const nextTotalPages = Math.max(1, Number(result?.totalPages) || 1);
+      let mapped = (result?.leads || []).map(mapLeadRow);
+
+      // Compatibility while an older backend is still live: it returns the
+      // historical latest-500 shape without pagination metadata. Filter/page
+      // that bounded response locally until Render has the new route.
+      if (result?.total == null || result?.totalPages == null) {
+        const query = debouncedSearch.toLowerCase();
+        if (date) mapped = mapped.filter((lead) => lead.createdAt.toISOString().slice(0, 10) === date);
+        if (query) {
+          mapped = mapped.filter((lead) => [lead.business, lead.owner, lead.phone, lead.subLocation, lead.posName, lead.salesmanName]
+            .some((value) => String(value || "").toLowerCase().includes(query)));
+        }
+        const fallbackTotal = mapped.length;
+        const fallbackPages = Math.max(1, Math.ceil(fallbackTotal / limit));
+        if (page > fallbackPages) {
+          setPage(fallbackPages);
+          return;
+        }
+        setRows(mapped.slice((page - 1) * limit, page * limit));
+        setTotal(fallbackTotal);
+        setTotalPages(fallbackPages);
+        return;
+      }
+
+      const nextTotalPages = Math.max(1, Number(result.totalPages) || 1);
       if (page > nextTotalPages) {
         setPage(nextTotalPages);
         return;
       }
-      setRows((result?.leads || []).map(mapLeadRow));
-      setTotal(Number(result?.total) || 0);
+      setRows(mapped);
+      setTotal(Number(result.total) || 0);
       setTotalPages(nextTotalPages);
     }).catch((err) => {
       if (requestVersion !== requestVersionRef.current) return;
