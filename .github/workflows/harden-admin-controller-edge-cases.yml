@@ -1,0 +1,36 @@
+name: Harden admin controller edge cases
+
+on:
+  push:
+    paths:
+      - 'scripts/harden-admin-controller-edge-cases.py'
+      - '.github/workflows/harden-admin-controller-edge-cases.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  harden:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - run: python scripts/harden-admin-controller-edge-cases.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm audit --omit=dev --audit-level=critical
+      - run: npm run build
+      - name: Commit hardening
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f scripts/harden-admin-controller-edge-cases.py .github/workflows/harden-admin-controller-edge-cases.yml
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -m "harden admin controller runtime edge cases"
+          git push origin HEAD:main
