@@ -19,3 +19,5 @@ jobs:
           --env es6,browser
           --parser-options '{"ecmaVersion":2022,"sourceType":"module","ecmaFeatures":{"jsx":true}}'
           --rule 'no-undef:error'
+      - name: Smoke render Add Lead and new lead drawer
+        run: npx --yes vite-node .github/scripts/smoke-lead-ui.jsx
