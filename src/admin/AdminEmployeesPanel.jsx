@@ -1,38 +1,57 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Battery, Gauge, Clock, Plus, MessageSquare, Sparkles, Search, Settings, Route } from "lucide-react";
 import { getApiBase, getSession } from "../api.js";
 
 const BRIEF_CONCURRENCY = 5;
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const fmtTime = (d) => (d ? d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "—");
-const isThisMonth = (d) => {
-  const now = new Date();
-  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+const fmtNumber = (value) => new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(Number(value || 0));
+const currentMonthKey = () => {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit" }).formatToParts(new Date());
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  return `${year}-${month}`;
 };
 
-function MonthlyProgressBar({ T, salesmanId, target, leads }) {
-  const achieved = leads.filter((l) => l.salesmanId === salesmanId && isThisMonth(l.createdAt)).length;
-  const goal = target || 200;
-  const pct = Math.min(100, Math.round((achieved / goal) * 100));
-  const met = achieved >= goal;
+function MonthlyProgressBar({ T, target, metrics, selectedMonth, loading, error }) {
+  const allTime = selectedMonth === "all";
+  const achieved = Number(metrics?.leads_created || 0);
+  const revenue = Number(metrics?.revenue || 0);
+  const won = Number(metrics?.won || 0);
+  const goal = Number(target || 0);
+  const pct = !allTime && goal > 0 ? Math.min(100, Math.round((achieved / goal) * 100)) : 0;
+  const met = !allTime && goal > 0 && achieved >= goal;
+  const monthLabel = allTime ? "All time" : MONTH_NAMES[Number(selectedMonth.slice(5, 7)) - 1] || "Month";
 
   return (
     <div style={{ marginTop: 8 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-        <span style={{ fontSize: 10.5, color: T.inkSoft, fontWeight: 600 }}>This month</span>
-        <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10.5, fontWeight: 700, color: met ? T.verified : T.route }}>
-          {met && "🏆"} {achieved} / {goal}
-          <span style={{
-            fontSize: 9.5, padding: "1px 6px", borderRadius: 999,
-            background: met ? T.verifiedSoft : "#EEF1FD", color: met ? T.verified : T.route,
-          }}>{pct}%</span>
-        </span>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 4 }}>
+        <span style={{ fontSize: 10.5, color: T.inkSoft, fontWeight: 600 }}>{monthLabel}</span>
+        {loading ? (
+          <span style={{ fontSize: 10.5, color: T.inkSoft }}>Loading…</span>
+        ) : error ? (
+          <span style={{ fontSize: 10.5, color: T.danger }}>Revenue unavailable</span>
+        ) : allTime ? (
+          <span style={{ fontSize: 10.5, fontWeight: 700, color: T.route }}>{achieved} leads · {won} won</span>
+        ) : (
+          <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10.5, fontWeight: 700, color: met ? T.verified : T.route }}>
+            {met && "🏆"} {achieved}{goal > 0 ? ` / ${goal}` : " leads"}
+            {goal > 0 && <span style={{
+              fontSize: 9.5, padding: "1px 6px", borderRadius: 999,
+              background: met ? T.verifiedSoft : "#EEF1FD", color: met ? T.verified : T.route,
+            }}>{pct}%</span>}
+          </span>
+        )}
       </div>
-      <div style={{ height: 6, background: T.paperDeep, borderRadius: 999, overflow: "hidden" }}>
+      {!loading && !error && !allTime && goal > 0 && <div style={{ height: 6, background: T.paperDeep, borderRadius: 999, overflow: "hidden" }}>
         <div style={{
           height: "100%", width: `${pct}%`, borderRadius: 999, transition: "width 0.4s ease",
           background: met ? T.verified : `linear-gradient(90deg, ${T.route}, #6E8BF2)`,
         }} />
-      </div>
+      </div>}
+      {!loading && !error && <div style={{ marginTop: allTime || goal <= 0 ? 2 : 5, fontSize: 10.5, color: T.inkSoft }}>
+        Revenue <strong style={{ color: T.ink }}>{fmtNumber(revenue)}</strong>{won > 0 ? ` · ${won} won` : ""}
+      </div>}
     </div>
   );
 }
@@ -44,6 +63,15 @@ export default function AdminEmployeesPanel({ salesmen, leads, onAddClick, onSet
   const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [briefs, setBriefs] = useState({});
+  const [monthFilter, setMonthFilter] = useState(currentMonthKey);
+  const [revenueRows, setRevenueRows] = useState({});
+  const [revenueLoading, setRevenueLoading] = useState(true);
+  const [revenueError, setRevenueError] = useState("");
+  const filterYear = Number(currentMonthKey().slice(0, 4));
+  const monthOptions = useMemo(() => MONTH_NAMES.map((name, index) => ({
+    label: name,
+    value: `${filterYear}-${String(index + 1).padStart(2, "0")}`,
+  })), [filterYear]);
 
   useEffect(() => {
     let live = true;
@@ -83,6 +111,44 @@ export default function AdminEmployeesPanel({ salesmen, leads, onAddClick, onSet
     };
   }, [salesmen]);
 
+  useEffect(() => {
+    let live = true;
+    const controller = new AbortController();
+    const token = getSession()?.token;
+    const base = getApiBase();
+    if (!token || !base) {
+      setRevenueRows({});
+      setRevenueLoading(false);
+      setRevenueError("Revenue unavailable");
+      return undefined;
+    }
+
+    setRevenueLoading(true);
+    setRevenueError("");
+    fetch(`${base}/admin/employees/revenue?month=${encodeURIComponent(monthFilter)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+      signal: controller.signal,
+    }).then(async (res) => {
+      if (!res.ok) throw new Error(`Revenue request failed (${res.status})`);
+      return res.json();
+    }).then((data) => {
+      if (!live) return;
+      setRevenueRows(Object.fromEntries((data.rows || []).map((row) => [row.salesman_id, row])));
+    }).catch((err) => {
+      if (!live || err?.name === "AbortError") return;
+      setRevenueRows({});
+      setRevenueError("Revenue unavailable");
+    }).finally(() => {
+      if (live) setRevenueLoading(false);
+    });
+
+    return () => {
+      live = false;
+      controller.abort();
+    };
+  }, [monthFilter]);
+
   const employeeStatus = (s) => {
     if (s.status === "online") return "online";
     const sessions = briefs[s.id]?.sessions || [];
@@ -98,7 +164,7 @@ export default function AdminEmployeesPanel({ salesmen, leads, onAddClick, onSet
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, pages);
   const visible = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  useEffect(() => { setPage(1); }, [query, statusFilter]);
+  useEffect(() => { setPage(1); }, [query, statusFilter, monthFilter]);
 
   const briefLine = (s) => {
     const brief = briefs[s.id];
@@ -126,6 +192,10 @@ export default function AdminEmployeesPanel({ salesmen, leads, onAddClick, onSet
           <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: T.inkSoft }} />
           <input value={query} onChange={(e) => setQuery(e.target.value)} type="search" placeholder="Search employees" aria-label="Search employees" style={{ ...inputStyle, margin: 0, paddingLeft: 31, width: "100%", boxSizing: "border-box" }} />
         </div>
+        <select aria-label="Employee revenue month" value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)} style={{ ...inputStyle, width: "auto", minWidth: 124, margin: 0, fontWeight: 700 }}>
+          <option value="all">All Time</option>
+          {monthOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        </select>
         <div className="engage-employee-filter" style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
           {[["all","All"],["online","Online"],["offline","Offline"],["not-started","Not started"]].map(([key,label]) => (
             <button key={key} type="button" onClick={() => setStatusFilter(key)} style={{ border: `1px solid ${statusFilter === key ? T.route : T.line}`, background: statusFilter === key ? "#EAF5F0" : "#fff", color: statusFilter === key ? T.route : T.inkSoft, borderRadius: 8, padding: "6px 9px", fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}>{label}</button>
@@ -153,7 +223,7 @@ export default function AdminEmployeesPanel({ salesmen, leads, onAddClick, onSet
             <span style={{ display: "flex", alignItems: "center", gap: 3 }}><Clock size={12} /> {fmtTime(s.lastUpdate)}</span>
           </div>
           <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 3 }}>{(s.distanceM / 1000).toFixed(1)} km travelled today</div>
-          <MonthlyProgressBar T={T} salesmanId={s.id} target={s.monthlyTarget} leads={leads} />
+          <MonthlyProgressBar T={T} target={s.monthlyTarget} metrics={revenueRows[s.id]} selectedMonth={monthFilter} loading={revenueLoading} error={revenueError} />
           <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 8, flexWrap: "wrap" }}>
             <button onClick={() => onViewRoute(s)} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11.5, fontWeight: 700, color: T.route, background: "none", border: "none", cursor: "pointer", padding: 0 }}><Route size={12} /> View route</button>
             <button onClick={() => onMessageClick(s)} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11.5, fontWeight: 700, color: T.route, background: "none", border: "none", cursor: "pointer", padding: 0 }}><MessageSquare size={12} /> Message</button>
