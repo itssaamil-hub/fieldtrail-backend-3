@@ -11,6 +11,56 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Engage" />
     <title>Engage — Lead & Location Ledger</title>
+    <script>
+      (() => {
+        const recoveryKey = "engage:blank-shell-recovery";
+
+        async function recoverBlankShell() {
+          if (sessionStorage.getItem(recoveryKey)) return;
+          sessionStorage.setItem(recoveryKey, String(Date.now()));
+
+          try {
+            if ("serviceWorker" in navigator) {
+              const registrations = await navigator.serviceWorker.getRegistrations();
+              await Promise.all(registrations.map((registration) => {
+                const scriptUrl = registration.active?.scriptURL || registration.waiting?.scriptURL || registration.installing?.scriptURL || "";
+                try {
+                  const pathname = new URL(scriptUrl, location.href).pathname;
+                  return pathname === "/sw.js" ? registration.unregister() : Promise.resolve(false);
+                } catch {
+                  return Promise.resolve(false);
+                }
+              }));
+            }
+
+            if ("caches" in window) {
+              const names = await caches.keys();
+              await Promise.all(names
+                .filter((name) => /workbox|precache/i.test(name))
+                .map((name) => caches.delete(name)));
+            }
+          } catch {
+            // Recovery still continues with a cache-busting reload.
+          }
+
+          const url = new URL(location.href);
+          url.searchParams.set("engage_recover", Date.now().toString());
+          location.replace(url.toString());
+        }
+
+        window.addEventListener("error", (event) => {
+          const target = event.target;
+          if (target && (target.tagName === "SCRIPT" || target.tagName === "LINK")) recoverBlankShell();
+        }, true);
+
+        window.addEventListener("DOMContentLoaded", () => {
+          window.setTimeout(() => {
+            const root = document.getElementById("root");
+            if (root && root.childElementCount === 0 && !(root.textContent || "").trim()) recoverBlankShell();
+          }, 6000);
+        });
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
