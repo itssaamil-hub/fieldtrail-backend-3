@@ -34,13 +34,20 @@ export default function MobileContacts({ leads, onSelectLead, renderVerification
         }
       };
       return <div key={lead.id} role="button" tabIndex={0} className="engage-mobile-contact-card" onClick={openLead} onKeyDown={handleKeyDown}>
-        <div className="engage-mobile-contact-top">
+        <div className={`engage-mobile-contact-top${showVerification ? "" : " compact-status"}`}>
           <span className="engage-mobile-contact-avatar" aria-hidden="true">{initials(lead.owner || lead.business)}</span>
           <span className="engage-mobile-contact-identity">
             <strong className={!lead.owner?.trim() ? "is-missing" : undefined}>{contact}</strong>
             <span>{company}</span>
           </span>
-          <ChevronRight size={18} aria-hidden="true" />
+          {showVerification ? (
+            <ChevronRight size={18} aria-hidden="true" />
+          ) : (
+            <span className="engage-mobile-contact-top-actions">
+              <span className={`engage-mobile-contact-status ${lead.status || ""}`}>{status}</span>
+              <ChevronRight size={17} aria-hidden="true" />
+            </span>
+          )}
         </div>
         {enableCall && lead.phone ? (
           <a className="engage-mobile-contact-phone engage-mobile-contact-phone--callable" href={`tel:${String(lead.phone).replace(/[^+\d]/g, "")}`} onClick={(event) => event.stopPropagation()} aria-label={`Call ${contact} at ${lead.phone}`}>
@@ -57,10 +64,12 @@ export default function MobileContacts({ leads, onSelectLead, renderVerification
           <span>{lead.salesmanName || "Unassigned"}</span>
           {lead.subLocation && <span>{lead.subLocation}</span>}
         </div>
-        <div className={`engage-mobile-contact-bottom${showVerification ? "" : " no-verification"}`}>
-          <span className={`engage-mobile-contact-status ${lead.status || ""}`}>{status}</span>
-          {showVerification && <span className="engage-mobile-contact-verification">{renderVerification?.(lead)}</span>}
-        </div>
+        {showVerification && (
+          <div className="engage-mobile-contact-bottom">
+            <span className={`engage-mobile-contact-status ${lead.status || ""}`}>{status}</span>
+            <span className="engage-mobile-contact-verification">{renderVerification?.(lead)}</span>
+          </div>
+        )}
       </div>;
     })}
   </div>;
