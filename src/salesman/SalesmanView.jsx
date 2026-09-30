@@ -6,6 +6,7 @@ import useSalesmanTasks from "../useSalesmanTasks.js";
 import { showSaveFeedback } from "../saveFeedback.js";
 import MobileContacts from "../MobileContacts.jsx";
 import SalesmanTargetCard from "./SalesmanTargetCard.jsx";
+import NeedsAttentionCard from "./NeedsAttentionCard.jsx";
 
 const lazyNamed = (loader, exportName) => {
   const LazyComponent = lazy(() => loader().then((mod) => ({ default: mod[exportName] })));
@@ -96,6 +97,15 @@ export default function SalesmanView({ notificationLead, session, leads, leadSum
   const contactNeedle = contactSearch.trim().toLowerCase();
   const contactRows = leads.filter((lead) => !contactNeedle || [lead.owner, lead.business, lead.phone, lead.subLocation].some((value) => String(value || "").toLowerCase().includes(contactNeedle)));
 
+  const openBriefingLead = (id) => {
+    const found = leads.find((lead) => String(lead.id) === String(id));
+    if (found) {
+      setViewingLead(found);
+      return;
+    }
+    api.salesmanLead(id).then((res) => setViewingLead(mapLeadRow(res.lead))).catch(() => setNotificationLeadError("Couldn't open this lead."));
+  };
+
   useEffect(() => {
     if (page === "reports" && hasMoreLeads && !loadingMoreLeads) loadMoreLeads?.();
   }, [page, hasMoreLeads, loadingMoreLeads, loadMoreLeads, leads.length]);
@@ -169,11 +179,13 @@ export default function SalesmanView({ notificationLead, session, leads, leadSum
 
       {!dayStarted && !allowLeadWithoutStartDay && <div style={{ marginTop: 12, fontSize: 12, color: T.warn, background: T.warnSoft, padding: "8px 10px", borderRadius: 11 }}>Start your day to enable lead capture.</div>}
 
+      <NeedsAttentionCard online={online} onOpenLead={openBriefingLead} />
+      <div style={{ display: "none" }} aria-hidden="true"><TasksEntry onPendingChange={handlePendingTasksChange} /></div>
       </div>
-      <div hidden={!dashboard && mobileTab !== "messages"}>
-      <MessagesSection messages={messages} onMarkRead={onMarkMessageRead} onDelete={onDeleteMessage} onReply={onReplyMessage} employeeRepliesEnabled={employeeRepliesEnabled} onOpenLead={(id) => { const found = leads.find(l => l.id === id); if (found) setViewingLead(found); else api.salesmanLead(id).then(r => setViewingLead(mapLeadRow(r.lead))).catch(() => setNotificationLeadError("Couldn't open this lead.")); }} />
-      </div>
-      <div hidden={!dashboard}><TasksEntry onPendingChange={handlePendingTasksChange} /></div>
+
+      {visited.messages && <div hidden={!phone || mobileTab !== "messages"}>
+        <MessagesSection messages={messages} onMarkRead={onMarkMessageRead} onDelete={onDeleteMessage} onReply={onReplyMessage} employeeRepliesEnabled={employeeRepliesEnabled} onOpenLead={openBriefingLead} />
+      </div>}
       {visited.leads && <div hidden={!phone || mobileTab !== "leads"}>
         <MyLeadsModal {...leadPagingProps} embedded leads={leads} onSelectLead={setViewingLead} allowDateFilter employeeMobile />
       </div>}
