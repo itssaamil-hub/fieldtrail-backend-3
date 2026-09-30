@@ -66,7 +66,7 @@ export default function SalesmanTargetCard({ T, monthCount, monthTarget, todayCo
           <div style={{ fontSize: 10.5, color: T.inkSoft, fontWeight: 700, marginBottom: 3 }}>This month&apos;s target</div>
           {monthlyGoal > 0 ? (
             <>
-              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800, fontSize: 20, lineHeight: 1.08, color: T.ink, letterSpacing: "-.35px" }}>
+              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800, fontSize: 17, lineHeight: 1.08, color: T.ink, letterSpacing: "-.25px" }}>
                 {monthlyCurrent} / {monthlyGoal} deals
               </div>
               <div style={{ marginTop: 4, fontSize: 10.5, color: T.inkSoft, lineHeight: 1.35 }}>
