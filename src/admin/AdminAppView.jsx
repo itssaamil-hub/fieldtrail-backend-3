@@ -401,9 +401,9 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
         />
       )}
       {viewingSalesmanLeads && (
-        <SalesmanLeadsModal
-          salesman={viewingSalesmanLeads}
-          leads={leads}
+        <MyLeadsModal
+          leads={leads.filter((lead) => lead.salesmanId === viewingSalesmanLeads.id)}
+          title={`${viewingSalesmanLeads.name} · Leads`}
           onClose={() => setViewingSalesmanLeads(null)}
           onSelectLead={(l) => { setViewingSalesmanLeads(null); setSelectedLead(l); }}
         />
