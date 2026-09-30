@@ -1,0 +1,18 @@
+name: Trace Smoke Test Contracts
+on:
+  push:
+    paths:
+      - '.github/workflows/trace-smoke-test-contracts.yml'
+jobs:
+  trace:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trace auth and app contracts
+        run: |
+          echo '--- login/session ---'
+          grep -RInE 'login\(|auth/login|setSession\(|getSession\(|session\.role|session\?\.role|role ===|role===' src/App.jsx src/api.js src/app/AppShellFeatures.jsx || true
+          echo '--- API method names around export ---'
+          grep -nE 'export const api|const api =|login:|login\s*\(' src/api.js || true
+          echo '--- critical UI labels ---'
+          grep -RInE 'Add Lead|View route|Employee Settings|Day Closing reports|Quotations|Notifications|Tasks' src/admin src/salesman src/app src/lead src/reports src/*.jsx | head -120 || true
