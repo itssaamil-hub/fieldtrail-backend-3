@@ -95,7 +95,6 @@ export default function SalesmanView({ notificationLead, session, leads, leadSum
   const leadPagingProps = { hasMore: hasMoreLeads, onLoadMore: loadMoreLeads, loadingMore: loadingMoreLeads, totalCount: totalLeadCount };
   const contactNeedle = contactSearch.trim().toLowerCase();
   const contactRows = leads.filter((lead) => !contactNeedle || [lead.owner, lead.business, lead.phone, lead.subLocation].some((value) => String(value || "").toLowerCase().includes(contactNeedle)));
-  const firstName = String(session?.fullName || "").trim().split(/\s+/)[0] || "there";
 
   useEffect(() => {
     if (page === "reports" && hasMoreLeads && !loadingMoreLeads) loadMoreLeads?.();
@@ -110,8 +109,8 @@ export default function SalesmanView({ notificationLead, session, leads, leadSum
       <div hidden={!dashboard}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <div>
-          <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 18 }}>{greetingForNow()}, {firstName}</div>
-          <div style={{ fontSize: 12, color: T.inkSoft }}>{session.phone}</div>
+          <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 18 }}>{session.fullName}</div>
+          <div style={{ fontSize: 12, color: T.inkSoft }}>{greetingForNow()} 👋</div>
         </div>
         <button
           onClick={onToggleDay}
