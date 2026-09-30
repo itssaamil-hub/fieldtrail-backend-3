@@ -72,7 +72,7 @@ test('employee View Route renders without crash', async ({ page }) => {
   await bootAs(page, adminSession);
   await page.getByRole('button', { name: 'Employees' }).click();
   await noCrash(page);
-  await expect(page.getByText('Smoke Salesman', { exact: true })).toBeVisible();
+  await expect(page.getByText('Smoke Salesman', { exact: true }).first()).toBeVisible();
   await page.getByRole('button', { name: /view route/i }).click();
   await noCrash(page);
   await expect(page.locator('body')).toContainText(/No location pings|Route/i);
