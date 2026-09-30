@@ -38,8 +38,10 @@ async function bootAs(page, session) {
   await expect(page.getByText('Engage needs to reload')).toHaveCount(0);
 }
 
+const adminSession = { id: 'smoke-admin', role: 'admin', name: 'Smoke Admin', token: 'smoke-token' };
+
 test('admin shell and major navigation render without crash', async ({ page }) => {
-  await bootAs(page, { id: 'smoke-admin', role: 'admin', name: 'Smoke Admin', token: 'smoke-token' });
+  await bootAs(page, adminSession);
   await expect(page.locator('body')).toContainText(/Engage|Dashboard|Employees/i);
   const reports = page.getByText('Reports', { exact: true }).first();
   if (await reports.count()) {
@@ -62,15 +64,18 @@ test('salesman shell renders without crash', async ({ page }) => {
   await expect(page.getByText('Engage needs to reload')).toHaveCount(0);
 });
 
-test('settings and notification surfaces do not trigger crash boundary', async ({ page }) => {
-  await bootAs(page, { id: 'smoke-admin', role: 'admin', name: 'Smoke Admin', token: 'smoke-token' });
+test('settings surface does not trigger crash boundary', async ({ page }) => {
+  await bootAs(page, adminSession);
   const settingsButton = page.getByRole('button', { name: /settings/i }).first();
   if (await settingsButton.count()) {
     await settingsButton.click();
     await page.waitForTimeout(250);
     await expect(page.getByText('Engage needs to reload')).toHaveCount(0);
   }
-  await page.keyboard.press('Escape').catch(() => {});
+});
+
+test('notification surface does not trigger crash boundary', async ({ page }) => {
+  await bootAs(page, adminSession);
   const notificationButton = page.getByRole('button', { name: /notification|bell/i }).first();
   if (await notificationButton.count()) {
     await notificationButton.click();
