@@ -1,0 +1,106 @@
+import React from "react";
+
+function safeNumber(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.max(0, n) : 0;
+}
+
+function percent(current, target) {
+  if (!target) return 0;
+  return Math.min(100, Math.round((current / target) * 100));
+}
+
+export default function SalesmanTargetCard({ T, monthCount, monthTarget, todayCount, dailyTarget, wonValue, fmtMoney }) {
+  const monthlyCurrent = safeNumber(monthCount);
+  const monthlyGoal = safeNumber(monthTarget);
+  const dailyCurrent = safeNumber(todayCount);
+  const dailyGoal = safeNumber(dailyTarget);
+  const monthPct = percent(monthlyCurrent, monthlyGoal);
+  const todayPct = percent(dailyCurrent, dailyGoal);
+  const monthRemaining = monthlyGoal > 0 ? Math.max(0, monthlyGoal - monthlyCurrent) : null;
+  const todayRemaining = dailyGoal > 0 ? Math.max(0, dailyGoal - dailyCurrent) : null;
+  const displayWonValue = safeNumber(wonValue);
+  const circleSize = 92;
+  const stroke = 9;
+  const radius = (circleSize - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const dashOffset = circumference * (1 - monthPct / 100);
+
+  return (
+    <section
+      aria-label="Sales target progress"
+      style={{
+        background: "#fff",
+        border: `1px solid ${T.line}`,
+        borderRadius: 18,
+        padding: "18px 16px 16px",
+        marginBottom: 16,
+        boxShadow: "0 8px 24px rgba(20,45,46,.07)",
+      }}
+    >
+      <div style={{ display: "grid", gridTemplateColumns: "100px minmax(0,1fr)", gap: 15, alignItems: "center" }}>
+        <div style={{ width: circleSize, height: circleSize, position: "relative", display: "grid", placeItems: "center" }}>
+          <svg width={circleSize} height={circleSize} viewBox={`0 0 ${circleSize} ${circleSize}`} aria-hidden="true" style={{ transform: "rotate(-90deg)" }}>
+            <circle cx={circleSize / 2} cy={circleSize / 2} r={radius} fill="none" stroke={T.paperDeep} strokeWidth={stroke} />
+            <circle
+              cx={circleSize / 2}
+              cy={circleSize / 2}
+              r={radius}
+              fill="none"
+              stroke={T.route}
+              strokeWidth={stroke}
+              strokeLinecap="round"
+              strokeDasharray={circumference}
+              strokeDashoffset={dashOffset}
+              style={{ transition: "stroke-dashoffset .35s ease" }}
+            />
+          </svg>
+          <strong style={{ position: "absolute", fontFamily: "'Space Grotesk', sans-serif", fontSize: 23, color: T.ink }}>{monthPct}%</strong>
+        </div>
+
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 12, color: T.inkSoft, fontWeight: 700, marginBottom: 5 }}>This month&apos;s target</div>
+          {monthlyGoal > 0 ? (
+            <>
+              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800, fontSize: 27, lineHeight: 1.08, color: T.ink, letterSpacing: "-.5px" }}>
+                {monthlyCurrent} / {monthlyGoal} deals
+              </div>
+              <div style={{ marginTop: 7, fontSize: 12.5, color: T.inkSoft, lineHeight: 1.4 }}>
+                {monthRemaining === 0 ? "Monthly target reached" : `${monthRemaining} to go`}
+                {displayWonValue > 0 ? ` · ${fmtMoney(displayWonValue)} won` : ""}
+              </div>
+            </>
+          ) : (
+            <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>Monthly target not set</div>
+          )}
+        </div>
+      </div>
+
+      <div style={{ height: 1, background: T.line, margin: "16px 0 13px" }} />
+
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, marginBottom: 7 }}>
+        <div>
+          <div style={{ fontSize: 12, color: T.inkSoft, fontWeight: 700 }}>Today</div>
+          {dailyGoal > 0 && todayRemaining != null && (
+            <div style={{ fontSize: 10.5, color: T.inkSoft, marginTop: 2 }}>{todayRemaining === 0 ? "Daily target reached" : `${todayRemaining} to go`}</div>
+          )}
+        </div>
+        <strong style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, color: T.ink }}>
+          {dailyGoal > 0 ? `${dailyCurrent} / ${dailyGoal}` : "Target not set"}
+        </strong>
+      </div>
+
+      <div style={{ height: 9, background: T.paperDeep, borderRadius: 999, overflow: "hidden" }}>
+        <div
+          style={{
+            height: "100%",
+            width: `${todayPct}%`,
+            background: T.route,
+            borderRadius: 999,
+            transition: "width .35s ease",
+          }}
+        />
+      </div>
+    </section>
+  );
+}
