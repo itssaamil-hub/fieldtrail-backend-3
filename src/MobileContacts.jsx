@@ -15,7 +15,7 @@ function initials(name) {
   return (words.length === 1 ? words[0][0] : `${words[0][0]}${words[1][0]}`).toUpperCase();
 }
 
-export default function MobileContacts({ leads, onSelectLead, renderVerification, enableCall = false }) {
+export default function MobileContacts({ leads, onSelectLead, renderVerification, enableCall = false, showVerification = true }) {
   if (!leads.length) {
     return <div className="engage-mobile-contacts-empty">No contacts match these filters.</div>;
   }
@@ -57,9 +57,9 @@ export default function MobileContacts({ leads, onSelectLead, renderVerification
           <span>{lead.salesmanName || "Unassigned"}</span>
           {lead.subLocation && <span>{lead.subLocation}</span>}
         </div>
-        <div className="engage-mobile-contact-bottom">
+        <div className={`engage-mobile-contact-bottom${showVerification ? "" : " no-verification"}`}>
           <span className={`engage-mobile-contact-status ${lead.status || ""}`}>{status}</span>
-          <span className="engage-mobile-contact-verification">{renderVerification?.(lead)}</span>
+          {showVerification && <span className="engage-mobile-contact-verification">{renderVerification?.(lead)}</span>}
         </div>
       </div>;
     })}
