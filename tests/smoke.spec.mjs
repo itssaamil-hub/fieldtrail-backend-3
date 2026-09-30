@@ -26,39 +26,32 @@ async function mockBackend(page) {
   await page.route(`${apiBase}/**`, async route => {
     const req = route.request();
     const url = new URL(req.url());
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify(responseFor(url.pathname, req.method())),
-    });
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(responseFor(url.pathname, req.method())) });
   });
 }
 
 async function bootAs(page, session) {
   await mockBackend(page);
-  await page.addInitScript(sessionValue => {
-    localStorage.setItem('fieldtrail:session', JSON.stringify(sessionValue));
-  }, session);
-  await page.goto('/');
-  await page.waitForLoadState('networkidle').catch(() => {});
+  await page.addInitScript(sessionValue => localStorage.setItem('fieldtrail:session', JSON.stringify(sessionValue)), session);
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(750);
   await expect(page.getByText('Engage needs to reload')).toHaveCount(0);
 }
 
 test('admin shell and major navigation render without crash', async ({ page }) => {
   await bootAs(page, { id: 'smoke-admin', role: 'admin', name: 'Smoke Admin', token: 'smoke-token' });
   await expect(page.locator('body')).toContainText(/Engage|Dashboard|Employees/i);
-  await expect(page.getByText('Engage needs to reload')).toHaveCount(0);
-
   const reports = page.getByText('Reports', { exact: true }).first();
   if (await reports.count()) {
     await reports.click();
+    await page.waitForTimeout(250);
     await expect(page.getByText('Engage needs to reload')).toHaveCount(0);
     await expect(page.locator('body')).toContainText(/Reports|Day Closing/i);
   }
-
   const employees = page.getByText('Employees', { exact: true }).first();
   if (await employees.count()) {
     await employees.click();
+    await page.waitForTimeout(250);
     await expect(page.getByText('Engage needs to reload')).toHaveCount(0);
   }
 });
@@ -71,17 +64,17 @@ test('salesman shell renders without crash', async ({ page }) => {
 
 test('settings and notification surfaces do not trigger crash boundary', async ({ page }) => {
   await bootAs(page, { id: 'smoke-admin', role: 'admin', name: 'Smoke Admin', token: 'smoke-token' });
-
   const settingsButton = page.getByRole('button', { name: /settings/i }).first();
   if (await settingsButton.count()) {
     await settingsButton.click();
+    await page.waitForTimeout(250);
     await expect(page.getByText('Engage needs to reload')).toHaveCount(0);
   }
-
   await page.keyboard.press('Escape').catch(() => {});
   const notificationButton = page.getByRole('button', { name: /notification|bell/i }).first();
   if (await notificationButton.count()) {
     await notificationButton.click();
+    await page.waitForTimeout(250);
     await expect(page.getByText('Engage needs to reload')).toHaveCount(0);
   }
 });
