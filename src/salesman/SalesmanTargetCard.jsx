@@ -25,29 +25,42 @@ export default function SalesmanTargetCard({ T, monthCount, monthTarget, todayCo
   const radius = (circleSize - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
   const dashOffset = circumference * (1 - monthPct / 100);
+  const monthlyAccent = "#F28A52";
+  const monthlySoft = "#FFF2E9";
+  const dailySoft = "#EAF5F3";
 
   return (
     <section
       aria-label="Sales target progress"
       style={{
-        background: "#fff",
+        background: `linear-gradient(155deg, ${T.card} 0%, ${T.paperDeep} 100%)`,
         border: `1px solid ${T.line}`,
         borderRadius: 16,
-        padding: "13px 14px 12px",
+        padding: "12px 13px 11px",
         marginBottom: 16,
         boxShadow: "0 2px 8px rgba(20,45,46,.05)",
       }}
     >
-      <div style={{ display: "grid", gridTemplateColumns: "72px minmax(0,1fr)", gap: 11, alignItems: "center" }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "72px minmax(0,1fr)",
+          gap: 11,
+          alignItems: "center",
+          background: monthlySoft,
+          borderRadius: 12,
+          padding: "9px 10px",
+        }}
+      >
         <div style={{ width: circleSize, height: circleSize, position: "relative", display: "grid", placeItems: "center" }}>
           <svg width={circleSize} height={circleSize} viewBox={`0 0 ${circleSize} ${circleSize}`} aria-hidden="true" style={{ transform: "rotate(-90deg)" }}>
-            <circle cx={circleSize / 2} cy={circleSize / 2} r={radius} fill="none" stroke={T.paperDeep} strokeWidth={stroke} />
+            <circle cx={circleSize / 2} cy={circleSize / 2} r={radius} fill="none" stroke="#F6DED0" strokeWidth={stroke} />
             <circle
               cx={circleSize / 2}
               cy={circleSize / 2}
               r={radius}
               fill="none"
-              stroke={T.route}
+              stroke={monthlyAccent}
               strokeWidth={stroke}
               strokeLinecap="round"
               strokeDasharray={circumference}
@@ -67,7 +80,10 @@ export default function SalesmanTargetCard({ T, monthCount, monthTarget, todayCo
               </div>
               <div style={{ marginTop: 4, fontSize: 10.5, color: T.inkSoft, lineHeight: 1.35 }}>
                 {monthRemaining === 0 ? "Target reached" : `${monthRemaining} to go`}
-                {displayWonValue > 0 ? ` · ${fmtMoney(displayWonValue)} won` : ""}
+                {displayWonValue > 0 && typeof fmtMoney === "function" ? ` · ${fmtMoney(displayWonValue)} won` : ""}
+              </div>
+              <div style={{ height: 5, background: "#F6DED0", borderRadius: 999, overflow: "hidden", marginTop: 7 }}>
+                <div style={{ height: "100%", width: `${monthPct}%`, background: monthlyAccent, borderRadius: 999, transition: "width .35s ease" }} />
               </div>
             </>
           ) : (
@@ -76,30 +92,37 @@ export default function SalesmanTargetCard({ T, monthCount, monthTarget, todayCo
         </div>
       </div>
 
-      <div style={{ height: 1, background: T.line, margin: "11px 0 9px" }} />
-
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 5 }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 6, minWidth: 0 }}>
-          <span style={{ fontSize: 11, color: T.inkSoft, fontWeight: 700 }}>Today</span>
-          {dailyGoal > 0 && todayRemaining != null && (
-            <span style={{ fontSize: 9.5, color: T.inkSoft }}>{todayRemaining === 0 ? "Target reached" : `${todayRemaining} to go`}</span>
-          )}
+      <div
+        style={{
+          marginTop: 8,
+          background: dailySoft,
+          borderRadius: 11,
+          padding: "8px 10px 9px",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 5 }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 6, minWidth: 0 }}>
+            <span style={{ fontSize: 11, color: T.inkSoft, fontWeight: 700 }}>Today</span>
+            {dailyGoal > 0 && todayRemaining != null && (
+              <span style={{ fontSize: 9.5, color: T.inkSoft }}>{todayRemaining === 0 ? "Target reached" : `${todayRemaining} to go`}</span>
+            )}
+          </div>
+          <strong style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 14.5, color: T.ink, whiteSpace: "nowrap" }}>
+            {dailyGoal > 0 ? `${dailyCurrent} / ${dailyGoal}` : "Target not set"}
+          </strong>
         </div>
-        <strong style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 14.5, color: T.ink, whiteSpace: "nowrap" }}>
-          {dailyGoal > 0 ? `${dailyCurrent} / ${dailyGoal}` : "Target not set"}
-        </strong>
-      </div>
 
-      <div style={{ height: 7, background: T.paperDeep, borderRadius: 999, overflow: "hidden" }}>
-        <div
-          style={{
-            height: "100%",
-            width: `${todayPct}%`,
-            background: T.route,
-            borderRadius: 999,
-            transition: "width .35s ease",
-          }}
-        />
+        <div style={{ height: 6, background: "#CFE6E1", borderRadius: 999, overflow: "hidden" }}>
+          <div
+            style={{
+              height: "100%",
+              width: `${todayPct}%`,
+              background: T.route,
+              borderRadius: 999,
+              transition: "width .35s ease",
+            }}
+          />
+        </div>
       </div>
     </section>
   );
