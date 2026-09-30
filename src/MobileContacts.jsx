@@ -15,7 +15,7 @@ function initials(name) {
   return (words.length === 1 ? words[0][0] : `${words[0][0]}${words[1][0]}`).toUpperCase();
 }
 
-export default function MobileContacts({ leads, onSelectLead, renderVerification }) {
+export default function MobileContacts({ leads, onSelectLead, renderVerification, enableCall = false }) {
   if (!leads.length) {
     return <div className="engage-mobile-contacts-empty">No contacts match these filters.</div>;
   }
@@ -25,7 +25,15 @@ export default function MobileContacts({ leads, onSelectLead, renderVerification
       const contact = lead.owner?.trim() || "Contact not added";
       const company = lead.business?.trim() || "Company not added";
       const status = STATUS_LABELS[lead.status] || lead.status || "Not added";
-      return <button key={lead.id} type="button" className="engage-mobile-contact-card" onClick={() => onSelectLead(lead)}>
+      const openLead = () => onSelectLead(lead);
+      const handleKeyDown = (event) => {
+        if (event.target !== event.currentTarget) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openLead();
+        }
+      };
+      return <div key={lead.id} role="button" tabIndex={0} className="engage-mobile-contact-card" onClick={openLead} onKeyDown={handleKeyDown}>
         <div className="engage-mobile-contact-top">
           <span className="engage-mobile-contact-avatar" aria-hidden="true">{initials(lead.owner || lead.business)}</span>
           <span className="engage-mobile-contact-identity">
@@ -34,10 +42,17 @@ export default function MobileContacts({ leads, onSelectLead, renderVerification
           </span>
           <ChevronRight size={18} aria-hidden="true" />
         </div>
-        <div className="engage-mobile-contact-phone">
-          <Phone size={13} aria-hidden="true" />
-          <span>{lead.phone || "Phone not added"}</span>
-        </div>
+        {enableCall && lead.phone ? (
+          <a className="engage-mobile-contact-phone engage-mobile-contact-phone--callable" href={`tel:${String(lead.phone).replace(/[^+\d]/g, "")}`} onClick={(event) => event.stopPropagation()} aria-label={`Call ${contact} at ${lead.phone}`}>
+            <Phone size={13} aria-hidden="true" />
+            <span>{lead.phone}</span>
+          </a>
+        ) : (
+          <div className="engage-mobile-contact-phone">
+            <Phone size={13} aria-hidden="true" />
+            <span>{lead.phone || "Phone not added"}</span>
+          </div>
+        )}
         <div className="engage-mobile-contact-meta">
           <span>{lead.salesmanName || "Unassigned"}</span>
           {lead.subLocation && <span>{lead.subLocation}</span>}
@@ -46,7 +61,7 @@ export default function MobileContacts({ leads, onSelectLead, renderVerification
           <span className={`engage-mobile-contact-status ${lead.status || ""}`}>{status}</span>
           <span className="engage-mobile-contact-verification">{renderVerification?.(lead)}</span>
         </div>
-      </button>;
+      </div>;
     })}
   </div>;
 }
