@@ -138,6 +138,16 @@ test('notification surface does not trigger crash boundary', async ({ page }) =>
   await expect(page.locator('body')).toContainText(/Notifications|Daily sales briefing/i);
 });
 
+test('salesman mobile navigation uses Add Contact without duplicate My Leads', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await bootAs(page, { id: 'smoke-salesman', role: 'salesman', name: 'Smoke Salesman', fullName: 'Smoke Salesman', token: 'smoke-token' });
+  await expect(page.getByRole('button', { name: 'Add Contact' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'My Leads' })).toHaveCount(1);
+  await page.getByRole('button', { name: 'My Leads' }).click();
+  await noCrash(page);
+  await expect(page.locator('body')).toContainText(/My Leads|Kanban|Leads/i);
+});
+
 test('salesman shell renders without crash', async ({ page }) => {
   await bootAs(page, { id: 'smoke-salesman', role: 'salesman', name: 'Smoke Salesman', fullName: 'Smoke Salesman', token: 'smoke-token' });
   await expect(page.locator('body')).toContainText(/Engage|Today|Leads|Start Day/i);
