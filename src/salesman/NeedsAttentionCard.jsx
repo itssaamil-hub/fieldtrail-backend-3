@@ -10,6 +10,7 @@ export default function NeedsAttentionCard({ online, onOpenLead }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [retry, setRetry] = useState(0);
+  const [selectedBucket, setSelectedBucket] = useState("overdue");
 
   useEffect(() => {
     let cancelled = false;
@@ -39,6 +40,13 @@ export default function NeedsAttentionCard({ online, onOpenLead }) {
   const priorityLeads = briefing?.priorityLeads || [];
   const focus = briefing?.focus || briefing?.recommendation || "Review the most urgent follow-ups first.";
   const attentionCount = overdue + today + priorityLeads.length;
+  const selectedItems = followUps[selectedBucket] || [];
+  const selectedLabel = selectedBucket === "overdue" ? "Overdue" : selectedBucket === "today" ? "Today" : "Upcoming";
+
+  const openBucket = (bucket) => {
+    setSelectedBucket(bucket);
+    setOpen(true);
+  };
 
   return (
     <section style={{
@@ -87,13 +95,13 @@ export default function NeedsAttentionCard({ online, onOpenLead }) {
       {!loading && !error && briefing && <div style={{ padding: "0 16px 15px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 8 }}>
           {[
-            [overdue, "Overdue", "#C45E2A", "#FFF4ED"],
-            [today, "Today", "#145C5D", "#EDF7F4"],
-            [upcoming, "Upcoming", "#51606A", "#F3F5F6"],
-          ].map(([value, label, color, bg]) => <div key={label} style={{ borderRadius: 12, padding: "9px 8px", background: bg, textAlign: "center" }}>
+            ["overdue", overdue, "Overdue", "#C45E2A", "#FFF4ED"],
+            ["today", today, "Today", "#145C5D", "#EDF7F4"],
+            ["upcoming", upcoming, "Upcoming", "#51606A", "#F3F5F6"],
+          ].map(([key, value, label, color, bg]) => <button key={label} type="button" onClick={() => openBucket(key)} aria-label={`Show ${label.toLowerCase()} follow-ups`} style={{ border: selectedBucket === key && open ? `1px solid ${color}33` : "1px solid transparent", borderRadius: 12, padding: "9px 8px", background: bg, textAlign: "center", cursor: "pointer", boxShadow: selectedBucket === key && open ? "0 3px 10px rgba(23,57,58,.05)" : "none" }}>
             <div style={{ fontSize: 16, lineHeight: 1.1, fontWeight: 800, color }}>{value}</div>
             <div style={{ marginTop: 4, fontSize: 10.5, fontWeight: 700, color: "#667476" }}>{label}</div>
-          </div>)}
+          </button>)}
         </div>
 
         <div style={{ marginTop: 11, padding: "10px 12px", borderRadius: 12, background: "#F7FAF9", border: "1px solid #E8EFEC" }}>
@@ -110,22 +118,40 @@ export default function NeedsAttentionCard({ online, onOpenLead }) {
         {loading && <div role="status" style={{ fontSize: 12.5, color: "#728081" }}>Loading priorities…</div>}
         {!loading && !error && briefing && <>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 9 }}>
-            <strong style={{ fontSize: 12.5, color: "#244344" }}>Priority leads</strong>
-            <span style={{ fontSize: 10.5, color: "#7B898A" }}>{priorityLeads.length ? `${priorityLeads.length} to review` : "All clear"}</span>
+            <strong style={{ fontSize: 12.5, color: "#244344" }}>{selectedLabel} follow-ups</strong>
+            <span style={{ fontSize: 10.5, color: "#7B898A" }}>{selectedItems.length ? `${selectedItems.length} ${selectedItems.length === 1 ? "item" : "items"}` : "All clear"}</span>
           </div>
 
-          {priorityLeads.length ? <div style={{ display: "grid", gap: 8 }}>
-            {priorityLeads.slice(0, 5).map((lead) => <button key={lead.id} type="button" onClick={() => onOpenLead?.(lead.id)} style={{ width: "100%", border: "1px solid #E5ECE9", borderRadius: 13, background: "#fff", padding: "11px 12px", textAlign: "left", cursor: "pointer", boxShadow: "0 4px 12px rgba(28,62,63,.04)" }}>
+          {selectedItems.length ? <div style={{ display: "grid", gap: 8 }}>
+            {selectedItems.slice(0, 6).map((lead) => <button key={lead.id} type="button" onClick={() => onOpenLead?.(lead.id)} style={{ width: "100%", border: "1px solid #E5ECE9", borderRadius: 13, background: "#fff", padding: "11px 12px", textAlign: "left", cursor: "pointer", boxShadow: "0 4px 12px rgba(28,62,63,.04)" }}>
               <span style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
                 <span style={{ minWidth: 0 }}>
                   <strong style={{ display: "block", fontSize: 12.8, color: "#203A3B", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{lead.business_name}</strong>
-                  <span style={{ display: "block", marginTop: 4, fontSize: 10.8, color: "#768486", lineHeight: 1.35 }}>{lead.reasons?.length ? lead.reasons.join(" · ") : statusLabel(lead.status)}</span>
+                  <span style={{ display: "block", marginTop: 4, fontSize: 10.8, color: "#768486", lineHeight: 1.35 }}>{statusLabel(lead.status)}{lead.next_follow_up_date ? ` · ${lead.next_follow_up_date}` : ""}</span>
                 </span>
                 <span style={{ flex: "0 0 auto", fontSize: 11, fontWeight: 800, color: "#145C5D", paddingTop: 1 }}>View lead →</span>
               </span>
             </button>)}
-            {priorityLeads.length > 5 && <div style={{ textAlign: "center", fontSize: 10.8, color: "#7C898B", paddingTop: 2 }}>+{priorityLeads.length - 5} more priority leads</div>}
-          </div> : <div style={{ padding: "13px 12px", borderRadius: 12, background: "#F4FAF7", color: "#2E665B", fontSize: 12, fontWeight: 600 }}>Nothing urgent needs attention right now.</div>}
+            {selectedItems.length > 6 && <div style={{ textAlign: "center", fontSize: 10.8, color: "#7C898B", paddingTop: 2 }}>+{selectedItems.length - 6} more</div>}
+          </div> : <div style={{ padding: "13px 12px", borderRadius: 12, background: "#F4FAF7", color: "#2E665B", fontSize: 12, fontWeight: 600 }}>No {selectedLabel.toLowerCase()} follow-ups right now.</div>}
+
+          {!!priorityLeads.length && <div style={{ marginTop: 13, paddingTop: 12, borderTop: "1px solid #E8EFEC" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 9 }}>
+              <strong style={{ fontSize: 12.5, color: "#244344" }}>Priority leads</strong>
+              <span style={{ fontSize: 10.5, color: "#7B898A" }}>{priorityLeads.length} to review</span>
+            </div>
+            <div style={{ display: "grid", gap: 8 }}>
+              {priorityLeads.slice(0, 3).map((lead) => <button key={lead.id} type="button" onClick={() => onOpenLead?.(lead.id)} style={{ width: "100%", border: "1px solid #E5ECE9", borderRadius: 13, background: "#fff", padding: "11px 12px", textAlign: "left", cursor: "pointer", boxShadow: "0 4px 12px rgba(28,62,63,.04)" }}>
+                <span style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+                  <span style={{ minWidth: 0 }}>
+                    <strong style={{ display: "block", fontSize: 12.8, color: "#203A3B", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{lead.business_name}</strong>
+                    <span style={{ display: "block", marginTop: 4, fontSize: 10.8, color: "#768486", lineHeight: 1.35 }}>{lead.reasons?.length ? lead.reasons.join(" · ") : statusLabel(lead.status)}</span>
+                  </span>
+                  <span style={{ flex: "0 0 auto", fontSize: 11, fontWeight: 800, color: "#145C5D", paddingTop: 1 }}>View lead →</span>
+                </span>
+              </button>)}
+            </div>
+          </div>}
 
           <button type="button" onClick={() => setOpen(false)} style={{ width: "100%", marginTop: 11, border: 0, background: "transparent", color: "#5D7475", fontSize: 11.5, fontWeight: 750, cursor: "pointer", padding: "4px 0" }}>Show less ↑</button>
         </>}
