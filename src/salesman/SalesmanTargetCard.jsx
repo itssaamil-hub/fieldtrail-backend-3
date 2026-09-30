@@ -20,8 +20,8 @@ export default function SalesmanTargetCard({ T, monthCount, monthTarget, todayCo
   const monthRemaining = monthlyGoal > 0 ? Math.max(0, monthlyGoal - monthlyCurrent) : null;
   const todayRemaining = dailyGoal > 0 ? Math.max(0, dailyGoal - dailyCurrent) : null;
   const displayWonValue = safeNumber(wonValue);
-  const circleSize = 92;
-  const stroke = 9;
+  const circleSize = 66;
+  const stroke = 7;
   const radius = (circleSize - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
   const dashOffset = circumference * (1 - monthPct / 100);
@@ -32,13 +32,13 @@ export default function SalesmanTargetCard({ T, monthCount, monthTarget, todayCo
       style={{
         background: "#fff",
         border: `1px solid ${T.line}`,
-        borderRadius: 18,
-        padding: "18px 16px 16px",
+        borderRadius: 16,
+        padding: "13px 14px 12px",
         marginBottom: 16,
-        boxShadow: "0 8px 24px rgba(20,45,46,.07)",
+        boxShadow: "0 2px 8px rgba(20,45,46,.05)",
       }}
     >
-      <div style={{ display: "grid", gridTemplateColumns: "100px minmax(0,1fr)", gap: 15, alignItems: "center" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "72px minmax(0,1fr)", gap: 11, alignItems: "center" }}>
         <div style={{ width: circleSize, height: circleSize, position: "relative", display: "grid", placeItems: "center" }}>
           <svg width={circleSize} height={circleSize} viewBox={`0 0 ${circleSize} ${circleSize}`} aria-hidden="true" style={{ transform: "rotate(-90deg)" }}>
             <circle cx={circleSize / 2} cy={circleSize / 2} r={radius} fill="none" stroke={T.paperDeep} strokeWidth={stroke} />
@@ -55,42 +55,42 @@ export default function SalesmanTargetCard({ T, monthCount, monthTarget, todayCo
               style={{ transition: "stroke-dashoffset .35s ease" }}
             />
           </svg>
-          <strong style={{ position: "absolute", fontFamily: "'Space Grotesk', sans-serif", fontSize: 23, color: T.ink }}>{monthPct}%</strong>
+          <strong style={{ position: "absolute", fontFamily: "'Space Grotesk', sans-serif", fontSize: 17, color: T.ink }}>{monthPct}%</strong>
         </div>
 
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 12, color: T.inkSoft, fontWeight: 700, marginBottom: 5 }}>This month&apos;s target</div>
+          <div style={{ fontSize: 10.5, color: T.inkSoft, fontWeight: 700, marginBottom: 3 }}>This month&apos;s target</div>
           {monthlyGoal > 0 ? (
             <>
-              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800, fontSize: 27, lineHeight: 1.08, color: T.ink, letterSpacing: "-.5px" }}>
+              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800, fontSize: 20, lineHeight: 1.08, color: T.ink, letterSpacing: "-.35px" }}>
                 {monthlyCurrent} / {monthlyGoal} deals
               </div>
-              <div style={{ marginTop: 7, fontSize: 12.5, color: T.inkSoft, lineHeight: 1.4 }}>
-                {monthRemaining === 0 ? "Monthly target reached" : `${monthRemaining} to go`}
+              <div style={{ marginTop: 4, fontSize: 10.5, color: T.inkSoft, lineHeight: 1.35 }}>
+                {monthRemaining === 0 ? "Target reached" : `${monthRemaining} to go`}
                 {displayWonValue > 0 ? ` · ${fmtMoney(displayWonValue)} won` : ""}
               </div>
             </>
           ) : (
-            <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>Monthly target not set</div>
+            <div style={{ fontSize: 12.5, fontWeight: 800, color: T.ink }}>Monthly target not set</div>
           )}
         </div>
       </div>
 
-      <div style={{ height: 1, background: T.line, margin: "16px 0 13px" }} />
+      <div style={{ height: 1, background: T.line, margin: "11px 0 9px" }} />
 
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, marginBottom: 7 }}>
-        <div>
-          <div style={{ fontSize: 12, color: T.inkSoft, fontWeight: 700 }}>Today</div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 5 }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 6, minWidth: 0 }}>
+          <span style={{ fontSize: 11, color: T.inkSoft, fontWeight: 700 }}>Today</span>
           {dailyGoal > 0 && todayRemaining != null && (
-            <div style={{ fontSize: 10.5, color: T.inkSoft, marginTop: 2 }}>{todayRemaining === 0 ? "Daily target reached" : `${todayRemaining} to go`}</div>
+            <span style={{ fontSize: 9.5, color: T.inkSoft }}>{todayRemaining === 0 ? "Target reached" : `${todayRemaining} to go`}</span>
           )}
         </div>
-        <strong style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, color: T.ink }}>
+        <strong style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 14.5, color: T.ink, whiteSpace: "nowrap" }}>
           {dailyGoal > 0 ? `${dailyCurrent} / ${dailyGoal}` : "Target not set"}
         </strong>
       </div>
 
-      <div style={{ height: 9, background: T.paperDeep, borderRadius: 999, overflow: "hidden" }}>
+      <div style={{ height: 7, background: T.paperDeep, borderRadius: 999, overflow: "hidden" }}>
         <div
           style={{
             height: "100%",
