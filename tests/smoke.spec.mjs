@@ -59,26 +59,29 @@ async function noCrash(page) {
 
 const adminSession = { id: 'smoke-admin', role: 'admin', name: 'Smoke Admin', fullName: 'Smoke Admin', token: 'smoke-token' };
 
-test('admin dashboard, Add Lead and employee actions render without crash', async ({ page }) => {
+test('admin Add Lead surface renders without crash', async ({ page }) => {
   await bootAs(page, adminSession);
-  await expect(page.locator('body')).toContainText(/Engage|Dashboard|Employees/i);
-
   const addLead = page.getByRole('button', { name: /add lead/i }).first();
   await expect(addLead).toBeVisible();
   await addLead.click();
   await noCrash(page);
-  await page.keyboard.press('Escape');
+  await expect(page.locator('body')).toContainText(/Add Lead|Lead information/i);
+});
 
+test('employee View Route renders without crash', async ({ page }) => {
+  await bootAs(page, adminSession);
   await page.getByRole('button', { name: 'Employees' }).click();
   await noCrash(page);
   await expect(page.getByText('Smoke Salesman', { exact: true })).toBeVisible();
-
   await page.getByRole('button', { name: /view route/i }).click();
   await noCrash(page);
   await expect(page.locator('body')).toContainText(/No location pings|Route/i);
-  await page.keyboard.press('Escape');
+});
 
+test('employee Settings renders without crash', async ({ page }) => {
+  await bootAs(page, adminSession);
   await page.getByRole('button', { name: 'Employees' }).click();
+  await noCrash(page);
   const employeeSettings = page.getByRole('button', { name: 'Settings' }).last();
   await employeeSettings.click();
   await noCrash(page);
