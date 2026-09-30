@@ -77,7 +77,7 @@ function TopBar({ hidePageNavigation = false, online, session, page, onChangePag
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <ConnectionPill online={online} />
           {onOpenNotifications && <button type="button" onClick={onOpenNotifications} title="Notifications" aria-label={unreadCount ? `Notifications, ${unreadCount} unread` : "Notifications"} className={session?.role === "salesman" ? "employee-notification-button" : undefined} style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 6, border: "1px solid rgba(255,255,255,0.22)", cursor: "pointer", background: "rgba(255,255,255,0.14)", color: "#fff" }}><Bell size={14} />{unreadCount > 0 && <span className="ft-notification-badge" aria-hidden="true">{unreadCount > 99 ? "99+" : unreadCount}</span>}</button>}
-          <AppMenu onCollections={onOpenCollections} signedIn={!!session} role={session?.role} onSettings={onOpenSettings} onOnboarding={onOpenOnboarding} onQuotations={onOpenQuotations} onApprovals={onOpenApprovals} onDailyReports={session?.role === "salesman" ? onOpenDailyReports : undefined} />
+          {session?.role !== "salesman" && <AppMenu onCollections={onOpenCollections} signedIn={!!session} role={session?.role} onSettings={onOpenSettings} onOnboarding={onOpenOnboarding} onQuotations={onOpenQuotations} onApprovals={onOpenApprovals} onDailyReports={undefined} />}
         </div>
       </div>
     </div>

@@ -1,9 +1,10 @@
 import React, { lazy, Suspense, useEffect, useRef, useState } from "react";
-import { AlertTriangle, Play, Square, CheckCircle2, Loader2, WifiOff, Target as TargetIcon, Flame, MessageSquare, Handshake, CalendarClock, Plus, List } from "lucide-react";
+import { AlertTriangle, Play, Square, CheckCircle2, Loader2, WifiOff, Target as TargetIcon, Flame, MessageSquare, Handshake, CalendarClock, Plus, List, Search } from "lucide-react";
 import AdminMobileNav, { useAdminPhone, salesmanTabs } from "../AdminMobileNav.jsx";
 import { api, mapLeadRow } from "../api.js";
 import useSalesmanTasks from "../useSalesmanTasks.js";
 import { showSaveFeedback } from "../saveFeedback.js";
+import MobileContacts from "../MobileContacts.jsx";
 
 const lazyNamed = (loader, exportName) => {
   const LazyComponent = lazy(() => loader().then((mod) => ({ default: mod[exportName] })));
@@ -15,17 +16,13 @@ const TasksEntry = lazyNamed(() => import("../Tasks.jsx"), "TasksEntry");
 const TasksModal = lazyNamed(() => import("../Tasks.jsx"), "TasksModal");
 
 export default function SalesmanView({ notificationLead, session, leads, leadSummary, hasMoreLeads, loadMoreLeads, loadingMoreLeads, totalLeadCount, dayStarted, allowLeadWithoutStartDay, onToggleDay, togglingDay, justToggledDay, onAddLead, onUpdateLeadStatus, onUpdateLeadDetails, online, gpsStatus, queuedCount, loadError, messages, onMarkMessageRead, onDeleteMessage, onReplyMessage, employeeRepliesEnabled = true, dailyTarget, monthlyTarget, page, shared }) {
-  const { T, fmtMoney, isToday, isThisMonth, isWithinDays, isUpcomingRenewalMonth, SalesmanReportsPage, StatCard, MessagesSection, MyLeadsModal, AddLeadModal, LeadDetailDrawer } = shared;
+  const { T, fmtMoney, isToday, isThisMonth, isWithinDays, isUpcomingRenewalMonth, SalesmanReportsPage, StatCard, MessagesSection, MyLeadsModal, AddLeadModal, LeadDetailDrawer, VerificationStamp, NoLocationBadge } = shared;
   const { pendingTasks, handlePendingTasksChange } = useSalesmanTasks();
   const phone = useAdminPhone();
   const [mobileTab, setMobileTab] = useState("dashboard");
   const [visited, setVisited] = useState({});
   const positions = useRef({});
   const switchTab = tab => {
-    if (tab === "add-contact") {
-      setShowAddLead(true);
-      return;
-    }
     positions.current[mobileTab] = window.scrollY;
     setVisited(current => ({ ...current, [tab]: true }));
     setMobileTab(tab);
@@ -45,6 +42,7 @@ export default function SalesmanView({ notificationLead, session, leads, leadSum
   const [showNegotiation, setShowNegotiation] = useState(false);
   const [showConversation, setShowConversation] = useState(false);
   const [showRenewals, setShowRenewals] = useState(false);
+  const [contactSearch, setContactSearch] = useState("");
 
   const [notificationLeadError, setNotificationLeadError] = useState("");
   useEffect(() => {
@@ -83,6 +81,8 @@ export default function SalesmanView({ notificationLead, session, leads, leadSum
   const wonValue = leadSummary?.wonValue ?? convertedValue;
   const renewalCount = leadSummary?.renewalsDue ?? upcomingRenewals.length;
   const leadPagingProps = { hasMore: hasMoreLeads, onLoadMore: loadMoreLeads, loadingMore: loadingMoreLeads, totalCount: totalLeadCount };
+  const contactNeedle = contactSearch.trim().toLowerCase();
+  const contactRows = leads.filter((lead) => !contactNeedle || [lead.owner, lead.business, lead.phone, lead.subLocation].some((value) => String(value || "").toLowerCase().includes(contactNeedle)));
 
   useEffect(() => {
     if (page === "reports" && hasMoreLeads && !loadingMoreLeads) loadMoreLeads?.();
@@ -176,8 +176,8 @@ export default function SalesmanView({ notificationLead, session, leads, leadSum
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-        <BigButton T={T} icon={Plus} label="Add Lead" onClick={() => setShowAddLead(true)} primary disabled={!dayStarted && !allowLeadWithoutStartDay} />
-        <BigButton T={T} icon={List} label="My Leads" onClick={() => phone ? switchTab("leads") : setShowMyLeads(true)} />
+        <BigButton T={T} icon={Plus} label="Add Deal" onClick={() => setShowAddLead(true)} primary disabled={!dayStarted && !allowLeadWithoutStartDay} />
+        <BigButton T={T} icon={List} label="My Deal" onClick={() => phone ? switchTab("leads") : setShowMyLeads(true)} />
       </div>
 
       {!dayStarted && !allowLeadWithoutStartDay && <div style={{ marginTop: 12, fontSize: 12, color: T.warn, background: T.warnSoft, padding: "8px 10px", borderRadius: 11 }}>Start your day to enable lead capture.</div>}
@@ -190,6 +190,18 @@ export default function SalesmanView({ notificationLead, session, leads, leadSum
       {visited.leads && <div hidden={!phone || mobileTab !== "leads"}>
         <MyLeadsModal {...leadPagingProps} embedded leads={leads} onSelectLead={setViewingLead} allowDateFilter employeeMobile />
       </div>}
+      {visited.contacts && <section hidden={!phone || mobileTab !== "contacts"} className="engage-salesman-contacts">
+        <div style={{ marginBottom: 14 }}>
+          <h2 style={{ fontSize: 18, margin: "0 0 4px" }}>Contacts</h2>
+          <div style={{ fontSize: 12, color: T.inkSoft }}>{totalLeadCount ?? leads.length} contact records · Your contacts</div>
+        </div>
+        <div style={{ position: "relative", marginBottom: 12 }}>
+          <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: T.inkSoft }} />
+          <input aria-label="Search contacts" value={contactSearch} onChange={(event) => setContactSearch(event.target.value)} placeholder="Search by contact, company, phone, or area…" style={{ width: "100%", padding: "9px 12px 9px 32px", borderRadius: 10, border: `1px solid ${T.line}`, fontSize: 13.5, boxSizing: "border-box" }} />
+        </div>
+        <MobileContacts leads={contactRows} onSelectLead={setViewingLead} renderVerification={(lead) => lead.hasLocation ? <VerificationStamp status={lead.verification} small /> : <NoLocationBadge small />} />
+        {hasMoreLeads && <button type="button" disabled={loadingMoreLeads} onClick={loadMoreLeads} style={{ width: "100%", marginTop: 12, padding: "10px 12px", borderRadius: 9, border: `1px solid ${T.line}`, background: "#fff", color: T.route, fontWeight: 800, cursor: loadingMoreLeads ? "default" : "pointer", opacity: loadingMoreLeads ? .65 : 1 }}>{loadingMoreLeads ? "Loading more…" : `Load more contacts · ${Math.max(0, (totalLeadCount ?? leads.length) - leads.length)} remaining`}</button>}
+      </section>}
       {visited.tasks && <div hidden={!phone || mobileTab !== "tasks"}><TasksModal embedded active={phone && mobileTab === "tasks"} /></div>}
       {phone && mobileTab === "more" && <section className="engage-salesman-more"><h2>More</h2>
         {[["quotations", "Quotations"], ["onboarding", "Onboarding checklist"], ["payments", "Payment due"], ["daily", "My Daily Reports"], ["settings", "Settings"]].map(([key, label]) => <button type="button" key={key} onClick={() => window.dispatchEvent(new CustomEvent("engage:salesman-more", { detail: key }))}>{label}<span aria-hidden="true">›</span></button>)}

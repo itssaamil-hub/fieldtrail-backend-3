@@ -998,7 +998,7 @@ function SalesmanApp({ session, online, page, notificationLead }) {
       page={page}
       shared={{
         T, fmtMoney, isToday, isThisMonth, isWithinDays, isUpcomingRenewalMonth,
-        SalesmanReportsPage, StatCard, MessagesSection, MyLeadsModal, AddLeadModal, LeadDetailDrawer,
+        SalesmanReportsPage, StatCard, MessagesSection, MyLeadsModal, AddLeadModal, LeadDetailDrawer, VerificationStamp, NoLocationBadge,
       }}
     />
     </>
