@@ -3,19 +3,20 @@ import { test, expect } from '@playwright/test';
 const apiBase = 'http://127.0.0.1:9999';
 
 function responseFor(pathname, method) {
-  if (pathname.includes('/admin/salesmen')) return [];
+  if (pathname.includes('/admin/salesmen')) return { salesmen: [] };
   if (pathname.includes('/admin/leads-summary')) return {};
-  if (pathname.includes('/admin/leads')) return [];
+  if (pathname.includes('/admin/leads')) return { leads: [], total: 0 };
   if (pathname.includes('/admin/expenses')) return [];
   if (pathname.includes('/admin/tasks')) return [];
   if (pathname.includes('/notifications')) return [];
   if (pathname.includes('/salesman/leads-summary')) return {};
-  if (pathname.includes('/salesman/leads')) return [];
+  if (pathname.includes('/salesman/leads')) return { leads: [], total: 0 };
   if (pathname.includes('/salesman/tasks')) return [];
   if (pathname.includes('/salesman/messages')) return [];
   if (pathname.includes('/attendance')) return {};
   if (pathname.includes('/settings')) return {};
-  if (pathname.includes('/quotations')) return [];
+  if (pathname.includes('/quotations') && pathname.includes('/alerts')) return { alerts: [] };
+  if (pathname.includes('/quotations')) return { quotes: [], hasMore: false };
   if (pathname.includes('/collections')) return [];
   if (pathname.includes('/onboarding')) return [];
   if (method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE') return { ok: true };
