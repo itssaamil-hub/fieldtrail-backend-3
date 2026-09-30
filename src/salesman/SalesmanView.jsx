@@ -16,6 +16,17 @@ const lazyNamed = (loader, exportName) => {
 const TasksEntry = lazyNamed(() => import("../Tasks.jsx"), "TasksEntry");
 const TasksModal = lazyNamed(() => import("../Tasks.jsx"), "TasksModal");
 
+function greetingForNow() {
+  const hour = Number(new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kolkata",
+    hour: "2-digit",
+    hourCycle: "h23",
+  }).format(new Date()));
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
 export default function SalesmanView({ notificationLead, session, leads, leadSummary, hasMoreLeads, loadMoreLeads, loadingMoreLeads, totalLeadCount, dayStarted, allowLeadWithoutStartDay, onToggleDay, togglingDay, justToggledDay, onAddLead, onUpdateLeadStatus, onUpdateLeadDetails, online, gpsStatus, queuedCount, loadError, messages, onMarkMessageRead, onDeleteMessage, onReplyMessage, employeeRepliesEnabled = true, dailyTarget, monthlyTarget, page, shared }) {
   const { T, fmtMoney, isToday, isThisMonth, isWithinDays, isUpcomingRenewalMonth, SalesmanReportsPage, StatCard, MessagesSection, MyLeadsModal, AddLeadModal, LeadDetailDrawer, VerificationStamp, NoLocationBadge } = shared;
   const { pendingTasks, handlePendingTasksChange } = useSalesmanTasks();
@@ -62,8 +73,8 @@ export default function SalesmanView({ notificationLead, session, leads, leadSum
   const todayLeads = leads.filter((l) => isToday(l.createdAt));
   const monthLeads = leads.filter((l) => isThisMonth(l.createdAt));
   const allHotLeads = leads.filter((l) => l.status === "hot");
-  const converted = leads.filter((l) => l.status === "won").length;
-  const convertedValue = leads.filter((l) => l.status === "won" && l.dealValue != null).reduce((sum, l) => sum + l.dealValue, 0);
+  const converted = monthLeads.filter((l) => l.status === "won").length;
+  const convertedValue = monthLeads.filter((l) => l.status === "won" && l.dealValue != null).reduce((sum, l) => sum + l.dealValue, 0);
   const pending = leads.filter((l) => !["won", "lost"].includes(l.status)).length;
   const inConversation = leads.filter((l) => l.status === "conversation");
   const inNegotiation = leads.filter((l) => l.status === "negotiation");
@@ -84,6 +95,7 @@ export default function SalesmanView({ notificationLead, session, leads, leadSum
   const leadPagingProps = { hasMore: hasMoreLeads, onLoadMore: loadMoreLeads, loadingMore: loadingMoreLeads, totalCount: totalLeadCount };
   const contactNeedle = contactSearch.trim().toLowerCase();
   const contactRows = leads.filter((lead) => !contactNeedle || [lead.owner, lead.business, lead.phone, lead.subLocation].some((value) => String(value || "").toLowerCase().includes(contactNeedle)));
+  const firstName = String(session?.fullName || "").trim().split(/\s+/)[0] || "there";
 
   useEffect(() => {
     if (page === "reports" && hasMoreLeads && !loadingMoreLeads) loadMoreLeads?.();
@@ -98,7 +110,7 @@ export default function SalesmanView({ notificationLead, session, leads, leadSum
       <div hidden={!dashboard}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <div>
-          <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 18 }}>{session.fullName}</div>
+          <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 18 }}>{greetingForNow()}, {firstName}</div>
           <div style={{ fontSize: 12, color: T.inkSoft }}>{session.phone}</div>
         </div>
         <button
