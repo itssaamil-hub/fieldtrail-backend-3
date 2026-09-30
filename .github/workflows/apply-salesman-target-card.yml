@@ -1,0 +1,58 @@
+name: Apply salesman target card
+
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-salesman-target-card.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Replace salesman target UI
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/salesman/SalesmanView.jsx')
+          s=p.read_text()
+          imp='import MobileContacts from "../MobileContacts.jsx";\n'
+          newimp=imp+'import SalesmanTargetCard from "./SalesmanTargetCard.jsx";\n'
+          if 'SalesmanTargetCard' not in s:
+              if imp not in s: raise SystemExit('import anchor not found')
+              s=s.replace(imp,newimp,1)
+          s=s.replace('  const target = dailyTarget || 8;\n  const monthTarget = monthlyTarget || 200;','  const target = Number(dailyTarget) > 0 ? Number(dailyTarget) : 0;\n  const monthTarget = Number(monthlyTarget) > 0 ? Number(monthlyTarget) : 0;',1)
+          start='      <div\n        className="ft-card"\n'
+          end='      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>\n'
+          i=s.find(start)
+          j=s.find(end,i)
+          if i<0 or j<0: raise SystemExit('target card anchors not found')
+          replacement='''      <SalesmanTargetCard\n        T={T}\n        monthCount={monthCount}\n        monthTarget={monthTarget}\n        todayCount={todayCount}\n        dailyTarget={target}\n        wonValue={wonValue}\n        fmtMoney={fmtMoney}\n      />\n\n'''
+          s=s[:i]+replacement+s[j:]
+          p.write_text(s)
+          PY
+      - name: Install dependencies
+        run: npm ci
+      - name: Guard React source
+        run: |
+          FILES=$(find src -type f \( -name '*.jsx' -o -name '*.tsx' \) -print | tr '\n' ' ')
+          npx --yes eslint@8 $FILES --no-eslintrc --env es6,browser --parser-options '{"ecmaVersion":2022,"sourceType":"module","ecmaFeatures":{"jsx":true}}' --rule 'no-undef:error'
+      - name: Production build
+        run: npm run build
+      - name: Commit validated change
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/salesman/SalesmanView.jsx
+          git diff --cached --quiet && exit 0
+          git commit -m "upgrade salesman target progress card"
+          git push origin HEAD:main
