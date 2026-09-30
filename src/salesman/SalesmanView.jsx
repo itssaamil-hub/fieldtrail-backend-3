@@ -5,6 +5,7 @@ import { api, mapLeadRow } from "../api.js";
 import useSalesmanTasks from "../useSalesmanTasks.js";
 import { showSaveFeedback } from "../saveFeedback.js";
 import MobileContacts from "../MobileContacts.jsx";
+import SalesmanTargetCard from "./SalesmanTargetCard.jsx";
 
 const lazyNamed = (loader, exportName) => {
   const LazyComponent = lazy(() => loader().then((mod) => ({ default: mod[exportName] })));
@@ -70,8 +71,8 @@ export default function SalesmanView({ notificationLead, session, leads, leadSum
     (l.renewalDate && isWithinDays(new Date(l.renewalDate), 30)) ||
     (!l.renewalDate && isUpcomingRenewalMonth(l.renewalMonth))
   );
-  const target = dailyTarget || 8;
-  const monthTarget = monthlyTarget || 200;
+  const target = Number(dailyTarget) > 0 ? Number(dailyTarget) : 0;
+  const monthTarget = Number(monthlyTarget) > 0 ? Number(monthlyTarget) : 0;
   const todayCount = leadSummary?.today ?? todayLeads.length;
   const monthCount = leadSummary?.month ?? monthLeads.length;
   const hotCount = leadSummary?.hot ?? allHotLeads.length;
@@ -140,40 +141,15 @@ export default function SalesmanView({ notificationLead, session, leads, leadSum
         <StatCard label="Renewals" value={renewalCount} sub="next 30 days" icon={CalendarClock} color={T.accent} onClick={() => setShowRenewals(true)} />
       </div>
 
-      <div
-        className="ft-card"
-        style={{
-          background: `linear-gradient(155deg, ${T.card} 0%, ${T.paperDeep} 100%)`,
-          border: `1px solid ${T.line}`, borderRadius: 16, padding: "18px 18px 16px",
-          marginBottom: 16, boxShadow: "0 1px 3px rgba(20,20,30,0.05)",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 14 }}>
-          <TargetIcon size={14} color={T.route} />
-          <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 13.5 }}>Your Targets</div>
-        </div>
-
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 12, color: T.inkSoft, marginBottom: 6 }}>
-          <span>Today</span>
-          <span style={{ fontWeight: 700, fontSize: 13.5, color: T.ink }}>{Math.min(todayCount, target)} / {target}</span>
-        </div>
-        <div style={{ height: 7, background: T.paperDeep, borderRadius: 11, overflow: "hidden" }}>
-          <div style={{ height: "100%", width: `${Math.min(100, (todayCount / target) * 100)}%`, background: T.route, transition: "width 0.3s ease", borderRadius: 11 }} />
-        </div>
-
-        <div style={{ height: 1, background: T.line, margin: "16px 0 14px" }} />
-
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 12, color: T.inkSoft, marginBottom: 6 }}>
-          <span>This month</span>
-          <span style={{ fontWeight: 700, fontSize: 13.5, color: T.ink }}>{monthCount} / {monthTarget}</span>
-        </div>
-        <div style={{ height: 7, background: T.paperDeep, borderRadius: 11, overflow: "hidden" }}>
-          <div style={{ height: "100%", width: `${Math.min(100, (monthCount / monthTarget) * 100)}%`, background: T.accent, transition: "width 0.3s ease", borderRadius: 11 }} />
-        </div>
-        <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 6 }}>
-          {monthCount >= monthTarget ? "🎉 Target reached!" : `${monthTarget - monthCount} more to hit this month's target`}
-        </div>
-      </div>
+      <SalesmanTargetCard
+        T={T}
+        monthCount={monthCount}
+        monthTarget={monthTarget}
+        todayCount={todayCount}
+        dailyTarget={target}
+        wonValue={wonValue}
+        fmtMoney={fmtMoney}
+      />
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <BigButton T={T} icon={Plus} label="Add Deal" onClick={() => setShowAddLead(true)} primary disabled={!dayStarted && !allowLeadWithoutStartDay} />
