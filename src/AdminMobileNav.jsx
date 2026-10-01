@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Gauge, Contact2, Handshake, Users, Wallet, ClipboardList, MessageSquare, Menu } from "lucide-react";
+import { Gauge, Contact2, Handshake, Users, ClipboardList, MessageSquare, Menu } from "lucide-react";
 import "./admin-mobile-nav.css";
 
 export function useAdminPhone() {
@@ -13,7 +13,7 @@ export function useAdminPhone() {
   return phone;
 }
 
-const tabs = [["dashboard", "Dashboard", Gauge], ["leads", "Contacts", Contact2], ["deals", "Deals", Handshake], ["employees", "Employees", Users], ["expenses", "Expenses", Wallet]];
+const tabs = [["dashboard", "Dashboard", Gauge], ["leads", "Contacts", Contact2], ["deals", "Deals", Handshake], ["employees", "Employees", Users], ["menu", "Menu", Menu]];
 export const salesmanTabs = [["dashboard", "Dashboard", Gauge], ["contacts", "Contacts", Contact2], ["tasks", "Tasks", ClipboardList], ["messages", "Messages", MessageSquare], ["more", "More", Menu]];
 export default function AdminMobileNav({ active, onChange, items = tabs, counts = {}, label = "Admin navigation" }) {
   const phone = useAdminPhone();
@@ -53,7 +53,14 @@ export default function AdminMobileNav({ active, onChange, items = tabs, counts 
   }, [phone]);
   useEffect(() => setHidden(false), [active]);
   if (!phone) return null;
+  const activate = (key) => {
+    if (key === "menu" && items === tabs) {
+      document.querySelector(".ft-app-menu-trigger")?.click();
+      return;
+    }
+    onChange(key);
+  };
   return <nav className={`engage-admin-bottom-nav${hidden || blocked ? " is-hidden" : ""}`} aria-label={label} aria-hidden={hidden || blocked}>
-    {items.map(([key, label, Icon]) => <button key={key} type="button" aria-label={counts[key] > 0 ? `${label}, ${counts[key]} ${key === "messages" ? "unread" : "pending"}` : label} aria-current={active === key ? "page" : undefined} tabIndex={hidden || blocked ? -1 : 0} onClick={() => onChange(key)}><span className="engage-nav-icon"><Icon size={21} strokeWidth={1.8} />{counts[key] > 0 && <span className="engage-nav-count" aria-hidden="true">{counts[key] > 99 ? "99+" : counts[key]}</span>}</span><span>{label}</span></button>)}
+    {items.map(([key, itemLabel, Icon]) => <button key={key} type="button" aria-label={counts[key] > 0 ? `${itemLabel}, ${counts[key]} ${key === "messages" ? "unread" : "pending"}` : itemLabel} aria-current={active === key ? "page" : undefined} tabIndex={hidden || blocked ? -1 : 0} onClick={() => activate(key)}><span className="engage-nav-icon"><Icon size={21} strokeWidth={1.8} />{counts[key] > 0 && <span className="engage-nav-count" aria-hidden="true">{counts[key] > 99 ? "99+" : counts[key]}</span>}</span><span>{itemLabel}</span></button>)}
   </nav>;
 }
