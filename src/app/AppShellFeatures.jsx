@@ -1,4 +1,5 @@
 import React from "react";
+import DashboardDisplaySettingsControl from "../DashboardDisplaySettingsControl.jsx";
 
 // Shared application shell/settings UI extracted from App.jsx without changing behavior.
 export function createAppShellFeatures(deps) {
@@ -77,7 +78,7 @@ function TopBar({ hidePageNavigation = false, online, session, page, onChangePag
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <ConnectionPill online={online} />
           {onOpenNotifications && <button type="button" onClick={onOpenNotifications} title="Notifications" aria-label={unreadCount ? `Notifications, ${unreadCount} unread` : "Notifications"} className={session?.role === "salesman" ? "employee-notification-button" : undefined} style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 6, border: "1px solid rgba(255,255,255,0.22)", cursor: "pointer", background: "rgba(255,255,255,0.14)", color: "#fff" }}><Bell size={14} />{unreadCount > 0 && <span className="ft-notification-badge" aria-hidden="true">{unreadCount > 99 ? "99+" : unreadCount}</span>}</button>}
-          {session?.role !== "salesman" && <AppMenu onCollections={onOpenCollections} signedIn={!!session} role={session?.role} onSettings={onOpenSettings} onOnboarding={onOpenOnboarding} onQuotations={onOpenQuotations} onApprovals={onOpenApprovals} onDailyReports={undefined} />}
+          {session?.role !== "salesman" && !narrow && <AppMenu onCollections={onOpenCollections} signedIn={!!session} role={session?.role} onSettings={onOpenSettings} onOnboarding={onOpenOnboarding} onQuotations={onOpenQuotations} onApprovals={onOpenApprovals} onDailyReports={undefined} />}
         </div>
       </div>
     </div>
@@ -95,9 +96,6 @@ function ConnectionPill({ online }) {
   return null;
 }
 
-// ---------------------------------------------------------------------------
-// First-run screen: no backend URL saved yet. Pings /health before saving so
-// a typo doesn't silently break everything downstream.
 function ConnectBackendScreen({ onSave }) {
   const [url, setUrl] = useState("");
   const [checking, setChecking] = useState(false);
@@ -158,7 +156,6 @@ function ConnectBackendScreen({ onSave }) {
   );
 }
 
-// ---------------------------------------------------------------------------
 function LoginScreen({ apiBase, online, onLoggedIn, onOpenSettings }) {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
@@ -172,7 +169,6 @@ function LoginScreen({ apiBase, online, onLoggedIn, onOpenSettings }) {
     setError("");
     try {
       const res = await api.login(phone.trim(), password);
-      // Expected shape: { token, user: { id, fullName, role, phone } }
       const user = res.user || res;
       onLoggedIn({
         token: res.token,
@@ -337,9 +333,6 @@ function SettingsModal({ onClose, onLogout, onOpenCrmSettings, onOpenDataHealth,
   );
 }
 
-// ---------------------------------------------------------------------------
-// Shared small pieces
-// ---------------------------------------------------------------------------
 function StatCard({ label, value, sub, color, icon: IconC, onClick, comparison, comparisonPeriod, variant }) {
   const labelText = typeof label === "string" ? label : "";
   const salesmanKpi = ["Today", "Hot", "Conversation", "Negotiation", "Won", "Renewals"].includes(labelText);
@@ -426,9 +419,6 @@ function SyncBadge({ syncStatus }) {
   );
 }
 
-// Shown instead of VerificationStamp when GPS Location is turned off in
-// Location Settings — this is a neutral "not applicable" state, distinct
-// from an actual failed/unverified GPS reading.
 function NoLocationBadge({ small }) {
   return (
     <div style={{ display: "inline-flex", alignItems: "center", gap: 4, color: T.inkSoft, background: T.paperDeep, borderRadius: 999, padding: small ? "3px 9px" : "5px 12px", fontFamily: "Inter, sans-serif", fontSize: small ? 10.5 : 11.5, fontWeight: 700, whiteSpace: "nowrap" }}>
@@ -437,8 +427,6 @@ function NoLocationBadge({ small }) {
   );
 }
 
-// A labeled ON/OFF toggle — used throughout CRM Settings. Deliberately
-// plain (no external UI lib) to match the rest of this app's styling.
 function SettingToggle({ label, description, checked, onChange }) {
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "12px 0", borderBottom: `1px solid ${T.line}` }}>
@@ -536,7 +524,6 @@ function CrmSettingsModal({ onClose }) {
   const [leadSettings, setLeadSettings] = useState(null);
   const [locationSettings, setLocationSettings] = useState(null);
   const [messageSettings, setMessageSettings] = useState(null);
-  const [displaySettings, setDisplaySettings] = useState(getDashboardDisplaySettings);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -604,15 +591,8 @@ function CrmSettingsModal({ onClose }) {
             checked={messageSettings.employeeRepliesEnabled !== false}
             onChange={toggleMessage("employeeRepliesEnabled")}
           />
-          <div style={{fontSize:11,textTransform:"uppercase",color:T.inkSoft,fontWeight:700,letterSpacing:.4,marginTop:22,marginBottom:4}}>Display Settings</div>
-          <div style={{fontSize:12,color:T.inkSoft,marginBottom:8}}>Controls comparison indicators inside dashboard cards.</div>
-          <SettingToggle label="Show KPI Comparisons" description="Turn dashboard comparisons on or off." checked={displaySettings.showComparisons!==false} onChange={(val)=>{const next={...displaySettings,showComparisons:val};setDisplaySettings(next);localStorage.setItem(DASHBOARD_DISPLAY_KEY,JSON.stringify(next));window.dispatchEvent(new Event("engage-display-settings"));}} />
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,padding:"9px 2px"}}>
-            <div><div style={{fontSize:13,fontWeight:600}}>Comparison Period</div><div style={{fontSize:11.5,color:T.inkSoft,marginTop:2}}>Current period vs previous period.</div></div>
-            <select value={displaySettings.comparisonPeriod||"weekly"} onChange={(e)=>{const next={...displaySettings,comparisonPeriod:e.target.value};setDisplaySettings(next);localStorage.setItem(DASHBOARD_DISPLAY_KEY,JSON.stringify(next));window.dispatchEvent(new Event("engage-display-settings"));}} style={{border:`1px solid ${T.line}`,borderRadius:8,padding:"7px 9px",background:"#fff",fontSize:12.5}}>
-              <option value="weekly">Weekly</option><option value="monthly">Monthly</option>
-            </select>
-          </div>
+
+          <DashboardDisplaySettingsControl T={T} />
 
           {saving && <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 12, display: "flex", alignItems: "center", gap: 6 }}><Loader2 size={12} className="spin" /> Saving…</div>}
         </>
@@ -621,9 +601,6 @@ function CrmSettingsModal({ onClose }) {
   );
 }
 
-// Lets admin add/remove preset dropdown values for Category and POS Name
-// on the salesman's Add Lead form — no code change needed to add e.g. a
-// new POS provider.
 function FieldOptionsSection() {
   const [options, setOptions] = useState(null);
   const [error, setError] = useState("");
@@ -667,11 +644,11 @@ function FieldOptionsSection() {
       const next = { ...prev };
       for (const k of Object.keys(next)) next[k] = next[k].filter((o) => o.id !== id);
       return next;
-    }); // optimistic
+    });
     try {
       await api.adminDeleteLeadOption(id);
     } catch {
-      load(); // reconcile if it actually failed
+      load();
     }
   };
 
@@ -721,8 +698,6 @@ function FieldOptionsSection() {
   );
 }
 
-// Single "Download" button that reveals CSV/Excel/Sheets on click, instead
-// of showing all three as separate buttons all the time.
 function DownloadMenu({ onCsv, onXlsx, onSheets, onPdf }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
@@ -807,13 +782,6 @@ function Overlay({ title, onClose, children }) {
     </div>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Live map — Leaflet + OpenStreetMap (free, no API key). Salesman and lead
-// markers are plain Leaflet layers kept in refs so live position updates
-// just move existing markers instead of re-creating the map on every render.
-// ---------------------------------------------------------------------------
-
 
   return { LogoMark, TopBar, ConnectionPill, ConnectBackendScreen, LoginScreen, SettingsModal, StatCard, VerificationStamp, SyncBadge, NoLocationBadge, SettingToggle, AddExpenseModal, CrmSettingsModal, FieldOptionsSection, DownloadMenu, Tab, Select, LegendDot, Field, Overlay, inputStyle, EXPENSE_CATEGORIES };
 }
