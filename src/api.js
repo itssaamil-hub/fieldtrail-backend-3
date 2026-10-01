@@ -349,8 +349,6 @@ export const api = {
   taskDetail: async id => {
     try { return await request(`/tasks/${id}`); }
     catch (err) {
-      // Older deployments have the scoped list endpoint but no detail route.
-      // Do not mask authenticated not-found/permission responses from the new API.
       if (err.status !== 404 || err.message !== 'Request failed (404)') throw err;
       const result = await request(`/tasks?${new URLSearchParams({ filter: 'all', taskId: id })}`);
       const task = result.tasks?.find(item => item.id === id);
@@ -414,7 +412,6 @@ export const api = {
   adminDeleteExpense: (id) => request(`/admin/expenses/${id}`, { method: "DELETE" }),
   adminUpdateExpense: (id, payload) => request(`/admin/expenses/${id}`, { method: "PATCH", body: payload }),
 
-  // Push notifications — shared across both roles.
   notificationsUnread: () => request('/notifications/unread'),
   notificationsMarkRead: (body) => request('/notifications/read', { method: 'POST', body }),
   notificationsActivity: (cursor) => request(`/notifications/activity${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`),
@@ -480,10 +477,6 @@ export const api = {
   salesmanDeleteMessage: (id) => request(`/salesman/messages/${id}`, { method: "DELETE" }),
 };
 
-// Builds a downloadable export URL (CSV/XLSX) that includes the auth token
-// as a query param, since these are opened as plain navigations/downloads
-// rather than fetch() calls — a normal Authorization header isn't possible
-// for a direct link click.
 export function buildExportUrl(format, params = {}, resource = "leads") {
   const base = getApiBase();
   const session = getSession();
@@ -493,10 +486,6 @@ export function buildExportUrl(format, params = {}, resource = "leads") {
   return `${base}/admin/${resource}/export.${format}?${qs.toString()}`;
 }
 
-// ---------------------------------------------------------------------------
-// Field-name adapters: backend rows (snake_case, Postgres-shaped) -> the
-// camelCase shapes the UI components use.
-// ---------------------------------------------------------------------------
 export function mapSalesmanRow(row) {
   return {
     id: row.id,
@@ -530,6 +519,7 @@ export function mapLeadRow(row) {
     renewalMonth: row.renewal_month || "",
     renewalDate: row.renewal_date || "",
     nextFollowUpDate: row.next_follow_up_date || "",
+    wonDate: row.won_date || "",
     dealValue: row.deal_value != null ? Number(row.deal_value) : null,
     owner: row.contact_name,
     phone: row.phone,
