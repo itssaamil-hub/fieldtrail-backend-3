@@ -248,8 +248,10 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
     owner: lead.owner || "", phone: lead.phone || "", notes: lead.notes || "",
     dealValue: lead.dealValue != null ? String(lead.dealValue) : "",
     nextFollowUpDate: lead.nextFollowUpDate || "",
+    wonDate: lead.wonDate || "",
   });
   const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState("");
   const [savedOverrides, setSavedOverrides] = useState({}); // reflects the drawer's own last successful save immediately, so it never shows stale data while waiting on a full reload
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const displayLead = { ...lead, ...savedOverrides };
@@ -324,7 +326,12 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
   const saveEdit = async () => {
     const businessName = form.business.trim();
     if (!businessName) return;
+    if (isAdmin && lead.status === "won" && !form.wonDate) {
+      setEditError("Won Date is required for a Won deal.");
+      return;
+    }
     setSaving(true);
+    setEditError("");
     const payload = {
       businessName,
       subLocation: form.subLocation, posName: form.posName,
@@ -333,18 +340,30 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
       dealValue: form.dealValue ? Number(form.dealValue) : null,
       nextFollowUpDate: form.nextFollowUpDate || null,
     };
-    await onUpdate(lead.id, payload);
-    setSavedOverrides((prev) => ({
-      ...prev,
-      business: payload.businessName,
-      subLocation: payload.subLocation, posName: payload.posName,
-      renewalMonth: payload.renewalMonth, renewalDate: payload.renewalDate || "",
-      owner: payload.contactName, phone: payload.phone, notes: payload.notes,
-      dealValue: payload.dealValue,
-      nextFollowUpDate: payload.nextFollowUpDate || "",
-    }));
-    setSaving(false);
-    setEditing(false);
+    if (isAdmin && lead.status === "won") payload.wonDate = form.wonDate;
+    try {
+      const result = await onUpdate(lead.id, payload);
+      const returnedWonDate = result?.lead?.won_date || payload.wonDate;
+      setSavedOverrides((prev) => ({
+        ...prev,
+        business: payload.businessName,
+        subLocation: payload.subLocation, posName: payload.posName,
+        renewalMonth: payload.renewalMonth, renewalDate: payload.renewalDate || "",
+        owner: payload.contactName, phone: payload.phone, notes: payload.notes,
+        dealValue: payload.dealValue,
+        nextFollowUpDate: payload.nextFollowUpDate || "",
+        ...(returnedWonDate ? { wonDate: returnedWonDate } : {}),
+      }));
+      if (payload.wonDate) {
+        setForm((prev) => ({ ...prev, wonDate: returnedWonDate || payload.wonDate }));
+        setHistoryRefresh((v) => v + 1);
+      }
+      setEditing(false);
+    } catch (err) {
+      setEditError(err?.message || "Couldn't save changes.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const followUpDate = displayLead.nextFollowUpDate ? new Date(displayLead.nextFollowUpDate) : null;
@@ -545,10 +564,14 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
               <div style={{ flex: 1 }}><Field label="Expected Deal Value"><input style={inputStyle} type="number" min="0" value={form.dealValue} onChange={set("dealValue")} placeholder="₹ e.g. 45000" /></Field></div>
               <div style={{ flex: 1 }}><Field label="Next Follow-up Date"><input style={inputStyle} type="date" value={form.nextFollowUpDate} onChange={set("nextFollowUpDate")} /></Field></div>
             </div>
+            {isAdmin && lead.status === "won" && (
+              <Field label="Won Date"><input style={inputStyle} type="date" value={form.wonDate} onChange={set("wonDate")} /></Field>
+            )}
+            {editError && <div style={{ fontSize: 12.5, color: T.danger, background: T.dangerSoft, borderRadius: 10, padding: "8px 10px", marginBottom: 10 }}>{editError}</div>}
             <Field label="Comments"><textarea style={{ ...inputStyle, minHeight: 60 }} value={form.notes} onChange={set("notes")} /></Field>
             <div style={{ display: "flex", gap: 8 }}>
               <button onClick={() => setEditing(false)} style={{ flex: 1, padding: 10, borderRadius: 11, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
-              <button onClick={saveEdit} disabled={saving || !form.business.trim()} style={{ flex: 1, padding: 10, borderRadius: 11, border: "none", background: T.route, color: "#fff", fontWeight: 700, cursor: saving || !form.business.trim() ? "not-allowed" : "pointer", opacity: saving || !form.business.trim() ? .6 : 1 }}>{saving ? "Saving…" : "Save changes"}</button>
+              <button onClick={saveEdit} disabled={saving || !form.business.trim() || (isAdmin && lead.status === "won" && !form.wonDate)} style={{ flex: 1, padding: 10, borderRadius: 11, border: "none", background: T.route, color: "#fff", fontWeight: 700, cursor: saving || !form.business.trim() || (isAdmin && lead.status === "won" && !form.wonDate) ? "not-allowed" : "pointer", opacity: saving || !form.business.trim() || (isAdmin && lead.status === "won" && !form.wonDate) ? .6 : 1 }}>{saving ? "Saving…" : "Save changes"}</button>
             </div>
           </div>
         ) : detailTab === "overview" ? (
@@ -741,6 +764,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                                   "lead.follow_up_rescheduled": "Follow-up rescheduled",
                                   "lead.follow_up_done": "Follow-up completed",
                                   "lead.comment_updated": "Comment updated",
+                                  "lead.won_date_changed": "Won Date changed",
                                   "lead.edited": "Lead information updated",
                                   "lead.admin_mention": "Admin instruction",
                                   "lead.employee_reply": "Employee reply",
@@ -773,7 +797,9 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                                   detail = <div><span style={{ fontWeight: 800, color: T.route }}>{h.recipient_name ? `@${h.recipient_name}` : "Salesman"}</span><div style={{ marginTop: 4, color: T.ink, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{h.message_body || "Instruction sent"}</div></div>;
                                 } else if (action === "lead.employee_reply") {
                                   detail = <div style={{ color: T.ink, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{h.message_body || "Reply sent"}</div>;
-                                } else if (action === "lead.comment_updated") {
+                                } else if (action === "lead.won_date_changed") {
+                            detail = <><span style={{ color: T.inkSoft }}>{fmtDate(oldValue)}</span><span style={{ color: T.inkSoft }}> → </span><span style={{ fontWeight: 700, color: T.route }}>{fmtDate(newValue)}</span></>;
+                          } else if (action === "lead.comment_updated") {
                                   const text = String(newValue || "").trim();
                                   detail = text ? <span style={{ color: T.inkSoft }}>“{text.length > 90 ? `${text.slice(0, 90)}…` : text}”</span> : <span style={{ color: T.inkSoft }}>Comment cleared</span>;
                                 } else if (action === "lead.edited" && h.changes) {
