@@ -83,8 +83,6 @@ export default function useAdminData({ online, session }) {
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
-  // Full refresh is only a safety net. Realtime-connected admins refresh rarely;
-  // disconnected admins keep the existing 15-second fallback. Hidden tabs do no polling.
   useEffect(() => {
     if (!online) return undefined;
     const intervalMs = wsConnected ? HEALTHY_REFRESH_MS : DISCONNECTED_REFRESH_MS;
@@ -94,7 +92,6 @@ export default function useAdminData({ online, session }) {
     return () => window.clearInterval(timer);
   }, [online, wsConnected, loadAll]);
 
-  // Reconcile after a long background period instead of continuously polling while hidden.
   useEffect(() => {
     if (!online) return undefined;
     const onVisibility = () => {
@@ -105,8 +102,6 @@ export default function useAdminData({ online, session }) {
     return () => document.removeEventListener("visibilitychange", onVisibility);
   }, [online, loadAll]);
 
-  // Realtime updates with exponential reconnect backoff plus jitter so multiple
-  // admin clients do not reconnect to Render at the same instant after an outage.
   useEffect(() => {
     if (!online || !session?.token) return undefined;
     let cancelled = false;
@@ -182,11 +177,15 @@ export default function useAdminData({ online, session }) {
   const onStatusChange = useCallback(async (id, status) => {
     setLeads((prev) => prev.map((lead) => lead.id === id ? { ...lead, status } : lead));
     try {
-      await api.adminUpdateLeadStatus(id, status);
+      const result = await api.adminUpdateLeadStatus(id, status);
+      const mapped = mappedLeadFromResponse(result);
+      if (mapped) setLeads((prev) => prev.map((lead) => lead.id === id ? mapped : lead));
       refreshSummary();
+      return result;
     } catch (err) {
       setLoadError(errorMessage(err, "Couldn't update status."));
       loadAll();
+      throw err;
     }
   }, [loadAll, refreshSummary]);
 
@@ -199,6 +198,7 @@ export default function useAdminData({ online, session }) {
       renewalMonth: payload.renewalMonth,
       renewalDate: payload.renewalDate || "",
       nextFollowUpDate: payload.nextFollowUpDate ?? lead.nextFollowUpDate,
+      wonDate: payload.wonDate ?? lead.wonDate,
       owner: payload.contactName,
       phone: payload.phone,
       notes: payload.notes,
@@ -208,9 +208,11 @@ export default function useAdminData({ online, session }) {
       const result = await api.adminUpdateLead(id, payload);
       const mapped = mappedLeadFromResponse(result);
       if (mapped) setLeads((prev) => prev.map((lead) => lead.id === id ? mapped : lead));
+      return result;
     } catch (err) {
       setLoadError(errorMessage(err, "Couldn't save changes."));
       loadAll();
+      throw err;
     }
   }, [loadAll]);
 
