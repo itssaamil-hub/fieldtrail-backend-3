@@ -210,7 +210,7 @@ export default function SalesmanView({ notificationLead, session, leads, leadSum
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <BigButton T={T} icon={Plus} label="Add Deal" onClick={() => setShowAddLead(true)} primary disabled={!dayStarted && !allowLeadWithoutStartDay} />
-        <BigButton T={T} icon={List} label="My Deal" onClick={() => phone ? switchTab("leads") : setShowMyLeads(true)} />
+        <BigButton T={T} icon={List} label="My Deals" onClick={() => phone ? switchTab("leads") : setShowMyLeads(true)} />
       </div>
 
       {!dayStarted && !allowLeadWithoutStartDay && <div style={{ marginTop: 12, fontSize: 12, color: T.warn, background: T.warnSoft, padding: "8px 10px", borderRadius: 11 }}>Start your day to enable lead capture.</div>}
