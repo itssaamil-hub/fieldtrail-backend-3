@@ -123,9 +123,9 @@ jobs:
                                             "lead.won_date_changed": "Won Date changed",
                                             "lead.edited": "Lead information updated",'''))
           replacements.append((
-          '''                                } else if (action === "lead.comment_updated") {
+          '''} else if (action === "lead.comment_updated") {
                                       const text = String(newValue || "").trim();''',
-          '''                                } else if (action === "lead.won_date_changed") {
+          '''} else if (action === "lead.won_date_changed") {
                                       detail = <><span style={{ color: T.inkSoft }}>{fmtDate(oldValue)}</span><span style={{ color: T.inkSoft }}> → </span><span style={{ fontWeight: 700, color: T.route }}>{fmtDate(newValue)}</span></>;
                                     } else if (action === "lead.comment_updated") {
                                       const text = String(newValue || "").trim();'''))
