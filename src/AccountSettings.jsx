@@ -49,16 +49,7 @@ export default function AccountSettingsLauncher() {
 
   if (!isAdmin) return null;
   return <>
-    <button
-      type="button"
-      aria-label="My account"
-      title="My account"
-      onClick={() => setOpen(true)}
-      style={{ position:"fixed", right:14, top:12, zIndex:900, width:38, height:38, borderRadius:12, border:"1px solid #E7E9EE", background:"#fff", display:"none", placeItems:"center", boxShadow:"0 4px 16px rgba(20,30,40,.08)" }}
-      className="engage-account-mobile-trigger"
-    ><UserRound size={18}/></button>
     {open && <AccountSettingsModal onClose={() => setOpen(false)} />}
-    <style>{`@media (max-width: 600px){.engage-account-mobile-trigger{display:grid!important}}`}</style>
   </>;
 }
 
