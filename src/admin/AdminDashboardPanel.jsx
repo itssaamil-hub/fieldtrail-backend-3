@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect, useState } from "react";
+import React, { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import {
   CalendarClock,
   CheckCircle2,
@@ -11,6 +11,7 @@ import {
   Target as TargetIcon,
 } from "lucide-react";
 import { api, getSession, mapLeadRow } from "../api.js";
+import { loadAdminDashboardComparisons } from "../dashboardComparisons.js";
 import AdminActivityOverview from "../AdminActivityOverview.jsx";
 
 const lazyNamed = (loader, exportName) => {
@@ -74,26 +75,40 @@ export default function AdminDashboardPanel({
     isToday,
     isWithinDays,
     isUpcomingRenewalMonth,
-    comparisonFor,
-    dailyComparisonFor,
-    getDashboardDisplaySettings,
   } = shared;
   const [dashboardSalesman, setDashboardSalesman] = useState("all");
-  const [dashboardDisplay, setDashboardDisplay] = useState(getDashboardDisplaySettings);
+  const [comparisonData, setComparisonData] = useState(null);
   const [conversationError, setConversationError] = useState("");
   const [adminPendingTasks, setAdminPendingTasks] = useState(null);
 
+  const refreshComparisons = useCallback(async () => {
+    if (!showDashboard) return;
+    try {
+      const result = await loadAdminDashboardComparisons(dashboardSalesman);
+      setComparisonData(result);
+    } catch {
+      // The primary dashboard remains usable if the comparison service is unavailable.
+      // Never fall back to the old client-side approximation because that can misstate history.
+      setComparisonData(null);
+    }
+  }, [showDashboard, dashboardSalesman]);
+
   useEffect(() => {
-    const sync = () => setDashboardDisplay(getDashboardDisplaySettings());
+    refreshComparisons();
+  }, [refreshComparisons, leads, conversationCount]);
+
+  useEffect(() => {
+    const sync = () => refreshComparisons();
     window.addEventListener("engage-display-settings", sync);
     return () => window.removeEventListener("engage-display-settings", sync);
-  }, [getDashboardDisplaySettings]);
+  }, [refreshComparisons]);
 
   if (!showDashboard) return null;
 
   const dashboardLeads = dashboardSalesman === "all" ? leads : leads.filter((l) => l.salesmanId === dashboardSalesman);
   const todayLeads = dashboardLeads.filter((l) => isToday(l.createdAt));
   const hotLeadsToday = todayLeads.filter((l) => l.status === "hot");
+  const inConversation = dashboardLeads.filter((l) => l.status === "conversation");
   const inNegotiation = dashboardLeads.filter((l) => l.status === "negotiation");
   const upcomingRenewals = dashboardLeads.filter((l) =>
     (l.renewalDate && isWithinDays(new Date(l.renewalDate), 30)) ||
@@ -103,14 +118,21 @@ export default function AdminDashboardPanel({
   const convertedValue = dashboardLeads.filter((l) => l.status === "won" && l.dealValue != null).reduce((sum, l) => sum + l.dealValue, 0);
   const upcomingFollowUps = dashboardLeads.filter((l) => l.nextFollowUpDate && new Date(l.nextFollowUpDate) >= new Date(new Date().toDateString()));
   const activeSalesmen = salesmen.filter((s) => s.status === "online").length;
-  const comparisonPeriod = dashboardDisplay.comparisonPeriod || "weekly";
-  const comparisonsEnabled = dashboardDisplay.showComparisons !== false;
-  const dashboardComparison = comparisonsEnabled ? comparisonFor(dashboardLeads, comparisonPeriod) : null;
-  const conversationComparison = comparisonsEnabled ? comparisonFor(dashboardLeads, comparisonPeriod, (l) => l.status === "conversation") : null;
-  const leadsTodayComparison = comparisonsEnabled ? dailyComparisonFor(dashboardLeads, comparisonPeriod) : null;
-  const hotComparison = comparisonsEnabled ? dailyComparisonFor(dashboardLeads, comparisonPeriod, (l) => l.status === "hot") : null;
-  const negotiationComparison = comparisonsEnabled ? comparisonFor(dashboardLeads, comparisonPeriod, (l) => l.status === "negotiation") : null;
-  const wonComparison = comparisonsEnabled ? comparisonFor(dashboardLeads, comparisonPeriod, (l) => l.status === "won") : null;
+
+  const serverMetrics = comparisonData?.metrics || {};
+  const displaySettings = comparisonData?.settings || {};
+  const comparisonPeriod = comparisonData?.period || displaySettings.comparisonPeriod || "weekly";
+  const comparisonsEnabled = comparisonData && displaySettings.showAdminComparisons !== false;
+  const comparisons = comparisonsEnabled ? comparisonData.comparisons || {} : {};
+
+  const conversationValue = serverMetrics.conversation ?? (dashboardSalesman === "all" ? conversationCount : inConversation.length);
+  const leadsTodayValue = serverMetrics.leadsToday ?? todayLeads.length;
+  const hotTodayValue = serverMetrics.hotToday ?? hotLeadsToday.length;
+  const negotiationValue = serverMetrics.negotiation ?? inNegotiation.length;
+  const totalValue = serverMetrics.total ?? dashboardLeads.length;
+  const wonValue = serverMetrics.won ?? converted;
+  const wonDealValue = serverMetrics.wonValue ?? convertedValue;
+
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const adminName = (getSession()?.fullName || getSession()?.full_name || getSession()?.name || "Admin").split(/\s+/)[0];
@@ -118,9 +140,11 @@ export default function AdminDashboardPanel({
   const openConversationLeads = async () => {
     try {
       setConversationError("");
-      const result = await api.adminLeads({ status: "conversation" });
+      const params = { status: "conversation" };
+      if (dashboardSalesman !== "all") params.salesmanId = dashboardSalesman;
+      const result = await api.adminLeads(params);
       onOpenStatLeads({
-        title: conversationCount > 500 ? "Conversation Leads · Latest 500" : "Conversation Leads",
+        title: conversationValue > 500 ? "Conversation Leads · Latest 500" : "Conversation Leads",
         leads: (result.leads || []).map(mapLeadRow),
       });
     } catch (error) {
@@ -157,12 +181,12 @@ export default function AdminDashboardPanel({
       )}
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
         <DashboardStatCard T={T} label="Total Employees" value={salesmen.length} sub={<span style={{ color: T.verified }}>{activeSalesmen} active now</span>} icon={Contact2} color="#64748B" onClick={phone ? onShowTeamActivity : undefined} />
-        <DashboardStatCard T={T} label="Conversation" value={conversationCount ?? "—"} comparison={conversationComparison} comparisonPeriod={comparisonPeriod} icon={MessageSquare} color={T.route} onClick={openConversationLeads} />
-        <DashboardStatCard T={T} label="Leads Today" value={todayLeads.length} comparison={leadsTodayComparison} comparisonPeriod={comparisonPeriod} icon={TargetIcon} color="#3B82F6" onClick={() => onOpenStatLeads({ title: "Leads Today", leads: todayLeads })} />
-        <DashboardStatCard T={T} label={<>Hot Leads <span style={{ fontSize: 8.5, opacity: 0.65 }}>TODAY</span></>} value={hotLeadsToday.length} icon={Flame} comparison={hotComparison} comparisonPeriod={comparisonPeriod} color={T.danger} onClick={() => onOpenStatLeads({ title: "Hot Leads Today", leads: hotLeadsToday })} />
-        <DashboardStatCard T={T} label="In Negotiation" value={inNegotiation.length} comparison={negotiationComparison} comparisonPeriod={comparisonPeriod} icon={Handshake} color="#8B5CF6" onClick={() => onOpenStatLeads({ title: "In Negotiation", leads: inNegotiation })} />
-        <DashboardStatCard T={T} label="Total Leads" value={dashboardLeads.length} comparison={dashboardComparison} comparisonPeriod={comparisonPeriod} icon={Contact2} color="#0891B2" />
-        <DashboardStatCard T={T} label="Won" value={converted} sub={fmtMoney(convertedValue)} comparison={wonComparison} comparisonPeriod={comparisonPeriod} icon={CheckCircle2} color={T.verified} onClick={() => onOpenStatLeads({ title: "Won Leads", leads: dashboardLeads.filter((l) => l.status === "won") })} />
+        <DashboardStatCard T={T} label="Conversation" value={conversationValue ?? "—"} comparison={comparisons.conversation} comparisonPeriod={comparisonPeriod} icon={MessageSquare} color={T.route} onClick={openConversationLeads} />
+        <DashboardStatCard T={T} label="Leads Today" value={leadsTodayValue} comparison={comparisons.leadsToday} comparisonPeriod={comparisonPeriod} icon={TargetIcon} color="#3B82F6" onClick={() => onOpenStatLeads({ title: "Leads Today", leads: todayLeads })} />
+        <DashboardStatCard T={T} label={<>Hot Leads <span style={{ fontSize: 8.5, opacity: 0.65 }}>TODAY</span></>} value={hotTodayValue} icon={Flame} comparison={comparisons.hotToday} comparisonPeriod={comparisonPeriod} color={T.danger} onClick={() => onOpenStatLeads({ title: "Hot Leads Today", leads: hotLeadsToday })} />
+        <DashboardStatCard T={T} label="In Negotiation" value={negotiationValue} comparison={comparisons.negotiation} comparisonPeriod={comparisonPeriod} icon={Handshake} color="#8B5CF6" onClick={() => onOpenStatLeads({ title: "In Negotiation", leads: inNegotiation })} />
+        <DashboardStatCard T={T} label="Total Leads" value={totalValue} comparison={comparisons.total} comparisonPeriod={comparisonPeriod} icon={Contact2} color="#0891B2" />
+        <DashboardStatCard T={T} label="Won" value={wonValue} sub={fmtMoney(wonDealValue)} comparison={comparisons.won} comparisonPeriod={comparisonPeriod} icon={CheckCircle2} color={T.verified} onClick={() => onOpenStatLeads({ title: "Won Leads", leads: dashboardLeads.filter((l) => l.status === "won") })} />
         <DashboardStatCard T={T} label="Tasks" value={adminPendingTasks ?? 0} sub="pending" icon={List} color="#145C5D" />
         <DashboardStatCard T={T} label="Upcoming Follow-up" value={upcomingFollowUps.length} icon={CalendarClock} color={T.warn} onClick={() => onOpenStatLeads({ title: "Upcoming Follow-ups", leads: upcomingFollowUps })} />
         <DashboardStatCard T={T} label="Renewals Due" sub="next 30 days" value={upcomingRenewals.length} icon={RefreshCw} color={T.accent} onClick={() => onOpenStatLeads({ title: "Renewals Due (Next 30 Days)", leads: upcomingRenewals })} />
