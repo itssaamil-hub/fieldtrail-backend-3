@@ -20,6 +20,7 @@ import "./lead-status-colors.css";
 import "./exception-snooze-yellow.css";
 import "./collections-quick-pay.css";
 import "./salesmanLeadsViewToggle.js";
+import "./adminMobileDealsViewToggle.js";
 import "./salesmanPerformanceEnhanced.jsx";
 
 // If an installed PWA opens against an older deployment and one of Vite's
