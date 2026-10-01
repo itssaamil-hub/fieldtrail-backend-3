@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Gauge, Contact2, Handshake, Users, ClipboardList, MessageSquare, Menu } from "lucide-react";
+import { requestAdminMenuOpen } from "./adminMenuStore.js";
 import "./admin-mobile-nav.css";
 
 export function useAdminPhone() {
@@ -13,7 +14,7 @@ export function useAdminPhone() {
   return phone;
 }
 
-const tabs = [["dashboard", "Dashboard", Gauge], ["leads", "Contacts", Contact2], ["deals", "Deals", Handshake], ["employees", "Employees", Users], ["menu", "Menu", Menu]];
+const tabs = [["dashboard", "Dashboard", Gauge], ["leads", "Contacts", Contact2], ["deals", "Deals", Handshake], ["employees", "Employees", Users], ["more", "More", Menu]];
 export const salesmanTabs = [["dashboard", "Dashboard", Gauge], ["contacts", "Contacts", Contact2], ["tasks", "Tasks", ClipboardList], ["messages", "Messages", MessageSquare], ["more", "More", Menu]];
 export default function AdminMobileNav({ active, onChange, items = tabs, counts = {}, label = "Admin navigation" }) {
   const phone = useAdminPhone();
@@ -54,8 +55,8 @@ export default function AdminMobileNav({ active, onChange, items = tabs, counts 
   useEffect(() => setHidden(false), [active]);
   if (!phone) return null;
   const activate = (key) => {
-    if (key === "menu" && items === tabs) {
-      document.querySelector(".ft-app-menu-trigger")?.click();
+    if (key === "more" && items === tabs) {
+      requestAdminMenuOpen();
       return;
     }
     onChange(key);
