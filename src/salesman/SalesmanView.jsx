@@ -1,7 +1,8 @@
-import React, { lazy, Suspense, useEffect, useRef, useState } from "react";
+import React, { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { AlertTriangle, Play, Square, CheckCircle2, Loader2, WifiOff, Target as TargetIcon, Flame, MessageSquare, Handshake, CalendarClock, Plus, List, Search } from "lucide-react";
 import AdminMobileNav, { useAdminPhone, salesmanTabs } from "../AdminMobileNav.jsx";
 import { api, mapLeadRow } from "../api.js";
+import { loadEmployeeDashboardComparisons } from "../dashboardComparisons.js";
 import useSalesmanTasks from "../useSalesmanTasks.js";
 import { showSaveFeedback } from "../saveFeedback.js";
 import MobileContacts from "../MobileContacts.jsx";
@@ -56,6 +57,7 @@ export default function SalesmanView({ notificationLead, session, leads, leadSum
   const [showConversation, setShowConversation] = useState(false);
   const [showRenewals, setShowRenewals] = useState(false);
   const [contactSearch, setContactSearch] = useState("");
+  const [comparisonData, setComparisonData] = useState(null);
 
   const [notificationLeadError, setNotificationLeadError] = useState("");
   useEffect(() => {
@@ -85,17 +87,51 @@ export default function SalesmanView({ notificationLead, session, leads, leadSum
   );
   const target = Number(dailyTarget) > 0 ? Number(dailyTarget) : 0;
   const monthTarget = Number(monthlyTarget) > 0 ? Number(monthlyTarget) : 0;
-  const todayCount = leadSummary?.today ?? todayLeads.length;
+  const serverMetrics = comparisonData?.metrics || {};
+  const displaySettings = comparisonData?.settings || {};
+  const employeeComparisonsEnabled = comparisonData && displaySettings.showEmployeeComparisons !== false;
+  const comparisonPeriod = comparisonData?.period || displaySettings.comparisonPeriod || "weekly";
+  const comparisons = employeeComparisonsEnabled ? comparisonData.comparisons || {} : {};
+  const todayCount = serverMetrics.today ?? leadSummary?.today ?? todayLeads.length;
   const monthCount = leadSummary?.month ?? monthLeads.length;
-  const hotCount = leadSummary?.hot ?? allHotLeads.length;
-  const conversationCount = leadSummary?.conversation ?? inConversation.length;
-  const negotiationCount = leadSummary?.negotiation ?? inNegotiation.length;
-  const wonCount = leadSummary?.won ?? converted;
-  const wonValue = leadSummary?.wonValue ?? convertedValue;
-  const renewalCount = leadSummary?.renewalsDue ?? upcomingRenewals.length;
+  const hotCount = serverMetrics.hot ?? leadSummary?.hot ?? allHotLeads.length;
+  const conversationCount = serverMetrics.conversation ?? leadSummary?.conversation ?? inConversation.length;
+  const negotiationCount = serverMetrics.negotiation ?? leadSummary?.negotiation ?? inNegotiation.length;
+  const wonCount = serverMetrics.won ?? leadSummary?.won ?? converted;
+  const wonValue = serverMetrics.wonValue ?? leadSummary?.wonValue ?? convertedValue;
+  const renewalCount = serverMetrics.renewalsDue ?? leadSummary?.renewalsDue ?? upcomingRenewals.length;
   const leadPagingProps = { hasMore: hasMoreLeads, onLoadMore: loadMoreLeads, loadingMore: loadingMoreLeads, totalCount: totalLeadCount };
   const contactNeedle = contactSearch.trim().toLowerCase();
   const contactRows = leads.filter((lead) => !contactNeedle || [lead.owner, lead.business, lead.phone, lead.subLocation].some((value) => String(value || "").toLowerCase().includes(contactNeedle)));
+
+  const refreshComparisons = useCallback(async () => {
+    if (!online || page === "reports") return;
+    try {
+      setComparisonData(await loadEmployeeDashboardComparisons());
+    } catch {
+      // Keep the dashboard functional, but never fabricate historical comparisons.
+      setComparisonData(null);
+    }
+  }, [online, page]);
+
+  useEffect(() => {
+    refreshComparisons();
+  }, [
+    refreshComparisons,
+    leadSummary?.today,
+    leadSummary?.hot,
+    leadSummary?.conversation,
+    leadSummary?.negotiation,
+    leadSummary?.won,
+    leadSummary?.wonValue,
+    leadSummary?.renewalsDue,
+  ]);
+
+  useEffect(() => {
+    const sync = () => refreshComparisons();
+    window.addEventListener("engage-display-settings", sync);
+    return () => window.removeEventListener("engage-display-settings", sync);
+  }, [refreshComparisons]);
 
   const openBriefingLead = (id) => {
     const found = leads.find((lead) => String(lead.id) === String(id));
@@ -154,11 +190,11 @@ export default function SalesmanView({ notificationLead, session, leads, leadSum
       )}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8, marginBottom: 16 }}>
-        <StatCard label="Today" value={todayCount} icon={TargetIcon} color={T.route} onClick={() => setShowTodayLeads(true)} />
-        <StatCard label="Hot" value={hotCount} icon={Flame} color={T.danger} onClick={() => setShowHotLeads(true)} />
-        <StatCard label="Conversation" value={conversationCount} icon={MessageSquare} color={T.accent} onClick={() => setShowConversation(true)} />
-        <StatCard label="Negotiation" value={negotiationCount} icon={Handshake} color={T.warn} onClick={() => setShowNegotiation(true)} />
-        <StatCard label="Won" value={wonCount} sub={wonValue > 0 ? fmtMoney(wonValue) : undefined} icon={CheckCircle2} color={T.verified} onClick={() => setShowConverted(true)} />
+        <StatCard label="Today" value={todayCount} comparison={comparisons.today} comparisonPeriod={comparisonPeriod} icon={TargetIcon} color={T.route} onClick={() => setShowTodayLeads(true)} />
+        <StatCard label="Hot" value={hotCount} comparison={comparisons.hot} comparisonPeriod={comparisonPeriod} icon={Flame} color={T.danger} onClick={() => setShowHotLeads(true)} />
+        <StatCard label="Conversation" value={conversationCount} comparison={comparisons.conversation} comparisonPeriod={comparisonPeriod} icon={MessageSquare} color={T.accent} onClick={() => setShowConversation(true)} />
+        <StatCard label="Negotiation" value={negotiationCount} comparison={comparisons.negotiation} comparisonPeriod={comparisonPeriod} icon={Handshake} color={T.warn} onClick={() => setShowNegotiation(true)} />
+        <StatCard label="Won" value={wonCount} sub={wonValue > 0 ? fmtMoney(wonValue) : undefined} comparison={comparisons.won} comparisonPeriod={comparisonPeriod} icon={CheckCircle2} color={T.verified} onClick={() => setShowConverted(true)} />
         <StatCard label="Renewals" value={renewalCount} sub="next 30 days" icon={CalendarClock} color={T.accent} onClick={() => setShowRenewals(true)} />
       </div>
 
