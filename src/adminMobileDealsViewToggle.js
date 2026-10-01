@@ -78,6 +78,14 @@ function setListVisibility(section, show) {
   });
 }
 
+function boardAnchor(section) {
+  const toggleRow = section.querySelector('.engage-admin-mobile-view-toggle-row');
+  const addButton = section.querySelector('button[aria-label="Add Deal"]');
+  const headerRow = addButton?.parentElement;
+  if (toggleRow && headerRow && toggleRow.parentElement === headerRow) return headerRow;
+  return toggleRow;
+}
+
 function buildBoard(section, requestedStage) {
   const rows = dealRows(section);
   const items = rows.map(dealInfo);
@@ -91,8 +99,7 @@ function buildBoard(section, requestedStage) {
   if (!board) {
     board = document.createElement('div');
     board.className = 'engage-admin-mobile-kanban engage-salesman-kanban';
-    const anchor = section.querySelector('.engage-admin-mobile-view-toggle-row');
-    anchor?.insertAdjacentElement('afterend', board);
+    boardAnchor(section)?.insertAdjacentElement('afterend', board);
   }
 
   const signature = JSON.stringify({ active, filterStage, counts, values, items: items.map((item) => [item.name, item.stage, item.value, item.meta]) });
@@ -169,6 +176,22 @@ function setMode(section, mode) {
   buildBoard(section, section.dataset.adminKanbanStage);
 }
 
+function placeToggleBesideAddDeal(section, row) {
+  const addButton = section.querySelector('button[aria-label="Add Deal"]');
+  const headerRow = addButton?.parentElement;
+  if (!addButton || !headerRow) return false;
+
+  Object.assign(row.style, {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    margin: '0 0 0 auto',
+    flexShrink: '0',
+  });
+  headerRow.insertBefore(row, addButton);
+  return true;
+}
+
 function enhanceSection(section) {
   if (!visible(section)) return;
   section.classList.add('engage-salesman-leads-section');
@@ -177,7 +200,6 @@ function enhanceSection(section) {
   if (!row) {
     row = document.createElement('div');
     row.className = 'engage-admin-mobile-view-toggle-row';
-    Object.assign(row.style, { display: 'flex', justifyContent: 'flex-end', margin: '1px 0 8px' });
 
     const toggle = document.createElement('div');
     toggle.className = 'engage-salesman-leads-view-toggle';
@@ -203,7 +225,9 @@ function enhanceSection(section) {
     board.addEventListener('click', () => setMode(section, 'kanban'));
     toggle.append(list, board);
     row.appendChild(toggle);
+  }
 
+  if (!placeToggleBesideAddDeal(section, row) && !row.isConnected) {
     const filterGrid = section.querySelector('select[aria-label="Employee"]')?.parentElement;
     if (filterGrid) filterGrid.insertAdjacentElement('afterend', row);
     else section.querySelector('h2')?.parentElement?.parentElement?.insertAdjacentElement('afterend', row);
