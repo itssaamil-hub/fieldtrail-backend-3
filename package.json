@@ -4,7 +4,7 @@
   "description": "Engage — salesman lead & live location tracking PWA",
   "type": "module",
   "engines": {
-    "node": "20.x"
+    "node": "24.x"
   },
   "scripts": {
     "dev": "vite",
