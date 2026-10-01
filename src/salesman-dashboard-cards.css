@@ -108,7 +108,8 @@
     max-width: 72px !important;
     margin: 0 !important;
     text-align: right !important;
-    font-size: 8.5px !important;
+    font-size: 8px !important;
+    font-weight: 700 !important;
     line-height: 1 !important;
   }
 
