@@ -1,0 +1,151 @@
+name: Apply Won Date UI patch
+
+on:
+  push:
+    branches: [feature/won-date-edit]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.head_commit.message != 'apply Won date UI patch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/won-date-edit
+      - name: Apply exact source transformations
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/lead/LeadFeatures.jsx')
+          s=p.read_text()
+          replacements=[]
+          replacements.append((
+          '''    dealValue: lead.dealValue != null ? String(lead.dealValue) : "",
+              nextFollowUpDate: lead.nextFollowUpDate || "",
+            });''',
+          '''    dealValue: lead.dealValue != null ? String(lead.dealValue) : "",
+              nextFollowUpDate: lead.nextFollowUpDate || "",
+              wonDate: lead.wonDate || "",
+            });'''))
+          replacements.append((
+          '''  const [saving, setSaving] = useState(false);
+            const [savedOverrides, setSavedOverrides] = useState({});''',
+          '''  const [saving, setSaving] = useState(false);
+            const [editError, setEditError] = useState("");
+            const [savedOverrides, setSavedOverrides] = useState({});'''))
+          old='''  const saveEdit = async () => {
+              const businessName = form.business.trim();
+              if (!businessName) return;
+              setSaving(true);
+              const payload = {
+                businessName,
+                subLocation: form.subLocation, posName: form.posName,
+                renewalMonth: form.renewalMonth, renewalDate: form.renewalDate || null,
+                contactName: form.owner, phone: form.phone, notes: form.notes,
+                dealValue: form.dealValue ? Number(form.dealValue) : null,
+                nextFollowUpDate: form.nextFollowUpDate || null,
+              };
+              await onUpdate(lead.id, payload);
+              setSavedOverrides((prev) => ({
+                ...prev,
+                business: payload.businessName,
+                subLocation: payload.subLocation, posName: payload.posName,
+                renewalMonth: payload.renewalMonth, renewalDate: payload.renewalDate || "",
+                owner: payload.contactName, phone: payload.phone, notes: payload.notes,
+                dealValue: payload.dealValue,
+                nextFollowUpDate: payload.nextFollowUpDate || "",
+              }));
+              setSaving(false);
+              setEditing(false);
+            };'''
+          new='''  const saveEdit = async () => {
+              const businessName = form.business.trim();
+              if (!businessName) return;
+              if (isAdmin && lead.status === "won" && !form.wonDate) {
+                setEditError("Won Date is required for a Won deal.");
+                return;
+              }
+              setSaving(true);
+              setEditError("");
+              const payload = {
+                businessName,
+                subLocation: form.subLocation, posName: form.posName,
+                renewalMonth: form.renewalMonth, renewalDate: form.renewalDate || null,
+                contactName: form.owner, phone: form.phone, notes: form.notes,
+                dealValue: form.dealValue ? Number(form.dealValue) : null,
+                nextFollowUpDate: form.nextFollowUpDate || null,
+              };
+              if (isAdmin && lead.status === "won") payload.wonDate = form.wonDate;
+              try {
+                const result = await onUpdate(lead.id, payload);
+                const returnedWonDate = result?.lead?.won_date || payload.wonDate;
+                setSavedOverrides((prev) => ({
+                  ...prev,
+                  business: payload.businessName,
+                  subLocation: payload.subLocation, posName: payload.posName,
+                  renewalMonth: payload.renewalMonth, renewalDate: payload.renewalDate || "",
+                  owner: payload.contactName, phone: payload.phone, notes: payload.notes,
+                  dealValue: payload.dealValue,
+                  nextFollowUpDate: payload.nextFollowUpDate || "",
+                  ...(returnedWonDate ? { wonDate: returnedWonDate } : {}),
+                }));
+                if (payload.wonDate) {
+                  setForm((prev) => ({ ...prev, wonDate: returnedWonDate || payload.wonDate }));
+                  setHistoryRefresh((v) => v + 1);
+                }
+                setEditing(false);
+              } catch (err) {
+                setEditError(err?.message || "Couldn't save changes.");
+              } finally {
+                setSaving(false);
+              }
+            };'''
+          replacements.append((old,new))
+          replacements.append((
+          '''            <Field label="Comments"><textarea style={{ ...inputStyle, minHeight: 60 }} value={form.notes} onChange={set("notes")} /></Field>
+                      <div style={{ display: "flex", gap: 8 }}>''',
+          '''            {isAdmin && lead.status === "won" && (
+                        <Field label="Won Date"><input style={inputStyle} type="date" value={form.wonDate} onChange={set("wonDate")} /></Field>
+                      )}
+                      {editError && <div style={{ fontSize: 12.5, color: T.danger, background: T.dangerSoft, borderRadius: 10, padding: "8px 10px", marginBottom: 10 }}>{editError}</div>}
+                      <Field label="Comments"><textarea style={{ ...inputStyle, minHeight: 60 }} value={form.notes} onChange={set("notes")} /></Field>
+                      <div style={{ display: "flex", gap: 8 }}>'''))
+          replacements.append((
+          '''              <button onClick={saveEdit} disabled={saving || !form.business.trim()} style={{ flex: 1, padding: 10, borderRadius: 11, border: "none", background: T.route, color: "#fff", fontWeight: 700, cursor: saving || !form.business.trim() ? "not-allowed" : "pointer", opacity: saving || !form.business.trim() ? .6 : 1 }}>{saving ? "Saving…" : "Save changes"}</button>''',
+          '''              <button onClick={saveEdit} disabled={saving || !form.business.trim() || (isAdmin && lead.status === "won" && !form.wonDate)} style={{ flex: 1, padding: 10, borderRadius: 11, border: "none", background: T.route, color: "#fff", fontWeight: 700, cursor: saving || !form.business.trim() || (isAdmin && lead.status === "won" && !form.wonDate) ? "not-allowed" : "pointer", opacity: saving || !form.business.trim() || (isAdmin && lead.status === "won" && !form.wonDate) ? .6 : 1 }}>{saving ? "Saving…" : "Save changes"}</button>'''))
+          replacements.append((
+          '''                                  "lead.comment_updated": "Comment updated",
+                                            "lead.edited": "Lead information updated",''',
+          '''                                  "lead.comment_updated": "Comment updated",
+                                            "lead.won_date_changed": "Won Date changed",
+                                            "lead.edited": "Lead information updated",'''))
+          replacements.append((
+          '''                                } else if (action === "lead.comment_updated") {
+                                      const text = String(newValue || "").trim();''',
+          '''                                } else if (action === "lead.won_date_changed") {
+                                      detail = <><span style={{ color: T.inkSoft }}>{fmtDate(oldValue)}</span><span style={{ color: T.inkSoft }}> → </span><span style={{ fontWeight: 700, color: T.route }}>{fmtDate(newValue)}</span></>;
+                                    } else if (action === "lead.comment_updated") {
+                                      const text = String(newValue || "").trim();'''))
+          for old,new in replacements:
+              count=s.count(old)
+              if count != 1:
+                  raise SystemExit(f'Expected exactly one match, got {count}: {old[:80]!r}')
+              s=s.replace(old,new,1)
+          p.write_text(s)
+          PY
+      - name: Verify intended UI markers
+        run: |
+          grep -q 'label="Won Date"' src/lead/LeadFeatures.jsx
+          grep -q 'lead.won_date_changed' src/lead/LeadFeatures.jsx
+          grep -q 'payload.wonDate = form.wonDate' src/lead/LeadFeatures.jsx
+          git diff --check
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/lead/LeadFeatures.jsx
+          git commit -m "apply Won date UI patch"
+          git push origin HEAD:feature/won-date-edit
