@@ -47,7 +47,7 @@ function DashboardStatCard({ T, label, value, sub, subInline = false, color, ico
       {subInline ? (
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
           <div className="engage-dashboard-stat-value engage-db-value">{value}</div>
-          {sub && <div className="engage-dashboard-stat-sub" style={{ marginTop: 0, textAlign: "right", whiteSpace: "nowrap" }}>{sub}</div>}
+          {sub && <div className="engage-dashboard-stat-sub" style={{ marginTop: 0, textAlign: "right", whiteSpace: "nowrap", fontSize: 11, fontWeight: 700, lineHeight: 1 }}>{sub}</div>}
         </div>
       ) : (
         <>
