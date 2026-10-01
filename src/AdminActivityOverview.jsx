@@ -114,6 +114,7 @@ export default function AdminActivityOverview({ salesmen=[] }) {
     <style>{`
       @media(max-width:1180px){.engage-activity-overview{grid-template-columns:minmax(0,1.28fr) minmax(370px,.92fr)!important}}
       @media(max-width:920px){.engage-activity-overview{grid-template-columns:1fr!important}.engage-activity-feed{max-height:none!important}}
+      @media(max-width:1023px){.ac-dashboard-view-all{display:none}}
       .engage-activity-row{transition:background .14s ease}.engage-activity-row:hover{background:#FBFCFC}
       .engage-activity-row .activity-chevron{transition:transform .14s ease,color .14s ease}
       .engage-activity-row:hover .activity-chevron{transform:translateX(1px);color:#647C7D!important}
@@ -158,7 +159,7 @@ export default function AdminActivityOverview({ salesmen=[] }) {
         }):!loading?<div style={{padding:'38px 16px',textAlign:'center',fontSize:12.5,color:C.soft}}>No recorded activity yet.</div>:<div style={{padding:'38px 16px',textAlign:'center',fontSize:12.5,color:C.soft}}>Loading activity…</div>}
       </div>
 
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'9px 10px',borderTop:'1px solid #EDF0F2',background:'#FCFDFD'}}><div style={{display:'flex',alignItems:'center',gap:5,fontSize:10.3,color:'#7A8586'}}><MapPin size={12}/> Recorded CRM events only</div><div style={{fontSize:10.3,color:'#7A8586'}}>Auto-refreshes every minute</div></div>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'9px 10px',borderTop:'1px solid #EDF0F2',background:'#FCFDFD'}}><div style={{display:'flex',alignItems:'center',gap:5,fontSize:10.3,color:'#7A8586'}}><MapPin size={12}/> Recorded CRM events only</div><button className="ac-dashboard-view-all" type="button" onClick={()=>window.dispatchEvent(new CustomEvent('engage:open-activity-centre'))} style={{border:0,background:'transparent',color:C.teal,fontWeight:700,fontSize:11,cursor:'pointer'}}>View all</button><div style={{fontSize:10.3,color:'#7A8586'}}>Auto-refreshes every minute</div></div>
     </section>
   </div>;
 }

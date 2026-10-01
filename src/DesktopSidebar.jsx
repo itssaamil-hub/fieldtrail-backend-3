@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Gauge, Contact2, Columns3, Users, ClipboardList, ShieldAlert, BarChart3, Settings, UserRound, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { History, Gauge, Contact2, Columns3, Users, ClipboardList, ShieldAlert, BarChart3, Settings, UserRound, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import './desktop-sidebar.css';
 
 export function useDesktopSidebar() {
@@ -12,7 +12,7 @@ export function useDesktopSidebar() {
   }, []);
   return desktop;
 }
-const sections = [['dashboard', 'Dashboard', Gauge], ['leads', 'Contacts', Contact2], ['deals', 'Pipeline', Columns3], ['employees', 'Employees', Users], ['tasks', 'Tasks', ClipboardList], ['exceptions', 'Exception Centre', ShieldAlert], ['reports', 'Reports', BarChart3]];
+const sections = [['dashboard', 'Dashboard', Gauge], ['leads', 'Contacts', Contact2], ['deals', 'Pipeline', Columns3], ['employees', 'Employees', Users], ['tasks', 'Tasks', ClipboardList], ['activity', 'Activity Centre', History], ['exceptions', 'Exception Centre', ShieldAlert], ['reports', 'Reports', BarChart3]];
 export default function DesktopSidebar({ active, collapsed, onCollapse, onSelect, onSettings, settingsOpen }) {
   const item = ([key, label, Icon]) => <button key={key} type="button" aria-label={label} title={collapsed ? label : undefined} aria-current={!settingsOpen && active === key ? 'page' : undefined} onClick={() => onSelect(key)}><Icon size={19} aria-hidden="true"/><span>{label}</span></button>;
   const openAccount = () => window.dispatchEvent(new CustomEvent('engage:open-account-settings'));

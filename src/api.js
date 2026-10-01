@@ -376,6 +376,8 @@ export const api = {
     const qs = new URLSearchParams(entries).toString();
     return request(`/admin/activity-centre/overview${qs ? `?${qs}` : ""}`);
   },
+  adminActivityFeed: (params = {}) => request(`/admin/activity-centre/feed?${new URLSearchParams(params)}`),
+  adminActivityLead: id => request(`/admin/activity-centre/lead/${encodeURIComponent(id)}`),
   adminSalesmen: () => request("/admin/salesmen"),
   adminCreateSalesman: (payload) => request("/admin/salesmen", { method: "POST", body: payload }),
   adminUpdateSalesman: (id, payload) => request(`/admin/salesmen/${id}`, { method: "PATCH", body: payload }),

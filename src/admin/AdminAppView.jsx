@@ -241,7 +241,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
   const [selectedLead, setSelectedLead] = useState(null);
   useEffect(() => {
     if (!notificationLead?.id) return;
-    const lead = leads.find((item) => item.id === notificationLead.id);
+    const lead = leads.find((item) => item.id === notificationLead.id) || notificationLead.lead;
     if (lead) setSelectedLead(lead);
   }, [notificationLead, leads]);
   const [showAddSalesman, setShowAddSalesman] = useState(false);

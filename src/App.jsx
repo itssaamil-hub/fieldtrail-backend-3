@@ -103,6 +103,7 @@ const withLazyBoundary = (LazyComponent) => {
 const lazyDefault = (loader) => withLazyBoundary(lazy(loader));
 const lazyNamed = (loader, exportName) => withLazyBoundary(lazy(() => loader().then((mod) => ({ default: mod[exportName] }))));
 
+const ActivityCentre = lazyDefault(() => import("./ActivityCentre.jsx"));
 const CollectionsPanel = lazyDefault(() => import("./Collections.jsx"));
 const CollectionsEntry = lazyNamed(() => import("./Collections.jsx"), "CollectionsEntry");
 const SalesmanBriefPopup = lazyDefault(() => import("./SalesmanBrief.jsx"));
@@ -549,6 +550,12 @@ export default function App() {
     setDesktopSection(section);
     setTopPage(section === "reports" ? "reports" : "dashboard");
   };
+  useEffect(() => {
+    if (!adminDesktop) return;
+    const open = () => { setDesktopSection("activity"); setTopPage("dashboard"); };
+    window.addEventListener("engage:open-activity-centre", open);
+    return () => window.removeEventListener("engage:open-activity-centre", open);
+  }, [adminDesktop]);
   const toggleSidebar = () => setSidebarCollapsed(value => {
     try { localStorage.setItem("engage:sidebar-collapsed", String(!value)); } catch { /* optional preference */ }
     return !value;
@@ -640,6 +647,8 @@ export default function App() {
   } else if (session.role === "admin") {
     body = adminDesktop && desktopSection === "exceptions" && topPage !== "reports"
       ? <ExceptionCentre onNavigate={selectDesktopSection} />
+      : adminDesktop && desktopSection === "activity" && topPage !== "reports"
+      ? <ActivityCentre onOpenLead={lead => { selectDesktopSection("leads"); setNotificationLead({id:lead.id, lead, openedAt:Date.now()}); }} />
       : <AdminApp desktopSection={adminDesktop ? (topPage === "reports" ? "reports" : desktopSection === "reports" ? "dashboard" : desktopSection) : null} notificationLead={notificationLead} session={session} online={online} onLogout={handleLogout} page={topPage} />;
   } else {
     body = <SalesmanApp key={`salesman-${session.id}`} notificationLead={notificationLead} session={session} online={online} onLogout={handleLogout} page={topPage} />;
