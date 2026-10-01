@@ -17,6 +17,17 @@ async function fetchWonDate(leadId) {
   return data?.wonDate || "";
 }
 
+function presentWonDateAudit(item) {
+  if (item?.action !== "lead.won_date_changed") return item;
+  return {
+    ...item,
+    action: "lead.edited",
+    changes: {
+      "Won Date": { from: item.old_value || null, to: item.new_value || null },
+    },
+  };
+}
+
 export function createLeadFeatures(deps) {
   const BaseField = deps.Field;
 
@@ -48,6 +59,7 @@ export function createLeadFeatures(deps) {
     const [wonDate, setWonDate] = useState("");
     const [loading, setLoading] = useState(enabled);
     const [error, setError] = useState("");
+    const [historyVersion, setHistoryVersion] = useState(0);
 
     useEffect(() => {
       let cancelled = false;
@@ -74,18 +86,34 @@ export function createLeadFeatures(deps) {
       onChange: setWonDate,
     }), [enabled, wonDate, loading, error]);
 
+    const wrappedFetchHistory = useMemo(() => {
+      if (!props.fetchHistory) return undefined;
+      return async (leadId) => {
+        const result = await props.fetchHistory(leadId);
+        return {
+          ...result,
+          history: (result?.history || []).map(presentWonDateAudit),
+        };
+      };
+    }, [props.fetchHistory, historyVersion]);
+
     const onUpdate = async (leadId, payload) => {
       if (!props.onUpdate) return undefined;
       const isEditSave = payload && Object.prototype.hasOwnProperty.call(payload, "businessName");
-      const nextPayload = enabled && isEditSave && wonDate && !loading && !error
-        ? { ...payload, wonDate }
-        : payload;
-      return props.onUpdate(leadId, nextPayload);
+      const includeWonDate = enabled && isEditSave && wonDate && !loading && !error;
+      const nextPayload = includeWonDate ? { ...payload, wonDate } : payload;
+      const result = await props.onUpdate(leadId, nextPayload);
+      if (includeWonDate) setHistoryVersion((value) => value + 1);
+      return result;
     };
 
     return (
       <WonDateContext.Provider value={contextValue}>
-        <CoreLeadDetailDrawer {...props} onUpdate={props.onUpdate ? onUpdate : undefined} />
+        <CoreLeadDetailDrawer
+          {...props}
+          fetchHistory={wrappedFetchHistory}
+          onUpdate={props.onUpdate ? onUpdate : undefined}
+        />
       </WonDateContext.Provider>
     );
   }
