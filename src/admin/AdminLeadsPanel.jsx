@@ -6,6 +6,39 @@ import DesktopDealsBoard from "../DesktopDealsBoard";
 import { api, buildExportUrl } from "../api.js";
 import useAdminLeadPage from "./useAdminLeadPage.js";
 
+const MOBILE_STATUS_STYLE = {
+  cold: { background: "#F3F4F6", color: "#4B5563", border: "#E2E5E9" },
+  conversation: { background: "#EAF1FF", color: "#315FB4", border: "#D8E3FA" },
+  hot: { background: "#FDECEC", color: "#C33F3F", border: "#F4D2D2" },
+  demo: { background: "#F2ECFF", color: "#7350A5", border: "#E3D8FA" },
+  negotiation: { background: "#FFF4DA", color: "#A06B12", border: "#F0D69A" },
+  won: { background: "#E6F6EF", color: "#12805C", border: "#CFE9DE" },
+  lost: { background: "#F4F4F5", color: "#71717A", border: "#E4E4E7" },
+  nurture: { background: "#EAF6F8", color: "#287C88", border: "#D7EBEF" },
+};
+
+function localDay(value) {
+  if (!value) return null;
+  const d = value instanceof Date ? new Date(value) : new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function mobileAttention(lead) {
+  if (lead.status === "won") return { label: "Won", tone: "#12805C" };
+  if (lead.status === "lost") return { label: "Lost", tone: "#71717A" };
+  if (!lead.nextFollowUpDate) return { label: "", tone: "#70817E" };
+  const follow = localDay(`${String(lead.nextFollowUpDate).slice(0, 10)}T00:00:00`);
+  const today = localDay(new Date());
+  if (!follow || !today) return { label: "", tone: "#70817E" };
+  const days = Math.round((follow - today) / 86400000);
+  if (days < 0) return { label: "Follow-up overdue", tone: "#C33F3F" };
+  if (days === 0) return { label: "Follow-up today", tone: "#A06B12" };
+  if (days === 1) return { label: "Follow-up tomorrow", tone: "#287C88" };
+  return { label: "", tone: "#70817E" };
+}
+
 export default function AdminLeadsPanel({
   showLeads, desktopDeals, desktopContacts, sectionNavigation, section, desktopSection, phone,
   salesmen, filteredLeads, pagedLeads, leadsViewMode, setLeadsViewMode,
@@ -19,6 +52,19 @@ export default function AdminLeadsPanel({
   } = shared;
   const [sheetsInfo, setSheetsInfo] = useState(null);
   const [sheetsError, setSheetsError] = useState("");
+  const [mobileDealsSort, setMobileDealsSort] = useState("recent_activity");
+
+  const mobileDeals = Boolean(phone && sectionNavigation && section === "deals" && !desktopSection);
+  const mobileDealRows = useMemo(() => {
+    if (!mobileDeals) return filteredLeads;
+    const rows = [...filteredLeads];
+    const activity = (lead) => new Date(lead.updatedAt || lead.createdAt || 0).getTime();
+    if (mobileDealsSort === "oldest_activity") rows.sort((a, b) => activity(a) - activity(b));
+    else if (mobileDealsSort === "newest_lead") rows.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    else if (mobileDealsSort === "oldest_lead") rows.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+    else rows.sort((a, b) => activity(b) - activity(a));
+    return rows;
+  }, [filteredLeads, mobileDeals, mobileDealsSort]);
 
   const listMode = (sectionNavigation && section === "leads")
     || ((desktopDeals || !(sectionNavigation && section === "deals")) && leadsViewMode === "list");
@@ -44,6 +90,134 @@ export default function AdminLeadsPanel({
     ? Math.max(1, Math.ceil(filteredLeads.length / LEADS_PER_PAGE))
     : serverPage.totalPages;
   const listCurrentPage = serverPage.error && serverRows.length === 0 ? 1 : serverPage.page;
+
+  if (mobileDeals) {
+    const mobileTotalValue = mobileDealRows.reduce((sum, lead) => sum + (Number(lead.dealValue) || 0), 0);
+    const controlStyle = {
+      minWidth: 0,
+      height: 34,
+      border: `1px solid ${T.line}`,
+      borderRadius: 9,
+      background: "#fff",
+      color: T.ink,
+      padding: "5px 9px",
+      fontSize: 11.5,
+      fontWeight: 650,
+      outline: "none",
+    };
+
+    return (
+      <div hidden={!showLeads} style={{ marginTop: 8 }}>
+        <section aria-label="Admin deals" style={{ width: "100%" }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 10 }}>
+            <div style={{ minWidth: 0 }}>
+              <h2 style={{ margin: 0, fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, lineHeight: 1.2, color: T.ink }}>Deals</h2>
+              <div style={{ marginTop: 3, fontSize: 11.5, color: T.inkSoft }}>
+                {mobileDealRows.length} deals · {fmtMoney(mobileTotalValue)} recorded value
+              </div>
+            </div>
+            {onAddClick && (
+              <button
+                type="button"
+                onClick={onAddClick}
+                aria-label="Add Deal"
+                style={{ flexShrink: 0, minHeight: 34, display: "inline-flex", alignItems: "center", gap: 5, border: "none", borderRadius: 9, padding: "7px 10px", background: T.route, color: "#fff", fontSize: 11.5, fontWeight: 800, cursor: "pointer" }}
+              >
+                <Plus size={14} /> Add Deal
+              </button>
+            )}
+          </div>
+
+          <div style={{ position: "relative", marginBottom: 9 }}>
+            <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: T.inkSoft, pointerEvents: "none" }} />
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Search deals"
+              placeholder="Search deals"
+              style={{ width: "100%", height: 38, padding: "8px 34px 8px 33px", borderRadius: 10, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontSize: 13, outline: "none" }}
+            />
+            {searchQuery && (
+              <button type="button" aria-label="Clear search" onClick={() => setSearchQuery("")} style={{ position: "absolute", right: 7, top: "50%", transform: "translateY(-50%)", width: 28, height: 28, display: "inline-flex", alignItems: "center", justifyContent: "center", border: "none", background: "transparent", color: T.inkSoft, cursor: "pointer" }}>
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 7, marginBottom: 7 }}>
+            <select aria-label="Employee" value={filterSalesman} onChange={(e) => setFilterSalesman(e.target.value)} style={controlStyle}>
+              <option value="all">All employees</option>
+              {salesmen.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+            <select aria-label="Deal status" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={controlStyle}>
+              <option value="all">Status</option>
+              {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+            </select>
+            <input aria-label="Deal date" type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} style={{ ...controlStyle, width: "100%" }} />
+            <select aria-label="Sort deals" value={mobileDealsSort} onChange={(e) => setMobileDealsSort(e.target.value)} style={controlStyle}>
+              <option value="recent_activity">Recent activity</option>
+              <option value="oldest_activity">Oldest activity</option>
+              <option value="newest_lead">Newest deal</option>
+              <option value="oldest_lead">Oldest deal</option>
+            </select>
+          </div>
+
+          {(filterSalesman !== "all" || filterStatus !== "all" || filterDate || searchQuery.trim()) && (
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+              <button type="button" onClick={() => { setFilterSalesman("all"); setFilterStatus("all"); setFilterDate(""); setSearchQuery(""); }} style={{ border: "none", background: "transparent", color: T.route, fontSize: 11, fontWeight: 800, padding: "3px 1px", cursor: "pointer" }}>
+                Reset filters
+              </button>
+            </div>
+          )}
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+            {mobileDealRows.map((lead) => {
+              const statusStyle = MOBILE_STATUS_STYLE[lead.status] || MOBILE_STATUS_STYLE.cold;
+              const attention = mobileAttention(lead);
+              const activityTime = lead.updatedAt || lead.createdAt;
+              return (
+                <button
+                  key={lead.id}
+                  type="button"
+                  className="ft-row"
+                  onClick={() => onSelectLead(lead)}
+                  style={{ width: "100%", textAlign: "left", border: `1px solid ${T.line}`, borderRadius: 12, background: "#fff", padding: "10px 11px", cursor: "pointer", color: T.ink }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 9 }}>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ fontWeight: 700, fontSize: 13.5, lineHeight: 1.25, overflowWrap: "anywhere" }}>{lead.business}</div>
+                      <div style={{ marginTop: 3, display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap", fontSize: 11.2, color: T.inkSoft }}>
+                        <span>{lead.salesmanName || "Unassigned"}</span>
+                        {attention.label && <><span aria-hidden="true">·</span><strong style={{ color: attention.tone, fontWeight: 800 }}>{attention.label}</strong></>}
+                      </div>
+                    </div>
+                    <span style={{ flexShrink: 0, border: `1px solid ${statusStyle.border}`, borderRadius: 999, background: statusStyle.background, color: statusStyle.color, padding: "4px 8px", fontSize: 10.5, lineHeight: 1, fontWeight: 800 }}>
+                      {STATUS_LABEL[lead.status] || lead.status}
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 10, marginTop: 8 }}>
+                    <div style={{ minWidth: 0, fontSize: 10.8, color: T.inkSoft, lineHeight: 1.3 }}>
+                      {[lead.subLocation, lead.owner || lead.phone].filter(Boolean).join(" · ") || "No contact details"}
+                      <div style={{ marginTop: 2 }}>{activityTime ? fmtTime(activityTime) : ""}</div>
+                    </div>
+                    {lead.dealValue != null && Number(lead.dealValue) > 0 && (
+                      <div style={{ flexShrink: 0, fontSize: 12, fontWeight: 850, color: T.route }}>{fmtMoney(Number(lead.dealValue))}</div>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+            {mobileDealRows.length === 0 && (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7, color: T.inkSoft, fontSize: 12.5, padding: "30px 8px" }}>
+                <List size={20} style={{ opacity: 0.45 }} />
+                No deals match these filters.
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div hidden={!showLeads}>
