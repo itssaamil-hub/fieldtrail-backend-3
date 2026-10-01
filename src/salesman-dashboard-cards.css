@@ -100,4 +100,20 @@
     overflow: hidden !important;
     text-overflow: ellipsis !important;
   }
+
+  .engage-salesman-water-card[data-kpi="won"] > div:nth-child(3) {
+    position: absolute !important;
+    top: 39px !important;
+    right: 10px !important;
+    max-width: 72px !important;
+    margin: 0 !important;
+    text-align: right !important;
+    font-size: 8.5px !important;
+    line-height: 1 !important;
+  }
+
+  .engage-salesman-water-card[data-kpi="won"] > div:nth-child(4) {
+    margin-top: 3px !important;
+    padding-right: 0 !important;
+  }
 }
