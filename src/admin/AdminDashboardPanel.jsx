@@ -28,7 +28,7 @@ const lazyNamed = (loader, exportName) => {
 const TasksEntry = lazyNamed(() => import("../Tasks.jsx"), "TasksEntry");
 const AdminMobileLeadTrend = lazyNamed(() => import("../AdminMobileEnhancements.jsx"), "AdminMobileLeadTrend");
 
-function DashboardStatCard({ T, label, value, sub, color, icon: IconC, onClick, comparison, comparisonPeriod }) {
+function DashboardStatCard({ T, label, value, sub, subInline = false, color, icon: IconC, onClick, comparison, comparisonPeriod }) {
   const c = color || T.ink;
   return (
     <div
@@ -44,14 +44,23 @@ function DashboardStatCard({ T, label, value, sub, color, icon: IconC, onClick, 
           </div>
         )}
       </div>
-      <div className="engage-dashboard-stat-value engage-db-value">{value}</div>
-      {sub && <div className="engage-dashboard-stat-sub">{sub}</div>}
+      {subInline ? (
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
+          <div className="engage-dashboard-stat-value engage-db-value">{value}</div>
+          {sub && <div className="engage-dashboard-stat-sub" style={{ marginTop: 0, textAlign: "right", whiteSpace: "nowrap" }}>{sub}</div>}
+        </div>
+      ) : (
+        <>
+          <div className="engage-dashboard-stat-value engage-db-value">{value}</div>
+          {sub && <div className="engage-dashboard-stat-sub">{sub}</div>}
+        </>
+      )}
       {comparison && (
         <div
           className="engage-dashboard-stat-comparison"
-          style={{ color: comparison.pct == null ? T.verified : comparison.pct > 0 ? T.verified : comparison.pct < 0 ? T.danger : T.inkSoft }}
+          style={{ color: comparison.pct > 0 ? T.verified : comparison.pct < 0 ? T.danger : T.inkSoft }}
         >
-          {comparison.pct == null ? "↑ New" : comparison.pct > 0 ? `↑ ${comparison.pct}%` : comparison.pct < 0 ? `↓ ${Math.abs(comparison.pct)}%` : "— Same"}{" "}
+          {comparison.pct > 0 ? `↑ ${comparison.pct}%` : comparison.pct < 0 ? `↓ ${Math.abs(comparison.pct)}%` : "— Same"}{" "}
           <span>vs last {comparisonPeriod === "monthly" ? "month" : "week"}</span>
         </div>
       )}
@@ -186,7 +195,7 @@ export default function AdminDashboardPanel({
         <DashboardStatCard T={T} label={<>Hot Leads <span style={{ fontSize: 8.5, opacity: 0.65 }}>TODAY</span></>} value={hotTodayValue} icon={Flame} comparison={comparisons.hotToday} comparisonPeriod={comparisonPeriod} color={T.danger} onClick={() => onOpenStatLeads({ title: "Hot Leads Today", leads: hotLeadsToday })} />
         <DashboardStatCard T={T} label="In Negotiation" value={negotiationValue} comparison={comparisons.negotiation} comparisonPeriod={comparisonPeriod} icon={Handshake} color="#8B5CF6" onClick={() => onOpenStatLeads({ title: "In Negotiation", leads: inNegotiation })} />
         <DashboardStatCard T={T} label="Total Leads" value={totalValue} comparison={comparisons.total} comparisonPeriod={comparisonPeriod} icon={Contact2} color="#0891B2" />
-        <DashboardStatCard T={T} label="Won" value={wonValue} sub={fmtMoney(wonDealValue)} comparison={comparisons.won} comparisonPeriod={comparisonPeriod} icon={CheckCircle2} color={T.verified} onClick={() => onOpenStatLeads({ title: "Won Leads", leads: dashboardLeads.filter((l) => l.status === "won") })} />
+        <DashboardStatCard T={T} label="Won" value={wonValue} sub={fmtMoney(wonDealValue)} subInline comparison={comparisons.won} comparisonPeriod={comparisonPeriod} icon={CheckCircle2} color={T.verified} onClick={() => onOpenStatLeads({ title: "Won Leads", leads: dashboardLeads.filter((l) => l.status === "won") })} />
         <DashboardStatCard T={T} label="Tasks" value={adminPendingTasks ?? 0} sub="pending" icon={List} color="#145C5D" />
         <DashboardStatCard T={T} label="Upcoming Follow-up" value={upcomingFollowUps.length} icon={CalendarClock} color={T.warn} onClick={() => onOpenStatLeads({ title: "Upcoming Follow-ups", leads: upcomingFollowUps })} />
         <DashboardStatCard T={T} label="Renewals Due" sub="next 30 days" value={upcomingRenewals.length} icon={RefreshCw} color={T.accent} onClick={() => onOpenStatLeads({ title: "Renewals Due (Next 30 Days)", leads: upcomingRenewals })} />
