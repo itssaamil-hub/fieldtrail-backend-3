@@ -1,5 +1,5 @@
 import React, { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, Play, Square, CheckCircle2, Loader2, WifiOff, Target as TargetIcon, Flame, MessageSquare, Handshake, CalendarClock, Plus, List, Search } from "lucide-react";
+import { AlertTriangle, Play, Square, CheckCircle2, Loader2, Target as TargetIcon, Flame, MessageSquare, Handshake, CalendarClock, Plus, List, Search } from "lucide-react";
 import AdminMobileNav, { useAdminPhone, salesmanTabs } from "../AdminMobileNav.jsx";
 import { api, mapLeadRow } from "../api.js";
 import { loadEmployeeDashboardComparisons } from "../dashboardComparisons.js";
@@ -29,7 +29,7 @@ function greetingForNow() {
   return "Good evening";
 }
 
-export default function SalesmanView({ notificationLead, session, leads, leadSummary, hasMoreLeads, loadMoreLeads, loadingMoreLeads, totalLeadCount, dayStarted, allowLeadWithoutStartDay, onToggleDay, togglingDay, justToggledDay, onAddLead, onUpdateLeadStatus, onUpdateLeadDetails, online, gpsStatus, queuedCount, loadError, messages, onMarkMessageRead, onDeleteMessage, onReplyMessage, employeeRepliesEnabled = true, dailyTarget, monthlyTarget, page, shared }) {
+export default function SalesmanView({ notificationLead, session, leads, leadSummary, hasMoreLeads, loadMoreLeads, loadingMoreLeads, totalLeadCount, dayStarted, allowLeadWithoutStartDay, onToggleDay, togglingDay, justToggledDay, onAddLead, onUpdateLeadStatus, onUpdateLeadDetails, online, gpsStatus, loadError, messages, onMarkMessageRead, onDeleteMessage, onReplyMessage, employeeRepliesEnabled = true, dailyTarget, monthlyTarget, page, shared }) {
   const { T, fmtMoney, isToday, isThisMonth, isWithinDays, isUpcomingRenewalMonth, SalesmanReportsPage, StatCard, MessagesSection, MyLeadsModal, AddLeadModal, LeadDetailDrawer, VerificationStamp, NoLocationBadge } = shared;
   const { pendingTasks, handlePendingTasksChange } = useSalesmanTasks();
   const phone = useAdminPhone();
@@ -180,14 +180,6 @@ export default function SalesmanView({ notificationLead, session, leads, leadSum
         </div>
       )}
 
-      {(!online || queuedCount > 0) && (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: T.warn, background: T.warnSoft, padding: "9px 12px", borderRadius: 11, marginBottom: 14 }}>
-          <WifiOff size={14} />
-          {!online
-            ? "No connection — leads you capture now are saved on this device and will sync automatically once you're back online."
-            : `Syncing ${queuedCount} queued lead${queuedCount === 1 ? "" : "s"}…`}
-        </div>
-      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8, marginBottom: 16 }}>
         <StatCard label="Today" value={todayCount} comparison={comparisons.today} comparisonPeriod={comparisonPeriod} icon={TargetIcon} color={T.route} onClick={() => setShowTodayLeads(true)} />

@@ -1,17 +1,11 @@
-import { legacyQueueCount, flushOfflineLeads, queueReadError } from './offlineLeadQueue.js';
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   api,
   ApiError,
   getSession,
-  getQueuedLeads,
-  pushQueuedLead,
-  removeQueuedLead,
   mapLeadRow,
 } from "./api.js";
 
-const QUEUE_RETRY_BASE_MS = 20000;
-const QUEUE_RETRY_JITTER_MS = 10000;
 const PAGE_SIZE = 50;
 
 function fallbackSummary(leads) {
@@ -56,7 +50,7 @@ function mergeUnique(current, incoming) {
   return merged;
 }
 
-export default function useSalesmanLeads({ online, session, setLoadError, makeQueuedLead }) {
+export default function useSalesmanLeads({ session, setLoadError }) {
   const [leads, setLeads] = useState([]);
   const [leadSummary, setLeadSummary] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -64,17 +58,9 @@ export default function useSalesmanLeads({ online, session, setLoadError, makeQu
   const [loadedPage, setLoadedPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [queuedCount, setQueuedCount] = useState(getQueuedLeads(session.id).length);
-  const queueFlightRef = useRef(null);
   const updateFlights = useRef(new Set());
   const loadMoreFlightRef = useRef(null);
   const mountedRef = useRef(true);
-  const makeQueuedLeadRef = useRef(makeQueuedLead);
-
-  useEffect(() => {
-    makeQueuedLeadRef.current = makeQueuedLead;
-  }, [makeQueuedLead]);
-
   const refreshSummary = useCallback(async (fallbackLeads = null) => {
     try {
       const summary = await api.salesmanLeadSummary(session.id);
@@ -91,13 +77,11 @@ export default function useSalesmanLeads({ online, session, setLoadError, makeQu
       const res = await api.salesmanLeads({ page: 1, limit: PAGE_SIZE }, session.id);
       if (!mountedRef.current || getSession()?.id !== session.id) return;
       const mapped = (res.leads || []).map((r) => mapLeadRow({ ...r, salesman_name: session.fullName }));
-      const queued = getQueuedLeads(session.id).map((payload) => ({ ...makeQueuedLeadRef.current(payload), syncStatus: "queued" }));
-      const next = mergeUnique(queued, mapped);
-      setLeads(next);
+      setLeads(mapped);
       setLoadedPage(1);
       setTotal(Number.isFinite(Number(res.total)) ? Number(res.total) : mapped.length);
       setTotalPages(Math.max(1, Number(res.totalPages) || 1));
-      setLoadError(queueReadError(session.id) || (legacyQueueCount() ? "Older offline deals are preserved on this device. Their owner must be verified before they can sync." : ""));
+      setLoadError("");
       refreshSummary(mapped);
     } catch (err) {
       if (mountedRef.current) setLoadError(err instanceof ApiError ? err.message : "Couldn't load your leads.");
@@ -136,96 +120,19 @@ export default function useSalesmanLeads({ online, session, setLoadError, makeQu
     return request;
   }, [loadedPage, totalPages, session.id, session.fullName, setLoadError]);
 
-  const flushQueue = useCallback(() => {
-    if (queueFlightRef.current) return queueFlightRef.current;
-    const queue = getQueuedLeads(session.id);
-    if (queue.length === 0) {
-      if (mountedRef.current) setQueuedCount(0);
-      return Promise.resolve();
-    }
-
-    const request = (async () => {
-      let synced = 0;
-      await flushOfflineLeads({
-        userId: session.id,
-        isCurrent: () => mountedRef.current && getSession()?.id === session.id,
-        createLead: api.salesmanCreateLead,
-        onSynced: (res, payload) => {
-          if (!res.deduped) synced += 1;
-          setLeads(prev => prev.map(lead => lead.clientUuid === payload.clientUuid
-            ? mapLeadRow({ ...res.lead, salesman_name: session.fullName }) : lead));
-        },
-        onError: err => setLoadError(`Offline deal remains saved: ${err.message || "Sync failed. Please try again."}`),
-      });
-      if (mountedRef.current && getSession()?.id === session.id) {
-        if (synced) setTotal((value) => value + synced);
-        setQueuedCount(getQueuedLeads(session.id).length);
-        refreshSummary();
-      }
-    })().finally(() => {
-      if (queueFlightRef.current === request) queueFlightRef.current = null;
-    });
-
-    queueFlightRef.current = request;
-    return request;
-  }, [session.id, session.fullName, refreshSummary]);
-
-  useEffect(() => {
-    if (online && queuedCount > 0 && document.visibilityState === "visible") flushQueue();
-  }, [online, queuedCount, flushQueue]);
-
-  useEffect(() => {
-    if (!online || queuedCount === 0) return undefined;
-    let timerId = null;
-    let stopped = false;
-    const schedule = () => {
-      if (stopped || getQueuedLeads(session.id).length === 0) return;
-      timerId = window.setTimeout(run, QUEUE_RETRY_BASE_MS + Math.floor(Math.random() * QUEUE_RETRY_JITTER_MS));
-    };
-    const run = async () => {
-      if (stopped) return;
-      if (document.visibilityState === "visible" && navigator.onLine !== false) await flushQueue();
-      schedule();
-    };
-    const onResume = () => {
-      if (!stopped && document.visibilityState === "visible" && navigator.onLine !== false) flushQueue();
-    };
-    schedule();
-    document.addEventListener("visibilitychange", onResume);
-    window.addEventListener("online", onResume);
-    return () => {
-      stopped = true;
-      if (timerId) window.clearTimeout(timerId);
-      document.removeEventListener("visibilitychange", onResume);
-      window.removeEventListener("online", onResume);
-    };
-  }, [online, queuedCount, flushQueue]);
-
-  const queueLead = payload => {
-    try {
-      pushQueuedLead(payload, session.id);
-      setQueuedCount(getQueuedLeads(session.id).length);
-      const queued = { ...makeQueuedLeadRef.current(payload), syncStatus: "queued" };
-      setLeads(prev => mergeUnique([queued], prev));
-      return { ok: true, lead: queued };
-    } catch (err) {
-      return { ok: false, error: err.message || "The deal could not be stored on this device. Keep the form open and try again online." };
-    }
-  };
   const handleAddLead = async payload => {
-    if (!online) return queueLead(payload);
     try {
       const res = await api.salesmanCreateLead(payload, session.id);
       const mapped = mapLeadRow({ ...res.lead, salesman_name: session.fullName });
       if (mountedRef.current && getSession()?.id === session.id) {
         setLeads(prev => mergeUnique([mapped], prev));
         if (!res.deduped) setTotal(value => value + 1);
+        setLoadError("");
         refreshSummary();
       }
       return { ok: true, lead: mapped };
     } catch (err) {
-      if (!(err instanceof ApiError) || err.status === 0) return queueLead(payload);
-      return { ok: false, error: err.message };
+      return { ok: false, error: err?.message || "The deal was not saved. Check your connection and try again." };
     }
   };
 
@@ -254,8 +161,7 @@ export default function useSalesmanLeads({ online, session, setLoadError, makeQu
     leadSummary,
     loading,
     loadingMore,
-    queuedCount,
-    totalLeadCount: total + queuedCount,
+    totalLeadCount: total,
     hasMoreLeads: loadedPage < totalPages,
     loadLeads,
     loadMoreLeads,
