@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { createLeadFeatures as createCoreLeadFeatures } from "./LeadFeaturesCore.jsx";
 import { getApiBase, getSession } from "../api.js";
+import { isWonDateInCurrentIstMonth, readAdminWonPeriod, writeAdminWonPeriod } from "./wonPeriod.js";
 
 const WonDateContext = createContext(null);
 
@@ -53,6 +54,55 @@ export function createLeadFeatures(deps) {
 
   const core = createCoreLeadFeatures({ ...deps, Field: FieldWithWonDate });
   const CoreLeadDetailDrawer = core.LeadDetailDrawer;
+  const CoreMyLeadsModal = core.MyLeadsModal;
+
+  function MyLeadsModal(props) {
+    if (props.title !== "Won Leads") return <CoreMyLeadsModal {...props} />;
+
+    const [period, setPeriod] = useState(() => readAdminWonPeriod());
+    const currentWon = (props.leads || []).filter((lead) => lead.status === "won");
+    const periodWon = period === "month"
+      ? currentWon.filter((lead) => isWonDateInCurrentIstMonth(lead.wonDate))
+      : currentWon;
+    const revenue = periodWon.reduce((sum, lead) => sum + (Number(lead.dealValue) || 0), 0);
+
+    const choosePeriod = (next) => {
+      const saved = writeAdminWonPeriod(next);
+      setPeriod(saved);
+    };
+
+    return (
+      <deps.Overlay onClose={props.onClose} title="Won Leads">
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 12, padding: "10px 12px", background: deps.T.paperDeep, borderRadius: 11 }}>
+          <div>
+            <div style={{ fontSize: 10.5, color: deps.T.inkSoft, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4 }}>{period === "all" ? "All-time revenue" : "This month's revenue"}</div>
+            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 18, color: deps.T.verified }}>{deps.fmtMoney(revenue)}</div>
+          </div>
+          <div style={{ display: "flex", gap: 2, background: "#fff", borderRadius: 8, padding: 2, border: `1px solid ${deps.T.line}` }}>
+            <button
+              onClick={() => choosePeriod("all")}
+              style={{ fontSize: 11.5, fontWeight: 600, padding: "5px 9px", borderRadius: 6, border: "none", cursor: "pointer", background: period === "all" ? deps.T.route : "transparent", color: period === "all" ? "#fff" : deps.T.inkSoft }}
+            >
+              All time
+            </button>
+            <button
+              onClick={() => choosePeriod("month")}
+              style={{ fontSize: 11.5, fontWeight: 600, padding: "5px 9px", borderRadius: 6, border: "none", cursor: "pointer", background: period === "month" ? deps.T.route : "transparent", color: period === "month" ? "#fff" : deps.T.inkSoft }}
+            >
+              This month
+            </button>
+          </div>
+        </div>
+        <CoreMyLeadsModal
+          {...props}
+          title=" "
+          leads={periodWon}
+          embedded
+          onClose={props.onClose}
+        />
+      </deps.Overlay>
+    );
+  }
 
   function LeadDetailDrawer(props) {
     const enabled = !!props.isAdmin && props.lead?.status === "won";
@@ -118,5 +168,5 @@ export function createLeadFeatures(deps) {
     );
   }
 
-  return { ...core, LeadDetailDrawer };
+  return { ...core, MyLeadsModal, LeadDetailDrawer };
 }
