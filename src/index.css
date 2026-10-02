@@ -344,3 +344,135 @@ button:disabled {
   color: #7450C7 !important;
   stroke: #7450C7 !important;
 }
+
+/* Admin Employees: phone-only responsiveness. Desktop layout remains unchanged. */
+@media (max-width: 899px) {
+  .engage-employee-panel-enhanced {
+    width: 100%;
+    min-width: 0;
+    padding: 12px !important;
+    border-radius: 14px !important;
+    overflow: hidden;
+  }
+
+  .engage-employee-panel-enhanced > div:first-child {
+    align-items: flex-start !important;
+    gap: 8px !important;
+  }
+
+  .engage-employee-panel-enhanced > div:first-child > div:last-child {
+    width: 100%;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 7px !important;
+  }
+
+  .engage-employee-panel-enhanced > div:first-child > div:last-child button {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+    white-space: nowrap;
+    padding: 7px 8px !important;
+  }
+
+  .engage-employee-controls {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 118px;
+    width: 100%;
+    gap: 7px !important;
+    align-items: stretch !important;
+  }
+
+  .engage-employee-search-wrap {
+    min-width: 0;
+    flex: none !important;
+  }
+
+  .engage-employee-controls > select {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .engage-employee-filter {
+    grid-column: 1 / -1;
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 5px !important;
+    width: 100%;
+  }
+
+  .engage-employee-filter button {
+    min-width: 0;
+    width: 100%;
+    padding: 6px 5px !important;
+    white-space: normal;
+    line-height: 1.15;
+  }
+
+  .engage-employee-panel-enhanced > .ft-row {
+    min-width: 0;
+    overflow: hidden;
+    padding: 10px !important;
+  }
+
+  .engage-employee-panel-enhanced > .ft-row > div:first-child {
+    align-items: flex-start !important;
+    gap: 8px;
+  }
+
+  .engage-employee-panel-enhanced > .ft-row > div:first-child > div:first-child {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow-wrap: anywhere;
+  }
+
+  .engage-employee-panel-enhanced > .ft-row > div:first-child > div:last-child {
+    flex: 0 1 auto;
+    min-width: 0;
+    gap: 5px !important;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .engage-employee-today {
+    overflow-wrap: anywhere;
+    line-height: 1.35;
+  }
+
+  .engage-employee-panel-enhanced > .ft-row > div:nth-of-type(4) {
+    flex-wrap: wrap;
+    gap: 7px 10px !important;
+  }
+
+  .engage-employee-panel-enhanced > .ft-row > div:last-child {
+    gap: 10px !important;
+  }
+
+  .engage-employee-pagination {
+    flex-wrap: wrap;
+    align-items: center !important;
+  }
+
+  .engage-employee-pagination > div {
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 380px) {
+  .engage-employee-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .engage-employee-controls > select,
+  .engage-employee-filter {
+    grid-column: 1;
+  }
+
+  .engage-employee-filter {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .engage-employee-panel-enhanced > div:first-child > div:last-child {
+    grid-template-columns: 1fr;
+  }
+}
