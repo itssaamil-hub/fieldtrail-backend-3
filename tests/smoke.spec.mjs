@@ -62,7 +62,7 @@ const adminSession = { id: 'smoke-admin', role: 'admin', name: 'Smoke Admin', fu
 test('admin Add Deal surface renders without crash', async ({ page }) => {
   await bootAs(page, adminSession);
   await page.getByRole('button', { name: 'Pipeline', exact: true }).click();
-  const addDeal = page.getByRole('button', { name: /add deal/i }).first();
+  const addDeal = page.getByRole('button', { name: /add lead/i }).first();
   await expect(addDeal).toBeVisible();
   await addDeal.click();
   await noCrash(page);
