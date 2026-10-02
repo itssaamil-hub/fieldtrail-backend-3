@@ -229,7 +229,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
   const desktopDeals = desktopSection === "deals";
   const desktopContacts = desktopSection === "leads";
   const showDashboard = !sectionNavigation || section === "dashboard";
-  const showLeads = showDashboard || section === "leads" || section === "deals";
+  const showLeads = section === "leads" || section === "deals";
   const [filterSalesman, setFilterSalesman] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterDate, setFilterDate] = useState("");
