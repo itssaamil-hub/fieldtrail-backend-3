@@ -1,4 +1,5 @@
 import React from "react";
+import { mapLeadRow } from "../api.js";
 
 // Admin map and orchestration extracted from App.jsx without changing behavior.
 export function createAdminAppView(deps) {
@@ -242,8 +243,12 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
   useEffect(() => {
     if (!notificationLead?.id) return;
     const lead = leads.find((item) => item.id === notificationLead.id) || notificationLead.lead;
-    if (lead) setSelectedLead(lead);
-  }, [notificationLead, leads]);
+    if (lead) { setSelectedLead(lead); return; }
+    let cancelled = false;
+    api.adminActivityLead(notificationLead.id).then(res => { if (!cancelled) setSelectedLead(mapLeadRow(res.lead)); })
+      .catch(err => { if (!cancelled) window.alert(err.message || "This lead could not be opened."); });
+    return () => { cancelled = true; };
+  }, [notificationLead]);
   const [showAddSalesman, setShowAddSalesman] = useState(false);
   const [editSalesman, setEditSalesman] = useState(null);
   const [employeeSettings,setEmployeeSettings]=useState(null);
@@ -387,7 +392,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
       <AdminMobileNav active={mobileTab} onChange={switchMobileTab} />
 
       {showTeamActivity && <AdminTeamActivitySheet salesmen={salesmen} onClose={() => setShowTeamActivity(false)} />}
-      {selectedLead && <LeadDetailDrawer lead={leads.find((l) => l.id === selectedLead.id) || selectedLead} onClose={() => setSelectedLead(null)} onStatusChange={onStatusChange} onUpdate={onUpdateLead} onDelete={onDeleteLead} fetchHistory={api.adminLeadHistory} isAdmin />}
+      {selectedLead && <LeadDetailDrawer notificationOpenedAt={notificationLead?.id === selectedLead.id ? notificationLead.openedAt : null} lead={leads.find((l) => l.id === selectedLead.id) || selectedLead} onClose={() => setSelectedLead(null)} onStatusChange={onStatusChange} onUpdate={onUpdateLead} onDelete={onDeleteLead} fetchHistory={api.adminLeadHistory} isAdmin />}
       {routeSalesman && <SalesmanRouteModal salesman={routeSalesman} onClose={() => setRouteSalesman(null)} />}
       {showAdminAddLead && (
         <AdminAddLeadModalV2

@@ -221,12 +221,13 @@ function whatsappLink(phone) {
   return `https://wa.me/${digits}`;
 }
 
-function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, fetchHistory, isAdmin = false, employeeRepliesEnabled = true }) {
+function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, fetchHistory, isAdmin = false, employeeRepliesEnabled = true, notificationOpenedAt = null }) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [editing, setEditing] = useState(false);
   const [history, setHistory] = useState(null); // null = loading, [] = loaded & empty
   const [historyError, setHistoryError] = useState("");
   const [showBrief, setShowBrief] = useState(false);
+  useEffect(() => { if (notificationOpenedAt) setShowBrief(true); }, [notificationOpenedAt, lead.id]);
   const [detailTab, setDetailTab] = useState("overview");
   const [showReschedule, setShowReschedule] = useState(false);
   const [rescheduleDate, setRescheduleDate] = useState("");
@@ -333,6 +334,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
       dealValue: form.dealValue ? Number(form.dealValue) : null,
       nextFollowUpDate: form.nextFollowUpDate || null,
     };
+    try {
     await onUpdate(lead.id, payload);
     setSavedOverrides((prev) => ({
       ...prev,
@@ -343,8 +345,9 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
       dealValue: payload.dealValue,
       nextFollowUpDate: payload.nextFollowUpDate || "",
     }));
-    setSaving(false);
     setEditing(false);
+    } catch (err) { window.alert(err.message || "The deal could not be saved. Please try again."); }
+    finally { setSaving(false); }
   };
 
   const followUpDate = displayLead.nextFollowUpDate ? new Date(displayLead.nextFollowUpDate) : null;
@@ -369,7 +372,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
       await onUpdate(lead.id, { nextFollowUpDate: null });
       setSavedOverrides((prev) => ({ ...prev, nextFollowUpDate: "" }));
       setForm((prev) => ({ ...prev, nextFollowUpDate: "" }));
-    } finally {
+    } catch (err) { window.alert(err.message || "The follow-up could not be saved. Please try again."); } finally {
       setFollowUpSaving(false);
     }
   };
@@ -383,7 +386,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
       setForm((prev) => ({ ...prev, nextFollowUpDate: rescheduleDate }));
       setShowReschedule(false);
       setRescheduleDate("");
-    } finally {
+    } catch (err) { window.alert(err.message || "The follow-up could not be saved. Please try again."); } finally {
       setFollowUpSaving(false);
     }
   };
@@ -396,25 +399,25 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
       setSavedOverrides((prev) => ({ ...prev, nextFollowUpDate: iso }));
       setForm((prev) => ({ ...prev, nextFollowUpDate: iso }));
       setShowReschedule(false);
-    } finally {
+    } catch (err) { window.alert(err.message || "The follow-up could not be saved. Please try again."); } finally {
       setFollowUpSaving(false);
     }
   };
 
-  const changeStatus = (next) => {
+  const changeStatus = async (next) => {
     if (!onStatusChange || next === lead.status) return;
     const previous = lead.status;
-    onStatusChange(lead.id, next);
+    try { await onStatusChange(lead.id, next); } catch (err) { window.alert(err.message || "The status could not be saved. Please try again."); return; }
     setStatusExpanded(false);
     setStatusToast({ label: STATUS_LABEL[next] || next, previous });
     clearTimeout(statusToastTimer.current);
     statusToastTimer.current = setTimeout(() => setStatusToast(null), 5000);
   };
 
-  const undoStatus = () => {
+  const undoStatus = async () => {
     if (!statusToast) return;
     clearTimeout(statusToastTimer.current);
-    onStatusChange(lead.id, statusToast.previous);
+    try { await onStatusChange(lead.id, statusToast.previous); } catch (err) { window.alert(err.message || "The status could not be saved. Please try again."); return; }
     setStatusToast(null);
   };
 

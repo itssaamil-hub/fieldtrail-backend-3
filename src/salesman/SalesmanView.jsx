@@ -301,7 +301,7 @@ export default function SalesmanView({ notificationLead, session, leads, leadSum
           onSelectLead={(l) => { setShowRenewals(false); setViewingLead(l); }}
         />
       )}
-      {viewingLead && <LeadDetailDrawer lead={leads.find((l) => l.id === viewingLead.id) || viewingLead} onClose={() => setViewingLead(null)} onStatusChange={onUpdateLeadStatus} onUpdate={onUpdateLeadDetails} fetchHistory={api.salesmanLeadHistory} employeeRepliesEnabled={employeeRepliesEnabled} />}
+      {viewingLead && <LeadDetailDrawer notificationOpenedAt={notificationLead?.id === viewingLead.id ? notificationLead.openedAt : null} lead={leads.find((l) => l.id === viewingLead.id) || viewingLead} onClose={() => setViewingLead(null)} onStatusChange={onUpdateLeadStatus} onUpdate={onUpdateLeadDetails} fetchHistory={api.salesmanLeadHistory} employeeRepliesEnabled={employeeRepliesEnabled} />}
       </>
       )}
     </div>

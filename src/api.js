@@ -1,3 +1,4 @@
+export { getQueuedLeads, setQueuedLeads, pushQueuedLead, removeQueuedLead } from './offlineLeadQueue.js';
 import { showSaveFeedback, savedActionMessage } from "./saveFeedback.js";
 // ---------------------------------------------------------------------------
 // Talks to the real FieldTrail backend (Express + Postgres, from the
@@ -51,29 +52,6 @@ export function setDayStartedFlag(userId, val) {
   if (val) localStorage.setItem(`${LS_DAY_STARTED}:${userId}`, "1");
   else localStorage.removeItem(`${LS_DAY_STARTED}:${userId}`);
 }
-
-// Offline lead queue — a lead saved with no connection sits here (keyed by
-// its own client-generated UUID, the same idempotency key the backend uses
-// to dedupe retries) until it can be POSTed successfully.
-export function getQueuedLeads() {
-  try {
-    return JSON.parse(localStorage.getItem(LS_QUEUED_LEADS) || "[]");
-  } catch {
-    return [];
-  }
-}
-export function setQueuedLeads(list) {
-  localStorage.setItem(LS_QUEUED_LEADS, JSON.stringify(list));
-}
-export function pushQueuedLead(payload) {
-  const list = getQueuedLeads();
-  list.push(payload);
-  setQueuedLeads(list);
-}
-export function removeQueuedLead(clientUuid) {
-  setQueuedLeads(getQueuedLeads().filter((l) => l.clientUuid !== clientUuid));
-}
-
 
 const RENEWAL_MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 function normalizeRenewalPayload(payload = {}) {
@@ -254,12 +232,13 @@ async function attendanceBodyWithLocation(body = {}, { required = true } = {}) {
   return locationAuditBody(body, fix);
 }
 
-async function request(path, { method = "GET", body, auth = true } = {}) {
+async function request(path, { method = "GET", body, auth = true, expectedUserId } = {}) {
   const base = getApiBase();
   if (!base) throw new ApiError("No backend configured yet.", 0);
   const headers = { "Content-Type": "application/json" };
   if (auth) {
     const session = getSession();
+    if (expectedUserId && (session?.id !== expectedUserId || !session?.token)) throw new ApiError("Account changed. The offline deal remains saved for its owner.", 401);
     if (session?.token) headers.Authorization = `Bearer ${session.token}`;
   }
   let res;
@@ -460,17 +439,17 @@ export const api = {
     rememberAttendanceLocation(payload?.lat, payload?.lng, payload?.accuracyM, payload?.capturedAt || Date.now());
     return request("/salesman/location/ping", { method: "POST", body: payload });
   },
-  salesmanLeads: (params = {}) => {
+  salesmanLeads: (params = {}, expectedUserId) => {
     const entries = Object.entries(params).filter(([, v]) => v != null && v !== "" && v !== "all");
     const qs = new URLSearchParams(entries).toString();
-    return request(`/salesman/leads${qs ? `?${qs}` : ""}`);
+    return request(`/salesman/leads${qs ? `?${qs}` : ""}`, { expectedUserId });
   },
-  salesmanLeadSummary: () => request("/salesman/leads-summary"),
+  salesmanLeadSummary: (expectedUserId) => request("/salesman/leads-summary", { expectedUserId }),
   salesmanLead: (id) => request(`/salesman/leads/${id}`),
   salesmanLeadHistory: (id) => request(`/salesman/leads/${id}/history`),
-  salesmanCreateLead: (payload) => request("/salesman/leads", { method: "POST", body: normalizeRenewalPayload(payload) }),
+  salesmanCreateLead: (payload, expectedUserId) => request("/salesman/leads", { method: "POST", body: normalizeRenewalPayload(payload), expectedUserId }),
   salesmanCheckDuplicateLead: (payload) => request("/salesman/leads/duplicate-check", { method: "POST", body: payload }),
-  salesmanUpdateLead: (id, payload) => request(`/salesman/leads/${id}`, { method: "PATCH", body: normalizeRenewalPayload(payload) }),
+  salesmanUpdateLead: (id, payload, expectedUserId) => request(`/salesman/leads/${id}`, { method: "PATCH", body: normalizeRenewalPayload(payload), expectedUserId }),
   salesmanGetSettings: () => request("/salesman/settings"),
   salesmanGetProfile: () => request("/salesman/profile"),
   salesmanGetLeadOptions: () => request("/salesman/lead-options"),
