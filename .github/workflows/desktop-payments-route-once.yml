@@ -1,0 +1,52 @@
+name: Desktop Payments route once
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/desktop-payments-route-once.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply guarded desktop Payments route
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          sidebar = Path('src/DesktopSidebar.jsx')
+          text = sidebar.read_text()
+          old = """export default function DesktopSidebar({ active, collapsed, onCollapse, onSelect, onSettings, settingsOpen }) {\n  const openPayments = () => window.dispatchEvent(new CustomEvent('fieldtrail:open-collections'));\n  const item = ([key, label, Icon]) => {\n    const activate = () => key === 'payments' ? openPayments() : onSelect(key);"""
+          new = """export default function DesktopSidebar({ active, collapsed, onCollapse, onSelect, onSettings, settingsOpen }) {\n  const item = ([key, label, Icon]) => {\n    const activate = () => onSelect(key);"""
+          if text.count(old) != 1:
+              raise SystemExit(f'DesktopSidebar guard failed: expected exactly 1 match, got {text.count(old)}')
+          sidebar.write_text(text.replace(old, new))
+
+          app = Path('src/App.jsx')
+          text = app.read_text()
+          old = """  } else if (session.role === \"admin\") {\n    body = adminDesktop && desktopSection === \"exceptions\" && topPage !== \"reports\"\n      ? <ExceptionCentre onNavigate={selectDesktopSection} />\n      : adminDesktop && desktopSection === \"activity\" && topPage !== \"reports\"\n      ? <ActivityCentre onOpenLead={lead => { selectDesktopSection(\"leads\"); setNotificationLead({id:lead.id, lead, openedAt:Date.now()}); }} />\n      : <AdminApp desktopSection={adminDesktop ? (topPage === \"reports\" ? \"reports\" : desktopSection === \"reports\" ? \"dashboard\" : desktopSection) : null} notificationLead={notificationLead} session={session} online={online} onLogout={handleLogout} page={topPage} />;"""
+          new = """  } else if (session.role === \"admin\") {\n    body = adminDesktop && desktopSection === \"payments\" && topPage !== \"reports\"\n      ? <CollectionsPanel embedded />\n      : adminDesktop && desktopSection === \"exceptions\" && topPage !== \"reports\"\n      ? <ExceptionCentre onNavigate={selectDesktopSection} />\n      : adminDesktop && desktopSection === \"activity\" && topPage !== \"reports\"\n      ? <ActivityCentre onOpenLead={lead => { selectDesktopSection(\"leads\"); setNotificationLead({id:lead.id, lead, openedAt:Date.now()}); }} />\n      : <AdminApp desktopSection={adminDesktop ? (topPage === \"reports\" ? \"reports\" : desktopSection === \"reports\" ? \"dashboard\" : desktopSection) : null} notificationLead={notificationLead} session={session} online={online} onLogout={handleLogout} page={topPage} />;"""
+          if text.count(old) != 1:
+              raise SystemExit(f'App route guard failed: expected exactly 1 match, got {text.count(old)}')
+          app.write_text(text.replace(old, new))
+
+          Path('.github/workflows/desktop-payments-route-once.yml').unlink()
+          PY
+      - name: Verify scope
+        run: |
+          git diff --check
+          changed="$(git diff --name-only | sort)"
+          expected="$(printf '%s\n' '.github/workflows/desktop-payments-route-once.yml' 'src/App.jsx' 'src/DesktopSidebar.jsx' | sort)"
+          test "$changed" = "$expected" || { echo "Unexpected files changed:"; echo "$changed"; exit 1; }
+          git diff --stat
+      - name: Commit
+        run: |
+          git config user.name 'itssaamil-hub'
+          git config user.email 'itssaamil@gmail.com'
+          git add src/App.jsx src/DesktopSidebar.jsx .github/workflows/desktop-payments-route-once.yml
+          git commit -m 'open desktop Payments as full admin workspace'
+          git push
