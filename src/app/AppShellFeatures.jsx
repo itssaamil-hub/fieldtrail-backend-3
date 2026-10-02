@@ -28,7 +28,7 @@ function TopBar({ hidePageNavigation = false, online, session, page, onChangePag
 
   return (
     <div className={hidePageNavigation ? "engage-desktop-topbar" : undefined} style={{ position: "sticky", top: 0, zIndex: 40 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", paddingTop: "calc(14px + env(safe-area-inset-top))", background: "linear-gradient(135deg, #0F3D3E 0%, #145C5D 100%)", color: "#fff", borderBottom: hidePageNavigation ? "1px solid rgba(255,255,255,0.12)" : undefined, gap: 10, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", paddingTop: "calc(14px + env(safe-area-inset-top))", background: hidePageNavigation ? "#F4F5F7" : "linear-gradient(135deg, #0F3D3E 0%, #145C5D 100%)", color: hidePageNavigation ? "#334155" : "#fff", borderBottom: hidePageNavigation ? "1px solid #E4E8EB" : undefined, gap: 10, flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           {!hidePageNavigation && <>
           <div style={{ width: 30, height: 30, borderRadius: 7, background: "#145C5D", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -37,7 +37,7 @@ function TopBar({ hidePageNavigation = false, online, session, page, onChangePag
           <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 17, letterSpacing: 0.2 }}>Engage</div>
           </>}
           {!narrow && session && (
-            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: "rgba(255,255,255,0.65)", marginRight: 4 }}>
+            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: hidePageNavigation ? "#64748B" : "rgba(255,255,255,0.65)", marginRight: 4 }}>
               {session.fullName} · {session.role}
             </div>
           )}
@@ -68,7 +68,7 @@ function TopBar({ hidePageNavigation = false, online, session, page, onChangePag
           {onAddExpense && !(narrow && session?.role === "admin") && (
             <button
               onClick={onAddExpense}
-              style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, padding: "6px 10px", borderRadius: 7, cursor: "pointer", border: "1px solid rgba(255,255,255,0.22)", background: "rgba(255,255,255,0.14)", color: "#fff" }}
+              style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, padding: "6px 10px", borderRadius: 7, cursor: "pointer", border: hidePageNavigation ? "1px solid #E4E8EB" : "1px solid rgba(255,255,255,0.22)", background: hidePageNavigation ? "#fff" : "rgba(255,255,255,0.14)", color: hidePageNavigation ? "#334155" : "#fff" }}
             >
               <Wallet size={13} /> {narrow ? "" : "Expenses"}
             </button>
@@ -77,7 +77,7 @@ function TopBar({ hidePageNavigation = false, online, session, page, onChangePag
 
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <ConnectionPill online={online} />
-          {onOpenNotifications && <button type="button" onClick={onOpenNotifications} title="Notifications" aria-label={unreadCount ? `Notifications, ${unreadCount} unread` : "Notifications"} className={session?.role === "salesman" ? "employee-notification-button" : undefined} style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 6, border: "1px solid rgba(255,255,255,0.22)", cursor: "pointer", background: "rgba(255,255,255,0.14)", color: "#fff" }}><Bell size={14} />{unreadCount > 0 && <span className="ft-notification-badge" aria-hidden="true">{unreadCount > 99 ? "99+" : unreadCount}</span>}</button>}
+          {onOpenNotifications && <button type="button" onClick={onOpenNotifications} title="Notifications" aria-label={unreadCount ? `Notifications, ${unreadCount} unread` : "Notifications"} className={session?.role === "salesman" ? "employee-notification-button" : undefined} style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 6, border: hidePageNavigation ? "1px solid #E4E8EB" : "1px solid rgba(255,255,255,0.22)", cursor: "pointer", background: hidePageNavigation ? "#fff" : "rgba(255,255,255,0.14)", color: hidePageNavigation ? "#334155" : "#fff" }}><Bell size={14} />{unreadCount > 0 && <span className="ft-notification-badge" aria-hidden="true">{unreadCount > 99 ? "99+" : unreadCount}</span>}</button>}
           {session?.role !== "salesman" && <AppMenu onExpenses={narrow && session?.role === "admin" ? onAddExpense : undefined} onCollections={onOpenCollections} signedIn={!!session} role={session?.role} onSettings={onOpenSettings} onOnboarding={onOpenOnboarding} onQuotations={onOpenQuotations} onApprovals={onOpenApprovals} onDailyReports={undefined} />}
         </div>
       </div>
