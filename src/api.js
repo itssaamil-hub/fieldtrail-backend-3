@@ -1,4 +1,3 @@
-export { getQueuedLeads, setQueuedLeads, pushQueuedLead, removeQueuedLead } from './offlineLeadQueue.js';
 import { showSaveFeedback, savedActionMessage } from "./saveFeedback.js";
 // ---------------------------------------------------------------------------
 // Talks to the real FieldTrail backend (Express + Postgres, from the
@@ -9,7 +8,6 @@ import { showSaveFeedback, savedActionMessage } from "./saveFeedback.js";
 
 const LS_SESSION = "fieldtrail:session";
 const LS_DEVICE_ID = "fieldtrail:deviceId";
-const LS_QUEUED_LEADS = "fieldtrail:queuedLeads";
 const LS_DAY_STARTED = "fieldtrail:dayStarted";
 
 export function getApiBase() {
@@ -238,7 +236,7 @@ async function request(path, { method = "GET", body, auth = true, expectedUserId
   const headers = { "Content-Type": "application/json" };
   if (auth) {
     const session = getSession();
-    if (expectedUserId && (session?.id !== expectedUserId || !session?.token)) throw new ApiError("Account changed. The offline deal remains saved for its owner.", 401);
+    if (expectedUserId && (session?.id !== expectedUserId || !session?.token)) throw new ApiError("Account changed. Please sign in again before saving.", 401);
     if (session?.token) headers.Authorization = `Bearer ${session.token}`;
   }
   let res;

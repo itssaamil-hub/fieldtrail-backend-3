@@ -2,7 +2,7 @@ import React from "react";
 
 // Lead and salesman UI extracted from App.jsx without changing business behavior.
 export function createLeadFeatures(deps) {
-  const { useState, useEffect, useRef, useCallback, api, ApiError, T, inputStyle, STATUSES, STATUS_LABEL, MONTH_NAMES, uuid, fmtMoney, fmtTime, isToday, isThisMonth, isWithinDays, isUpcomingRenewalMonth, LeadBriefPopup, buildLeadBrief, leadAvatarStyle, leadInitials, VerificationStamp, SyncBadge, NoLocationBadge, Overlay, Select, Field, StatCard, SalesmanReportsPage, TasksEntry, getDeviceId, getDayStarted, setDayStartedFlag, useSalesmanMessages, useSalesmanSettings, useAttendanceGps, useSalesmanLeads, useAttendanceDay, SalesmanView, DayClosingForm, Loader2, AlertTriangle, WifiOff, Navigation, Contact2, Search, List, Sparkles, Trash2, PhoneIcon, WhatsAppIcon, MessageSquare, X } = deps;
+  const { useState, useEffect, useRef, useCallback, api, ApiError, T, inputStyle, STATUSES, STATUS_LABEL, MONTH_NAMES, uuid, fmtMoney, fmtTime, isToday, isThisMonth, isWithinDays, isUpcomingRenewalMonth, LeadBriefPopup, buildLeadBrief, leadAvatarStyle, leadInitials, VerificationStamp, SyncBadge, NoLocationBadge, Overlay, Select, Field, StatCard, SalesmanReportsPage, TasksEntry, getDeviceId, getDayStarted, setDayStartedFlag, useSalesmanMessages, useSalesmanSettings, useAttendanceGps, useSalesmanLeads, useAttendanceDay, SalesmanView, DayClosingForm, Loader2, AlertTriangle, Navigation, Contact2, Search, List, Sparkles, Trash2, PhoneIcon, WhatsAppIcon, MessageSquare, X } = deps;
 
 function DuplicateLeadWarning({ result }) {
   if (!result?.matches?.length) return null;
@@ -877,8 +877,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
 
 // ---------------------------------------------------------------------------
 // SALESMAN — real day start/end, a throttled real-GPS ping loop while the
-// day is active, and an offline lead queue that actually retries against
-// the server (backend dedupes on client_uuid, so retries are always safe).
+// day is active, with Deal writes confirmed by the server before they appear saved.
 // ---------------------------------------------------------------------------
 function SalesmanApp({ session, online, page, notificationLead }) {
   const [loadError, setLoadError] = useState("");
@@ -932,19 +931,13 @@ function SalesmanApp({ session, online, page, notificationLead }) {
     leadSummary,
     loading,
     loadingMore,
-    queuedCount,
     totalLeadCount,
     hasMoreLeads,
     loadMoreLeads,
     handleAddLead,
     handleUpdateLeadStatus,
     handleUpdateLeadDetails,
-  } = useSalesmanLeads({
-    online,
-    session,
-    setLoadError,
-    makeQueuedLead: (payload) => adHocLeadFromPayload(payload, session),
-  });
+  } = useSalesmanLeads({ session, setLoadError });
 
   const [showClosing,setShowClosing]=useState(false);
   const [justToggled, setJustToggled] = useState(false); // brief "Started"/"Ended" confirmation flash
@@ -989,7 +982,6 @@ function SalesmanApp({ session, online, page, notificationLead }) {
       onUpdateLeadDetails={handleUpdateLeadDetails}
       online={online}
       gpsStatus={gpsStatus}
-      queuedCount={queuedCount}
       loadError={loadError}
       messages={messages}
       onMarkMessageRead={markMessageRead}
@@ -1007,33 +999,6 @@ function SalesmanApp({ session, online, page, notificationLead }) {
     </>
   );
 }
-
-function adHocLeadFromPayload(payload, session) {
-  const hasLocation = payload.lat != null && payload.lng != null;
-  return {
-    id: payload.clientUuid,
-    clientUuid: payload.clientUuid,
-    salesmanId: session.id,
-    salesmanName: session.fullName,
-    business: payload.businessName,
-    subLocation: payload.subLocation || "",
-    posName: payload.posName || "",
-    renewalMonth: payload.renewalMonth || "",
-    renewalDate: payload.renewalDate || "",
-    owner: payload.contactName,
-    phone: payload.phone,
-    category: payload.category,
-    status: payload.status || "new",
-    hasLocation,
-    lat: hasLocation ? payload.lat : null,
-    lng: hasLocation ? payload.lng : null,
-    accuracy: payload.accuracyM,
-    verification: hasLocation ? (payload.accuracyM > 50 ? "poor_accuracy" : "verified") : null,
-    createdAt: new Date(),
-    notes: payload.notes || "",
-  };
-}
-
 
 const DEFAULT_LEAD_SETTINGS = {
   requireBusinessName: true, requireSubLocation: true, requirePosName: true,
@@ -1246,6 +1211,10 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
+    if (!online) {
+      setError("No connection — this deal has not been saved. Reconnect and try again.");
+      return;
+    }
     setSubmitting(true);
     setError("");
     const hasGps = gps.state === "ok";
@@ -1279,11 +1248,6 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
 
   return (
     <AddLeadOverlay onClose={onClose}>
-      {!online && (
-        <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: T.warn, background: T.warnSoft, padding: "8px 10px", borderRadius: 11, marginBottom: 12 }}>
-          <WifiOff size={13} /> Offline — this will save to your device and sync when reconnected.
-        </div>
-      )}
 
       {locationSettings.gpsLocation && (
         <div style={{ display: "flex", flexDirection: "column", gap: 5, marginBottom: 14 }}>
@@ -1377,7 +1341,7 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
         style={{ width: "100%", padding: "12px", borderRadius: 11, border: "none", cursor: canSubmit && !duplicateResult?.blocking ? "pointer" : "not-allowed", background: canSubmit && !duplicateResult?.blocking ? T.route : "#C7CDD6", color: "#fff", fontWeight: 700, fontSize: 14.5, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
       >
         {submitting && <Loader2 size={16} className="spin" />}
-        {submitting ? "Saving…" : online ? "Save Lead" : "Save Lead (offline)"}
+        {submitting ? "Saving…" : "Save Lead"}
       </button>
     </AddLeadOverlay>
   );
@@ -1600,7 +1564,6 @@ function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads", allowD
                   Renews {new Date(l.renewalDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
                 </span>
               )}
-              <SyncBadge syncStatus={l.syncStatus} />
                 </div>
               </div>
             </div>
@@ -1623,5 +1586,5 @@ function EmbeddedLeads({ title, children }) {
 }
 
 
-  return { DuplicateLeadWarning, AddLeadField, AddLeadSection, AdminAddLeadModal, SalesmanFormModal, LeadDetailDrawer, SalesmanApp, adHocLeadFromPayload, MessagesSection, AddLeadOverlay, AddLeadModal, GpsStatus, MyLeadsModal, EmbeddedLeads };
+  return { DuplicateLeadWarning, AddLeadField, AddLeadSection, AdminAddLeadModal, SalesmanFormModal, LeadDetailDrawer, SalesmanApp, MessagesSection, AddLeadOverlay, AddLeadModal, GpsStatus, MyLeadsModal, EmbeddedLeads };
 }
