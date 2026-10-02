@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { History, Gauge, Contact2, Columns3, Users, ClipboardList, ShieldAlert, BarChart3, Settings, UserRound, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { History, Gauge, Contact2, Columns3, Users, ClipboardList, ShieldAlert, BarChart3, Settings, UserRound, PanelLeftClose, PanelLeftOpen, Wallet } from 'lucide-react';
 import './desktop-sidebar.css';
 
 export function useDesktopSidebar() {
@@ -12,9 +12,13 @@ export function useDesktopSidebar() {
   }, []);
   return desktop;
 }
-const sections = [['dashboard', 'Dashboard', Gauge], ['leads', 'Contacts', Contact2], ['deals', 'Pipeline', Columns3], ['employees', 'Employees', Users], ['tasks', 'Tasks', ClipboardList], ['activity', 'Activity Centre', History], ['exceptions', 'Exception Centre', ShieldAlert], ['reports', 'Reports', BarChart3]];
-export default function DesktopSidebar({ active, collapsed, onCollapse, onSelect, onSettings, settingsOpen }) {
-  const item = ([key, label, Icon]) => <button key={key} type="button" aria-label={label} title={collapsed ? label : undefined} aria-current={!settingsOpen && active === key ? 'page' : undefined} onClick={() => onSelect(key)}><Icon size={19} aria-hidden="true"/><span>{label}</span></button>;
+const sections = [['dashboard', 'Dashboard', Gauge], ['leads', 'Contacts', Contact2], ['deals', 'Pipeline', Columns3], ['employees', 'Employees', Users], ['tasks', 'Tasks', ClipboardList], ['payments', 'Payments', Wallet], ['activity', 'Activity Centre', History], ['exceptions', 'Exception Centre', ShieldAlert], ['reports', 'Reports', BarChart3]];
+export default function DesktopSidebar({ active, collapsed, onCollapse, onSelect, onSettings, settingsOpen, onPayments, paymentsOpen = false }) {
+  const item = ([key, label, Icon]) => {
+    const selected = key === 'payments' ? paymentsOpen : active === key;
+    const activate = () => key === 'payments' ? onPayments?.() : onSelect(key);
+    return <button key={key} type="button" aria-label={label} title={collapsed ? label : undefined} aria-current={!settingsOpen && selected ? 'page' : undefined} onClick={activate}><Icon size={19} aria-hidden="true"/><span>{label}</span></button>;
+  };
   const openAccount = () => window.dispatchEvent(new CustomEvent('engage:open-account-settings'));
   return <aside className={`engage-desktop-sidebar${collapsed ? ' is-collapsed' : ''}`} aria-label="Admin sidebar">
     <div className="engage-sidebar-brand"><img src="/engage-logo.png" alt="" width="28" height="28"/><span>Engage</span></div>
@@ -26,4 +30,3 @@ export default function DesktopSidebar({ active, collapsed, onCollapse, onSelect
     </div>
   </aside>;
 }
-
