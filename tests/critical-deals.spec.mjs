@@ -34,7 +34,7 @@ test('failed edits keep the form open, preserve saved values and report failure'
  const statusDialog=page.waitForEvent('dialog');await page.getByRole('button',{name:'Hot',exact:true}).last().click();const failure=await statusDialog;expect(failure.message()).toContain('Save failed');await failure.accept();
  await expect(page.getByText('Moved to Hot',{exact:false})).toHaveCount(0);
 });
-test('API refuses a salesman write after login changes and never sends the other employee token',async({page})=>{
+test('API blocks a salesman write after login changes and never sends the other employee token',async({page})=>{
  await boot(page,'salesman');const sent=[];
  await page.route(`${base}/salesman/leads`,route=>{sent.push(route.request().headers().authorization);return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({lead})});});
  const result=await page.evaluate(async()=>{
