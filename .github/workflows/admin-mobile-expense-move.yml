@@ -1,0 +1,62 @@
+name: Admin mobile expense move
+on:
+  push:
+    paths:
+      - .github/workflows/admin-mobile-expense-move.yml
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply narrowly scoped navigation patch
+        shell: python
+        run: |
+          from pathlib import Path
+
+          shell = Path('src/app/AppShellFeatures.jsx')
+          text = shell.read_text()
+          old = '{onAddExpense && (\n            <button'
+          new = '{onAddExpense && !(narrow && session?.role === "admin") && (\n            <button'
+          assert text.count(old) == 1, f'unexpected onAddExpense button matches: {text.count(old)}'
+          text = text.replace(old, new, 1)
+
+          old = '<AppMenu onCollections={onOpenCollections}'
+          new = '<AppMenu onExpenses={narrow && session?.role === "admin" ? onAddExpense : undefined} onCollections={onOpenCollections}'
+          assert text.count(old) == 1, f'unexpected AppMenu matches: {text.count(old)}'
+          text = text.replace(old, new, 1)
+          shell.write_text(text)
+
+          menu = Path('src/Onboarding.jsx')
+          text = menu.read_text()
+          old = "import { Menu, Settings, ListChecks, FileText, CheckCheck, UserRound, X } from 'lucide-react';"
+          new = "import { Menu, Settings, ListChecks, FileText, CheckCheck, UserRound, Wallet, X } from 'lucide-react';"
+          assert text.count(old) == 1, f'unexpected icon import matches: {text.count(old)}'
+          text = text.replace(old, new, 1)
+
+          old = 'export function AppMenu({ signedIn, role, onSettings, onOnboarding, onQuotations, onApprovals, onDailyReports, onCollections }) {'
+          new = 'export function AppMenu({ signedIn, role, onSettings, onOnboarding, onQuotations, onApprovals, onDailyReports, onCollections, onExpenses }) {'
+          assert text.count(old) == 1, f'unexpected AppMenu signature matches: {text.count(old)}'
+          text = text.replace(old, new, 1)
+
+          old = "{signedIn&&<button type=\"button\" onClick={()=>{setOpen(false);onOnboarding()}}><ListChecks size={15}/>Onboarding checklist</button>}{signedIn&&onCollections&&"
+          new = "{signedIn&&<button type=\"button\" onClick={()=>{setOpen(false);onOnboarding()}}><ListChecks size={15}/>Onboarding checklist</button>}{signedIn&&role==='admin'&&onExpenses&&<button type=\"button\" onClick={()=>{setOpen(false);onExpenses()}}><Wallet size={15}/>Expenses</button>}{signedIn&&onCollections&&"
+          assert text.count(old) == 1, f'unexpected menu insertion matches: {text.count(old)}'
+          text = text.replace(old, new, 1)
+          menu.write_text(text)
+      - name: Verify scope
+        run: |
+          git diff --check
+          test "$(git diff --name-only | sort | tr '\n' ' ')" = "src/Onboarding.jsx src/app/AppShellFeatures.jsx "
+          git diff --stat
+      - name: Commit scoped change and remove temporary workflow
+        run: |
+          git config user.name "itssaamil-hub"
+          git config user.email "itssaamil@gmail.com"
+          git rm .github/workflows/admin-mobile-expense-move.yml
+          git add src/Onboarding.jsx src/app/AppShellFeatures.jsx
+          git commit -m "move admin mobile Expenses into More"
+          git push origin HEAD:main
