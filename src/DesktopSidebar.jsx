@@ -14,9 +14,8 @@ export function useDesktopSidebar() {
 }
 const sections = [['dashboard', 'Dashboard', Gauge], ['leads', 'Contacts', Contact2], ['deals', 'Pipeline', Columns3], ['employees', 'Employees', Users], ['tasks', 'Tasks', ClipboardList], ['payments', 'Payments', Wallet], ['activity', 'Activity Centre', History], ['exceptions', 'Exception Centre', ShieldAlert], ['reports', 'Reports', BarChart3]];
 export default function DesktopSidebar({ active, collapsed, onCollapse, onSelect, onSettings, settingsOpen }) {
-  const openPayments = () => window.dispatchEvent(new CustomEvent('fieldtrail:open-collections'));
   const item = ([key, label, Icon]) => {
-    const activate = () => key === 'payments' ? openPayments() : onSelect(key);
+    const activate = () => onSelect(key);
     return <button key={key} type="button" aria-label={label} title={collapsed ? label : undefined} aria-current={!settingsOpen && active === key ? 'page' : undefined} onClick={activate}><Icon size={19} aria-hidden="true"/><span>{label}</span></button>;
   };
   const openAccount = () => window.dispatchEvent(new CustomEvent('engage:open-account-settings'));

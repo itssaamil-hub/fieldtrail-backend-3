@@ -645,7 +645,9 @@ export default function App() {
   } else if (!session) {
     body = <LoginScreen apiBase={apiBase} online={online} onLoggedIn={handleLoggedIn} onOpenSettings={() => setShowSettings(true)} />;
   } else if (session.role === "admin") {
-    body = adminDesktop && desktopSection === "exceptions" && topPage !== "reports"
+    body = adminDesktop && desktopSection === "payments" && topPage !== "reports"
+      ? <CollectionsPanel embedded />
+      : adminDesktop && desktopSection === "exceptions" && topPage !== "reports"
       ? <ExceptionCentre onNavigate={selectDesktopSection} />
       : adminDesktop && desktopSection === "activity" && topPage !== "reports"
       ? <ActivityCentre onOpenLead={lead => { selectDesktopSection("leads"); setNotificationLead({id:lead.id, lead, openedAt:Date.now()}); }} />
