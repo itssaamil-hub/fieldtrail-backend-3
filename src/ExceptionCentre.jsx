@@ -8,7 +8,6 @@ import { api, getApiBase, getSession } from './api.js';
 import './exception-centre.css';
 import ExceptionLeadDrawer from './exceptionLeadDrawer.jsx';
 
-const ACTIVE = new Set(['cold','conversation','hot','demo','negotiation','nurture']);
 const DAY = 86400000;
 const DEFAULT_RULES = {
   followup_enabled:true, hot_enabled:true, hot_stale_days:3, hot_critical_days:5,
@@ -17,18 +16,8 @@ const DEFAULT_RULES = {
   payments_enabled:true, data_quality_enabled:true,
 };
 const money = n => `₹${Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
-const safeDate = value => { const d = value ? new Date(value) : null; return d && !Number.isNaN(d.getTime()) ? d : null; };
-const ageDays = value => { const d = safeDate(value); return d ? Math.max(0, Math.floor((Date.now() - d.getTime()) / DAY)) : 0; };
-const pick = (obj, ...keys) => { for (const key of keys) if (obj?.[key] != null) return obj[key]; return null; };
-const leadName = l => pick(l,'business','businessName','business_name') || 'Unnamed lead';
-const ownerName = l => pick(l,'salesmanName','salesman_name') || 'Unassigned';
-const updatedAt = l => pick(l,'updatedAt','updated_at','createdAt','created_at');
-const followUp = l => pick(l,'nextFollowUpDate','next_follow_up_date');
-const renewal = l => pick(l,'renewalDate','renewal_date');
-const dealValue = l => Number(pick(l,'dealValue','deal_value') || 0);
 const rank = value => value === 'critical' ? 0 : value === 'high' ? 1 : value === 'medium' ? 2 : 3;
 const severityLabel = value => value === 'critical' ? 'Critical' : value === 'high' ? 'High' : value === 'medium' ? 'Medium' : 'Low';
-const slug = value => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'').slice(0,60);
 
 async function exceptionRequest(path, options = {}) {
   const token = getSession()?.token || '';
@@ -40,68 +29,6 @@ async function exceptionRequest(path, options = {}) {
   let data = null; try { data = await response.json(); } catch { /* no body */ }
   if (!response.ok) throw new Error(data?.error || `Request failed (${response.status})`);
   return data;
-}
-
-function buildDetections(leads, tasks, collections, rules) {
-  const now = new Date();
-  const rows = [];
-  const add = item => rows.push({
-    ...item,
-    fingerprint:`${item.type}:${item.entityType}:${item.entityId || item.entityName}:${slug(item.title)}`,
-    metadata:{ status:item.status || null, value:item.value || 0, action:item.action || null },
-  });
-  const addLead = (l,type,severity,title,reason,action='Open Lead') => add({
-    type,severity,title,reason,action,entityType:'lead',entityId:l.id,entityName:leadName(l),
-    owner:ownerName(l),status:l.status,value:dealValue(l),
-  });
-
-  leads.forEach(l => {
-    const status = String(l.status || '').toLowerCase();
-    const age = ageDays(updatedAt(l));
-    const fu = safeDate(followUp(l));
-    if (rules.followup_enabled && ACTIVE.has(status) && fu && fu < new Date(now.getFullYear(),now.getMonth(),now.getDate())) {
-      const days = Math.max(1,Math.ceil((now-fu)/DAY));
-      addLead(l,'followup',days >= 3 ? 'critical':'high','Follow-up overdue',`${days} day${days===1?'':'s'} overdue · scheduled ${fu.toLocaleDateString('en-IN',{day:'numeric',month:'short'})}`);
-    }
-    if (rules.hot_enabled && status === 'hot' && age >= Number(rules.hot_stale_days)) {
-      addLead(l,'hot',age >= Number(rules.hot_critical_days) ? 'critical':'high','Hot lead going cold',`No recorded lead update for ${age} days`);
-    }
-    if (rules.negotiation_enabled && status === 'negotiation' && age >= Number(rules.negotiation_stale_days)) {
-      addLead(l,'negotiation',age >= Number(rules.negotiation_critical_days) ? 'critical':'high','Negotiation stalled',`No recorded lead update for ${age} days`);
-    }
-    if (rules.data_quality_enabled) {
-      if (ACTIVE.has(status) && !pick(l,'phone','contactNumber','contact_number')) addLead(l,'data','medium','Contact number missing','Sales team cannot reliably follow up without a contact number');
-      if (['conversation','hot','demo','negotiation'].includes(status) && !followUp(l)) addLead(l,'data',['hot','negotiation'].includes(status)?'high':'medium','Next follow-up not set',`${status.charAt(0).toUpperCase()+status.slice(1)} lead has no next follow-up date`);
-      if (status === 'negotiation' && dealValue(l) <= 0) addLead(l,'data','medium','Deal value missing','Negotiation is active but expected deal value is not recorded');
-    }
-    if (rules.renewal_enabled) {
-      const ren = safeDate(renewal(l));
-      if (ren && ACTIVE.has(status)) {
-        const days = Math.ceil((ren-now)/DAY);
-        if (days < 0) addLead(l,'renewal','critical','Renewal overdue',`Renewal date passed ${Math.abs(days)} day${Math.abs(days)===1?'':'s'} ago`);
-        else if (days <= Number(rules.renewal_warning_days)) addLead(l,'renewal',days <= 2 ? 'high':'medium','Renewal approaching',`Renewal due in ${days} day${days===1?'':'s'}`);
-      }
-    }
-  });
-
-  if (rules.tasks_enabled) tasks.forEach(t => {
-    const status = String(pick(t,'status') || '').toLowerCase();
-    const due = safeDate(pick(t,'dueAt','due_at','dueDate','due_date'));
-    if (status !== 'completed' && due && due < now) {
-      const days = Math.max(1,Math.ceil((now-due)/DAY));
-      add({type:'task',severity:days>=3?'high':'medium',title:'Task overdue',reason:`${days} day${days===1?'':'s'} overdue`,action:'Open Tasks',entityType:'task',entityId:t.id,entityName:pick(t,'title')||'Task',owner:pick(t,'salesman_name','assignee_name','assigned_to_name')||'Team'});
-    }
-  });
-
-  if (rules.payments_enabled) collections.forEach(c => {
-    const outstanding = Number(pick(c,'pending','outstanding','outstanding_amount','balance','balance_due') || 0);
-    const due = safeDate(pick(c,'dueDate','due_date','payment_due_date'));
-    if (outstanding > 0 && due && due < now) {
-      const days = Math.max(1,Math.ceil((now-due)/DAY));
-      add({type:'payment',severity:days>=7?'critical':'high',title:'Payment overdue',reason:`${money(outstanding)} outstanding · ${days} day${days===1?'':'s'} overdue`,action:'Open Collections',entityType:'payment',entityId:pick(c,'key','id','customer_key','lead_id')||leadName(c),entityName:pick(c,'customer.name','business_name','customer_name','business','name')||c.customer?.name||'Customer',owner:pick(c,'salesman_name','owner_name')||'Team',value:outstanding});
-    }
-  });
-  return rows;
 }
 
 export default function ExceptionCentre({ onNavigate }) {
@@ -125,28 +52,19 @@ export default function ExceptionCentre({ onNavigate }) {
   const load = useCallback(async () => {
     setLoading(true); setError('');
     try {
-      const [ruleResult, salesmanResult] = await Promise.allSettled([exceptionRequest('/exceptions/settings'),api.adminSalesmen()]);
-      const nextRules = ruleResult.status === 'fulfilled' ? {...DEFAULT_RULES,...ruleResult.value.settings} : DEFAULT_RULES;
-      setRules(nextRules);
-      if (salesmanResult.status === 'fulfilled') setSalesmen(salesmanResult.value.salesmen || []);
-      const source = await Promise.allSettled([api.adminLeads(),api.tasks({filter:'all'}),api.collections({status:'all'})]);
-      const leads = source[0].status === 'fulfilled' ? source[0].value.leads || [] : null;
-      const tasks = source[1].status === 'fulfilled' ? source[1].value.tasks || [] : null;
-      const collections = source[2].status === 'fulfilled' ? source[2].value.accounts || [] : null;
-      if (!leads) throw new Error('Lead data could not be loaded. Exception Centre was not refreshed.');
-      const detections = buildDetections(leads,tasks || [],collections || [],nextRules);
-      if (tasks && collections) await exceptionRequest('/exceptions/sync',{method:'POST',body:{exceptions:detections}});
-      else setError('Some supporting data could not be loaded. Existing workflow state is shown, but live sync was skipped.');
-      try {
-        const persisted = await exceptionRequest('/exceptions');
-        setCases(persisted.exceptions || []);
-      } catch {
-        // Safe first-deploy fallback while the backend is still rolling out.
-        setCases(detections.map((x,i)=>({id:`live-${i}`,...x,entity_type:x.entityType,entity_id:x.entityId,entity_name:x.entityName,owner_name:x.owner,status:'open',active:true,metadata:x.metadata})));
-      }
+      const [ruleResult,salesmanResult] = await Promise.all([
+        exceptionRequest('/exceptions/settings'),
+        api.adminSalesmen(),
+      ]);
+      setRules({...DEFAULT_RULES,...ruleResult.settings});
+      setSalesmen(salesmanResult.salesmen || []);
+      await exceptionRequest('/exceptions/refresh',{method:'POST'});
+      const persisted = await exceptionRequest('/exceptions');
+      setCases(persisted.exceptions || []);
       setLastUpdated(new Date());
-    } catch (e) { setError(e.message); }
-    finally { setLoading(false); }
+    } catch (e) {
+      setError(e.message || 'Exception Centre could not be refreshed.');
+    } finally { setLoading(false); }
   },[]);
 
   useEffect(()=>{ load(); },[load]);
@@ -172,13 +90,22 @@ export default function ExceptionCentre({ onNavigate }) {
   const cards = [['followup','Overdue follow-ups',CalendarClock],['hot','Stale hot leads',Flame],['negotiation','Stuck negotiations',Target],['payment','Payment overdue',CircleDollarSign],['task','Overdue tasks',Clock3],['data','Data issues',DatabaseZap]];
 
   const mutate = async (item, body) => {
-    if (String(item.id).startsWith('live-')) return setError('Backend V2 is still deploying. Refresh after Render finishes.');
     setBusy(true); setError('');
-    try { await exceptionRequest(`/exceptions/${item.id}`,{method:'PATCH',body}); await load(); }
-    catch(e){ setError(e.message); }
-    finally { setBusy(false); }
+    try {
+      await exceptionRequest(`/exceptions/${item.id}`,{method:'PATCH',body});
+      await load();
+      return true;
+    } catch(e) {
+      setError(e.message);
+      return false;
+    } finally { setBusy(false); }
   };
-  const snooze = async (item,days) => { await mutate(item,{action:'snooze',until:new Date(Date.now()+days*DAY).toISOString()}); setToast(`Snoozed for ${days} day${days===1?'':'s'}`); setTimeout(()=>setToast(''),2200); };
+  const snooze = async (item,days) => {
+    const saved = await mutate(item,{action:'snooze',until:new Date(Date.now()+days*DAY).toISOString()});
+    if (!saved) return;
+    setToast(`Snoozed for ${days} day${days===1?'':'s'}`);
+    setTimeout(()=>setToast(''),2200);
+  };
   const resolve = item => {
     const note = window.prompt('Resolution note (optional):','');
     if (note === null) return;
@@ -186,22 +113,28 @@ export default function ExceptionCentre({ onNavigate }) {
   };
   const openHistory = async item => {
     setHistoryCase(item); setHistory([]);
-    if (String(item.id).startsWith('live-')) return;
     try { const r=await exceptionRequest(`/exceptions/${item.id}/history`); setHistory(r.events||[]); } catch(e){ setError(e.message); }
   };
   const saveRules = async next => {
     setBusy(true); setError('');
-    try { const r=await exceptionRequest('/exceptions/settings',{method:'PUT',body:next}); setRules({...DEFAULT_RULES,...r.settings}); setShowRules(false); await load(); }
-    catch(e){setError(e.message);} finally{setBusy(false);}
+    try {
+      const r=await exceptionRequest('/exceptions/settings',{method:'PUT',body:next});
+      setRules({...DEFAULT_RULES,...r.settings});
+      setShowRules(false);
+      await load();
+    } catch(e){setError(e.message);} finally{setBusy(false);}
   };
   const primaryAction = item => {
     const type = item.entity_type || item.entityType;
     if (type === 'lead') {
-      setLeadRequest({ name:item.entity_name || item.entityName, title:item.title, reason:item.reason, openedAt:Date.now() });
+      setLeadRequest({ id:item.entity_id || item.entityId, name:item.entity_name || item.entityName, title:item.title, reason:item.reason, openedAt:Date.now() });
       return;
     }
     if (type === 'task') { onNavigate?.('tasks'); return; }
-    if (type === 'payment') window.dispatchEvent(new CustomEvent('fieldtrail:open-collections'));
+    if (type === 'payment') {
+      const key = item.metadata?.collectionKey || item.entity_id || item.entityId;
+      window.dispatchEvent(new CustomEvent('fieldtrail:open-collections',{detail:{key}}));
+    }
   };
 
   return <main className="exception-centre">
@@ -267,12 +200,12 @@ export default function ExceptionCentre({ onNavigate }) {
 function RuleDrawer({rules,busy,onClose,onSave}) {
   const [draft,setDraft]=useState({...rules});
   const toggle=key=><label className="exception-rule-toggle"><input type="checkbox" checked={!!draft[key]} onChange={e=>setDraft(v=>({...v,[key]:e.target.checked}))}/><span>{draft[key]?'On':'Off'}</span></label>;
-  const number=(key,min=1,max=180)=><input type="number" min={min} max={max} value={draft[key]} onChange={e=>setDraft(v=>({...v,[key]:Math.max(min,Math.min(max,Number(e.target.value)||min))}))}/>;
+  const number=(key,min=1,max=180,onChangeExtra=null)=><input type="number" min={min} max={max} value={draft[key]} onChange={e=>{const n=Math.max(min,Math.min(max,Number(e.target.value)||min));setDraft(v=>onChangeExtra?onChangeExtra(v,n):({...v,[key]:n}));}}/>;
   return <div className="exception-drawer-backdrop"><aside className="exception-drawer"><header><div><small>EXCEPTION RULES</small><h2>Manager thresholds</h2></div><button onClick={onClose}><X size={18}/></button></header><p className="exception-drawer-intro">Tune when Engage should interrupt you. These settings change live detection for the whole admin team.</p>
     <div className="exception-rule"><div><strong>Overdue follow-ups</strong><span>Flag active leads after their next follow-up date passes.</span></div>{toggle('followup_enabled')}</div>
-    <div className="exception-rule"><div><strong>Stale Hot leads</strong><span>Warn after {draft.hot_stale_days} days; critical after {draft.hot_critical_days}.</span></div>{toggle('hot_enabled')}<div className="exception-rule-numbers">{number('hot_stale_days')}<span>→</span>{number('hot_critical_days')}</div></div>
-    <div className="exception-rule"><div><strong>Stuck Negotiations</strong><span>Warn after {draft.negotiation_stale_days} days; critical after {draft.negotiation_critical_days}.</span></div>{toggle('negotiation_enabled')}<div className="exception-rule-numbers">{number('negotiation_stale_days')}<span>→</span>{number('negotiation_critical_days')}</div></div>
-    <div className="exception-rule"><div><strong>Renewal risk</strong><span>Start warning {draft.renewal_warning_days} days before renewal.</span></div>{toggle('renewal_enabled')}<div className="exception-rule-numbers">{number('renewal_warning_days')}</div></div>
+    <div className="exception-rule"><div><strong>Stale Hot leads</strong><span>Warn after {draft.hot_stale_days} days; critical after {draft.hot_critical_days}.</span></div>{toggle('hot_enabled')}<div className="exception-rule-numbers">{number('hot_stale_days',1,90,(v,n)=>({...v,hot_stale_days:n,hot_critical_days:Math.max(Number(v.hot_critical_days)||n,n)}))}<span>→</span>{number('hot_critical_days',Number(draft.hot_stale_days)||1,180)}</div></div>
+    <div className="exception-rule"><div><strong>Stuck Negotiations</strong><span>Warn after {draft.negotiation_stale_days} days; critical after {draft.negotiation_critical_days}.</span></div>{toggle('negotiation_enabled')}<div className="exception-rule-numbers">{number('negotiation_stale_days',1,90,(v,n)=>({...v,negotiation_stale_days:n,negotiation_critical_days:Math.max(Number(v.negotiation_critical_days)||n,n)}))}<span>→</span>{number('negotiation_critical_days',Number(draft.negotiation_stale_days)||1,180)}</div></div>
+    <div className="exception-rule"><div><strong>Renewal risk</strong><span>Start warning {draft.renewal_warning_days} days before renewal.</span></div>{toggle('renewal_enabled')}<div className="exception-rule-numbers">{number('renewal_warning_days',1,180)}</div></div>
     <div className="exception-rule"><div><strong>Overdue tasks</strong><span>Include past-due team tasks.</span></div>{toggle('tasks_enabled')}</div>
     <div className="exception-rule"><div><strong>Overdue payments</strong><span>Include outstanding balances past their due date.</span></div>{toggle('payments_enabled')}</div>
     <div className="exception-rule"><div><strong>Lead data quality</strong><span>Missing phone, follow-up date or negotiation value.</span></div>{toggle('data_quality_enabled')}</div>
