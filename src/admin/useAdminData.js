@@ -8,10 +8,18 @@ const RECONNECT_DELAYS_MS = [4000, 8000, 15000, 30000];
 
 const errorMessage = (err, fallback) => err instanceof ApiError ? err.message : fallback;
 
+function mapAdminLeadRow(row) {
+  const mapped = mapLeadRow(row);
+  return {
+    ...mapped,
+    wonDate: row?.won_date || row?.wonDate || null,
+  };
+}
+
 function mappedLeadFromResponse(result) {
   const row = result?.lead || result?.data?.lead || result;
   if (!row?.id) return null;
-  if (row.business_name != null || row.created_at != null) return mapLeadRow(row);
+  if (row.business_name != null || row.created_at != null) return mapAdminLeadRow(row);
   if (row.business != null && row.createdAt != null) return row;
   return null;
 }
@@ -65,7 +73,7 @@ export default function useAdminData({ online, session }) {
         ]);
         setConversationCount(summaryRes.conversationLeads ?? null);
         setSalesmen((salesmenRes.salesmen || []).map(mapSalesmanRow));
-        setLeads((leadsRes.leads || []).map(mapLeadRow));
+        setLeads((leadsRes.leads || []).map(mapAdminLeadRow));
         setLoadError("");
         lastRefreshAtRef.current = Date.now();
       } catch (err) {
@@ -161,6 +169,7 @@ export default function useAdminData({ online, session }) {
         } else if (msg.type === "lead_status_changed") {
           setLeads((prev) => prev.map((lead) => lead.id === msg.leadId ? { ...lead, status: msg.status } : lead));
           refreshSummary();
+          if (msg.status === "won") loadAll();
         }
       };
     };
@@ -177,13 +186,14 @@ export default function useAdminData({ online, session }) {
       }
       setWsConnected(false);
     };
-  }, [online, session?.token, refreshSummary]);
+  }, [online, session?.token, refreshSummary, loadAll]);
 
   const onStatusChange = useCallback(async (id, status) => {
     setLeads((prev) => prev.map((lead) => lead.id === id ? { ...lead, status } : lead));
     try {
       await api.adminUpdateLeadStatus(id, status);
       refreshSummary();
+      if (status === "won") await loadAll();
     } catch (err) {
       setLoadError(errorMessage(err, "Couldn't update status."));
       loadAll();
@@ -203,11 +213,13 @@ export default function useAdminData({ online, session }) {
       phone: payload.phone,
       notes: payload.notes,
       dealValue: payload.dealValue,
+      wonDate: payload.wonDate ?? lead.wonDate,
     } : lead));
     try {
       const result = await api.adminUpdateLead(id, payload);
       const mapped = mappedLeadFromResponse(result);
-      if (mapped) setLeads((prev) => prev.map((lead) => lead.id === id ? mapped : lead));
+      if (mapped) setLeads((prev) => prev.map((lead) => lead.id === id ? { ...mapped, wonDate: mapped.wonDate ?? lead.wonDate } : lead));
+      if (payload.wonDate) await loadAll();
     } catch (err) {
       setLoadError(errorMessage(err, "Couldn't save changes."));
       loadAll();
@@ -231,6 +243,7 @@ export default function useAdminData({ online, session }) {
     if (mapped) {
       setLeads((prev) => [mapped, ...prev.filter((lead) => lead.id !== mapped.id)]);
       refreshSummary();
+      if (payload.status === "won") await loadAll();
     } else {
       await loadAll();
     }
