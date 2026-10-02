@@ -59,13 +59,13 @@ async function noCrash(page) {
 
 const adminSession = { id: 'smoke-admin', role: 'admin', name: 'Smoke Admin', fullName: 'Smoke Admin', token: 'smoke-token' };
 
-test('admin Add Lead surface renders without crash', async ({ page }) => {
+test('admin Add Deal surface renders without crash', async ({ page }) => {
   await bootAs(page, adminSession);
-  const addLead = page.getByRole('button', { name: /add lead/i }).first();
-  await expect(addLead).toBeVisible();
-  await addLead.click();
+  const addDeal = page.getByRole('button', { name: /add deal/i }).first();
+  await expect(addDeal).toBeVisible();
+  await addDeal.click();
   await noCrash(page);
-  await expect(page.locator('body')).toContainText(/Add Lead|Lead information/i);
+  await expect(page.locator('body')).toContainText(/Add Deal|Lead information/i);
 });
 
 test('employee View Route renders without crash', async ({ page }) => {
@@ -124,7 +124,7 @@ test('payments report renders without crash', async ({ page }) => {
   await bootAs(page, adminSession);
   await page.getByRole('button', { name: 'Reports' }).click();
   await noCrash(page);
-  await page.getByText('Payments', { exact: true }).click();
+  await page.getByRole('button', { name: 'Payments', exact: true }).click();
   await noCrash(page);
   await expect(page.locator('body')).toContainText(/Track collections|No matching accounts|Payments/i);
 });
