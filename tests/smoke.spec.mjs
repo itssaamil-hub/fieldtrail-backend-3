@@ -66,7 +66,7 @@ test('admin Add Deal surface renders without crash', async ({ page }) => {
   await expect(addDeal).toBeVisible();
   await addDeal.click();
   await noCrash(page);
-  await expect(page.locator('body')).toContainText(/Add Deal|Lead information/i);
+  await expect(page.locator('body')).toContainText(/Add Lead|Business Information/i);
 });
 
 test('employee View Route renders without crash', async ({ page }) => {
