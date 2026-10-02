@@ -4,17 +4,6 @@ import { CalendarClock, Clock3, MapPin, MessageCircle, Phone, UserRound, Wallet,
 import { api } from './api.js';
 import './exception-lead-drawer.css';
 
-const LEAD_EXCEPTION_TITLES = new Set([
-  'Follow-up overdue',
-  'Hot lead going cold',
-  'Negotiation stalled',
-  'Contact number missing',
-  'Next follow-up not set',
-  'Deal value missing',
-  'Renewal overdue',
-  'Renewal approaching',
-]);
-
 const pick = (obj, ...keys) => {
   for (const key of keys) if (obj?.[key] != null) return obj[key];
   return null;
@@ -49,25 +38,22 @@ export default function ExceptionLeadDrawer({ request, onClose }) {
   useEffect(() => {
     let alive = true;
     setLoading(true); setError(''); setLead(null); setHistory([]);
-    api.adminLeads().then(async result => {
+    if (!request.id) {
+      setError('This exception is missing its lead reference. Refresh Exception Centre and try again.');
+      setLoading(false);
+      return () => { alive = false; };
+    }
+    api.adminLeads({ leadId: request.id }).then(async result => {
       if (!alive) return;
-      const target = request.name.trim().toLowerCase();
-      const list = result.leads || [];
-      const found = list.find(item => {
-        const name = String(pick(item,'business','businessName','business_name') || '').trim().toLowerCase();
-        return name === target;
-      }) || list.find(item => {
-        const name = String(pick(item,'business','businessName','business_name') || '').trim().toLowerCase();
-        return name.includes(target) || target.includes(name);
-      });
+      const found = (result.leads || []).find(item => String(item.id) === String(request.id));
       if (!found) {
-        setError('Lead could not be found in the current CRM list.');
+        setError('Lead could not be found. It may have been deleted or reassigned.');
         return;
       }
       setLead(found);
       try {
-        const result = await api.adminLeadHistory(found.id);
-        if (alive) setHistory(result.history || []);
+        const historyResult = await api.adminLeadHistory(found.id);
+        if (alive) setHistory(historyResult.history || []);
       } catch {
         if (alive) setHistory([]);
       }
