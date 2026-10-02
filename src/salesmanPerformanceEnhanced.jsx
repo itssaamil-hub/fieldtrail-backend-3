@@ -159,8 +159,9 @@ function SalesmanPerformanceEnhanced() {
   if (!data) return <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>{header}<div style={{ padding: 18, color: C.soft, fontSize: 13 }}>Loading your performance…</div></div>;
 
   const won = Number(data.won || 0), wonTarget = Number(data.won_target || 0);
-  const sales = Number(data.sales_value || 0), salesTarget = Number(data.sales_value_target || 0);
-  const conversion = Number(data.lead_to_won_pct || 0), leadsAdded = Number(data.leads_added || 0);
+  const wonValue = Number(data.won_value ?? data.sales_value ?? 0), wonValueTarget = Number(data.sales_value_target || 0);
+  const totalDeals = Number(data.total_deals ?? data.leads_added ?? 0);
+  const winRate = Number(data.win_rate_pct ?? (totalDeals > 0 ? Math.round((won / totalDeals) * 1000) / 10 : 0));
   const followups = Number(data.followups_completed || 0), overdue = Number(data.overdue_followups || 0);
   const attendance = data.attendance || {}, closings = data.day_closing || {};
   const activeDays = Number(attendance.active_days || 0), workingDays = Number(attendance.working_days || 0);
@@ -175,17 +176,17 @@ function SalesmanPerformanceEnhanced() {
     else if (attendance.today_started && attendance.today_ended) { todayText = "Day Completed"; todayTone = "good"; }
   }
 
-  const salesPct = salesTarget > 0 ? pct(sales, salesTarget) : 0;
+  const wonValuePct = wonValueTarget > 0 ? pct(wonValue, wonValueTarget) : 0;
   const wonPct = wonTarget > 0 ? pct(won, wonTarget) : 0;
 
   return <div style={{ display: "flex", flexDirection: "column", gap: 12, color: C.ink }}>
     {header}
 
-    <Panel title="Performance Summary" subtitle="Sales result and conversion for the selected date range" icon={Target}>
-      <MetricRow label="Won Deals" value={won} detail={wonTarget > 0 ? `${won} of ${wonTarget} prorated target` : "No won-deal target set"} chip={wonTarget > 0 ? `${wonPct}% target` : null} chipTone={wonPct >= 100 ? "good" : "warn"} progress={won} target={wonTarget} />
-      <MetricRow label="Sales Value" value={fmtMoney(sales)} detail={salesTarget > 0 ? `${fmtMoney(sales)} of ${fmtMoney(salesTarget)} prorated target` : "No sales target set"} chip={salesTarget > 0 ? `${salesPct}% target` : null} chipTone={salesPct >= 100 ? "good" : "warn"} progress={sales} target={salesTarget} />
-      <MetricRow label="Lead → Won" value={`${conversion}%`} detail={`${won} won from ${leadsAdded} leads added in range`} />
-      <div style={{ borderBottom: 0 }}><MetricRow label="Target Progress" value={`${salesPct}%`} detail={salesTarget > 0 ? `${fmtMoney(Math.max(0, salesTarget - sales))} remaining for selected range` : "Sales target not set"} chip={salesPct >= 100 ? "Achieved" : "In Progress"} chipTone={salesPct >= 100 ? "good" : "warn"} /></div>
+    <Panel title="Performance Summary" subtitle="Core deal results for the selected date range" icon={Target}>
+      <MetricRow label="Total Deals" value={totalDeals} detail="Deals added in the selected range" />
+      <MetricRow label="Won Deals" value={won} detail={wonTarget > 0 ? `${won} of ${wonTarget} prorated target` : "Currently Won deals with canonical Won Date in range"} chip={wonTarget > 0 ? `${wonPct}% target` : null} chipTone={wonPct >= 100 ? "good" : "warn"} progress={won} target={wonTarget} />
+      <MetricRow label="Won Value" value={fmtMoney(wonValue)} detail={wonValueTarget > 0 ? `${fmtMoney(wonValue)} of ${fmtMoney(wonValueTarget)} prorated target` : "Current Deal Value of those Won deals"} chip={wonValueTarget > 0 ? `${wonValuePct}% target` : null} chipTone={wonValuePct >= 100 ? "good" : "warn"} progress={wonValue} target={wonValueTarget} />
+      <div style={{ borderBottom: 0 }}><MetricRow label="Win Rate" value={`${winRate}%`} detail={`${won} Won Deals from ${totalDeals} Total Deals in this report view`} /></div>
     </Panel>
 
     <Panel title="Follow-up Health" subtitle="Completed work and overdue items as of the selected range end" icon={ClipboardCheck} accent={overdue > 0 ? C.amber : C.green}>

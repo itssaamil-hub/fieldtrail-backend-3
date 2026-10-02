@@ -12,6 +12,7 @@ import "./expense-report-enhance.css";
 import "./employee-panel-enhance.css";
 import "./performance-report-enhance.css";
 import "./performance-report-mobile.css";
+import "./performance-report-core-metrics.css";
 import "./performance-insights-enhance.css";
 import "./onboarding-live-share.css";
 import "./quotation-settings-enhance.css";
