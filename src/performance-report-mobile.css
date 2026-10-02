@@ -1,0 +1,98 @@
+@media (max-width: 1023px) {
+  .engage-performance-report-page {
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  .engage-performance-filters > * {
+    width: 100% !important;
+    min-width: 0 !important;
+    flex: 1 1 100% !important;
+  }
+
+  .engage-performance-report-page > div:has(> div[style*="min-width: 760px"]) {
+    overflow: visible !important;
+    padding: 10px !important;
+  }
+
+  .engage-performance-report-page > div:has(> div[style*="min-width: 760px"]) > div {
+    min-width: 0 !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .engage-performance-report-page > div:has(> div[style*="min-width: 760px"]) > div > div:nth-child(even) {
+    display: none !important;
+  }
+
+  .engage-performance-report-page > div:has(> div[style*="min-width: 760px"]) > div > div:nth-child(9) {
+    grid-column: 1 / -1;
+  }
+
+  .engage-performance-report-page > div:has(> div[style*="min-width: 760px"]) + div {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    margin-bottom: 14px !important;
+  }
+
+  .engage-performance-report-page > div:has(> div[style*="min-width: 760px"]) + div > div:nth-child(5) {
+    grid-column: 1 / -1;
+  }
+
+  .engage-performance-employee-card {
+    min-width: 0 !important;
+    padding: 13px !important;
+  }
+
+  .engage-performance-employee-card > button > div {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+    align-items: start !important;
+  }
+
+  .engage-performance-employee-card > button > div > div:first-child,
+  .engage-performance-employee-card > button > div > div:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .engage-performance-employee-card > button > div > div:first-child {
+    min-width: 0;
+  }
+
+  .engage-performance-employee-card > button > div > div:first-child > div:last-child {
+    min-width: 0;
+  }
+
+  .engage-performance-employee-card > button > div > div:first-child > div:last-child > div {
+    overflow-wrap: anywhere;
+  }
+
+  .engage-performance-employee-card > button > div > div:last-child {
+    justify-content: flex-start !important;
+  }
+
+  .engage-performance-employee-card > button + div {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 12px !important;
+  }
+
+  .engage-performance-employee-card strong,
+  .engage-performance-employee-card [style*="font-size: 20px"] {
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 380px) {
+  .engage-performance-report-page > div:has(> div[style*="min-width: 760px"]) > div,
+  .engage-performance-report-page > div:has(> div[style*="min-width: 760px"]) + div,
+  .engage-performance-employee-card > button > div {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .engage-performance-report-page > div:has(> div[style*="min-width: 760px"]) > div > div:nth-child(9),
+  .engage-performance-report-page > div:has(> div[style*="min-width: 760px"]) + div > div:nth-child(5),
+  .engage-performance-employee-card > button > div > div:first-child,
+  .engage-performance-employee-card > button > div > div:last-child {
+    grid-column: 1;
+  }
+}
