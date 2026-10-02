@@ -2,3 +2,23 @@
 
 /* Employee Contacts: match Deals card shell and compact vertical density on phones. */
 .engage-salesman-contacts .engage-mobile-contacts-list{gap:7px}.engage-salesman-contacts .engage-mobile-contact-card{padding:10px 11px;border-radius:12px;overflow:hidden;box-shadow:none}.engage-salesman-contacts .engage-mobile-contact-top{grid-template-columns:30px minmax(0,1fr) 18px;gap:7px}.engage-salesman-contacts .engage-mobile-contact-top.compact-status{grid-template-columns:30px minmax(0,1fr) fit-content(112px)}.engage-salesman-contacts .engage-mobile-contact-top-actions{display:flex;align-items:center;justify-content:flex-end;gap:5px;min-width:0;max-width:112px}.engage-salesman-contacts .engage-mobile-contact-top-actions .engage-mobile-contact-status{white-space:nowrap;max-width:88px;overflow:hidden;text-overflow:ellipsis;flex-shrink:1}.engage-salesman-contacts .engage-mobile-contact-top-actions svg{flex:0 0 auto}.engage-salesman-contacts .engage-mobile-contact-avatar{width:30px;height:30px;font-size:10.5px}.engage-salesman-contacts .engage-mobile-contact-identity{gap:1px}.engage-salesman-contacts .engage-mobile-contact-identity strong{font-size:13.5px;line-height:1.2}.engage-salesman-contacts .engage-mobile-contact-identity span{font-size:11.5px;line-height:1.2}.engage-salesman-contacts .engage-mobile-contact-phone{margin-top:4px;font-size:11.5px;line-height:1.2}.engage-salesman-contacts .engage-mobile-contact-meta{margin-top:3px;font-size:10.8px;line-height:1.2;gap:4px 8px}.engage-salesman-contacts .engage-mobile-contact-meta span+span::before{margin-right:8px}.engage-salesman-contacts .engage-mobile-contact-bottom{margin-top:4px}.engage-salesman-contacts .engage-mobile-contact-status{padding:4px 8px;font-size:10.5px;line-height:1}.engage-salesman-contacts .engage-mobile-contact-bottom.no-verification{justify-content:flex-end}
+
+/* Admin phone Contacts: keep the existing UI, but prevent the shared card/filter shell and contact rows from overflowing narrow screens. */
+@media(max-width:899px){
+.engage-admin-mobile-content .ft-card:has(.engage-mobile-contacts-list){width:100%;min-width:0;max-width:100%;box-sizing:border-box;padding:12px!important;border-radius:14px!important;overflow:hidden}
+.engage-admin-mobile-content .ft-card:has(.engage-mobile-contacts-list)>div{min-width:0;max-width:100%}
+.engage-admin-mobile-content .ft-card:has(.engage-mobile-contacts-list) select,.engage-admin-mobile-content .ft-card:has(.engage-mobile-contacts-list) input{min-width:0;max-width:100%;box-sizing:border-box}
+.engage-admin-mobile-content .ft-card:has(.engage-mobile-contacts-list) button{max-width:100%}
+.engage-admin-mobile-content .engage-mobile-contacts-list{width:100%;min-width:0;max-width:100%}
+.engage-admin-mobile-content .engage-mobile-contact-card{min-width:0;max-width:100%;box-sizing:border-box;overflow:hidden;padding:11px;border-radius:12px}
+.engage-admin-mobile-content .engage-mobile-contact-top{grid-template-columns:34px minmax(0,1fr) 16px;gap:8px;min-width:0}
+.engage-admin-mobile-content .engage-mobile-contact-avatar{width:34px;height:34px}
+.engage-admin-mobile-content .engage-mobile-contact-phone{min-width:0;max-width:100%}
+.engage-admin-mobile-content .engage-mobile-contact-phone span,.engage-admin-mobile-content .engage-mobile-contact-phone a{min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.engage-admin-mobile-content .engage-mobile-contact-meta{min-width:0;max-width:100%}
+.engage-admin-mobile-content .engage-mobile-contact-meta span{min-width:0;max-width:100%;overflow-wrap:anywhere}
+.engage-admin-mobile-content .engage-mobile-contact-bottom{min-width:0;max-width:100%;flex-wrap:wrap;align-items:flex-start}
+.engage-admin-mobile-content .engage-mobile-contact-status{max-width:100%;white-space:normal;overflow-wrap:anywhere}
+.engage-admin-mobile-content .engage-mobile-contact-verification{min-width:0;max-width:100%;flex-wrap:wrap}
+}
+@media(max-width:380px){.engage-admin-mobile-content .ft-card:has(.engage-mobile-contacts-list){padding:10px!important}.engage-admin-mobile-content .engage-mobile-contact-top{grid-template-columns:32px minmax(0,1fr) 14px;gap:7px}.engage-admin-mobile-content .engage-mobile-contact-avatar{width:32px;height:32px}.engage-admin-mobile-content .engage-mobile-contact-bottom{align-items:stretch}}
