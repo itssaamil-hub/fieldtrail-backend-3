@@ -57,14 +57,54 @@ export function createLeadFeatures(deps) {
   const CoreMyLeadsModal = core.MyLeadsModal;
 
   function MyLeadsModal(props) {
-    if (props.title !== "Won Leads") return <CoreMyLeadsModal {...props} />;
-
+    const isWonModal = props.title === "Won Leads";
     const [period, setPeriod] = useState(() => readAdminWonPeriod());
-    const currentWon = (props.leads || []).filter((lead) => lead.status === "won");
+    const [resolvedWonDates, setResolvedWonDates] = useState({});
+    const [wonDatesLoading, setWonDatesLoading] = useState(false);
+    const [wonDatesError, setWonDatesError] = useState("");
+
+    useEffect(() => {
+      if (!isWonModal) return undefined;
+      const currentWon = (props.leads || []).filter((lead) => lead.status === "won");
+      const missing = currentWon.filter((lead) => !lead.wonDate && !resolvedWonDates[lead.id]);
+      if (!missing.length) {
+        setWonDatesLoading(false);
+        setWonDatesError("");
+        return undefined;
+      }
+
+      let cancelled = false;
+      setWonDatesLoading(true);
+      setWonDatesError("");
+      Promise.allSettled(missing.map(async (lead) => [lead.id, await fetchWonDate(lead.id)]))
+        .then((results) => {
+          if (cancelled) return;
+          const updates = {};
+          let failed = false;
+          results.forEach((result) => {
+            if (result.status === "fulfilled" && result.value[1]) updates[result.value[0]] = result.value[1];
+            else failed = true;
+          });
+          if (Object.keys(updates).length) setResolvedWonDates((current) => ({ ...current, ...updates }));
+          if (failed) setWonDatesError("Some canonical Won Dates could not be verified.");
+        })
+        .finally(() => { if (!cancelled) setWonDatesLoading(false); });
+      return () => { cancelled = true; };
+    }, [isWonModal, props.leads]);
+
+    if (!isWonModal) return <CoreMyLeadsModal {...props} />;
+
+    const currentWon = (props.leads || [])
+      .filter((lead) => lead.status === "won")
+      .map((lead) => ({ ...lead, wonDate: lead.wonDate || resolvedWonDates[lead.id] || null }));
+    const missingCanonicalWonDate = currentWon.some((lead) => !lead.wonDate);
+    const monthDataVerified = !wonDatesLoading && !missingCanonicalWonDate && !wonDatesError;
     const periodWon = period === "month"
-      ? currentWon.filter((lead) => isWonDateInCurrentIstMonth(lead.wonDate))
+      ? (monthDataVerified ? currentWon.filter((lead) => isWonDateInCurrentIstMonth(lead.wonDate)) : [])
       : currentWon;
-    const revenue = periodWon.reduce((sum, lead) => sum + (Number(lead.dealValue) || 0), 0);
+    const revenue = period === "month" && !monthDataVerified
+      ? null
+      : periodWon.reduce((sum, lead) => sum + (Number(lead.dealValue) || 0), 0);
 
     const choosePeriod = (next) => {
       const saved = writeAdminWonPeriod(next);
@@ -76,7 +116,7 @@ export function createLeadFeatures(deps) {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 12, padding: "10px 12px", background: deps.T.paperDeep, borderRadius: 11 }}>
           <div>
             <div style={{ fontSize: 10.5, color: deps.T.inkSoft, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4 }}>{period === "all" ? "All-time revenue" : "This month's revenue"}</div>
-            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 18, color: deps.T.verified }}>{deps.fmtMoney(revenue)}</div>
+            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 18, color: deps.T.verified }}>{revenue == null ? "—" : deps.fmtMoney(revenue)}</div>
           </div>
           <div style={{ display: "flex", gap: 2, background: "#fff", borderRadius: 8, padding: 2, border: `1px solid ${deps.T.line}` }}>
             <button
@@ -93,6 +133,8 @@ export function createLeadFeatures(deps) {
             </button>
           </div>
         </div>
+        {period === "month" && wonDatesLoading && <div role="status" style={{ marginBottom: 10, fontSize: 12, color: deps.T.inkSoft }}>Verifying canonical Won Dates…</div>}
+        {period === "month" && !wonDatesLoading && (wonDatesError || missingCanonicalWonDate) && <div role="alert" style={{ marginBottom: 10, padding: "8px 10px", borderRadius: 9, background: deps.T.warnSoft, color: deps.T.warn, fontSize: 12, fontWeight: 650 }}>This Month is hidden until every Won Date is verified. All Time remains accurate.</div>}
         <CoreMyLeadsModal
           {...props}
           title=" "
