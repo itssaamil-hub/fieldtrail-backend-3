@@ -78,12 +78,23 @@ function setListVisibility(section, show) {
   });
 }
 
-function boardAnchor(section) {
+function boardAnchor(section, rows) {
+  const listContainer = rows[0]?.parentElement;
+  if (listContainer) return { node: listContainer, position: 'beforebegin' };
+
+  const sortControl = section.querySelector('select[aria-label="Sort deals"]');
+  const filterGrid = sortControl?.parentElement;
+  if (filterGrid) {
+    const resetRow = filterGrid.nextElementSibling;
+    const hasResetButton = resetRow?.querySelector?.('button')?.textContent?.trim() === 'Reset filters';
+    return { node: hasResetButton ? resetRow : filterGrid, position: 'afterend' };
+  }
+
   const toggleRow = section.querySelector('.engage-admin-mobile-view-toggle-row');
   const addButton = section.querySelector('button[aria-label="Add Deal"]');
   const headerRow = addButton?.parentElement;
-  if (toggleRow && headerRow && toggleRow.parentElement === headerRow) return headerRow;
-  return toggleRow;
+  if (toggleRow && headerRow && toggleRow.parentElement === headerRow) return { node: headerRow, position: 'afterend' };
+  return toggleRow ? { node: toggleRow, position: 'afterend' } : null;
 }
 
 function buildBoard(section, requestedStage) {
@@ -99,7 +110,8 @@ function buildBoard(section, requestedStage) {
   if (!board) {
     board = document.createElement('div');
     board.className = 'engage-admin-mobile-kanban engage-salesman-kanban';
-    boardAnchor(section)?.insertAdjacentElement('afterend', board);
+    const anchor = boardAnchor(section, rows);
+    anchor?.node?.insertAdjacentElement(anchor.position, board);
   }
 
   const signature = JSON.stringify({ active, filterStage, counts, values, items: items.map((item) => [item.name, item.stage, item.value, item.meta]) });
