@@ -29,7 +29,7 @@ jobs:
           npx --yes eslint@8 $FILES \
             --no-eslintrc \
             --env es6,browser,node \
-            --global globalThis:readonly \
+            --global globalThis \
             --parser-options '{"ecmaVersion":2022,"sourceType":"module"}' \
             --rule 'no-undef:error'
       - run: npm audit --omit=dev --audit-level=critical
