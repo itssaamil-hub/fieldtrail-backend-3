@@ -9,6 +9,7 @@ const STAGES = [
 ];
 const amount = lead => lead.dealValue != null && Number.isFinite(Number(lead.dealValue)) ? Number(lead.dealValue) : null;
 const money = value => `₹${value.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+const dealInitial = business => String(business || '?').trim().charAt(0).toUpperCase() || '?';
 function followUp(value) {
   if (!value) return null;
   const day = String(value).slice(0, 10);
@@ -81,10 +82,13 @@ export default function DesktopDealsBoard({ leads, visibleStatus = 'all', onStat
               onDragStart={e => { setDragging(lead.id); e.dataTransfer.setData('text/plain', String(lead.id)); e.dataTransfer.effectAllowed = 'move'; }}
               onDragEnd={() => { setDragging(null); setOver(null); }} onClick={() => onSelectLead(lead)}
               style={{ opacity: dragging === lead.id ? 0.4 : 1 }}>
-              <strong className="engage-deal-name">{lead.business}</strong>
+              <div className="engage-deal-title-row">
+                <span className="engage-deal-avatar" aria-hidden="true">{dealInitial(lead.business)}</span>
+                <strong className="engage-deal-name">{lead.business}</strong>
+              </div>
               {leadAmount !== null && <div className="engage-deal-value">{money(leadAmount)}</div>}
               <div className="engage-deal-meta-row">
-                <div className="engage-deal-owner"><span aria-hidden="true">{(lead.salesmanName || '?').slice(0, 1)}</span>{lead.salesmanName || 'Unassigned'}</div>
+                <div className="engage-deal-owner">{lead.salesmanName || 'Unassigned'}</div>
                 {follow && !follow.overdue && <div className={`engage-deal-followup${follow.today ? ' is-today' : ''}`}>{follow.text}</div>}
               </div>
               {follow?.overdue && <div className="engage-deal-overdue-pill">{follow.text}</div>}
