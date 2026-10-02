@@ -74,11 +74,12 @@
   .engage-deal-card:hover { border-color: #719881; box-shadow: 0 4px 12px rgba(42,73,58,.07); transform: translateY(-1px); }
   .engage-deal-card:active { cursor: grabbing; }
   .engage-deal-card:focus-visible { outline: 2px solid #145c5d; outline-offset: 2px; }
-  .engage-deal-name { display: block; font-size: 12.5px; line-height: 1.32; overflow-wrap: anywhere; }
+  .engage-deal-title-row { display: flex; align-items: center; gap: 7px; min-width: 0; }
+  .engage-deal-avatar { display: inline-grid; place-items: center; width: 24px; height: 24px; flex: 0 0 24px; border-radius: 50%; background: #eaf0eb; color: #315b44; font-size: 10.5px; font-weight: 700; }
+  .engage-deal-name { display: block; min-width: 0; font-size: 12.5px; line-height: 1.32; overflow-wrap: anywhere; }
   .engage-deal-value { font-size: 11.8px; font-weight: 700; margin: 5px 0 6px; color: #243f35; }
   .engage-deal-meta-row { display: flex; align-items: center; justify-content: space-between; gap: 7px; min-width: 0; margin-top: 5px; }
-  .engage-deal-owner { display: flex; align-items: center; gap: 5px; color: #718078; font-size: 10.5px; min-width: 0; }
-  .engage-deal-owner span { display: inline-grid; place-items: center; width: 18px; height: 18px; flex: 0 0 18px; border-radius: 50%; background: #eaf0eb; color: #315b44; font-size: 9.5px; }
+  .engage-deal-owner { color: #718078; font-size: 10.5px; min-width: 0; }
   .engage-deal-followup { margin-left: auto; color: #63756b; font-size: 9.8px; white-space: nowrap; }
   .engage-deal-followup.is-today { color: #9a650d; font-weight: 700; }
   .engage-deal-overdue-pill {
