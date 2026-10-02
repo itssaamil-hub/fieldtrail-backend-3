@@ -13,11 +13,11 @@ export function useDesktopSidebar() {
   return desktop;
 }
 const sections = [['dashboard', 'Dashboard', Gauge], ['leads', 'Contacts', Contact2], ['deals', 'Pipeline', Columns3], ['employees', 'Employees', Users], ['tasks', 'Tasks', ClipboardList], ['payments', 'Payments', Wallet], ['activity', 'Activity Centre', History], ['exceptions', 'Exception Centre', ShieldAlert], ['reports', 'Reports', BarChart3]];
-export default function DesktopSidebar({ active, collapsed, onCollapse, onSelect, onSettings, settingsOpen, onPayments, paymentsOpen = false }) {
+export default function DesktopSidebar({ active, collapsed, onCollapse, onSelect, onSettings, settingsOpen }) {
+  const openPayments = () => window.dispatchEvent(new CustomEvent('fieldtrail:open-collections'));
   const item = ([key, label, Icon]) => {
-    const selected = key === 'payments' ? paymentsOpen : active === key;
-    const activate = () => key === 'payments' ? onPayments?.() : onSelect(key);
-    return <button key={key} type="button" aria-label={label} title={collapsed ? label : undefined} aria-current={!settingsOpen && selected ? 'page' : undefined} onClick={activate}><Icon size={19} aria-hidden="true"/><span>{label}</span></button>;
+    const activate = () => key === 'payments' ? openPayments() : onSelect(key);
+    return <button key={key} type="button" aria-label={label} title={collapsed ? label : undefined} aria-current={!settingsOpen && active === key ? 'page' : undefined} onClick={activate}><Icon size={19} aria-hidden="true"/><span>{label}</span></button>;
   };
   const openAccount = () => window.dispatchEvent(new CustomEvent('engage:open-account-settings'));
   return <aside className={`engage-desktop-sidebar${collapsed ? ' is-collapsed' : ''}`} aria-label="Admin sidebar">
