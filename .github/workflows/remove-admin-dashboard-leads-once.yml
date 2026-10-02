@@ -1,0 +1,38 @@
+name: Remove Admin Dashboard Leads once
+on:
+  push:
+    paths:
+      - '.github/workflows/remove-admin-dashboard-leads-once.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Apply exact guarded patch
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/admin/AdminAppView.jsx')
+          s = p.read_text()
+          old = '  const showLeads = showDashboard || section === "leads" || section === "deals";'
+          new = '  const showLeads = section === "leads" || section === "deals";'
+          count = s.count(old)
+          if count != 1:
+              raise SystemExit(f'Expected exact showLeads line once, found {count}')
+          p.write_text(s.replace(old, new, 1))
+          PY
+          rm .github/workflows/remove-admin-dashboard-leads-once.yml
+          git diff --check
+          git diff -- src/admin/AdminAppView.jsx
+          test "$(git diff --numstat -- src/admin/AdminAppView.jsx | awk '{print $1+$2}')" = "2"
+      - name: Commit scoped change
+        run: |
+          git config user.name "itssaamil-hub"
+          git config user.email "itssaamil@gmail.com"
+          git add src/admin/AdminAppView.jsx .github/workflows/remove-admin-dashboard-leads-once.yml
+          git commit -m "remove duplicated Leads block from admin dashboard"
+          git push origin HEAD:main
