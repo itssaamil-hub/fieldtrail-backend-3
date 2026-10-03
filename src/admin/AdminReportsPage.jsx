@@ -65,7 +65,10 @@ export default function AdminReportsPage({ salesmen, leads, shared }) {
     return null;
   });
   useEffect(() => {
-    const openExpenses = () => setActive("expenses");
+    const openExpenses = () => {
+      sessionStorage.removeItem("engage:open-report");
+      setActive("expenses");
+    };
     window.addEventListener("engage:open-expenses", openExpenses);
     return () => window.removeEventListener("engage:open-expenses", openExpenses);
   }, []);
