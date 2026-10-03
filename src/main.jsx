@@ -4,6 +4,7 @@ import { registerSW } from "virtual:pwa-register";
 import App from "./App.jsx";
 import AppErrorBoundary from "./AppErrorBoundary.jsx";
 import AccountSettingsLauncher from "./AccountSettings.jsx";
+import BusinessNameTopBar from "./BusinessNameTopBar.jsx";
 import LateStartToast from "./LateStartToast.jsx";
 import { startPushSubscriptionRecovery } from "./pushSubscriptionRecovery.js";
 import "./index.css";
@@ -58,6 +59,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <AppErrorBoundary>
       <App />
+      <BusinessNameTopBar />
       <AccountSettingsLauncher />
       <LateStartToast />
     </AppErrorBoundary>
