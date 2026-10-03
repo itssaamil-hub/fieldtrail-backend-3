@@ -104,7 +104,7 @@ function buildExpensePdf(expenses, filters, total) {
     });
 
     if (pageIndex === pages.length - 1) {
-      const totalY = Math.max(86, y - 8);
+      const totalY = Math.max(86, y - 52);
       s += fillRect(367, totalY, 188, 42, "0.94 0.97 0.96");
       s += strokeRect(367, totalY, 188, 42, "0.72 0.82 0.79");
       s += text(381, totalY + 25, 8, "TOTAL SPEND", true, "0.39 0.45 0.49");
