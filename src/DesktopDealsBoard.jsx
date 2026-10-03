@@ -7,9 +7,24 @@ const STAGES = [
   ['negotiation', 'Negotiation', '#b79b60'], ['won', 'Won', '#5c9476'],
   ['lost', 'Lost', '#a8acac'], ['nurture', 'Nurture', '#879c65'],
 ];
+const AVATAR_PALETTES = [
+  ['#E8F5EF', '#147A5A'],
+  ['#EEF3FF', '#4967B2'],
+  ['#F4EEFF', '#7651A8'],
+  ['#FFF2E7', '#A45E24'],
+  ['#FDECEF', '#A84E63'],
+  ['#EAF6F8', '#287C88'],
+];
 const amount = lead => lead.dealValue != null && Number.isFinite(Number(lead.dealValue)) ? Number(lead.dealValue) : null;
 const money = value => `₹${value.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 const dealInitial = business => String(business || '?').trim().charAt(0).toUpperCase() || '?';
+function dealAvatarStyle(business) {
+  const value = String(business || '?');
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) hash = ((hash << 5) - hash + value.charCodeAt(i)) | 0;
+  const [background, color] = AVATAR_PALETTES[Math.abs(hash) % AVATAR_PALETTES.length];
+  return { background, color };
+}
 function followUp(value) {
   if (!value) return null;
   const day = String(value).slice(0, 10);
@@ -83,7 +98,7 @@ export default function DesktopDealsBoard({ leads, visibleStatus = 'all', onStat
               onDragEnd={() => { setDragging(null); setOver(null); }} onClick={() => onSelectLead(lead)}
               style={{ opacity: dragging === lead.id ? 0.4 : 1 }}>
               <div className="engage-deal-title-row">
-                <span className="engage-deal-avatar" aria-hidden="true">{dealInitial(lead.business)}</span>
+                <span className="engage-deal-avatar" aria-hidden="true" style={dealAvatarStyle(lead.business)}>{dealInitial(lead.business)}</span>
                 <strong className="engage-deal-name">{lead.business}</strong>
               </div>
               {leadAmount !== null && <div className="engage-deal-value">{money(leadAmount)}</div>}
