@@ -4,6 +4,7 @@ import { registerSW } from "virtual:pwa-register";
 import App from "./App.jsx";
 import AppErrorBoundary from "./AppErrorBoundary.jsx";
 import AccountSettingsLauncher from "./AccountSettings.jsx";
+import { startPushSubscriptionRecovery } from "./pushSubscriptionRecovery.js";
 import "./index.css";
 import "./salesman-dashboard-cards.css";
 import "./admin-mobile-lead-trend.css";
@@ -46,6 +47,11 @@ registerSW({
     registration?.update().catch(() => {});
   },
 });
+
+// Keep an already-authorized device attached to Web Push. This never asks for
+// notification permission; it only repairs/re-syncs subscriptions after the
+// user has already granted permission.
+startPushSubscriptionRecovery();
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
