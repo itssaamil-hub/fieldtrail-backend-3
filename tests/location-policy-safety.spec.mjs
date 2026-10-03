@@ -22,5 +22,7 @@ test('Add Deal cannot boot the device GPS from legacy optimistic defaults', () =
   expect(leadWrapperSource).toContain('gpsLocation: false');
   expect(leadWrapperSource).toContain('locationMandatoryForNewLead: false');
   expect(leadWrapperSource).toContain('continuousGpsTracking: false');
-  expect(leadWrapperSource).toContain('createCoreLeadFeatures({ ...deps, useState: locationSafeUseState');
+  expect(leadWrapperSource).toContain('api: leadCaptureApi');
+  expect(leadWrapperSource).toContain('useState: locationSafeUseState');
+  expect(leadWrapperSource).toContain('allowLeadWithoutStartDay !== true');
 });
