@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { api, ApiError, setDayStartedFlag } from "./api.js";
+import { attendanceV2Api } from "./attendanceV2Api.js";
 
 /**
  * Owns the Start Day / End Day request lifecycle while leaving presentation
@@ -43,8 +44,15 @@ export default function useAttendanceDay({
         setDayStartedFlag(sessionId, true);
         setDayStartedState(true);
         const lateMinutes = Number(result?.lateMinutes);
-        if (result?.showLateStartBanner === true && Number.isFinite(lateMinutes) && lateMinutes > 0) {
-          window.dispatchEvent(new CustomEvent("engage:late-start", { detail: { lateMinutes } }));
+        if (Number.isFinite(lateMinutes) && lateMinutes > 0) {
+          try {
+            const ui = await attendanceV2Api.lateStartUi();
+            if (ui?.showLateStartBanner === true) {
+              window.dispatchEvent(new CustomEvent("engage:late-start", { detail: { lateMinutes } }));
+            }
+          } catch {
+            // Start Day already succeeded. A presentation preference must never turn it into a failure.
+          }
         }
       }
 
