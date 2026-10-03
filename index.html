@@ -12,11 +12,13 @@
     <meta name="apple-mobile-web-app-title" content="Engage" />
     <title>Engage — Lead & Location Ledger</title>
     <style>
-      /* Keep the desktop Dashboard on the same 1500px / 28px page rhythm as
+      /* Keep key desktop workspaces on the same 1500px / 28px page rhythm as
          Exception Centre and Activity Centre without changing mobile spacing
          or any card/component internals. */
       @media (min-width: 1024px) {
-        div:has(> .engage-dashboard-greeting) {
+        div:has(> .engage-dashboard-greeting),
+        div[style*="max-width: 1180px"]:has(> .engage-reports-page),
+        div[style*="max-width: 1180px"]:has(> div:not([hidden]) > .ft-tasks-embedded) {
           max-width: 1500px !important;
           padding-left: 28px !important;
           padding-right: 28px !important;
