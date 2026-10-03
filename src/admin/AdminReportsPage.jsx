@@ -68,7 +68,7 @@ export default function AdminReportsPage({ salesmen, leads, shared }) {
 
   if (!active) {
     return (
-      <div>
+      <div className="engage-reports-page">
         <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 18, marginBottom: 4 }}>Reports</div>
         <div style={{ fontSize: 13, color: T.inkSoft, marginBottom: 16 }}>Choose a report to view</div>
         <DayClosingReportsEntry />
@@ -93,7 +93,7 @@ export default function AdminReportsPage({ salesmen, leads, shared }) {
   }
 
   return (
-    <div>
+    <div className="engage-reports-page">
       <button
         onClick={() => setActive(null)}
         style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: T.inkSoft, background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: 16 }}
