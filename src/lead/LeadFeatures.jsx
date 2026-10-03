@@ -52,7 +52,24 @@ export function createLeadFeatures(deps) {
     </>;
   }
 
-  const core = createCoreLeadFeatures({ ...deps, Field: FieldWithWonDate });
+  // The legacy core originally booted the Add Deal GPS state as ON before the
+  // employee-specific policy request completed. That could wake the device GPS
+  // for a fraction of a second even when Admin had set this employee to GPS OFF.
+  // Start this one exact state shape as OFF instead. The existing settings effect
+  // turns it ON only after the authoritative employee policy says so. A settings
+  // failure therefore fails closed and never fabricates permission to acquire GPS.
+  const locationSafeUseState = (initialValue) => {
+    const isLegacyLocationDefault = initialValue && typeof initialValue === "object"
+      && initialValue.gpsLocation === true
+      && initialValue.locationMandatoryForNewLead === true
+      && initialValue.continuousGpsTracking === true
+      && Object.keys(initialValue).length === 3;
+    return useState(isLegacyLocationDefault
+      ? { gpsLocation: false, locationMandatoryForNewLead: false, continuousGpsTracking: false }
+      : initialValue);
+  };
+
+  const core = createCoreLeadFeatures({ ...deps, useState: locationSafeUseState, Field: FieldWithWonDate });
   const CoreLeadDetailDrawer = core.LeadDetailDrawer;
   const CoreMyLeadsModal = core.MyLeadsModal;
 
