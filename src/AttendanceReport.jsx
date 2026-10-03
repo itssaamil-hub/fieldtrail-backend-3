@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { api } from "./api.js";
 import { attendanceApi } from "./attendanceApi.js";
+import { closingComplianceForDay } from "./attendanceClosingCompliance.js";
 
 const C = {
   ink: "#1A1D23",
@@ -142,6 +143,26 @@ async function loadAllClosingReports(from, to, employee) {
   return rows;
 }
 
+async function loadAttendanceReportData(from, to, employee) {
+  const params = { from, to };
+  if (employee) params.employee = employee;
+
+  const rows = await loadAllClosingReports(from, to, employee);
+  const userIds = [...new Set(rows.map((row) => row.user_id).filter(Boolean))];
+  const [settings, policyPairs] = await Promise.all([
+    attendanceApi.settings(params),
+    Promise.all(userIds.map(async (userId) => [userId, await attendanceApi.permissions(userId)])),
+  ]);
+
+  return {
+    rows,
+    settings: {
+      ...settings,
+      closingPolicies: Object.fromEntries(policyPairs),
+    },
+  };
+}
+
 function Pill({ children, tone = "gray" }) {
   const tones = {
     green: [C.greenSoft, C.green2],
@@ -223,8 +244,7 @@ function dayMetrics(sessions, day, now, today) {
     durationMs += Math.max(0, end - start);
   }
   const statuses = sorted.map((s) => s.status).filter(Boolean);
-  const closingDone = statuses.some((status) => status === "submitted" || status === "skipped");
-  return { firstStart, lastEnd, hasOpen, durationMs, closingDone, sessionCount:sorted.length };
+  return { firstStart, lastEnd, hasOpen, durationMs, statuses, sessionCount:sorted.length };
 }
 
 function scheduleFor(userId, calendar) {
@@ -285,12 +305,7 @@ export default function AttendanceReport({ salesmen = [] }) {
     setLoading(true);
     setError("");
     try {
-      const params = { from, to };
-      if (employee) params.employee = employee;
-      const [rows, settings] = await Promise.all([
-        loadAllClosingReports(from, to, employee),
-        attendanceApi.settings(params),
-      ]);
+      const { rows, settings } = await loadAttendanceReportData(from, to, employee);
       setRaw(rows);
       setCalendar(settings);
       setCompanyDays(settings.company.workingDays);
@@ -308,10 +323,8 @@ export default function AttendanceReport({ salesmen = [] }) {
     if (!from || !to || from > to) return undefined;
     setLoading(true);
     setError("");
-    const params = { from, to };
-    if (employee) params.employee = employee;
-    Promise.all([loadAllClosingReports(from, to, employee), attendanceApi.settings(params)])
-      .then(([rows, settings]) => {
+    loadAttendanceReportData(from, to, employee)
+      .then(({ rows, settings }) => {
         if (cancelled) return;
         setRaw(rows);
         setCalendar(settings);
@@ -350,6 +363,11 @@ export default function AttendanceReport({ salesmen = [] }) {
     }
 
     return [...people.values()].map((person) => {
+      const closingPolicy = calendar.closingPolicies?.[person.userId];
+      if (!closingPolicy || typeof closingPolicy.require_closing !== "boolean") {
+        throw new Error(`Day Closing policy is unavailable for ${person.name}.`);
+      }
+
       const byDay = new Map();
       for (const session of person.sessions) {
         if (!byDay.has(session.day)) byDay.set(session.day, []);
@@ -370,6 +388,7 @@ export default function AttendanceReport({ salesmen = [] }) {
       const notStartedToday = todayWorking && !todayPresent;
 
       let closingDone = 0;
+      let closingRequiredDays = 0;
       let totalDuration = 0;
       const details = [];
       const exceptionDates = (calendar.exceptions || [])
@@ -381,7 +400,13 @@ export default function AttendanceReport({ salesmen = [] }) {
         const sessions = byDay.get(day) || [];
         const policy = calendarState(day, person.userId, calendar);
         const metrics = dayMetrics(sessions, day, now, today);
-        if (metrics.closingDone) closingDone += 1;
+        const closing = closingComplianceForDay({
+          hasSessions:sessions.length > 0,
+          statuses:metrics.statuses,
+          requireClosing:closingPolicy.require_closing,
+        });
+        if (closing.required) closingRequiredDays += 1;
+        if (closing.completed) closingDone += 1;
         totalDuration += metrics.durationMs;
 
         let state = "Off Day";
@@ -400,11 +425,11 @@ export default function AttendanceReport({ salesmen = [] }) {
           tone = "red";
         }
 
-        details.push({ day, sessions, ...metrics, state, tone, policy });
+        details.push({ day, sessions, ...metrics, closingRequired:closing.required, closingDone:closing.completed, state, tone, policy });
       }
 
       const workedDays = workedDates.length;
-      const closingPending = Math.max(0, workedDays - closingDone);
+      const closingPending = Math.max(0, closingRequiredDays - closingDone);
       return {
         ...person,
         workedDays,
@@ -414,6 +439,7 @@ export default function AttendanceReport({ salesmen = [] }) {
         notStartedToday,
         attendancePct,
         closingDone,
+        closingRequiredDays,
         closingPending,
         totalDuration,
         details,
@@ -436,8 +462,9 @@ export default function AttendanceReport({ salesmen = [] }) {
     absent:acc.absent + row.absentDays,
     notStartedToday:acc.notStartedToday + (row.notStartedToday ? 1 : 0),
     closingDone:acc.closingDone + row.closingDone,
+    closingRequired:acc.closingRequired + row.closingRequiredDays,
     closingPending:acc.closingPending + row.closingPending,
-  }), { worked:0, working:0, present:0, absent:0, notStartedToday:0, closingDone:0, closingPending:0 }), [rows]);
+  }), { worked:0, working:0, present:0, absent:0, notStartedToday:0, closingDone:0, closingRequired:0, closingPending:0 }), [rows]);
 
   const summaryPct = summary.working ? Math.round(summary.present / summary.working * 1000) / 10 : 0;
 
@@ -650,8 +677,8 @@ export default function AttendanceReport({ salesmen = [] }) {
           <SummaryRow label="Attendance" value={`${summaryPct}%`} detail="Present scheduled days ÷ expected working days" tone={summaryPct >= 90 ? "green" : summaryPct >= 75 ? "amber" : "red"} last/>
         </Panel>
         <Panel title="Day Closing" subtitle="Closing compliance on days actually worked" icon={ClipboardCheck}>
-          <SummaryRow label="Completed" value={`${summary.closingDone} / ${summary.worked}`} detail="Submitted or approved skipped closing" tone={summary.closingPending ? "amber" : "green"}/>
-          <SummaryRow label="Pending" value={summary.closingPending} detail="Worked days without completed closing" tone={summary.closingPending ? "amber" : "green"} last/>
+          <SummaryRow label="Completed" value={`${summary.closingDone} / ${summary.closingRequired}`} detail="Required worked days completed by submitted or approved skipped closing" tone={summary.closingPending ? "amber" : "green"}/>
+          <SummaryRow label="Pending" value={summary.closingPending} detail="Required worked days without completed closing" tone={summary.closingPending ? "amber" : "green"} last/>
         </Panel>
       </div>
 
@@ -680,7 +707,7 @@ export default function AttendanceReport({ salesmen = [] }) {
                   <div style={{ fontSize:13, fontWeight:800, color:C.heading, marginTop:2 }}>{row.attendancePct}%</div>
                 </div>
                 <span className="attendance-extra"><Pill tone={row.notStartedToday ? "amber" : row.absentDays ? "red" : "green"}>{row.notStartedToday ? "Not started" : `${row.absentDays} absent`}</Pill></span>
-                <span className="attendance-extra"><Pill tone={row.closingPending ? "amber" : "green"}>{row.closingDone}/{row.workedDays} closing</Pill></span>
+                <span className="attendance-extra"><Pill tone={row.closingPending ? "amber" : "green"}>{row.closingRequiredDays ? `${row.closingDone}/${row.closingRequiredDays} closing` : "Closing not required"}</Pill></span>
                 {open ? <ChevronDown size={15} color="#7B8788"/> : <ChevronRight size={15} color="#A4AEAE"/>}
               </button>
 
@@ -694,7 +721,7 @@ export default function AttendanceReport({ salesmen = [] }) {
                       <div style={{ fontSize:10.8, color:C.soft }}>
                         {detail.sessions.length ? `${fmtTime(detail.firstStart)} → ${detail.hasOpen ? "Now" : fmtTime(detail.lastEnd)} · ${fmtDuration(detail.durationMs)}` : (detail.policy.exception?.label || (detail.policy.exception ? EXCEPTION_LABELS[detail.policy.exception.kind] : "No Start Day"))}
                       </div>
-                      <div className="attendance-closing-detail" style={{ fontSize:10.3, color:C.soft, whiteSpace:"nowrap" }}>{detail.sessions.length ? (detail.closingDone ? "Closing done" : "Closing pending") : "—"}</div>
+                      <div className="attendance-closing-detail" style={{ fontSize:10.3, color:C.soft, whiteSpace:"nowrap" }}>{detail.sessions.length ? (!detail.closingRequired ? "Closing not required" : detail.closingDone ? "Closing done" : "Closing pending") : "—"}</div>
                     </div>
                   ))}
                 </div>

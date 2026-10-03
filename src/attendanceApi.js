@@ -40,6 +40,7 @@ function queryString(params = {}) {
 
 export const attendanceApi = {
   settings: (params = {}) => attendanceRequest(`/day-closing/attendance-settings${queryString(params)}`),
+  permissions: (id) => attendanceRequest(`/day-closing/permissions/${id}`),
   saveCompany: (body) => attendanceRequest("/day-closing/attendance-settings/company", { method: "PUT", body }),
   saveEmployee: (id, body) => attendanceRequest(`/day-closing/attendance-settings/employee/${id}`, { method: "PUT", body }),
   saveException: (body) => attendanceRequest("/day-closing/attendance-settings/exceptions", { method: "POST", body }),
