@@ -27,7 +27,7 @@ const lazyNamed = (loader, exportName) => withLazyBoundary(lazy(() => loader().t
 
 const CollectionsPanel = lazyDefault(() => import("../Collections.jsx"));
 const DealValueReport = lazyDefault(() => import("../DealValueReport.jsx"));
-const AttendanceReport = lazyDefault(() => import("../AttendanceReport.jsx"));
+const AttendanceReport = lazyDefault(() => import("../AttendanceReportV2.jsx"));
 const EnhancedDailyActivityReport = lazyDefault(() => import("../EnhancedDailyActivityReport.jsx"));
 const DayClosingReportsEntry = lazyNamed(() => import("../DayClosing.jsx"), "DayClosingReportsEntry");
 
@@ -56,7 +56,14 @@ export default function AdminReportsPage({ salesmen, leads, shared }) {
     DataQualityReport,
     LeadExportReport,
   } = shared;
-  const [active, setActive] = useState(null);
+  const [active, setActive] = useState(() => {
+    const requested = sessionStorage.getItem("engage:open-report");
+    if (requested && REPORT_CARDS.some((card) => card.key === requested)) {
+      sessionStorage.removeItem("engage:open-report");
+      return requested;
+    }
+    return null;
+  });
   const activeCard = REPORT_CARDS.find((card) => card.key === active);
 
   if (!active) {

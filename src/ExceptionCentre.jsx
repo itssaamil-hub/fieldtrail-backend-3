@@ -134,6 +134,11 @@ export default function ExceptionCentre({ onNavigate }) {
     if (type === 'payment') {
       const key = item.metadata?.collectionKey || item.entity_id || item.entityId;
       window.dispatchEvent(new CustomEvent('fieldtrail:open-collections',{detail:{key}}));
+      return;
+    }
+    if (type === 'attendance' || item.metadata?.source === 'attendance_v2') {
+      sessionStorage.setItem('engage:open-report','attendance');
+      onNavigate?.('reports');
     }
   };
 
