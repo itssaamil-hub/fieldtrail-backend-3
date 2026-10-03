@@ -39,9 +39,13 @@ export default function useAttendanceDay({
         setDayStartedFlag(sessionId, false);
         setDayStartedState(false);
       } else {
-        await api.salesmanDayStart({ locationRequired: attendanceLocationPolicy.start });
+        const result = await api.salesmanDayStart({ locationRequired: attendanceLocationPolicy.start });
         setDayStartedFlag(sessionId, true);
         setDayStartedState(true);
+        const lateMinutes = Number(result?.lateMinutes);
+        if (result?.showLateStartBanner === true && Number.isFinite(lateMinutes) && lateMinutes > 0) {
+          window.dispatchEvent(new CustomEvent("engage:late-start", { detail: { lateMinutes } }));
+        }
       }
 
       setJustToggled(true);
