@@ -69,7 +69,29 @@ export function createLeadFeatures(deps) {
       : initialValue);
   };
 
-  const core = createCoreLeadFeatures({ ...deps, useState: locationSafeUseState, Field: FieldWithWonDate });
+  // "Allow lead entry without Start Day / GPS" is scoped to lead creation only.
+  // The core Add Deal modal reads salesmanGetSettings directly, so present GPS as
+  // OFF to that lead-capture path when the employee is trusted. Attendance and
+  // continuous tracking keep using useSalesmanSettings, which reads the real
+  // employee GPS policy independently and is therefore unchanged.
+  const leadCaptureApi = {
+    ...deps.api,
+    salesmanGetSettings: async (...args) => {
+      const result = await deps.api.salesmanGetSettings(...args);
+      if (result?.employeePermissions?.allowLeadWithoutStartDay !== true) return result;
+      return {
+        ...result,
+        locationSettings: {
+          ...(result.locationSettings || {}),
+          gpsLocation: false,
+          locationMandatoryForNewLead: false,
+          continuousGpsTracking: false,
+        },
+      };
+    },
+  };
+
+  const core = createCoreLeadFeatures({ ...deps, api: leadCaptureApi, useState: locationSafeUseState, Field: FieldWithWonDate });
   const CoreLeadDetailDrawer = core.LeadDetailDrawer;
   const CoreMyLeadsModal = core.MyLeadsModal;
 
