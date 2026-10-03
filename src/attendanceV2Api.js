@@ -29,6 +29,8 @@ async function request(path, { method = "GET", body, blob = false } = {}) {
 export const attendanceV2Api = {
   report: (params) => request(`/attendance-v2/report${qs(params)}`),
   settings: (params) => request(`/attendance-v2/settings${qs(params)}`),
+  lateStartUi: () => request("/attendance-v2/late-start-ui"),
+  saveLateStartUi: (body) => request("/attendance-v2/late-start-ui", { method: "PUT", body }),
   saveCompany: (body) => request("/attendance-v2/settings/company", { method: "PUT", body }),
   saveEmployee: (id, body) => request(`/attendance-v2/settings/employee/${id}`, { method: "PUT", body }),
   saveException: (body) => request("/attendance-v2/exceptions", { method: "POST", body }),
