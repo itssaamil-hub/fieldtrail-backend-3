@@ -161,7 +161,7 @@ async function boot(page, role = 'admin', initialTasks = [taskTemplate()]) {
 }
 
 async function openTasks(page) {
-  await page.getByRole('button', { name: 'Tasks', exact: true }).click();
+  await page.getByRole('button', { name: /^Tasks(?:,|$)/ }).click();
   await expect(page.getByRole('heading', { name: /Team Tasks|My Tasks/ })).toBeVisible();
 }
 
@@ -169,13 +169,14 @@ test('admin creates a fully specified task for the selected employee', async ({ 
   const state = await boot(page, 'admin', []);
   await openTasks(page);
   await page.getByRole('button', { name: '+ Create Task' }).click();
-  await page.getByLabel('Task title').fill('Send revised quotation');
-  await page.getByLabel('Assign to').selectOption({ label: 'Anand' });
-  await page.getByLabel('Due date and time (IST)').fill('2026-10-05T15:30');
-  await page.getByLabel('Priority').selectOption('high');
-  await page.getByLabel('Repeat').selectOption('weekly');
-  await page.getByLabel('Notes (optional)').fill('Confirm the final module list before sending.');
-  await page.getByRole('button', { name: 'Save task' }).click();
+  const createForm = page.locator('form.ft-task-form').filter({ has: page.getByRole('heading', { name: 'Create task' }) });
+  await createForm.getByLabel('Task title').fill('Send revised quotation');
+  await createForm.getByLabel('Assign to').selectOption({ label: 'Anand' });
+  await createForm.getByLabel('Due date and time (IST)').fill('2026-10-05T15:30');
+  await createForm.getByLabel('Priority').selectOption('high');
+  await createForm.getByLabel('Repeat').selectOption('weekly');
+  await createForm.getByLabel('Notes (optional)').fill('Confirm the final module list before sending.');
+  await createForm.getByRole('button', { name: 'Save task' }).click();
 
   await expect.poll(() => state.createBodies.length).toBe(1);
   expect(state.createBodies[0]).toMatchObject({
