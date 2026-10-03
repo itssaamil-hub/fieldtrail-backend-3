@@ -96,7 +96,7 @@ export default function AdminActivityOverview({ salesmen=[] }) {
   const [data,setData]=useState(null);
   const [error,setError]=useState('');
   const [loading,setLoading]=useState(true);
-  const [activeKeys,setActiveKeys]=useState(['leadsCreated','movedHot','movedNegotiation','won','followupsDone']);
+  const [activeKeys,setActiveKeys]=useState(['leadsCreated']);
 
   useEffect(()=>{
     let alive=true;
@@ -108,7 +108,7 @@ export default function AdminActivityOverview({ salesmen=[] }) {
 
   const person=salesmanId==='all'?'All employees':(salesmen.find(s=>s.id===salesmanId)?.name||'Employee');
   const totals=data?.totals||{}, rows=data?.trend||[], activities=data?.activities||[];
-  const toggle=k=>setActiveKeys(prev=>prev.includes(k)?(prev.length===1?prev:prev.filter(x=>x!==k)):[...prev,k]);
+  const selectMetric=k=>setActiveKeys([k]);
 
   return <div style={{display:'grid',gridTemplateColumns:'minmax(0,1.42fr) minmax(380px,.86fr)',gap:14,marginBottom:18}} className="engage-activity-overview">
     <style>{`
@@ -131,7 +131,7 @@ export default function AdminActivityOverview({ salesmen=[] }) {
       </div>
 
       {error?<div style={{padding:'18px 4px',fontSize:12.5,color:'#B42318'}}>{error}</div>:<>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(5,minmax(82px,1fr))',gap:6,overflowX:'auto'}}>{metricDefs.map(m=>{const on=activeKeys.includes(m.key),Icon=m.Icon;return <button key={m.key} onClick={()=>toggle(m.key)} style={{minWidth:82,textAlign:'left',padding:'6px 8px',borderRadius:9,border:`1px solid ${on?m.color+'55':C.line}`,background:on?`${m.color}0D`:'#fff',cursor:'pointer'}}><div style={{display:'flex',alignItems:'center',gap:4,fontSize:9.2,fontWeight:750,color:C.soft,whiteSpace:'nowrap'}}><Icon size={11.5} color={m.color}/>{m.label}</div><div style={{fontSize:17,fontWeight:850,color:C.ink,marginTop:2,lineHeight:1.05}}>{Number(totals[m.key]||0)}</div></button>;})}</div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(5,minmax(82px,1fr))',gap:6,overflowX:'auto'}}>{metricDefs.map(m=>{const on=activeKeys.includes(m.key),Icon=m.Icon;return <button key={m.key} aria-pressed={on} onClick={()=>selectMetric(m.key)} style={{minWidth:82,textAlign:'left',padding:'6px 8px',borderRadius:9,border:`1px solid ${on?m.color+'55':C.line}`,background:on?`${m.color}0D`:'#fff',cursor:'pointer'}}><div style={{display:'flex',alignItems:'center',gap:4,fontSize:9.2,fontWeight:750,color:C.soft,whiteSpace:'nowrap'}}><Icon size={11.5} color={m.color}/>{m.label}</div><div style={{fontSize:17,fontWeight:850,color:C.ink,marginTop:2,lineHeight:1.05}}>{Number(totals[m.key]||0)}</div></button>;})}</div>
         {rows.length?<SparkChart rows={rows} activeKeys={activeKeys} days={days}/>:!loading&&<div style={{padding:'72px 12px',textAlign:'center',color:C.soft,fontSize:12.5}}>No lead activity recorded in this period.</div>}
       </>}
     </section>
