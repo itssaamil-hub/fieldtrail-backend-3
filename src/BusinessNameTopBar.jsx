@@ -15,10 +15,20 @@ export default function BusinessNameTopBar() {
     const session = getSession();
     if (!session?.token || session?.role !== "admin") return undefined;
 
-    const syncTarget = () => setTarget(findDesktopTopbarLeft());
-    syncTarget();
-    const observer = new MutationObserver(syncTarget);
-    observer.observe(document.body, { childList: true, subtree: true });
+    let attempts = 0;
+    const findTarget = () => {
+      const node = findDesktopTopbarLeft();
+      if (node) {
+        setTarget(node);
+        return true;
+      }
+      return false;
+    };
+    findTarget();
+    const targetTimer = window.setInterval(() => {
+      attempts += 1;
+      if (findTarget() || attempts >= 50) window.clearInterval(targetTimer);
+    }, 100);
 
     const syncSession = (event) => {
       const next = event?.detail || getSession();
@@ -46,7 +56,7 @@ export default function BusinessNameTopBar() {
     return () => {
       alive = false;
       controller.abort();
-      observer.disconnect();
+      window.clearInterval(targetTimer);
       window.removeEventListener("engage:session-updated", syncSession);
     };
   }, []);
