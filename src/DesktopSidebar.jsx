@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { History, Gauge, Contact2, Columns3, Users, ClipboardList, ShieldAlert, BarChart3, Settings, UserRound, PanelLeftClose, PanelLeftOpen, Wallet } from 'lucide-react';
+import { History, Gauge, Contact2, Columns3, Users, ClipboardList, ShieldAlert, BarChart3, Settings, UserRound, PanelLeftClose, PanelLeftOpen, Wallet, ReceiptText } from 'lucide-react';
 import './desktop-sidebar.css';
 
 export function useDesktopSidebar() {
@@ -12,11 +12,24 @@ export function useDesktopSidebar() {
   }, []);
   return desktop;
 }
-const sections = [['dashboard', 'Dashboard', Gauge], ['leads', 'Contacts', Contact2], ['deals', 'Pipeline', Columns3], ['employees', 'Employees', Users], ['tasks', 'Tasks', ClipboardList], ['payments', 'Payments', Wallet], ['activity', 'Activity Centre', History], ['exceptions', 'Exception Centre', ShieldAlert], ['reports', 'Reports', BarChart3]];
+const sections = [['dashboard', 'Dashboard', Gauge], ['leads', 'Contacts', Contact2], ['deals', 'Pipeline', Columns3], ['employees', 'Employees', Users], ['tasks', 'Tasks', ClipboardList], ['payments', 'Payments', Wallet], ['expenses', 'Expenses', ReceiptText], ['activity', 'Activity Centre', History], ['exceptions', 'Exception Centre', ShieldAlert], ['reports', 'Reports', BarChart3]];
 export default function DesktopSidebar({ active, collapsed, onCollapse, onSelect, onSettings, settingsOpen }) {
+  const [directActive, setDirectActive] = useState(null);
+  useEffect(() => { if (active !== 'reports') setDirectActive(null); }, [active]);
   const item = ([key, label, Icon]) => {
-    const activate = () => onSelect(key);
-    return <button key={key} type="button" aria-label={label} title={collapsed ? label : undefined} aria-current={!settingsOpen && active === key ? 'page' : undefined} onClick={activate}><Icon size={19} aria-hidden="true"/><span>{label}</span></button>;
+    const selected = !settingsOpen && (directActive ? directActive === key : active === key);
+    const activate = () => {
+      if (key === 'expenses') {
+        setDirectActive('expenses');
+        sessionStorage.setItem('engage:open-report', 'expenses');
+        window.dispatchEvent(new CustomEvent('engage:open-expenses'));
+        onSelect('reports');
+        return;
+      }
+      setDirectActive(null);
+      onSelect(key);
+    };
+    return <button key={key} type="button" aria-label={label} title={collapsed ? label : undefined} aria-current={selected ? 'page' : undefined} onClick={activate}><Icon size={19} aria-hidden="true"/><span>{label}</span></button>;
   };
   const openAccount = () => window.dispatchEvent(new CustomEvent('engage:open-account-settings'));
   return <aside className={`engage-desktop-sidebar${collapsed ? ' is-collapsed' : ''}`} aria-label="Admin sidebar">

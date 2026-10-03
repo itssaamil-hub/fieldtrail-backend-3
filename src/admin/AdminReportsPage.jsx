@@ -1,4 +1,5 @@
-import React, { lazy, Suspense, useState } from "react";
+import React, { lazy, Suspense, useEffect, useState } from "react";
+import ExpensesWorkspace from "../ExpensesWorkspace.jsx";
 import {
   AlertTriangle,
   CalendarClock,
@@ -37,7 +38,7 @@ const REPORT_CARDS = [
   { key: "funnel", title: "Funnel and conversion", desc: "Lead count and drop-off at each pipeline stage.", icon: Handshake, color: "#7B4FC9" },
   { key: "renewals", title: "Renewals due", desc: "Everything renewing in the next 30, 60 or 90 days.", icon: CalendarClock, color: "#B8791F" },
   { key: "payments", title: "Payments", desc: "Collections, pending balances, overdue payments and receipts in one place.", icon: Wallet, color: "#C0392B" },
-  { key: "expenses", title: "Expenses", desc: "Salary and other spending, broken down by category.", icon: Receipt, color: "#993C1D" },
+  { key: "expenses", title: "Expenses", desc: "Salary and other spending, broken down by category.", icon: Receipt, color: "#993C1D", sidebarOnly: true },
   { key: "attendance", title: "Attendance Report", desc: "Start day, end day, working duration and day closing status.", icon: Clock, color: "#145C5D" },
   { key: "daily", title: "Daily activity", desc: "Visits, leads touched and distance travelled per day.", icon: MapPin, color: "#12805C" },
   { key: "stage", title: "Time in stage", desc: "Average days a lead spends at each status.", icon: Clock, color: "#8B5E00" },
@@ -51,7 +52,6 @@ export default function AdminReportsPage({ salesmen, leads, shared }) {
     SalesmanPerformanceReport,
     FunnelReport,
     RenewalsReport,
-    ExpensesReport,
     TimeInStageReport,
     DataQualityReport,
     LeadExportReport,
@@ -64,7 +64,19 @@ export default function AdminReportsPage({ salesmen, leads, shared }) {
     }
     return null;
   });
+  useEffect(() => {
+    const openExpenses = () => {
+      sessionStorage.removeItem("engage:open-report");
+      setActive("expenses");
+    };
+    window.addEventListener("engage:open-expenses", openExpenses);
+    return () => window.removeEventListener("engage:open-expenses", openExpenses);
+  }, []);
   const activeCard = REPORT_CARDS.find((card) => card.key === active);
+
+  if (active === "expenses") {
+    return <div className="engage-reports-page"><ExpensesWorkspace salesmen={salesmen} /></div>;
+  }
 
   if (!active) {
     return (
@@ -73,7 +85,7 @@ export default function AdminReportsPage({ salesmen, leads, shared }) {
         <div style={{ fontSize: 13, color: T.inkSoft, marginBottom: 16 }}>Choose a report to view</div>
         <DayClosingReportsEntry />
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
-          {REPORT_CARDS.map((card) => (
+          {REPORT_CARDS.filter((card) => !card.sidebarOnly).map((card) => (
             <div
               key={card.key}
               onClick={() => setActive(card.key)}
@@ -109,7 +121,6 @@ export default function AdminReportsPage({ salesmen, leads, shared }) {
       {active === "funnel" && <FunnelReport leads={leads} />}
       {active === "renewals" && <RenewalsReport leads={leads} />}
       {active === "payments" && <CollectionsPanel embedded />}
-      {active === "expenses" && <ExpensesReport salesmen={salesmen} />}
       {active === "attendance" && <AttendanceReport salesmen={salesmen} />}
       {active === "daily" && <EnhancedDailyActivityReport salesmen={salesmen} />}
       {active === "stage" && <TimeInStageReport />}
