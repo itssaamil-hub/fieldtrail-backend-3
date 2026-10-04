@@ -49,6 +49,9 @@ output: {
       },
       workbox: {
         cleanupOutdatedCaches: true,
+        // Public quotation links are standalone customer pages. Never let the
+        // Engage app-shell fallback replace /q with the authenticated CRM UI.
+        navigateFallbackDenylist: [/^\/q(?:\/|$)/],
         // App shell + static assets are precached so the app opens instantly
         // and works with no signal (a salesman in the field is the whole point).
         globPatterns: ["**/*.{js,css,html,png,svg,ico,woff2}"],
