@@ -10,5 +10,5 @@ async function post(path,body){
  return data;
 }
 
-export const cancelAcceptedDeal=(quoteId,body)=>post(`/quotations/${quoteId}/cancel-deal`,body);
+export const voidAcceptedQuotation=(quoteId,body)=>post(`/quotations/${quoteId}/void`,body);
 export const voidPaymentAccount=(key,body)=>post(`/collections/${encodeURIComponent(key)}/void`,body);
