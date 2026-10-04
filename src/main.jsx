@@ -1,7 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { registerSW } from "virtual:pwa-register";
-import "./quotationDeletePolicy.js";
 import App from "./App.jsx";
 import AppErrorBoundary from "./AppErrorBoundary.jsx";
 import AccountSettingsLauncher from "./AccountSettings.jsx";
