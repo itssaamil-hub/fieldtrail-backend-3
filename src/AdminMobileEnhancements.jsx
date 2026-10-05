@@ -33,7 +33,7 @@ export function AdminMobileLeadTrend({ leads = [] }) {
   const pct = previousTotal ? Math.round(((currentTotal-previousTotal)/previousTotal)*100) : null;
   return <section className="engage-mobile-lead-trend">
     <div className="engage-mobile-lead-trend-head">
-      <div><div className="engage-mobile-lead-trend-title">Daily Leads Created</div><div className="engage-mobile-lead-trend-sub">Last 7 days · {currentTotal} lead{currentTotal===1?'':'s'}</div></div>
+      <div className="engage-mobile-lead-trend-sub">Last 7 days · {currentTotal} lead{currentTotal===1?'':'s'}</div>
       {pct !== null && <span className={`engage-mobile-lead-trend-badge${pct<0?' is-down':pct===0?' is-flat':''}`}>{pct>0?'↑':pct<0?'↓':'→'} {Math.abs(pct)}%</span>}
       {pct === null && currentTotal > 0 && <span className="engage-mobile-lead-trend-badge">New activity</span>}
     </div>
