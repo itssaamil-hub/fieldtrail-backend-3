@@ -326,6 +326,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
             </div>}
           />}
           <AdminEmployeesPanel
+            employeePage={sectionNavigation && section === "employees"}
             salesmen={salesmen}
             leads={leads}
             shared={{ T, inputStyle }}
