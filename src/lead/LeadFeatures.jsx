@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { createLeadFeatures as createCoreLeadFeatures } from "./LeadFeaturesCore.jsx";
 import { getApiBase, getSession } from "../api.js";
 import { isWonDateInCurrentIstMonth, readAdminWonPeriod, writeAdminWonPeriod } from "./wonPeriod.js";
@@ -191,6 +191,8 @@ export function createLeadFeatures(deps) {
     const [loading, setLoading] = useState(enabled);
     const [error, setError] = useState("");
     const [historyVersion, setHistoryVersion] = useState(0);
+    const [paymentDeleteWarning, setPaymentDeleteWarning] = useState(null);
+    const deleteGuardRef = useRef(false);
 
     useEffect(() => {
       let cancelled = false;
@@ -238,13 +240,108 @@ export function createLeadFeatures(deps) {
       return result;
     };
 
+    const closeDeleteWarning = () => {
+      deleteGuardRef.current = false;
+      setPaymentDeleteWarning(null);
+    };
+
+    const guardedClose = () => {
+      if (deleteGuardRef.current) return;
+      props.onClose?.();
+    };
+
+    const guardedDelete = async (leadId) => {
+      if (!props.onDelete) return;
+      deleteGuardRef.current = true;
+      setPaymentDeleteWarning({ state: "checking", leadId });
+      try {
+        let hasPayments = false;
+        try {
+          const collection = await deps.api.collection(`lead:${leadId}`);
+          hasPayments = Array.isArray(collection?.payments) && collection.payments.length > 0;
+        } catch (err) {
+          if (!(err instanceof deps.ApiError) || err.status !== 404) throw err;
+        }
+
+        if (hasPayments) {
+          setPaymentDeleteWarning({ state: "warning", leadId });
+          return;
+        }
+
+        await props.onDelete(leadId);
+        deleteGuardRef.current = false;
+        setPaymentDeleteWarning(null);
+        props.onClose?.();
+      } catch (err) {
+        setPaymentDeleteWarning({
+          state: "error",
+          leadId,
+          message: err?.message || "Couldn't verify payment history. Please try again.",
+        });
+      }
+    };
+
+    const confirmPaymentDelete = async () => {
+      const leadId = paymentDeleteWarning?.leadId;
+      if (!leadId || !props.onDelete) return;
+      setPaymentDeleteWarning((current) => ({ ...current, state: "deleting" }));
+      try {
+        await props.onDelete(leadId);
+        deleteGuardRef.current = false;
+        setPaymentDeleteWarning(null);
+        props.onClose?.();
+      } catch (err) {
+        setPaymentDeleteWarning((current) => ({
+          ...current,
+          state: "error",
+          message: err?.message || "Couldn't delete this Deal. Please try again.",
+        }));
+      }
+    };
+
     return (
       <WonDateContext.Provider value={contextValue}>
         <CoreLeadDetailDrawer
           {...props}
+          onClose={guardedClose}
           fetchHistory={wrappedFetchHistory}
           onUpdate={props.onUpdate ? onUpdate : undefined}
+          onDelete={props.onDelete ? guardedDelete : undefined}
         />
+
+        {paymentDeleteWarning?.state === "warning" && (
+          <deps.Overlay onClose={closeDeleteWarning} title="Delete Deal permanently?">
+            <div role="alert" style={{ background: deps.T.dangerSoft, border: `1px solid ${deps.T.danger}33`, borderRadius: 12, padding: 14 }}>
+              <div style={{ fontSize: 13.5, fontWeight: 800, color: deps.T.danger, marginBottom: 7 }}>
+                This Deal is associated with payment records.
+              </div>
+              <div style={{ fontSize: 12.5, lineHeight: 1.55, color: deps.T.ink, marginBottom: 14 }}>
+                Deleting it will also permanently delete its payment account and payment history. This action cannot be undone.
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={closeDeleteWarning} style={{ flex: 1, padding: 10, borderRadius: 8, border: `1px solid ${deps.T.line}`, background: "#fff", color: deps.T.ink, fontWeight: 700, cursor: "pointer" }}>
+                  Cancel
+                </button>
+                <button onClick={confirmPaymentDelete} style={{ flex: 1, padding: 10, borderRadius: 8, border: "none", background: deps.T.danger, color: "#fff", fontWeight: 800, cursor: "pointer" }}>
+                  Delete permanently
+                </button>
+              </div>
+            </div>
+          </deps.Overlay>
+        )}
+
+        {paymentDeleteWarning?.state === "error" && (
+          <deps.Overlay onClose={closeDeleteWarning} title="Delete Deal">
+            <div role="alert" style={{ background: deps.T.warnSoft, borderRadius: 12, padding: 14 }}>
+              <div style={{ fontSize: 12.5, lineHeight: 1.5, color: deps.T.warn, marginBottom: 12 }}>
+                {paymentDeleteWarning.message}
+              </div>
+              <button onClick={closeDeleteWarning} style={{ width: "100%", padding: 10, borderRadius: 8, border: `1px solid ${deps.T.line}`, background: "#fff", color: deps.T.ink, fontWeight: 700, cursor: "pointer" }}>
+                Close
+              </button>
+            </div>
+          </deps.Overlay>
+        )}
       </WonDateContext.Provider>
     );
   }
