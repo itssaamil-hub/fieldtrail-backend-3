@@ -12,7 +12,7 @@ const time=value=>value?new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata'
 const dateTime=value=>value?new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(value))+' IST':'—';
 const duration=(start,end)=>{if(!start||!end)return'—';const ms=Math.max(0,new Date(end)-new Date(start));const mins=Math.round(ms/60000);const h=Math.floor(mins/60),m=mins%60;return h?`${h}h ${m}m`:`${m}m`;};
 
-export function DayClosingReports({onClose}){
+export function DayClosingReports({onClose,embedded=false}){
  const [date,setDate]=useState(today()),[employee,setEmployee]=useState(''),[status,setStatus]=useState('all');
  const [employees,setEmployees]=useState([]),[reports,setReports]=useState([]),[selected,setSelected]=useState(null);
  const [loading,setLoading]=useState(true),[error,setError]=useState('');
@@ -22,8 +22,7 @@ export function DayClosingReports({onClose}){
  const visible=useMemo(()=>reports.filter(r=>status==='all'||(status==='pending'?(normalizeStatus(r)==='pending'||normalizeStatus(r)==='draft'):normalizeStatus(r)===status)),[reports,status]);
  const attention=useMemo(()=>reports.filter(r=>['pending','draft','skipped'].includes(normalizeStatus(r))),[reports]);
  const selectedReport=selected==null?null:reports.find((r,i)=>(r.attendance_id||`${r.user_id}-${i}`)===selected);
- return <OnboardingDialog title="Day Closing reports" onClose={onClose} wide desktopFull>
-  <div className="dc-report">
+ const content=<div className={`dc-report${embedded?' dc-report-embedded':''}`}>
    <div className="dc-report-toolbar">
     <label>Date · IST<input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label>
     <label>Employee<select value={employee} onChange={e=>setEmployee(e.target.value)}><option value="">All employees</option>{employees.map(e=><option key={e.id} value={e.id}>{e.full_name}</option>)}</select></label>
@@ -39,8 +38,8 @@ export function DayClosingReports({onClose}){
    <div className="dc-report-list-head"><div><span className="dc-kicker">Employees</span><h3>{visible.length} record{visible.length===1?'':'s'}</h3></div>{status!=='all'&&<button type="button" onClick={()=>setStatus('all')}>Clear status filter</button>}</div>
    {loading?<div className="dc-report-loading">Loading Day Closing records…</div>:visible.length===0?<div className="dc-report-empty">No matching Day Closing records for this date.</div>:<div className="dc-report-list">{visible.map((r,i)=>{const meta=statusMeta(r);const key=r.attendance_id||`${r.user_id}-${reports.indexOf(r)}`;return <button type="button" className="dc-report-row" key={key} onClick={()=>setSelected(key)}><div className="dc-report-avatar"><UserRound size={17}/></div><div className="dc-report-person"><strong>{r.full_name}{r.session_number>1?` · Session ${r.session_number}`:''}</strong><span>{r.start_day_at?`${time(r.start_day_at)} → ${r.end_day_at?time(r.end_day_at):'Active'}`:'Day not started'}{r.start_day_at&&r.end_day_at?` · ${duration(r.start_day_at,r.end_day_at)}`:''}</span></div><span className={`dc-status dc-status-${meta.tone}`}>{meta.label}</span><ChevronRight className="dc-row-chevron" size={17}/></button>})}</div>}
    {selectedReport&&<section className="dc-detail"><div className="dc-detail-head"><div><span className="dc-kicker">Report detail</span><h3>{selectedReport.full_name}{selectedReport.session_number>1?` · Session ${selectedReport.session_number}`:''}</h3></div><button type="button" onClick={()=>setSelected(null)} aria-label="Close report detail"><XCircle size={20}/></button></div><div className="dc-detail-meta"><div><span>Status</span><strong>{statusMeta(selectedReport).label}</strong></div><div><span>Start</span><strong>{time(selectedReport.start_day_at)}</strong></div><div><span>End</span><strong>{time(selectedReport.end_day_at)}</strong></div><div><span>Working time</span><strong>{duration(selectedReport.start_day_at,selectedReport.end_day_at)}</strong></div></div>{selectedReport.submitted_at&&<p className="dc-detail-submitted">Submitted {dateTime(selectedReport.submitted_at)}</p>}{[['outcomes','Outcomes'],['blockers','Blockers / help needed'],['priorities','Tomorrow’s priorities'],['skip_reason','Skip reason']].map(([k,label])=>selectedReport[k]&&<div className="dc-detail-copy" key={k}><span>{label}</span><p>{selectedReport[k]}</p></div>)}{selectedReport.metrics&&<div className="dc-detail-metrics"><div><strong>{selectedReport.metrics.leads||0}</strong><span>Leads</span></div><div><strong>{selectedReport.metrics.tasks||0}</strong><span>Tasks</span></div><div><strong>{selectedReport.metrics.quotes||0}</strong><span>Quotes</span></div><div><strong>{selectedReport.metrics.won||0}</strong><span>Won</span></div></div>}</section>}
-  </div>
- </OnboardingDialog>;
+  </div>;
+ return embedded?content:<OnboardingDialog title="Day Closing reports" onClose={onClose} wide desktopFull>{content}</OnboardingDialog>;
 }
 
 export function DayClosingReportsEntry(){const[open,setOpen]=useState(false);return <><button type="button" className="dc-report-entry" onClick={()=>setOpen(true)}><span><FileText size={17}/>Day Closing reports</span><ChevronRight size={17}/></button>{open&&<DayClosingReports onClose={()=>setOpen(false)}/>}</>}
