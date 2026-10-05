@@ -4,7 +4,18 @@ import { Sparkles, X } from 'lucide-react';
 import { api, getSession } from './api.js';
 import './lead-brief.css';
 
+const OPEN_DEAL_WITHOUT_BRIEF='engage:open-deal-without-brief';
+
 export default function LeadBriefPopup({ lead, buildBrief, onClose }) {
+  const suppressBrief = useRef((() => {
+    try {
+      if (sessionStorage.getItem(OPEN_DEAL_WITHOUT_BRIEF) !== lead?.id) return false;
+      sessionStorage.removeItem(OPEN_DEAL_WITHOUT_BRIEF);
+      return true;
+    } catch {
+      return false;
+    }
+  })()).current;
   const [brief, setBrief] = useState(null);
   const [text, setText] = useState('');
   const [done, setDone] = useState(false);
@@ -14,7 +25,14 @@ export default function LeadBriefPopup({ lead, buildBrief, onClose }) {
   closeRef.current = onClose;
   // Freeze the selected lead for this popup; each open is a new component.
   const snapshot = useRef({ lead, buildBrief });
+
   useEffect(() => {
+    if (!suppressBrief) return;
+    closeRef.current?.();
+  }, [suppressBrief]);
+
+  useEffect(() => {
+    if (suppressBrief) return undefined;
     let cancelled = false;
     const selected = snapshot.current.lead;
     const fetchHistory = getSession()?.role === 'admin' ? api.adminLeadHistory : api.salesmanLeadHistory;
@@ -28,10 +46,10 @@ export default function LeadBriefPopup({ lead, buildBrief, onClose }) {
     };
     run();
     return () => { cancelled = true; };
-  }, []);
+  }, [suppressBrief]);
 
   useEffect(() => {
-    if (!brief) return;
+    if (suppressBrief || !brief) return undefined;
     const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const words = brief.summary.match(/\S+\s*/g) || [];
     let timer, index = 0, cancelled = false;
@@ -48,9 +66,10 @@ export default function LeadBriefPopup({ lead, buildBrief, onClose }) {
     const onMotion = () => { if (motion.matches) finish(); };
     motion.addEventListener?.('change', onMotion);
     return () => { cancelled = true; clearTimeout(timer); motion.removeEventListener?.('change', onMotion); };
-  }, [brief]);
+  }, [brief, suppressBrief]);
 
   useEffect(() => {
+    if (suppressBrief) return undefined;
     const previous = document.activeElement;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -66,7 +85,9 @@ export default function LeadBriefPopup({ lead, buildBrief, onClose }) {
     };
     document.addEventListener('keydown', keydown, true);
     return () => { document.body.style.overflow = previousOverflow; document.removeEventListener('keydown', keydown, true); previous?.focus(); };
-  }, []);
+  }, [suppressBrief]);
+
+  if (suppressBrief) return null;
 
   return createPortal(<div className="ft-lead-brief-backdrop" onClick={event => { event.stopPropagation(); onClose(); }}>
     <section className="ft-lead-brief-popup" role="dialog" aria-modal="true" aria-labelledby="ft-lead-brief-title" ref={dialog} onClick={event => event.stopPropagation()}>
