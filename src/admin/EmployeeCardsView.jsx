@@ -1,5 +1,5 @@
 import React from "react";
-import { Battery, Gauge, Clock, Plus, MessageSquare, Search, Settings, Route, FileText, ChevronRight, MapPin, ListChecks, BarChart3, CalendarDays } from "lucide-react";
+import { Battery, Gauge, Clock, Plus, MessageSquare, Search, Settings, Route, FileText, ChevronRight, MapPin, CalendarDays } from "lucide-react";
 import "./employee-cards.css";
 
 const count = (value) => value != null && Number.isFinite(Number(value)) ? Number(value) : null;
@@ -8,6 +8,20 @@ const time = (value) => {
   return date && Number.isFinite(date.getTime())
     ? new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit", hour12: true }).format(date)
     : null;
+};
+
+// Stable colors follow the employee, including after filtering or pagination.
+const avatarTone = (id) => Array.from(String(id || "")).reduce((hash, char) => (hash * 31 + char.charCodeAt(0)) >>> 0, 0) % 4;
+const lastSeen = (value) => {
+  const date = value ? new Date(value) : null;
+  if (!date || !Number.isFinite(date.getTime())) return "Unavailable";
+  const minutes = Math.max(0, Math.floor((Date.now() - date.getTime()) / 60000));
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hr ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days === 1 ? "" : "s"} ago`;
 };
 
 function LeadProgress({ label, value, target, loading, error }) {
@@ -48,27 +62,27 @@ export default function EmployeeCardsView({ salesmen, visible, filteredCount, br
         const battery = count(s.battery), speed = count(s.speed), distance = count(s.distanceM);
         return <article className="emp-card" key={s.id} aria-label={`${s.name} employee card`} data-status={state}>
           <div className="emp-card-header">
-            <span className="emp-avatar" aria-hidden="true">{(s.name || "?").trim().slice(0, 1).toUpperCase()}</span>
+            <span className="emp-avatar" data-tone={avatarTone(s.id)} aria-hidden="true">{(s.name || "?").trim().slice(0, 1).toUpperCase()}</span>
             <div className="emp-identity"><button type="button" onClick={() => onOpenSalesmanLeads(s)}>{s.name}<ChevronRight size={16} /></button><p>{s.area}{s.employeeCode ? ` · ${s.employeeCode}` : ""}</p></div>
             <span className="emp-status"><i className={state === "Working" ? "is-working" : ""} />{state}</span>
+            <button className="emp-settings" type="button" aria-label="Settings" title={`Settings for ${s.name}`} onClick={() => onSettingsClick(s)}><Settings size={17} /></button>
           </div>
           <div className="emp-start"><Clock size={14} /><span>Today · {loading ? "Loading activity…" : !brief ? "Activity unavailable" : started ? <>Started <strong>{started}</strong></> : "Not started"}</span></div>
           <div className="emp-metrics">
-            {[[BarChart3, "Leads today", daily], [ListChecks, "Follow-ups due", count(brief?.followUpHealth?.dueToday)], [CalendarDays, "Pending tasks", count(brief?.unfinished?.pendingTasks)]].map(([Icon, label, value]) => <div className="emp-metric" key={label}><Icon size={17} /><div><span>{label}</span><strong>{loading ? "…" : value ?? "—"}</strong></div></div>)}
+            {[["Leads today", daily], ["Follow-ups due", count(brief?.followUpHealth?.dueToday)], ["Pending tasks", count(brief?.unfinished?.pendingTasks)]].map(([label, value]) => <div className="emp-metric" key={label}><strong>{loading ? "…" : value ?? "—"}</strong><span>{label}</span></div>)}
           </div>
           <div className="emp-progress-grid">
             <LeadProgress label="Daily leads" value={daily} target={s.dailyTarget} loading={loading} error={!loading && !brief} />
             <LeadProgress label={monthFilter === "all" ? "All-time leads" : "Monthly leads"} value={monthly} target={monthFilter === "all" ? null : s.monthlyTarget} loading={metricsLoading} error={metricsError} />
           </div>
           <div className="emp-telemetry">
-            <div><span><Battery size={14} /> Battery {battery == null ? "—" : `${Math.round(battery)}%`}</span><span><Gauge size={14} />{speed == null ? "—" : speed.toFixed(1)} km/h</span><span><Clock size={14} />Updated {time(s.lastUpdate) || "—"}</span></div>
-            <span><MapPin size={14} />{distance == null ? "—" : (distance / 1000).toFixed(1)} km travelled today</span>
+            <div><span><Battery size={14} /> Battery {battery == null ? "—" : `${Math.round(battery)}%`}</span><span title={s.lastUpdate ? new Date(s.lastUpdate).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : "No location update"}><Clock size={14} />Updated {lastSeen(s.lastUpdate)}</span></div>
+            <div><span><MapPin size={14} />{distance == null ? "—" : (distance / 1000).toFixed(1)} km today</span><span><Gauge size={14} />{speed == null ? "—" : speed.toFixed(1)} km/h</span></div>
           </div>
           <div className="emp-card-actions">
             <button type="button" onClick={() => onBriefClick(s)}><FileText size={16} />Daily Brief</button>
-            <button type="button" onClick={() => onViewRoute(s)}><Route size={16} />View Route</button>
+            <button className="emp-route-action" type="button" onClick={() => onViewRoute(s)}><Route size={16} />View Route</button>
             <button type="button" onClick={() => onMessageClick(s)}><MessageSquare size={16} />Message</button>
-            <button type="button" onClick={() => onSettingsClick(s)}><Settings size={16} />Settings</button>
           </div>
         </article>;
       })}
