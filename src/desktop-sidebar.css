@@ -19,9 +19,10 @@
   .engage-desktop-section-title { font: 700 20px 'Space Grotesk',sans-serif; color: #233b3b; margin: 0 0 16px; }
 }
 
+/* Expenses stays available in the sidebar/Reports, but never appears as a top-bar action. */
+div[style*="position: sticky"][style*="z-index: 40"] button:has(.lucide-wallet) { display: none !important; }
 
 @media (min-width: 1024px) {
-  .engage-desktop-topbar > div > div:first-child > button { display: none; }
   .engage-desktop-topbar .ft-app-menu-trigger { background: #fff; color: #334155; border-color: #E4E8EB; }
   .engage-desktop-topbar .ft-app-menu-trigger:hover { background: #E9EDF1; }
 }
