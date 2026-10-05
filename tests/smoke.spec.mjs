@@ -93,8 +93,9 @@ test('reports and Day Closing report render without crash', async ({ page }) => 
   await bootAs(page, adminSession);
   await page.getByRole('button', { name: 'Reports' }).click();
   await noCrash(page);
-  await expect(page.getByText('Day Closing Report')).toBeVisible();
-  await page.getByText('Day Closing Report').click();
+  const dayClosingCard = page.getByText('Day Closing Report', { exact: true });
+  await expect(dayClosingCard).toBeVisible();
+  await dayClosingCard.click();
   await noCrash(page);
   await expect(page.locator('body')).toContainText(/Day Closing Report|No matching Day Closing records for this date/i);
 });
