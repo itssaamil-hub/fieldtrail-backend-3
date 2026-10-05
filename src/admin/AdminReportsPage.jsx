@@ -6,6 +6,7 @@ import {
   Clock,
   Contact2,
   Download,
+  FileText,
   Handshake,
   MapPin,
   Receipt,
@@ -30,7 +31,7 @@ const CollectionsPanel = lazyDefault(() => import("../Collections.jsx"));
 const DealValueReport = lazyDefault(() => import("../DealValueReport.jsx"));
 const AttendanceReport = lazyDefault(() => import("../AttendanceReportV2.jsx"));
 const EnhancedDailyActivityReport = lazyDefault(() => import("../EnhancedDailyActivityReport.jsx"));
-const DayClosingReportsEntry = lazyNamed(() => import("../DayClosingReportOptimized.jsx"), "DayClosingReportsEntry");
+const DayClosingReports = lazyNamed(() => import("../DayClosingReportOptimized.jsx"), "DayClosingReports");
 
 const REPORT_CARDS = [
   { key: "deal-values", title: "Deal Value", desc: "Total deal value for Cold, Hot, Negotiation and every stage.", icon: Wallet, color: "#145C5D" },
@@ -40,6 +41,7 @@ const REPORT_CARDS = [
   { key: "payments", title: "Payments", desc: "Collections, pending balances, overdue payments and receipts in one place.", icon: Wallet, color: "#C0392B" },
   { key: "expenses", title: "Expenses", desc: "Salary and other spending, broken down by category.", icon: Receipt, color: "#993C1D", sidebarOnly: true },
   { key: "attendance", title: "Attendance Report", desc: "Start day, end day, working duration and day closing status.", icon: Clock, color: "#145C5D" },
+  { key: "day-closing", title: "Day Closing Report", desc: "Submitted, pending, skipped and not-required day closing reports with employee detail.", icon: FileText, color: "#145C5D" },
   { key: "daily", title: "Daily activity", desc: "Visits, leads touched and distance travelled per day.", icon: MapPin, color: "#12805C" },
   { key: "stage", title: "Time in stage", desc: "Average days a lead spends at each status.", icon: Clock, color: "#8B5E00" },
   { key: "quality", title: "Data quality", desc: "Find leads missing important sales information and fix them.", icon: AlertTriangle, color: "#B8791F" },
@@ -83,7 +85,6 @@ export default function AdminReportsPage({ salesmen, leads, shared }) {
       <div className="engage-reports-page">
         <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 18, marginBottom: 4 }}>Reports</div>
         <div style={{ fontSize: 13, color: T.inkSoft, marginBottom: 16 }}>Choose a report to view</div>
-        <DayClosingReportsEntry />
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
           {REPORT_CARDS.filter((card) => !card.sidebarOnly).map((card) => (
             <div
@@ -122,6 +123,7 @@ export default function AdminReportsPage({ salesmen, leads, shared }) {
       {active === "renewals" && <RenewalsReport leads={leads} />}
       {active === "payments" && <CollectionsPanel embedded />}
       {active === "attendance" && <AttendanceReport salesmen={salesmen} />}
+      {active === "day-closing" && <DayClosingReports embedded />}
       {active === "daily" && <EnhancedDailyActivityReport salesmen={salesmen} />}
       {active === "stage" && <TimeInStageReport />}
       {active === "quality" && <DataQualityReport salesmen={salesmen} />}

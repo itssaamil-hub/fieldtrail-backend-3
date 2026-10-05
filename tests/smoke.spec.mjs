@@ -89,14 +89,15 @@ test('employee Settings renders without crash', async ({ page }) => {
   await expect(page.locator('body')).toContainText(/Employee Settings|Work Rules|Targets/i);
 });
 
-test('reports and Day Closing reports render without crash', async ({ page }) => {
+test('reports and Day Closing report render without crash', async ({ page }) => {
   await bootAs(page, adminSession);
   await page.getByRole('button', { name: 'Reports' }).click();
   await noCrash(page);
-  await expect(page.getByText('Day Closing reports')).toBeVisible();
-  await page.getByText('Day Closing reports').click();
+  const dayClosingCard = page.getByText('Day Closing Report', { exact: true });
+  await expect(dayClosingCard).toBeVisible();
+  await dayClosingCard.click();
   await noCrash(page);
-  await expect(page.locator('body')).toContainText(/Day Closing reports|No records for this date/i);
+  await expect(page.locator('body')).toContainText(/Day Closing Report|No matching Day Closing records for this date/i);
 });
 
 test('tasks surface renders without crash', async ({ page }) => {
