@@ -8,11 +8,22 @@ const STATUS_LABELS = {
   warm: "Warm", new: "New", contacted: "Contacted", follow_up: "Follow-up",
   demo_scheduled: "Demo Scheduled", proposal_sent: "Proposal Sent",
 };
+const AVATAR_PALETTES = [
+  ["#E8F5EF", "#147A5A"], ["#EEF3FF", "#4967B2"], ["#F4EEFF", "#7651A8"],
+  ["#FFF2E7", "#A45E24"], ["#FDECEF", "#A84E63"], ["#EAF6F8", "#287C88"],
+];
 
 function initials(name) {
   const words = String(name || "").trim().split(/\s+/).filter(Boolean);
   if (!words.length) return "?";
   return (words.length === 1 ? words[0][0] : `${words[0][0]}${words[1][0]}`).toUpperCase();
+}
+function avatarStyle(name) {
+  const value = String(name || "?");
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) hash = ((hash << 5) - hash + value.charCodeAt(i)) | 0;
+  const [background, color] = AVATAR_PALETTES[Math.abs(hash) % AVATAR_PALETTES.length];
+  return { background, color };
 }
 
 export default function MobileContacts({ leads, onSelectLead, renderVerification, enableCall = false, showVerification = true }) {
@@ -35,7 +46,7 @@ export default function MobileContacts({ leads, onSelectLead, renderVerification
       };
       return <div key={lead.id} role="button" tabIndex={0} className="engage-mobile-contact-card" onClick={openLead} onKeyDown={handleKeyDown}>
         <div className={`engage-mobile-contact-top${showVerification ? "" : " compact-status"}`}>
-          <span className="engage-mobile-contact-avatar" aria-hidden="true">{initials(lead.owner || lead.business)}</span>
+          <span className="engage-mobile-contact-avatar" aria-hidden="true" style={avatarStyle(lead.owner || lead.business)}>{initials(lead.owner || lead.business)}</span>
           <span className="engage-mobile-contact-identity">
             <strong className={!lead.owner?.trim() ? "is-missing" : undefined}>{contact}</strong>
             <span>{company}</span>
