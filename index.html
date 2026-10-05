@@ -54,6 +54,69 @@
           margin-top: -16px !important;
           padding-top: calc(16px + env(safe-area-inset-top)) !important;
         }
+
+        /* Admin phone More: the utility workspaces use the same edge-to-edge
+           presentation as the salesman More workspaces, without changing desktop. */
+        body:has(.engage-admin-bottom-nav[aria-label="Admin navigation"]) .ft-onboarding-backdrop:has(> .ft-onboarding.ft-q-page),
+        body:has(.engage-admin-bottom-nav[aria-label="Admin navigation"]) .ft-onboarding-backdrop:has(> .ft-onboarding.ft-onboarding-desktop-full),
+        body:has(.engage-admin-bottom-nav[aria-label="Admin navigation"]) .ft-onboarding-backdrop:has(> .ft-onboarding > .ft-col.ft-q) {
+          padding: 0 !important;
+          align-items: stretch !important;
+          background: #fff !important;
+        }
+
+        body:has(.engage-admin-bottom-nav[aria-label="Admin navigation"]) .ft-onboarding-backdrop:has(> .ft-onboarding.ft-q-page) > .ft-onboarding,
+        body:has(.engage-admin-bottom-nav[aria-label="Admin navigation"]) .ft-onboarding-backdrop:has(> .ft-onboarding.ft-onboarding-desktop-full) > .ft-onboarding,
+        body:has(.engage-admin-bottom-nav[aria-label="Admin navigation"]) .ft-onboarding-backdrop:has(> .ft-onboarding > .ft-col.ft-q) > .ft-onboarding {
+          width: 100% !important;
+          max-width: none !important;
+          height: 100dvh !important;
+          max-height: 100dvh !important;
+          border-radius: 0 !important;
+          padding: 16px 16px calc(24px + env(safe-area-inset-bottom)) !important;
+        }
+
+        body:has(.engage-admin-bottom-nav[aria-label="Admin navigation"]) .ft-onboarding-backdrop:has(> .ft-onboarding.ft-q-page) > .ft-onboarding > header,
+        body:has(.engage-admin-bottom-nav[aria-label="Admin navigation"]) .ft-onboarding-backdrop:has(> .ft-onboarding.ft-onboarding-desktop-full) > .ft-onboarding > header,
+        body:has(.engage-admin-bottom-nav[aria-label="Admin navigation"]) .ft-onboarding-backdrop:has(> .ft-onboarding > .ft-col.ft-q) > .ft-onboarding > header {
+          top: -16px !important;
+          margin-top: -16px !important;
+          padding-top: calc(16px + env(safe-area-inset-top)) !important;
+        }
+
+        /* My Account is a dedicated admin-only More destination. */
+        body:has(.engage-admin-bottom-nav[aria-label="Admin navigation"]) [role="dialog"][aria-label="My Account"] {
+          padding: 0 !important;
+          place-items: stretch !important;
+          background: #fff !important;
+        }
+
+        body:has(.engage-admin-bottom-nav[aria-label="Admin navigation"]) [role="dialog"][aria-label="My Account"] > div {
+          width: 100% !important;
+          max-width: none !important;
+          height: 100dvh !important;
+          max-height: 100dvh !important;
+          border-radius: 0 !important;
+          box-shadow: none !important;
+        }
+
+        /* Settings and Add expense use the app's bottom-sheet shell. Target only
+           their distinctive phone structures so lead/attendance dialogs stay untouched. */
+        body:has(.engage-admin-bottom-nav[aria-label="Admin navigation"]) div[style*="z-index: 2000"]:has(> div > form input[type="number"][step="0.01"]):has(> div > form input[type="date"]),
+        body:has(.engage-admin-bottom-nav[aria-label="Admin navigation"]) div[style*="z-index: 2000"]:not(:has(form)):has(> div > div + button[style*="margin-bottom: 12px"]) {
+          align-items: stretch !important;
+          background: #fff !important;
+        }
+
+        body:has(.engage-admin-bottom-nav[aria-label="Admin navigation"]) div[style*="z-index: 2000"]:has(> div > form input[type="number"][step="0.01"]):has(> div > form input[type="date"]) > div,
+        body:has(.engage-admin-bottom-nav[aria-label="Admin navigation"]) div[style*="z-index: 2000"]:not(:has(form)):has(> div > div + button[style*="margin-bottom: 12px"]) > div {
+          width: 100% !important;
+          max-width: none !important;
+          height: 100dvh !important;
+          max-height: 100dvh !important;
+          border-radius: 0 !important;
+          padding-top: calc(18px + env(safe-area-inset-top)) !important;
+        }
       }
     </style>
     <script>
