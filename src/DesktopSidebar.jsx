@@ -40,7 +40,8 @@ export default function DesktopSidebar({ active, collapsed, onCollapse, onSelect
       setDirectActive(null);
       onSelect(key);
     };
-    return <button key={key} type="button" aria-label={label} title={collapsed ? label : undefined} aria-current={selected ? 'page' : undefined} onClick={activate}><Icon size={19} aria-hidden="true"/><span>{label}</span></button>;
+    const accessibleLabel = key === 'quotations' ? 'Open Quotations' : label;
+    return <button key={key} type="button" aria-label={accessibleLabel} title={collapsed ? label : undefined} aria-current={selected ? 'page' : undefined} onClick={activate}><Icon size={19} aria-hidden="true"/><span>{label}</span></button>;
   };
   const openAccount = () => window.dispatchEvent(new CustomEvent('engage:open-account-settings'));
   return <>
