@@ -63,6 +63,9 @@
   }
 
   .engage-admin-mobile-map-stack{
+    position:relative;
+    isolation:isolate;
+    z-index:0;
     margin-top:8px;
   }
 
