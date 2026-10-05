@@ -17,25 +17,19 @@ export function useDesktopSidebar() {
 const sections = [['dashboard', 'Dashboard', Gauge], ['leads', 'Contacts', Contact2], ['deals', 'Pipeline', Columns3], ['quotations', 'Quotations', FileText], ['employees', 'Employees', Users], ['tasks', 'Tasks', ClipboardList], ['payments', 'Payments', Wallet], ['expenses', 'Expenses', ReceiptText], ['activity', 'Activity Centre', History], ['exceptions', 'Exception Centre', ShieldAlert], ['reports', 'Reports', BarChart3]];
 export default function DesktopSidebar({ active, collapsed, onCollapse, onSelect, onSettings, settingsOpen }) {
   const [directActive, setDirectActive] = useState(null);
-  const [quotationsOpen, setQuotationsOpen] = useState(false);
+  const quotationsActive = active === 'quotations' && !settingsOpen;
   useEffect(() => { if (active !== 'reports') setDirectActive(null); }, [active]);
   useEffect(() => {
-    document.body.classList.toggle('engage-quotation-open', quotationsOpen);
+    document.body.classList.toggle('engage-quotation-open', quotationsActive);
     document.body.classList.toggle('engage-sidebar-collapsed', !!collapsed);
     return () => {
       document.body.classList.remove('engage-quotation-open');
       document.body.classList.remove('engage-sidebar-collapsed');
     };
-  }, [quotationsOpen, collapsed]);
+  }, [quotationsActive, collapsed]);
   const item = ([key, label, Icon]) => {
-    const selected = !settingsOpen && (quotationsOpen ? key === 'quotations' : (directActive ? directActive === key : active === key));
+    const selected = !settingsOpen && (directActive ? directActive === key : active === key);
     const activate = () => {
-      if (key === 'quotations') {
-        setDirectActive(null);
-        setQuotationsOpen(true);
-        return;
-      }
-      setQuotationsOpen(false);
       if (key === 'expenses') {
         setDirectActive('expenses');
         sessionStorage.setItem('engage:open-report', 'expenses');
@@ -56,10 +50,10 @@ export default function DesktopSidebar({ active, collapsed, onCollapse, onSelect
       <nav aria-label="Admin sections">{sections.map(item)}</nav>
       <div className="engage-sidebar-footer">
         <button type="button" aria-label="My Account" title={collapsed ? 'My Account' : undefined} onClick={openAccount}><UserRound size={19} aria-hidden="true"/><span>My Account</span></button>
-        <button type="button" aria-label="Settings" title={collapsed ? 'Settings' : undefined} aria-pressed={settingsOpen} onClick={()=>{setQuotationsOpen(false);onSettings();}}><Settings size={19} aria-hidden="true"/><span>Settings</span></button>
+        <button type="button" aria-label="Settings" title={collapsed ? 'Settings' : undefined} aria-pressed={settingsOpen} onClick={onSettings}><Settings size={19} aria-hidden="true"/><span>Settings</span></button>
         <button type="button" aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} aria-expanded={!collapsed} onClick={onCollapse}>{collapsed ? <PanelLeftOpen size={19} aria-hidden="true"/> : <PanelLeftClose size={19} aria-hidden="true"/>}<span>Collapse sidebar</span></button>
       </div>
     </aside>
-    {quotationsOpen&&<Suspense fallback={null}><QuotationsPanel onClose={()=>setQuotationsOpen(false)}/></Suspense>}
+    {quotationsActive&&<Suspense fallback={null}><QuotationsPanel onClose={()=>onSelect('dashboard')}/></Suspense>}
   </>;
 }
