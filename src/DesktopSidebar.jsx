@@ -19,6 +19,14 @@ export default function DesktopSidebar({ active, collapsed, onCollapse, onSelect
   const [directActive, setDirectActive] = useState(null);
   const [quotationsOpen, setQuotationsOpen] = useState(false);
   useEffect(() => { if (active !== 'reports') setDirectActive(null); }, [active]);
+  useEffect(() => {
+    document.body.classList.toggle('engage-quotation-open', quotationsOpen);
+    document.body.classList.toggle('engage-sidebar-collapsed', !!collapsed);
+    return () => {
+      document.body.classList.remove('engage-quotation-open');
+      document.body.classList.remove('engage-sidebar-collapsed');
+    };
+  }, [quotationsOpen, collapsed]);
   const item = ([key, label, Icon]) => {
     const selected = !settingsOpen && (key === 'quotations' ? quotationsOpen : (directActive ? directActive === key : active === key));
     const activate = () => {
