@@ -9,7 +9,9 @@
 .ft-q .ft-q-status-rejected{background:#fce9e7;color:#a13e32;border-color:#efc9c4}
 .ft-q .ft-q-status-voided{background:#eef0f2;color:#4e5963;border-color:#d7dce0}
 @media(min-width:1024px){
- .ft-onboarding-backdrop.ft-q-page-backdrop{padding:0;background:#f4f6f7;align-items:stretch}
+ body:has(.engage-desktop-sidebar:not(.is-collapsed)) .ft-onboarding-backdrop.ft-q-page-backdrop{left:190px}
+ body:has(.engage-desktop-sidebar.is-collapsed) .ft-onboarding-backdrop.ft-q-page-backdrop{left:64px}
+ .ft-onboarding-backdrop.ft-q-page-backdrop{padding:0;background:#f4f6f7;align-items:stretch;transition:left .18s ease}
  .ft-onboarding.ft-q-page{max-width:none;width:100%;height:100dvh;max-height:100dvh;border-radius:0;padding:0 28px 40px;background:#f4f6f7;color:#263c3d}
  .ft-q-page>header{max-width:1444px;margin:0 auto;padding:26px 0 16px;border-bottom:1px solid #e0e7e7}
  .ft-q-page>header h2{font:700 28px 'Space Grotesk',sans-serif;color:#183738}
