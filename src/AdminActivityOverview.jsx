@@ -106,7 +106,8 @@ export default function AdminActivityOverview({ salesmen=[], salesmanId='all' })
   },[salesmanId,days]);
 
   const person=salesmanId==='all'?'All employees':(salesmen.find(s=>s.id===salesmanId)?.name||'Employee');
-  const totals=data?.totals||{}, rows=data?.trend||[], activities=data?.activities||[];
+  const totals=data?.totals||{}, rows=data?.trend||[];
+  const activities=(data?.activities||[]).filter(a=>salesmanId==='all'||a.actorId===salesmanId);
   const selectMetric=k=>setActiveKeys([k]);
 
   return <div style={{display:'grid',gridTemplateColumns:'minmax(0,1.42fr) minmax(380px,.86fr)',gap:14,marginBottom:18}} className="engage-activity-overview">
@@ -136,7 +137,7 @@ export default function AdminActivityOverview({ salesmen=[], salesmanId='all' })
 
     <section style={{background:C.card,border:`1px solid ${C.line}`,borderRadius:16,padding:'15px 0 0',minWidth:0,boxShadow:'0 1px 2px rgba(15,23,42,.03)',overflow:'hidden'}}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:10,padding:'0 12px 11px'}}>
-        <div><div style={{fontFamily:"'Space Grotesk', sans-serif",fontSize:16,fontWeight:800,color:'#223A3B',letterSpacing:'-.1px'}}>Activity Centre</div><div style={{fontSize:12,color:'#7A8385',marginTop:3}}>Latest activities across your team</div></div>
+        <div><div style={{fontFamily:"'Space Grotesk', sans-serif",fontSize:16,fontWeight:800,color:'#223A3B',letterSpacing:'-.1px'}}>Activity Centre</div><div style={{fontSize:12,color:'#7A8385',marginTop:3}}>{salesmanId==='all'?'Latest activities across your team':`Latest activities by ${person}`}</div></div>
         <span style={{display:'inline-flex',alignItems:'center',gap:5,fontSize:10,fontWeight:850,color:C.teal,background:'#EEF7F5',border:'1px solid #D7E8E4',padding:'5px 8px',borderRadius:999,letterSpacing:'.04em'}}><span style={{width:6,height:6,borderRadius:'50%',background:C.green}}/>LIVE</span>
       </div>
 
