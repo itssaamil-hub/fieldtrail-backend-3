@@ -107,10 +107,14 @@ export default function AdminLeadsPanel({
   const [pipelineDateFrom, setPipelineDateFrom] = useState("");
   const [pipelineDateTo, setPipelineDateTo] = useState("");
   const [pipelinePage, setPipelinePage] = useState(1);
+  const [contactsDatePreset, setContactsDatePreset] = useState("all");
+  const [contactsDateFrom, setContactsDateFrom] = useState("");
+  const [contactsDateTo, setContactsDateTo] = useState("");
+  const [contactsPage, setContactsPage] = useState(1);
 
   useEffect(() => {
-    if (desktopDeals && filterDate) setFilterDate("");
-  }, [desktopDeals, filterDate, setFilterDate]);
+    if ((desktopDeals || desktopContacts) && filterDate) setFilterDate("");
+  }, [desktopDeals, desktopContacts, filterDate, setFilterDate]);
 
   const pipelineRange = useMemo(
     () => pipelineDateRange(pipelineDatePreset, pipelineDateFrom, pipelineDateTo),
@@ -126,12 +130,34 @@ export default function AdminLeadsPanel({
       return true;
     });
   }, [desktopDeals, filteredLeads, pipelineRange]);
-  const displayLeads = desktopDeals ? pipelineFilteredLeads : filteredLeads;
+
+  const contactsRange = useMemo(
+    () => pipelineDateRange(contactsDatePreset, contactsDateFrom, contactsDateTo),
+    [contactsDatePreset, contactsDateFrom, contactsDateTo]
+  );
+  const contactsFilteredLeads = useMemo(() => {
+    if (!desktopContacts || !contactsRange || (!contactsRange.from && !contactsRange.to)) return filteredLeads;
+    return filteredLeads.filter((lead) => {
+      const day = istDayKey(lead.createdAt);
+      if (!day) return false;
+      if (contactsRange.from && day < contactsRange.from) return false;
+      if (contactsRange.to && day > contactsRange.to) return false;
+      return true;
+    });
+  }, [desktopContacts, filteredLeads, contactsRange]);
+
+  const displayLeads = desktopDeals ? pipelineFilteredLeads : desktopContacts ? contactsFilteredLeads : filteredLeads;
   const pipelineDateActive = Boolean(desktopDeals && pipelineRange && (pipelineRange.from || pipelineRange.to));
+  const contactsDateActive = Boolean(desktopContacts && contactsRange && (contactsRange.from || contactsRange.to));
+  const rangeDateActive = pipelineDateActive || contactsDateActive;
 
   useEffect(() => {
     setPipelinePage(1);
   }, [pipelineDatePreset, pipelineDateFrom, pipelineDateTo, filterSalesman, filterStatus, searchQuery]);
+
+  useEffect(() => {
+    setContactsPage(1);
+  }, [contactsDatePreset, contactsDateFrom, contactsDateTo, filterSalesman, filterStatus, searchQuery]);
 
   const mobileDeals = Boolean(phone && sectionNavigation && section === "deals" && !desktopSection);
   const mobileDealRows = useMemo(() => {
@@ -149,7 +175,7 @@ export default function AdminLeadsPanel({
     || ((desktopDeals || !(sectionNavigation && section === "deals")) && leadsViewMode === "list");
   const refreshKey = `${filteredLeads.length}:${filteredLeads[0]?.id || ""}:${filteredLeads[0]?.status || ""}`;
   const serverPage = useAdminLeadPage({
-    enabled: showLeads && listMode && !pipelineDateActive,
+    enabled: showLeads && listMode && !rangeDateActive,
     salesmanId: filterSalesman,
     status: filterStatus,
     date: filterDate,
@@ -163,17 +189,19 @@ export default function AdminLeadsPanel({
     () => serverPage.rows.map((lead) => localById.get(lead.id) || lead),
     [serverPage.rows, localById]
   );
-  const pipelineTotalPages = Math.max(1, Math.ceil(pipelineFilteredLeads.length / LEADS_PER_PAGE));
-  const pipelineCurrentPage = Math.min(pipelinePage, pipelineTotalPages);
-  const pipelinePagedRows = pipelineFilteredLeads.slice((pipelineCurrentPage - 1) * LEADS_PER_PAGE, pipelineCurrentPage * LEADS_PER_PAGE);
-  const listRows = pipelineDateActive ? pipelinePagedRows : (serverPage.loading && serverRows.length === 0 ? pagedLeads : serverRows);
-  const listTotal = pipelineDateActive ? pipelineFilteredLeads.length : (serverPage.error && serverRows.length === 0 ? filteredLeads.length : serverPage.total);
-  const listTotalPages = pipelineDateActive ? pipelineTotalPages : (serverPage.error && serverRows.length === 0
+  const rangeFilteredLeads = pipelineDateActive ? pipelineFilteredLeads : contactsDateActive ? contactsFilteredLeads : filteredLeads;
+  const rangePage = pipelineDateActive ? pipelinePage : contactsPage;
+  const rangeTotalPages = Math.max(1, Math.ceil(rangeFilteredLeads.length / LEADS_PER_PAGE));
+  const rangeCurrentPage = Math.min(rangePage, rangeTotalPages);
+  const rangePagedRows = rangeFilteredLeads.slice((rangeCurrentPage - 1) * LEADS_PER_PAGE, rangeCurrentPage * LEADS_PER_PAGE);
+  const listRows = rangeDateActive ? rangePagedRows : (serverPage.loading && serverRows.length === 0 ? pagedLeads : serverRows);
+  const listTotal = rangeDateActive ? rangeFilteredLeads.length : (serverPage.error && serverRows.length === 0 ? filteredLeads.length : serverPage.total);
+  const listTotalPages = rangeDateActive ? rangeTotalPages : (serverPage.error && serverRows.length === 0
     ? Math.max(1, Math.ceil(filteredLeads.length / LEADS_PER_PAGE))
     : serverPage.totalPages);
-  const listCurrentPage = pipelineDateActive ? pipelineCurrentPage : (serverPage.error && serverRows.length === 0 ? 1 : serverPage.page);
-  const listLoading = pipelineDateActive ? false : serverPage.loading;
-  const setListPage = pipelineDateActive ? setPipelinePage : serverPage.setPage;
+  const listCurrentPage = rangeDateActive ? rangeCurrentPage : (serverPage.error && serverRows.length === 0 ? 1 : serverPage.page);
+  const listLoading = rangeDateActive ? false : serverPage.loading;
+  const setListPage = pipelineDateActive ? setPipelinePage : contactsDateActive ? setContactsPage : serverPage.setPage;
 
   if (mobileDeals) {
     const mobileTotalValue = mobileDealRows.reduce((sum, lead) => sum + (Number(lead.dealValue) || 0), 0);
@@ -305,6 +333,7 @@ export default function AdminLeadsPanel({
 
   const dateInputStyle = { border: `1px solid ${T.line}`, borderRadius: 6, padding: "6px 8px", fontSize: 12.5, fontFamily: "Inter, sans-serif", background: "#fff", color: T.ink };
   const pipelineHasDateFilter = pipelineDatePreset !== "all";
+  const contactsHasDateFilter = contactsDatePreset !== "all";
 
   return (
     <div hidden={!showLeads}>
@@ -375,6 +404,16 @@ export default function AdminLeadsPanel({
                   </>
                 )}
               </>
+            ) : desktopContacts ? (
+              <>
+                <Select value={contactsDatePreset} onChange={setContactsDatePreset} options={PIPELINE_DATE_OPTIONS} />
+                {contactsDatePreset === "custom" && (
+                  <>
+                    <input aria-label="Contacts date from" title="From" type="date" value={contactsDateFrom} onChange={(e) => setContactsDateFrom(e.target.value)} style={dateInputStyle} />
+                    <input aria-label="Contacts date to" title="To" type="date" value={contactsDateTo} min={contactsDateFrom || undefined} onChange={(e) => setContactsDateTo(e.target.value)} style={dateInputStyle} />
+                  </>
+                )}
+              </>
             ) : (
               <>
                 <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} style={dateInputStyle} />
@@ -385,10 +424,10 @@ export default function AdminLeadsPanel({
                 )}
               </>
             )}
-            {(filterSalesman !== "all" || filterStatus !== "all" || filterDate || (desktopDeals && pipelineHasDateFilter) || searchQuery.trim()) && (
+            {(filterSalesman !== "all" || filterStatus !== "all" || filterDate || (desktopDeals && pipelineHasDateFilter) || (desktopContacts && contactsHasDateFilter) || searchQuery.trim()) && (
               <button
                 type="button"
-                onClick={() => { setFilterSalesman("all"); setFilterStatus("all"); setFilterDate(""); setPipelineDatePreset("all"); setPipelineDateFrom(""); setPipelineDateTo(""); setSearchQuery(""); }}
+                onClick={() => { setFilterSalesman("all"); setFilterStatus("all"); setFilterDate(""); setPipelineDatePreset("all"); setPipelineDateFrom(""); setPipelineDateTo(""); setContactsDatePreset("all"); setContactsDateFrom(""); setContactsDateTo(""); setSearchQuery(""); }}
                 style={{ fontSize: 11.5, color: T.route, background: "#EAF5F0", border: `1px solid ${T.line}`, borderRadius: 8, cursor: "pointer", padding: "6px 9px", fontWeight: 750 }}
               >
                 Reset filters
@@ -424,7 +463,7 @@ export default function AdminLeadsPanel({
           </div>
         )}
 
-        {serverPage.error && listMode && !pipelineDateActive && <div style={{ fontSize: 12, color: T.danger, marginBottom: 10 }}>{serverPage.error}</div>}
+        {serverPage.error && listMode && !rangeDateActive && <div style={{ fontSize: 12, color: T.danger, marginBottom: 10 }}>{serverPage.error}</div>}
 
         {listMode ? (
           <>
