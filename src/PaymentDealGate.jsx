@@ -2,6 +2,7 @@ import React,{useEffect,useState} from 'react';
 import {api,getSession} from './api.js';
 
 const BLOCK_EVENT='engage:payment-deal-blocked';
+const OPEN_DEAL_WITHOUT_BRIEF='engage:open-deal-without-brief';
 let gateInstalled=false;
 
 function installGate(){
@@ -41,11 +42,14 @@ export default function PaymentDealGate(){
  if(!blocked)return null;
  const openDeal=()=>{
   const hash=`#lead=${blocked.leadId}`;
+  try{sessionStorage.setItem(OPEN_DEAL_WITHOUT_BRIEF,blocked.leadId);}catch{}
   setBlocked(null);
   if(window.location.hash===hash)window.dispatchEvent(new HashChangeEvent('hashchange'));
   else window.location.hash=hash;
   // Quotations/other modal state is in-memory. Reloading this one navigation
   // clears that overlay and lets Engage's existing #lead route open the Deal.
+  // LeadBriefPopup consumes the one-shot marker so this normal navigation does
+  // not inherit notification-only auto-Brief behavior.
   window.location.reload();
  };
  return <div role="dialog" aria-modal="true" aria-label="Payments require a Won Deal" style={{position:'fixed',inset:0,zIndex:100000,background:'rgba(17,24,39,.46)',display:'grid',placeItems:'center',padding:18}}>
