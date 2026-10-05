@@ -6,6 +6,7 @@ import AppErrorBoundary from "./AppErrorBoundary.jsx";
 import AccountSettingsLauncher from "./AccountSettings.jsx";
 import BusinessNameTopBar from "./BusinessNameTopBar.jsx";
 import LateStartToast from "./LateStartToast.jsx";
+import PaymentDealGate from "./PaymentDealGate.jsx";
 import { startPushSubscriptionRecovery } from "./pushSubscriptionRecovery.js";
 import "./index.css";
 import "./salesman-dashboard-cards.css";
@@ -62,6 +63,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <BusinessNameTopBar />
       <AccountSettingsLauncher />
       <LateStartToast />
+      <PaymentDealGate />
     </AppErrorBoundary>
   </React.StrictMode>
 );
