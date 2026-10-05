@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useEffect, useState } from 'react';
-import { History, Gauge, Contact2, Columns3, Users, ClipboardList, ShieldAlert, BarChart3, Settings, UserRound, PanelLeftClose, PanelLeftOpen, Wallet, ReceiptText, FileText } from 'lucide-react';
+import { History, Gauge, Contact2, Columns3, Users, ClipboardList, ShieldAlert, BarChart3, Settings, UserRound, PanelLeftClose, PanelLeftOpen, Wallet, FileText } from 'lucide-react';
 import './desktop-sidebar.css';
 
 const QuotationsPanel = lazy(() => import('./Quotations.jsx'));
@@ -14,7 +14,7 @@ export function useDesktopSidebar() {
   }, []);
   return desktop;
 }
-const sections = [['dashboard', 'Dashboard', Gauge], ['leads', 'Contacts', Contact2], ['deals', 'Pipeline', Columns3], ['quotations', 'Quotations', FileText], ['employees', 'Employees', Users], ['tasks', 'Tasks', ClipboardList], ['payments', 'Payments', Wallet], ['expenses', 'Expenses', ReceiptText], ['activity', 'Activity Centre', History], ['exceptions', 'Exception Centre', ShieldAlert], ['reports', 'Reports', BarChart3]];
+const sections = [['dashboard', 'Dashboard', Gauge], ['leads', 'Contacts', Contact2], ['deals', 'Pipeline', Columns3], ['quotations', 'Quotations', FileText], ['employees', 'Employees', Users], ['tasks', 'Tasks', ClipboardList], ['payments', 'Payments', Wallet], ['activity', 'Activity Centre', History], ['exceptions', 'Exception Centre', ShieldAlert], ['reports', 'Reports', BarChart3]];
 export default function DesktopSidebar({ active, collapsed, onCollapse, onSelect, onSettings, settingsOpen }) {
   const [directActive, setDirectActive] = useState(null);
   const [quotationsOpen, setQuotationsOpen] = useState(false);
@@ -28,13 +28,6 @@ export default function DesktopSidebar({ active, collapsed, onCollapse, onSelect
         return;
       }
       setQuotationsOpen(false);
-      if (key === 'expenses') {
-        setDirectActive('expenses');
-        sessionStorage.setItem('engage:open-report', 'expenses');
-        window.dispatchEvent(new CustomEvent('engage:open-expenses'));
-        onSelect('reports');
-        return;
-      }
       setDirectActive(null);
       onSelect(key);
     };
