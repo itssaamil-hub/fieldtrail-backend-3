@@ -106,17 +106,22 @@ test('tasks surface renders without crash', async ({ page }) => {
   await expect(page.locator('body')).toContainText(/Tasks/i);
 });
 
-test('app menu opens onboarding and quotations without crash', async ({ page }) => {
+test('desktop app menu keeps non-sidebar actions and Quotations opens from sidebar', async ({ page }) => {
   await bootAs(page, adminSession);
   const menu = page.getByRole('button', { name: 'Menu' });
   await menu.click();
-  await page.getByRole('button', { name: /Onboarding checklist/i }).click();
+  let appMenu = page.getByRole('navigation', { name: 'App menu' });
+  await expect(appMenu.getByRole('button', { name: /Onboarding checklist/i })).toBeVisible();
+  await expect(appMenu.getByRole('button', { name: /Quotation approvals/i })).toBeVisible();
+  await expect(appMenu.getByRole('button', { name: /^Payments$/i })).toHaveCount(0);
+  await expect(appMenu.getByRole('button', { name: /^Quotations$/i })).toHaveCount(0);
+  await expect(appMenu.getByRole('button', { name: /^Settings$/i })).toHaveCount(0);
+  await appMenu.getByRole('button', { name: /Onboarding checklist/i }).click();
   await noCrash(page);
   await expect(page.locator('body')).toContainText(/Customer onboarding|No matching customers/i);
   await page.keyboard.press('Escape');
 
-  await menu.click();
-  await page.getByRole('button', { name: /^Quotations$/i }).click();
+  await page.getByRole('button', { name: 'Open Quotations' }).click();
   await noCrash(page);
   await expect(page.locator('body')).toContainText(/Quotations|SALES WORKSPACE/i);
 });
