@@ -2,6 +2,10 @@
 #engage-admin-mobile-dashboard-utility{display:none}
 
 @media (max-width:900px){
+  .engage-admin-mobile-content{
+    padding-bottom:calc(96px + env(safe-area-inset-bottom)) !important;
+  }
+
   #engage-admin-mobile-dashboard-utility.engage-admin-mobile-dashboard-utility{
     display:flex;
     align-items:center;
