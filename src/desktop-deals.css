@@ -44,7 +44,7 @@
   .engage-deals-sticky-cell > div { display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:12.5px; }
   .engage-deals-sticky-cell strong { font-weight:750; color:#263b33; }
   .engage-deals-sticky-cell span { color:#718078; font-size:10.5px; font-weight:700; background:rgba(255,255,255,.55); border-radius:999px; padding:1px 6px; }
-  .engage-deals-sticky-cell small { display:block; color:#63756b; font-size:10.5px; margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .engage-deals-sticky-cell small { display:block; color:#63756b; font-size:10.5px; font-weight:600; margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .engage-deals-sticky-spacer { flex: 0 0 18px; }
 
   .engage-deals-board {
