@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Battery, Gauge, Clock, Plus, MessageSquare, Sparkles, Search, Settings, Route } from "lucide-react";
 import { getApiBase, getSession } from "../api.js";
+import EmployeeCardsView from "./EmployeeCardsView.jsx";
 
 const BRIEF_CONCURRENCY = 5;
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -56,7 +57,7 @@ function MonthlyProgressBar({ T, target, metrics, selectedMonth, loading, error 
   );
 }
 
-export default function AdminEmployeesPanel({ salesmen, leads, onAddClick, onSettingsClick, onBriefClick, onDeleteClick, onViewRoute, onMessageClick, onOpenSalesmanLeads, shared }) {
+export default function AdminEmployeesPanel({ employeePage = false, salesmen, leads, onAddClick, onSettingsClick, onBriefClick, onDeleteClick, onViewRoute, onMessageClick, onOpenSalesmanLeads, shared }) {
   const { T, inputStyle } = shared;
   const PAGE_SIZE = 8;
   const [query, setQuery] = useState("");
@@ -151,6 +152,7 @@ export default function AdminEmployeesPanel({ salesmen, leads, onAddClick, onSet
 
   const employeeStatus = (s) => {
     if (s.status === "online") return "online";
+    if (employeePage && !briefs[s.id]) return "unavailable";
     const sessions = briefs[s.id]?.sessions || [];
     return sessions.length ? "offline" : "not-started";
   };
@@ -176,6 +178,17 @@ export default function AdminEmployeesPanel({ salesmen, leads, onAddClick, onSet
     const tasks = Number(brief.unfinished?.pendingTasks || 0);
     return `Today · ${started} · ${leadCount} lead${leadCount === 1 ? "" : "s"} · ${followups} follow-up${followups === 1 ? "" : "s"} · ${tasks} task${tasks === 1 ? "" : "s"}`;
   };
+
+  if (employeePage) return <EmployeeCardsView
+    salesmen={salesmen} visible={visible} filteredCount={filtered.length}
+    briefs={briefs} employeeStatus={employeeStatus}
+    query={query} setQuery={setQuery} statusFilter={statusFilter} setStatusFilter={setStatusFilter}
+    monthFilter={monthFilter} setMonthFilter={setMonthFilter} monthOptions={monthOptions} year={filterYear}
+    metrics={revenueRows} metricsLoading={revenueLoading} metricsError={revenueError}
+    page={safePage} pages={pages} pageSize={PAGE_SIZE} setPage={setPage}
+    onAddClick={onAddClick} onSettingsClick={onSettingsClick} onBriefClick={onBriefClick}
+    onViewRoute={onViewRoute} onMessageClick={onMessageClick} onOpenSalesmanLeads={onOpenSalesmanLeads}
+  />;
 
   return (
     <div className="ft-card engage-employee-panel-enhanced" style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, padding: 18, display: "flex", flexDirection: "column", gap: 10 }}>
