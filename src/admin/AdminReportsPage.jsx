@@ -30,7 +30,7 @@ const CollectionsPanel = lazyDefault(() => import("../Collections.jsx"));
 const DealValueReport = lazyDefault(() => import("../DealValueReport.jsx"));
 const AttendanceReport = lazyDefault(() => import("../AttendanceReportV2.jsx"));
 const EnhancedDailyActivityReport = lazyDefault(() => import("../EnhancedDailyActivityReport.jsx"));
-const DayClosingReportsEntry = lazyNamed(() => import("../DayClosing.jsx"), "DayClosingReportsEntry");
+const DayClosingReportsEntry = lazyNamed(() => import("../DayClosingReportOptimized.jsx"), "DayClosingReportsEntry");
 
 const REPORT_CARDS = [
   { key: "deal-values", title: "Deal Value", desc: "Total deal value for Cold, Hot, Negotiation and every stage.", icon: Wallet, color: "#145C5D" },
