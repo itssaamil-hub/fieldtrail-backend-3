@@ -312,7 +312,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
           comparisonFor, dailyComparisonFor, getDashboardDisplaySettings,
         }}
       />
-      <div hidden={!showDashboard && section !== "employees"}>
+      <div className={phone && showDashboard ? "engage-admin-mobile-map-stack" : undefined} hidden={!showDashboard && section !== "employees"}>
             {mapView === "live" || (sectionNavigation && section === "employees") ? (
         <div className={sectionNavigation && section === "employees" ? undefined : "ft-dashboard-grid"}>
           {showDashboard && <LiveMap
@@ -326,7 +326,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
             </div>}
           />}
           <AdminEmployeesPanel
-            employeePage={sectionNavigation && section === "employees"}
+            employeePage={phone || (sectionNavigation && section === "employees")}
             salesmen={salesmen}
             leads={leads}
             shared={{ T, inputStyle }}
