@@ -146,8 +146,6 @@ export default function AdminDashboardPanel({
       const result = await loadAdminDashboardComparisons(dashboardSalesman);
       setComparisonData(result);
     } catch {
-      // The primary dashboard remains usable if the comparison service is unavailable.
-      // Never fall back to the old client-side approximation because that can misstate history.
       setComparisonData(null);
     }
   }, [showDashboard, dashboardSalesman]);
@@ -279,7 +277,6 @@ export default function AdminDashboardPanel({
       const wonLeads = await loadCompleteWonScope();
       onOpenStatLeads({ title: "Won Leads", leads: wonLeads });
     } catch {
-      // The card already shows Unavailable instead of opening a knowingly incomplete Won view.
     }
   };
 
@@ -322,7 +319,7 @@ export default function AdminDashboardPanel({
         <DashboardStatCard T={T} label="Upcoming Follow-up" value={upcomingFollowUps.length} icon={CalendarClock} color={T.warn} onClick={() => onOpenStatLeads({ title: "Upcoming Follow-ups", leads: upcomingFollowUps })} />
         <DashboardStatCard T={T} label="Renewals Due" sub="next 30 days" value={upcomingRenewals.length} icon={RefreshCw} color={T.accent} onClick={() => onOpenStatLeads({ title: "Renewals Due (Next 30 Days)", leads: upcomingRenewals })} />
       </div>
-      {!phone && <AdminActivityOverview salesmen={salesmen} />}
+      {!phone && <AdminActivityOverview salesmen={salesmen} salesmanId={dashboardSalesman} />}
       {phone && <AdminMobileLeadTrend leads={dashboardLeads} />}
       {conversationError && <p role="alert" style={{ color: T.danger }}>{conversationError}</p>}
       <div style={{ display: "none" }} aria-hidden="true"><TasksEntry onPendingChange={setAdminPendingTasks} /></div>
