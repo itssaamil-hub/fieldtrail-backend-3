@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { LayoutGrid, List, Plus, Search, X } from "lucide-react";
 import DesktopContacts from "../DesktopContacts.jsx";
 import MobileContacts from "../MobileContacts.jsx";
@@ -16,6 +16,56 @@ const MOBILE_STATUS_STYLE = {
   lost: { background: "#F4F4F5", color: "#71717A", border: "#E4E4E7" },
   nurture: { background: "#EAF6F8", color: "#287C88", border: "#D7EBEF" },
 };
+
+const PIPELINE_DATE_OPTIONS = [
+  ["all", "Date: All time"],
+  ["today", "Today"],
+  ["this_week", "This week"],
+  ["last_7", "Last 7 days"],
+  ["last_15", "Last 15 days"],
+  ["this_month", "This month"],
+  ["last_month", "Last month"],
+  ["custom", "Custom range"],
+];
+
+const IST_DAY_FORMAT = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit",
+});
+
+function istDayKey(value) {
+  if (!value) return "";
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return IST_DAY_FORMAT.format(date);
+}
+
+function shiftDay(key, days) {
+  const date = new Date(`${key}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function pipelineDateRange(preset, customFrom, customTo) {
+  if (!preset || preset === "all") return null;
+  const today = istDayKey(new Date());
+  if (preset === "today") return { from: today, to: today };
+  if (preset === "last_7") return { from: shiftDay(today, -6), to: today };
+  if (preset === "last_15") return { from: shiftDay(today, -14), to: today };
+  if (preset === "this_week") {
+    const weekday = new Date(`${today}T12:00:00Z`).getUTCDay();
+    const mondayOffset = (weekday + 6) % 7;
+    return { from: shiftDay(today, -mondayOffset), to: today };
+  }
+  if (preset === "this_month") return { from: `${today.slice(0, 8)}01`, to: today };
+  if (preset === "last_month") {
+    const [year, month] = today.split("-").map(Number);
+    const first = new Date(Date.UTC(year, month - 2, 1));
+    const last = new Date(Date.UTC(year, month - 1, 0));
+    return { from: first.toISOString().slice(0, 10), to: last.toISOString().slice(0, 10) };
+  }
+  if (preset === "custom") return { from: customFrom || "", to: customTo || "" };
+  return null;
+}
 
 function localDay(value) {
   if (!value) return null;
@@ -53,6 +103,35 @@ export default function AdminLeadsPanel({
   const [sheetsInfo, setSheetsInfo] = useState(null);
   const [sheetsError, setSheetsError] = useState("");
   const [mobileDealsSort, setMobileDealsSort] = useState("recent_activity");
+  const [pipelineDatePreset, setPipelineDatePreset] = useState("all");
+  const [pipelineDateFrom, setPipelineDateFrom] = useState("");
+  const [pipelineDateTo, setPipelineDateTo] = useState("");
+  const [pipelinePage, setPipelinePage] = useState(1);
+
+  useEffect(() => {
+    if (desktopDeals && filterDate) setFilterDate("");
+  }, [desktopDeals, filterDate, setFilterDate]);
+
+  const pipelineRange = useMemo(
+    () => pipelineDateRange(pipelineDatePreset, pipelineDateFrom, pipelineDateTo),
+    [pipelineDatePreset, pipelineDateFrom, pipelineDateTo]
+  );
+  const pipelineFilteredLeads = useMemo(() => {
+    if (!desktopDeals || !pipelineRange || (!pipelineRange.from && !pipelineRange.to)) return filteredLeads;
+    return filteredLeads.filter((lead) => {
+      const day = istDayKey(lead.createdAt);
+      if (!day) return false;
+      if (pipelineRange.from && day < pipelineRange.from) return false;
+      if (pipelineRange.to && day > pipelineRange.to) return false;
+      return true;
+    });
+  }, [desktopDeals, filteredLeads, pipelineRange]);
+  const displayLeads = desktopDeals ? pipelineFilteredLeads : filteredLeads;
+  const pipelineDateActive = Boolean(desktopDeals && pipelineRange && (pipelineRange.from || pipelineRange.to));
+
+  useEffect(() => {
+    setPipelinePage(1);
+  }, [pipelineDatePreset, pipelineDateFrom, pipelineDateTo, filterSalesman, filterStatus, searchQuery]);
 
   const mobileDeals = Boolean(phone && sectionNavigation && section === "deals" && !desktopSection);
   const mobileDealRows = useMemo(() => {
@@ -70,7 +149,7 @@ export default function AdminLeadsPanel({
     || ((desktopDeals || !(sectionNavigation && section === "deals")) && leadsViewMode === "list");
   const refreshKey = `${filteredLeads.length}:${filteredLeads[0]?.id || ""}:${filteredLeads[0]?.status || ""}`;
   const serverPage = useAdminLeadPage({
-    enabled: showLeads && listMode,
+    enabled: showLeads && listMode && !pipelineDateActive,
     salesmanId: filterSalesman,
     status: filterStatus,
     date: filterDate,
@@ -84,12 +163,17 @@ export default function AdminLeadsPanel({
     () => serverPage.rows.map((lead) => localById.get(lead.id) || lead),
     [serverPage.rows, localById]
   );
-  const listRows = serverPage.loading && serverRows.length === 0 ? pagedLeads : serverRows;
-  const listTotal = serverPage.error && serverRows.length === 0 ? filteredLeads.length : serverPage.total;
-  const listTotalPages = serverPage.error && serverRows.length === 0
+  const pipelineTotalPages = Math.max(1, Math.ceil(pipelineFilteredLeads.length / LEADS_PER_PAGE));
+  const pipelineCurrentPage = Math.min(pipelinePage, pipelineTotalPages);
+  const pipelinePagedRows = pipelineFilteredLeads.slice((pipelineCurrentPage - 1) * LEADS_PER_PAGE, pipelineCurrentPage * LEADS_PER_PAGE);
+  const listRows = pipelineDateActive ? pipelinePagedRows : (serverPage.loading && serverRows.length === 0 ? pagedLeads : serverRows);
+  const listTotal = pipelineDateActive ? pipelineFilteredLeads.length : (serverPage.error && serverRows.length === 0 ? filteredLeads.length : serverPage.total);
+  const listTotalPages = pipelineDateActive ? pipelineTotalPages : (serverPage.error && serverRows.length === 0
     ? Math.max(1, Math.ceil(filteredLeads.length / LEADS_PER_PAGE))
-    : serverPage.totalPages;
-  const listCurrentPage = serverPage.error && serverRows.length === 0 ? 1 : serverPage.page;
+    : serverPage.totalPages);
+  const listCurrentPage = pipelineDateActive ? pipelineCurrentPage : (serverPage.error && serverRows.length === 0 ? 1 : serverPage.page);
+  const listLoading = pipelineDateActive ? false : serverPage.loading;
+  const setListPage = pipelineDateActive ? setPipelinePage : serverPage.setPage;
 
   if (mobileDeals) {
     const mobileTotalValue = mobileDealRows.reduce((sum, lead) => sum + (Number(lead.dealValue) || 0), 0);
@@ -219,6 +303,9 @@ export default function AdminLeadsPanel({
     );
   }
 
+  const dateInputStyle = { border: `1px solid ${T.line}`, borderRadius: 6, padding: "6px 8px", fontSize: 12.5, fontFamily: "Inter, sans-serif", background: "#fff", color: T.ink };
+  const pipelineHasDateFilter = pipelineDatePreset !== "all";
+
   return (
     <div hidden={!showLeads}>
       <div className={`ft-card${desktopDeals ? " engage-desktop-deals" : desktopContacts ? " engage-desktop-contacts" : ""}`} style={{ marginTop: 20, background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, padding: 18 }}>
@@ -228,7 +315,7 @@ export default function AdminLeadsPanel({
               {sectionNavigation && section === "deals" ? (desktopSection ? "Pipeline" : "Deals") : (desktopContacts || (phone && section === "leads")) ? "Contacts" : "Leads"}
             </div>
             {(desktopContacts || (phone && section === "leads")) && <div className="engage-contacts-summary">{listMode ? listTotal : filteredLeads.length} contact records · Your restaurant connections</div>}
-            {desktopDeals && <div className="engage-deals-summary">{listMode ? listTotal : filteredLeads.length} deals · {fmtMoney(filteredLeads.reduce((sum, lead) => sum + (Number(lead.dealValue) || 0), 0))} recorded value</div>}
+            {desktopDeals && <div className="engage-deals-summary">{listMode ? listTotal : displayLeads.length} deals · {fmtMoney(displayLeads.reduce((sum, lead) => sum + (Number(lead.dealValue) || 0), 0))} recorded value</div>}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ display: sectionNavigation && section !== "dashboard" && !desktopDeals ? "none" : "flex", gap: 2, background: T.paperDeep, borderRadius: 8, padding: 2 }}>
@@ -278,21 +365,30 @@ export default function AdminLeadsPanel({
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
             <Select value={filterSalesman} onChange={setFilterSalesman} options={[["all", "All employees"], ...salesmen.map((s) => [s.id, s.name])]} />
             <Select value={filterStatus} onChange={setFilterStatus} options={[["all", "All statuses"], ...STATUSES.map((s) => [s, STATUS_LABEL[s]])]} />
-            <input
-              type="date"
-              value={filterDate}
-              onChange={(e) => setFilterDate(e.target.value)}
-              style={{ border: `1px solid ${T.line}`, borderRadius: 6, padding: "6px 8px", fontSize: 12.5, fontFamily: "Inter, sans-serif", background: "#fff", color: T.ink }}
-            />
-            {filterDate && (
-              <button onClick={() => setFilterDate("")} style={{ fontSize: 11.5, color: T.inkSoft, background: "none", border: "none", cursor: "pointer", padding: "6px 4px" }}>
-                Clear date
-              </button>
+            {desktopDeals ? (
+              <>
+                <Select value={pipelineDatePreset} onChange={setPipelineDatePreset} options={PIPELINE_DATE_OPTIONS} />
+                {pipelineDatePreset === "custom" && (
+                  <>
+                    <input aria-label="Pipeline date from" title="From" type="date" value={pipelineDateFrom} onChange={(e) => setPipelineDateFrom(e.target.value)} style={dateInputStyle} />
+                    <input aria-label="Pipeline date to" title="To" type="date" value={pipelineDateTo} min={pipelineDateFrom || undefined} onChange={(e) => setPipelineDateTo(e.target.value)} style={dateInputStyle} />
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} style={dateInputStyle} />
+                {filterDate && (
+                  <button onClick={() => setFilterDate("")} style={{ fontSize: 11.5, color: T.inkSoft, background: "none", border: "none", cursor: "pointer", padding: "6px 4px" }}>
+                    Clear date
+                  </button>
+                )}
+              </>
             )}
-            {(filterSalesman !== "all" || filterStatus !== "all" || filterDate || searchQuery.trim()) && (
+            {(filterSalesman !== "all" || filterStatus !== "all" || filterDate || (desktopDeals && pipelineHasDateFilter) || searchQuery.trim()) && (
               <button
                 type="button"
-                onClick={() => { setFilterSalesman("all"); setFilterStatus("all"); setFilterDate(""); setSearchQuery(""); }}
+                onClick={() => { setFilterSalesman("all"); setFilterStatus("all"); setFilterDate(""); setPipelineDatePreset("all"); setPipelineDateFrom(""); setPipelineDateTo(""); setSearchQuery(""); }}
                 style={{ fontSize: 11.5, color: T.route, background: "#EAF5F0", border: `1px solid ${T.line}`, borderRadius: 8, cursor: "pointer", padding: "6px 9px", fontWeight: 750 }}
               >
                 Reset filters
@@ -328,7 +424,7 @@ export default function AdminLeadsPanel({
           </div>
         )}
 
-        {serverPage.error && listMode && <div style={{ fontSize: 12, color: T.danger, marginBottom: 10 }}>{serverPage.error}</div>}
+        {serverPage.error && listMode && !pipelineDateActive && <div style={{ fontSize: 12, color: T.danger, marginBottom: 10 }}>{serverPage.error}</div>}
 
         {listMode ? (
           <>
@@ -355,7 +451,7 @@ export default function AdminLeadsPanel({
                     </div>
                   </div>
                 ))}
-                {!serverPage.loading && listTotal === 0 && (
+                {!listLoading && listTotal === 0 && (
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, color: T.inkSoft, fontSize: 13, padding: "36px 8px" }}>
                     <List size={22} style={{ opacity: 0.5 }} />
                     No leads match these filters.
@@ -371,17 +467,17 @@ export default function AdminLeadsPanel({
                 </div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                   <button
-                    disabled={listCurrentPage <= 1 || serverPage.loading}
-                    onClick={() => serverPage.setPage((p) => Math.max(1, p - 1))}
-                    style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontWeight: 700, fontSize: 12.5, cursor: listCurrentPage <= 1 || serverPage.loading ? "not-allowed" : "pointer", opacity: listCurrentPage <= 1 || serverPage.loading ? 0.5 : 1 }}
+                    disabled={listCurrentPage <= 1 || listLoading}
+                    onClick={() => setListPage((p) => Math.max(1, p - 1))}
+                    style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontWeight: 700, fontSize: 12.5, cursor: listCurrentPage <= 1 || listLoading ? "not-allowed" : "pointer", opacity: listCurrentPage <= 1 || listLoading ? 0.5 : 1 }}
                   >
                     Previous
                   </button>
                   <span style={{ fontSize: 12.5, color: T.inkSoft }}>Page {listCurrentPage} of {listTotalPages}</span>
                   <button
-                    disabled={listCurrentPage >= listTotalPages || serverPage.loading}
-                    onClick={() => serverPage.setPage((p) => Math.min(listTotalPages, p + 1))}
-                    style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontWeight: 700, fontSize: 12.5, cursor: listCurrentPage >= listTotalPages || serverPage.loading ? "not-allowed" : "pointer", opacity: listCurrentPage >= listTotalPages || serverPage.loading ? 0.5 : 1 }}
+                    disabled={listCurrentPage >= listTotalPages || listLoading}
+                    onClick={() => setListPage((p) => Math.min(listTotalPages, p + 1))}
+                    style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontWeight: 700, fontSize: 12.5, cursor: listCurrentPage >= listTotalPages || listLoading ? "not-allowed" : "pointer", opacity: listCurrentPage >= listTotalPages || listLoading ? 0.5 : 1 }}
                   >
                     Next
                   </button>
@@ -391,7 +487,7 @@ export default function AdminLeadsPanel({
           </>
         ) : (
           desktopDeals
-            ? <DesktopDealsBoard leads={filteredLeads} visibleStatus={filterStatus} onStatusChange={onStatusChange} onSelectLead={onSelectLead} />
+            ? <DesktopDealsBoard leads={displayLeads} visibleStatus={filterStatus} onStatusChange={onStatusChange} onSelectLead={onSelectLead} />
             : <LeadsBoardView leads={filteredLeads} onStatusChange={onStatusChange} onSelectLead={onSelectLead} />
         )}
       </div>
