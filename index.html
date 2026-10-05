@@ -24,6 +24,37 @@
           padding-right: 28px !important;
         }
       }
+
+      /* Salesman phone More: only Quotations, Onboarding checklist and Payment due
+         open edge-to-edge. Daily Reports and Settings keep their current UI. */
+      @media (max-width: 600px) {
+        body:has(.engage-salesman-more) .ft-onboarding-backdrop:has(> .ft-onboarding > .ft-q.ft-q-workspace),
+        body:has(.engage-salesman-more) .ft-onboarding-backdrop:has(> .ft-onboarding > .ft-col.ft-q),
+        body:has(.engage-salesman-more) .ft-onboarding-backdrop:has(> .ft-onboarding > .ft-ob-muted) {
+          padding: 0 !important;
+          align-items: stretch !important;
+          background: #fff !important;
+        }
+
+        body:has(.engage-salesman-more) .ft-onboarding-backdrop:has(> .ft-onboarding > .ft-q.ft-q-workspace) > .ft-onboarding,
+        body:has(.engage-salesman-more) .ft-onboarding-backdrop:has(> .ft-onboarding > .ft-col.ft-q) > .ft-onboarding,
+        body:has(.engage-salesman-more) .ft-onboarding-backdrop:has(> .ft-onboarding > .ft-ob-muted) > .ft-onboarding {
+          width: 100% !important;
+          max-width: none !important;
+          height: 100dvh !important;
+          max-height: 100dvh !important;
+          border-radius: 0 !important;
+          padding: 16px 16px calc(24px + env(safe-area-inset-bottom)) !important;
+        }
+
+        body:has(.engage-salesman-more) .ft-onboarding-backdrop:has(> .ft-onboarding > .ft-q.ft-q-workspace) > .ft-onboarding > header,
+        body:has(.engage-salesman-more) .ft-onboarding-backdrop:has(> .ft-onboarding > .ft-col.ft-q) > .ft-onboarding > header,
+        body:has(.engage-salesman-more) .ft-onboarding-backdrop:has(> .ft-onboarding > .ft-ob-muted) > .ft-onboarding > header {
+          top: -16px !important;
+          margin-top: -16px !important;
+          padding-top: calc(16px + env(safe-area-inset-top)) !important;
+        }
+      }
     </style>
     <script>
       (() => {
