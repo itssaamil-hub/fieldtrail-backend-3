@@ -9,6 +9,7 @@ import LateStartToast from "./LateStartToast.jsx";
 import PaymentDealGate from "./PaymentDealGate.jsx";
 import { startPushSubscriptionRecovery } from "./pushSubscriptionRecovery.js";
 import "./index.css";
+import "./mobile-dashboard-kpi.css";
 import "./salesman-dashboard-cards.css";
 import "./admin-mobile-lead-trend.css";
 import "./admin-team-activity.css";
