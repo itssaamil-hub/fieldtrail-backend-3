@@ -28,7 +28,7 @@ export default function DesktopSidebar({ active, collapsed, onCollapse, onSelect
     };
   }, [quotationsOpen, collapsed]);
   const item = ([key, label, Icon]) => {
-    const selected = !settingsOpen && (key === 'quotations' ? quotationsOpen : (directActive ? directActive === key : active === key));
+    const selected = !settingsOpen && (quotationsOpen ? key === 'quotations' : (directActive ? directActive === key : active === key));
     const activate = () => {
       if (key === 'quotations') {
         setDirectActive(null);
