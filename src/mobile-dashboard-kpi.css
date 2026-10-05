@@ -1,6 +1,7 @@
+/* Admin phone KPI cards: mirror the employee phone card theme without touching desktop or salesman cards. */
 @media (max-width: 899px) {
-  .engage-mobile-kpi-card {
-    flex: 1 1 46% !important;
+  .engage-dashboard-stat {
+    flex: 1 1 calc(50% - 6px) !important;
     min-width: 0 !important;
     min-height: 76px !important;
     height: 76px !important;
@@ -13,27 +14,50 @@
     overflow: hidden !important;
   }
 
-  .engage-mobile-kpi-card > div:first-child {
+  .engage-dashboard-stat-header {
     display: flex !important;
     align-items: center !important;
     justify-content: flex-start !important;
     gap: 6px !important;
     margin-bottom: 3px !important;
+    min-width: 0 !important;
   }
 
-  .engage-mobile-kpi-card > div:first-child > div:first-child {
+  .engage-dashboard-stat-icon {
+    order: -1 !important;
+    width: 22px !important;
+    height: 22px !important;
+    min-width: 22px !important;
+    flex: 0 0 22px !important;
+    border-radius: 7px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: none !important;
+    border: 1px solid color-mix(in srgb, currentColor 18%, transparent) !important;
+  }
+
+  .engage-dashboard-stat-icon svg {
+    width: 12px !important;
+    height: 12px !important;
+    stroke-width: 2 !important;
+  }
+
+  .engage-dashboard-stat-label {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    color: #596668 !important;
     font-size: 10px !important;
     line-height: 1.1 !important;
-    font-weight: 700 !important;
+    font-weight: 800 !important;
     letter-spacing: .1px !important;
-    color: #6F7B7D !important;
     text-transform: none !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
   }
 
-  .engage-mobile-kpi-card .engage-db-value {
+  .engage-dashboard-stat-value {
     font-family: 'Space Grotesk', sans-serif !important;
     font-size: 23px !important;
     line-height: .95 !important;
@@ -42,19 +66,16 @@
     color: #173738 !important;
   }
 
-  .engage-mobile-kpi-icon {
-    width: 22px !important;
-    height: 22px !important;
-    min-width: 22px !important;
-    border-radius: 7px !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    flex: 0 0 22px !important;
+  .engage-dashboard-stat-sub {
+    margin-top: 2px !important;
+    color: #70817E !important;
+    font-size: 9px !important;
+    line-height: 1.05 !important;
   }
 
-  .engage-mobile-kpi-icon svg {
-    width: 12px !important;
-    height: 12px !important;
+  .engage-dashboard-stat-comparison {
+    margin-top: 2px !important;
+    font-size: 9px !important;
+    line-height: 1.05 !important;
   }
 }
