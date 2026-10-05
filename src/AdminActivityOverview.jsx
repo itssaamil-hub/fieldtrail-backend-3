@@ -90,8 +90,7 @@ function SparkChart({ rows, activeKeys, days }) {
   </div>;
 }
 
-export default function AdminActivityOverview({ salesmen=[] }) {
-  const [salesmanId,setSalesmanId]=useState('all');
+export default function AdminActivityOverview({ salesmen=[], salesmanId='all' }) {
   const [days,setDays]=useState(7);
   const [data,setData]=useState(null);
   const [error,setError]=useState('');
@@ -125,7 +124,6 @@ export default function AdminActivityOverview({ salesmen=[] }) {
         <div style={{minWidth:180,paddingLeft:2}}><div style={{fontSize:16,fontWeight:800,color:C.ink}}>Lead Activity</div><div style={{fontSize:12,color:C.soft,marginTop:3}}>Real activity recorded in Engage · {person}</div></div>
         <div style={{display:'flex',alignItems:'center',gap:7,flexWrap:'wrap',justifyContent:'flex-end',marginLeft:'auto'}}>
           <select aria-label="Activity period" value={days} onChange={e=>setDays(Number(e.target.value))} style={{height:34,border:`1px solid ${C.line}`,borderRadius:9,background:'#fff',color:C.ink,fontSize:11.5,fontWeight:650,padding:'0 28px 0 9px'}}><option value={7}>7 Days</option><option value={15}>15 Days</option><option value={30}>1 Month</option></select>
-          <select aria-label="Activity employee" value={salesmanId} onChange={e=>setSalesmanId(e.target.value)} style={{height:34,border:`1px solid ${C.line}`,borderRadius:9,background:'#fff',color:C.ink,fontSize:11.5,fontWeight:650,padding:'0 28px 0 9px'}}><option value="all">All Employees</option>{salesmen.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select>
           <div style={{height:34,padding:'0 9px',border:`1px solid ${C.line}`,borderRadius:9,background:'#F8FBFA',fontSize:11.2,color:C.soft,display:'flex',alignItems:'center',gap:6,whiteSpace:'nowrap'}}>{loading?<><RefreshCw size={12} className="spin"/> Refreshing</>:<><span style={{width:7,height:7,borderRadius:'50%',background:C.green}}/> Live data</>}</div>
         </div>
       </div>
