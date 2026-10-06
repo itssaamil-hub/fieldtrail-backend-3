@@ -232,6 +232,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
   const showDashboard = !sectionNavigation || section === "dashboard";
   const showLeads = section === "leads" || section === "deals";
   const [filterSalesman, setFilterSalesman] = useState("all");
+  const [filterCity, setFilterCity] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterDate, setFilterDate] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -261,9 +262,14 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
   const [mapView, setMapView] = useState("live"); // "live" | "leads"
   const [statLeadsModal, setStatLeadsModal] = useState(null); // { title, leads } | null
 
+  const cityOptions = [...new Set(salesmen.map((s) => String(s.city || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const cityBySalesman = new Map(salesmen.map((s) => [s.id, String(s.city || "")]));
+  const normalizedCityFilter = filterCity.trim().toLowerCase();
+
   const filteredLeads = leads.filter(
     (l) =>
       (filterSalesman === "all" || l.salesmanId === filterSalesman) &&
+      (!normalizedCityFilter || String(cityBySalesman.get(l.salesmanId) || "").toLowerCase().includes(normalizedCityFilter)) &&
       (filterStatus === "all" || l.status === filterStatus) &&
       (!filterDate || l.createdAt.toISOString().slice(0, 10) === filterDate) &&
       (!searchQuery.trim() || [l.business, l.owner, l.phone, l.subLocation].some((f) => f && f.toLowerCase().includes(searchQuery.trim().toLowerCase())))
@@ -273,7 +279,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
   const currentPage = Math.min(leadsPage, totalPages);
   const pagedLeads = filteredLeads.slice((currentPage - 1) * LEADS_PER_PAGE, currentPage * LEADS_PER_PAGE);
 
-  useEffect(() => { setLeadsPage(1); }, [filterSalesman, filterStatus, filterDate, searchQuery]);
+  useEffect(() => { setLeadsPage(1); }, [filterSalesman, filterCity, filterStatus, filterDate, searchQuery]);
 
   return (
     <div className={phone && page !== "reports" ? "engage-admin-mobile-content" : undefined} style={{ padding: desktopDeals || desktopContacts ? "20px 28px" : "20px 24px", maxWidth: desktopDeals || desktopContacts ? 1500 : 1180, margin: "0 auto" }}>
@@ -370,6 +376,9 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
         setLeadsViewMode={setLeadsViewMode}
         filterSalesman={filterSalesman}
         setFilterSalesman={setFilterSalesman}
+        filterCity={filterCity}
+        setFilterCity={setFilterCity}
+        cityOptions={cityOptions}
         filterStatus={filterStatus}
         setFilterStatus={setFilterStatus}
         filterDate={filterDate}

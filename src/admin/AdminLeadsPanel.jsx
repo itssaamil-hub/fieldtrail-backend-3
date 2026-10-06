@@ -92,7 +92,7 @@ function mobileAttention(lead) {
 export default function AdminLeadsPanel({
   showLeads, desktopDeals, desktopContacts, sectionNavigation, section, desktopSection, phone,
   salesmen, filteredLeads, pagedLeads, leadsViewMode, setLeadsViewMode,
-  filterSalesman, setFilterSalesman, filterStatus, setFilterStatus, filterDate, setFilterDate,
+  filterSalesman, setFilterSalesman, filterCity, setFilterCity, cityOptions = [], filterStatus, setFilterStatus, filterDate, setFilterDate,
   searchQuery, setSearchQuery, LEADS_PER_PAGE,
   onStatusChange, onSelectLead, onAddClick, shared,
 }) {
@@ -150,14 +150,16 @@ export default function AdminLeadsPanel({
   const pipelineDateActive = Boolean(desktopDeals && pipelineRange && (pipelineRange.from || pipelineRange.to));
   const contactsDateActive = Boolean(desktopContacts && contactsRange && (contactsRange.from || contactsRange.to));
   const rangeDateActive = pipelineDateActive || contactsDateActive;
+  const cityFilterActive = Boolean(filterCity.trim());
+  const localFilterActive = rangeDateActive || cityFilterActive;
 
   useEffect(() => {
     setPipelinePage(1);
-  }, [pipelineDatePreset, pipelineDateFrom, pipelineDateTo, filterSalesman, filterStatus, searchQuery]);
+  }, [pipelineDatePreset, pipelineDateFrom, pipelineDateTo, filterSalesman, filterCity, filterStatus, searchQuery]);
 
   useEffect(() => {
     setContactsPage(1);
-  }, [contactsDatePreset, contactsDateFrom, contactsDateTo, filterSalesman, filterStatus, searchQuery]);
+  }, [contactsDatePreset, contactsDateFrom, contactsDateTo, filterSalesman, filterCity, filterStatus, searchQuery]);
 
   const mobileDeals = Boolean(phone && sectionNavigation && section === "deals" && !desktopSection);
   const mobileDealRows = useMemo(() => {
@@ -175,7 +177,7 @@ export default function AdminLeadsPanel({
     || ((desktopDeals || !(sectionNavigation && section === "deals")) && leadsViewMode === "list");
   const refreshKey = `${filteredLeads.length}:${filteredLeads[0]?.id || ""}:${filteredLeads[0]?.status || ""}`;
   const serverPage = useAdminLeadPage({
-    enabled: showLeads && listMode && !rangeDateActive,
+    enabled: showLeads && listMode && !localFilterActive,
     salesmanId: filterSalesman,
     status: filterStatus,
     date: filterDate,
@@ -194,14 +196,14 @@ export default function AdminLeadsPanel({
   const rangeTotalPages = Math.max(1, Math.ceil(rangeFilteredLeads.length / LEADS_PER_PAGE));
   const rangeCurrentPage = Math.min(rangePage, rangeTotalPages);
   const rangePagedRows = rangeFilteredLeads.slice((rangeCurrentPage - 1) * LEADS_PER_PAGE, rangeCurrentPage * LEADS_PER_PAGE);
-  const listRows = rangeDateActive ? rangePagedRows : (serverPage.loading && serverRows.length === 0 ? pagedLeads : serverRows);
-  const listTotal = rangeDateActive ? rangeFilteredLeads.length : (serverPage.error && serverRows.length === 0 ? filteredLeads.length : serverPage.total);
-  const listTotalPages = rangeDateActive ? rangeTotalPages : (serverPage.error && serverRows.length === 0
+  const listRows = localFilterActive ? rangePagedRows : (serverPage.loading && serverRows.length === 0 ? pagedLeads : serverRows);
+  const listTotal = localFilterActive ? rangeFilteredLeads.length : (serverPage.error && serverRows.length === 0 ? filteredLeads.length : serverPage.total);
+  const listTotalPages = localFilterActive ? rangeTotalPages : (serverPage.error && serverRows.length === 0
     ? Math.max(1, Math.ceil(filteredLeads.length / LEADS_PER_PAGE))
     : serverPage.totalPages);
-  const listCurrentPage = rangeDateActive ? rangeCurrentPage : (serverPage.error && serverRows.length === 0 ? 1 : serverPage.page);
-  const listLoading = rangeDateActive ? false : serverPage.loading;
-  const setListPage = pipelineDateActive ? setPipelinePage : contactsDateActive ? setContactsPage : serverPage.setPage;
+  const listCurrentPage = localFilterActive ? rangeCurrentPage : (serverPage.error && serverRows.length === 0 ? 1 : serverPage.page);
+  const listLoading = localFilterActive ? false : serverPage.loading;
+  const setListPage = localFilterActive ? (desktopDeals ? setPipelinePage : setContactsPage) : serverPage.setPage;
 
   if (mobileDeals) {
     const mobileTotalValue = mobileDealRows.reduce((sum, lead) => sum + (Number(lead.dealValue) || 0), 0);
@@ -257,6 +259,10 @@ export default function AdminLeadsPanel({
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 7, marginBottom: 7 }}>
+            <div>
+              <input aria-label="City filter" list="engage-city-filter-mobile" value={filterCity} onChange={(e) => setFilterCity(e.target.value)} placeholder="All cities" style={{ ...controlStyle, width: "100%" }} />
+              <datalist id="engage-city-filter-mobile">{cityOptions.map((city) => <option key={city} value={city} />)}</datalist>
+            </div>
             <select aria-label="Employee" value={filterSalesman} onChange={(e) => setFilterSalesman(e.target.value)} style={controlStyle}>
               <option value="all">All employees</option>
               {salesmen.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -274,9 +280,9 @@ export default function AdminLeadsPanel({
             </select>
           </div>
 
-          {(filterSalesman !== "all" || filterStatus !== "all" || filterDate || searchQuery.trim()) && (
+          {(filterSalesman !== "all" || filterCity.trim() || filterStatus !== "all" || filterDate || searchQuery.trim()) && (
             <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
-              <button type="button" onClick={() => { setFilterSalesman("all"); setFilterStatus("all"); setFilterDate(""); setSearchQuery(""); }} style={{ border: "none", background: "transparent", color: T.route, fontSize: 11, fontWeight: 800, padding: "3px 1px", cursor: "pointer" }}>
+              <button type="button" onClick={() => { setFilterSalesman("all"); setFilterCity(""); setFilterStatus("all"); setFilterDate(""); setSearchQuery(""); }} style={{ border: "none", background: "transparent", color: T.route, fontSize: 11, fontWeight: 800, padding: "3px 1px", cursor: "pointer" }}>
                 Reset filters
               </button>
             </div>
@@ -392,6 +398,18 @@ export default function AdminLeadsPanel({
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            {(desktopDeals || desktopContacts || (phone && section === "leads")) && <div style={{ position: "relative" }}>
+              <input
+                aria-label="City filter"
+                list="engage-city-filter"
+                value={filterCity}
+                onChange={(e) => setFilterCity(e.target.value)}
+                placeholder="All cities"
+                style={{ ...dateInputStyle, minWidth: 132, paddingRight: filterCity ? 28 : 8 }}
+              />
+              <datalist id="engage-city-filter">{cityOptions.map((city) => <option key={city} value={city} />)}</datalist>
+              {filterCity && <button type="button" aria-label="Clear city filter" onClick={() => setFilterCity("")} style={{ position: "absolute", right: 5, top: "50%", transform: "translateY(-50%)", border: "none", background: "transparent", color: T.inkSoft, cursor: "pointer", padding: 2 }}><X size={12} /></button>}
+            </div>}
             <Select value={filterSalesman} onChange={setFilterSalesman} options={[["all", "All employees"], ...salesmen.map((s) => [s.id, s.name])]} />
             <Select value={filterStatus} onChange={setFilterStatus} options={[["all", "All statuses"], ...STATUSES.map((s) => [s, STATUS_LABEL[s]])]} />
             {desktopDeals ? (
@@ -424,10 +442,10 @@ export default function AdminLeadsPanel({
                 )}
               </>
             )}
-            {(filterSalesman !== "all" || filterStatus !== "all" || filterDate || (desktopDeals && pipelineHasDateFilter) || (desktopContacts && contactsHasDateFilter) || searchQuery.trim()) && (
+            {(filterSalesman !== "all" || filterCity.trim() || filterStatus !== "all" || filterDate || (desktopDeals && pipelineHasDateFilter) || (desktopContacts && contactsHasDateFilter) || searchQuery.trim()) && (
               <button
                 type="button"
-                onClick={() => { setFilterSalesman("all"); setFilterStatus("all"); setFilterDate(""); setPipelineDatePreset("all"); setPipelineDateFrom(""); setPipelineDateTo(""); setContactsDatePreset("all"); setContactsDateFrom(""); setContactsDateTo(""); setSearchQuery(""); }}
+                onClick={() => { setFilterSalesman("all"); setFilterCity(""); setFilterStatus("all"); setFilterDate(""); setPipelineDatePreset("all"); setPipelineDateFrom(""); setPipelineDateTo(""); setContactsDatePreset("all"); setContactsDateFrom(""); setContactsDateTo(""); setSearchQuery(""); }}
                 style={{ fontSize: 11.5, color: T.route, background: "#EAF5F0", border: `1px solid ${T.line}`, borderRadius: 8, cursor: "pointer", padding: "6px 9px", fontWeight: 750 }}
               >
                 Reset filters
@@ -463,7 +481,7 @@ export default function AdminLeadsPanel({
           </div>
         )}
 
-        {serverPage.error && listMode && !rangeDateActive && <div style={{ fontSize: 12, color: T.danger, marginBottom: 10 }}>{serverPage.error}</div>}
+        {serverPage.error && listMode && !localFilterActive && <div style={{ fontSize: 12, color: T.danger, marginBottom: 10 }}>{serverPage.error}</div>}
 
         {listMode ? (
           <>
