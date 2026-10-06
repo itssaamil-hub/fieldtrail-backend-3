@@ -226,7 +226,7 @@ export default function SalesmanView({ notificationLead, session, leads, leadSum
           <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: T.inkSoft }} />
           <input aria-label="Search contacts" value={contactSearch} onChange={(event) => setContactSearch(event.target.value)} placeholder="Search by contact, company, phone, or area…" style={{ width: "100%", padding: "9px 12px 9px 32px", borderRadius: 10, border: `1px solid ${T.line}`, fontSize: 13.5, boxSizing: "border-box" }} />
         </div>
-        <MobileContacts leads={contactRows} onSelectLead={setViewingLead} enableCall showVerification={false} />
+        <MobileContacts leads={contactRows} onSelectLead={setViewingLead} enableCall showVerification={false} showAssignee={false} />
         {hasMoreLeads && <button type="button" disabled={loadingMoreLeads} onClick={loadMoreLeads} style={{ width: "100%", marginTop: 12, padding: "10px 12px", borderRadius: 9, border: `1px solid ${T.line}`, background: "#fff", color: T.route, fontWeight: 800, cursor: loadingMoreLeads ? "default" : "pointer", opacity: loadingMoreLeads ? .65 : 1 }}>{loadingMoreLeads ? "Loading more…" : `Load more contacts · ${Math.max(0, (totalLeadCount ?? leads.length) - leads.length)} remaining`}</button>}
       </section>}
       {visited.tasks && <div hidden={!phone || mobileTab !== "tasks"}><TasksModal embedded active={phone && mobileTab === "tasks"} /></div>}
