@@ -104,9 +104,9 @@ function DashboardStatCard({ T, label, value, sub, subInline = false, color, ico
       {comparison && (
         <div
           className="engage-dashboard-stat-comparison"
-          style={{ color: comparison.pct > 0 ? T.verified : comparison.pct < 0 ? T.danger : T.inkSoft }}
+          style={{ color: comparison.pct == null ? T.verified : comparison.pct > 0 ? T.verified : comparison.pct < 0 ? T.danger : T.inkSoft }}
         >
-          {comparison.pct > 0 ? `↑ ${comparison.pct}%` : comparison.pct < 0 ? `↓ ${Math.abs(comparison.pct)}%` : "— Same"}{" "}
+          {comparison.pct == null ? "↑ New" : comparison.pct > 0 ? `↑ ${comparison.pct}%` : comparison.pct < 0 ? `↓ ${Math.abs(comparison.pct)}%` : "— Same"}{" "}
           <span>vs last {comparisonPeriod === "monthly" ? "month" : "week"}</span>
         </div>
       )}
