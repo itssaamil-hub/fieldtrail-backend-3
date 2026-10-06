@@ -20,7 +20,7 @@ function eventIcon(a) {
   if(a.action.startsWith('lead.created')) return UserPlus;
   return Activity;
 }
-export default function ActivityCentre({onOpenLead}) {
+export default function ActivityCentre({onOpenLead,onClose,mobile=false}) {
   const [filters,setFilters] = useState({from:today(),through:today(),employee:'all',category:'all',action:'',search:''});
   const [query,setQuery] = useState('');
   const [offset,setOffset] = useState(0);
@@ -59,8 +59,8 @@ export default function ActivityCentre({onOpenLead}) {
   };
   const summary=!loading&&!error?data?.summary:null;
   const cards=[['Leads added',summary?.leadsAdded,UserPlus,'blue'],['Status changes',summary?.statusChanges,ArrowRight,'purple'],['Quotes sent',summary?.quotesSent,FileText,'green'],['Payments recorded',summary?(summary.payments.length?summary.payments.map(p=>money(p.amount,p.currency)).join(' · '):'No payments'):null,CircleDollarSign,'amber'],['Tasks completed',summary?.tasksCompleted,CheckCircle2,'rose']];
-  return <main className="ac-page">
-    <header className="ac-heading"><div><h1>Activity Centre</h1><p>See what changed, who changed it, and when.</p></div><button className="ac-button" disabled={loading} onClick={()=>setRefresh(n=>n+1)}><RefreshCw size={15} className={loading?'ac-spin':''}/>Refresh</button></header>
+  return <main className={`ac-page${mobile?" ac-mobile":""}`}>
+    <header className="ac-heading"><div><h1>Activity Centre</h1><p>See what changed, who changed it, and when.</p></div><div className="ac-heading-actions">{mobile&&onClose&&<button className="ac-button ac-close-page" type="button" onClick={onClose}><X size={15}/>Close</button>}<button className="ac-button" disabled={loading} onClick={()=>setRefresh(n=>n+1)}><RefreshCw size={15} className={loading?'ac-spin':''}/>Refresh</button></div></header>
     <div className="ac-summary">{cards.map(([name,value,Icon,tone])=><section className="ac-stat" key={name}><span className={`ac-icon ac-${tone}`}><Icon size={20}/></span><div><span>{name}</span><strong>{value??'—'}</strong></div></section>)}</div>
     <div className="ac-filters">
       <label className="ac-search"><span>Search</span><div><Search size={16}/><input aria-label="Search activity" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Customer, employee or activity" maxLength={120}/></div></label>
