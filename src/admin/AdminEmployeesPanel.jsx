@@ -62,8 +62,6 @@ export default function AdminEmployeesPanel({ employeePage = false, salesmen, le
   const PAGE_SIZE = 8;
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [regionFilter, setRegionFilter] = useState("all");
-  const [managerFilter, setManagerFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [briefs, setBriefs] = useState({});
   const [monthFilter, setMonthFilter] = useState(currentMonthKey);
@@ -158,21 +156,17 @@ export default function AdminEmployeesPanel({ employeePage = false, salesmen, le
     const sessions = briefs[s.id]?.sessions || [];
     return sessions.length ? "offline" : "not-started";
   };
-  const regionOptions = useMemo(() => [...new Set(salesmen.map((s) => s.region).filter(Boolean))].sort((a, b) => a.localeCompare(b)), [salesmen]);
-  const managerOptions = useMemo(() => salesmen.filter((s) => s.isReportingManager).sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""))), [salesmen]);
   const q = query.trim().toLowerCase();
   const filtered = salesmen.filter((s) => {
     const status = employeeStatus(s);
     const matchesStatus = statusFilter === "all" || status === statusFilter;
-    const matchesRegion = regionFilter === "all" || s.region === regionFilter;
-    const matchesManager = managerFilter === "all" || (managerFilter === "unassigned" ? !s.reportingManagerId : s.reportingManagerId === managerFilter);
-    const haystack = `${s.name || ""} ${s.employeeCode || ""} ${s.area || ""} ${s.region || ""} ${s.reportingManagerName || ""}`.toLowerCase();
-    return matchesStatus && matchesRegion && matchesManager && (!q || haystack.includes(q));
+    const haystack = `${s.name || ""} ${s.employeeCode || ""} ${s.area || ""}`.toLowerCase();
+    return matchesStatus && (!q || haystack.includes(q));
   });
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, pages);
   const visible = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  useEffect(() => { setPage(1); }, [query, statusFilter, monthFilter, regionFilter, managerFilter]);
+  useEffect(() => { setPage(1); }, [query, statusFilter, monthFilter]);
 
   const briefLine = (s) => {
     const brief = briefs[s.id];
@@ -189,8 +183,6 @@ export default function AdminEmployeesPanel({ employeePage = false, salesmen, le
     salesmen={salesmen} visible={visible} filteredCount={filtered.length}
     briefs={briefs} employeeStatus={employeeStatus}
     query={query} setQuery={setQuery} statusFilter={statusFilter} setStatusFilter={setStatusFilter}
-    regionFilter={regionFilter} setRegionFilter={setRegionFilter} regionOptions={regionOptions}
-    managerFilter={managerFilter} setManagerFilter={setManagerFilter} managerOptions={managerOptions}
     monthFilter={monthFilter} setMonthFilter={setMonthFilter} monthOptions={monthOptions} year={filterYear}
     metrics={revenueRows} metricsLoading={revenueLoading} metricsError={revenueError}
     page={safePage} pages={pages} pageSize={PAGE_SIZE} setPage={setPage}
