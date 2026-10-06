@@ -59,6 +59,23 @@ export default function SalesmanView({ notificationLead, session, leads, leadSum
   const [contactSearch, setContactSearch] = useState("");
   const [comparisonData, setComparisonData] = useState(null);
 
+  useEffect(() => {
+    const goHome = () => {
+      setMobileTab("dashboard");
+      setShowAddLead(false);
+      setShowMyLeads(false);
+      setViewingLead(null);
+      setShowTodayLeads(false);
+      setShowHotLeads(false);
+      setShowConverted(false);
+      setShowNegotiation(false);
+      setShowConversation(false);
+      setShowRenewals(false);
+    };
+    window.addEventListener("engage:go-home", goHome);
+    return () => window.removeEventListener("engage:go-home", goHome);
+  }, []);
+
   const [notificationLeadError, setNotificationLeadError] = useState("");
   useEffect(() => {
     if (!notificationLead) return;

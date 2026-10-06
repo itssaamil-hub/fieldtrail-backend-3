@@ -262,6 +262,28 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
   const [mapView, setMapView] = useState("live"); // "live" | "leads"
   const [statLeadsModal, setStatLeadsModal] = useState(null); // { title, leads } | null
 
+  useEffect(() => {
+    const goHome = () => {
+      setMobileTab("dashboard");
+      setShowTeamActivity(false);
+      setShowAdminAddLead(false);
+      setSelectedLead(null);
+      setShowAddSalesman(false);
+      setEditSalesman(null);
+      setEmployeeSettings(null);
+      setBriefSalesman(null);
+      setDeleteSalesmanConfirm(null);
+      setDeleteSalesmanError("");
+      setMessageTarget(null);
+      setRouteSalesman(null);
+      setViewingSalesmanLeads(null);
+      setStatLeadsModal(null);
+      setMapView("live");
+    };
+    window.addEventListener("engage:go-home", goHome);
+    return () => window.removeEventListener("engage:go-home", goHome);
+  }, []);
+
   const cityOptions = [...new Set(salesmen.map((s) => String(s.city || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   const cityBySalesman = new Map(salesmen.map((s) => [s.id, String(s.city || "")]));
   const normalizedCityFilter = filterCity.trim().toLowerCase();

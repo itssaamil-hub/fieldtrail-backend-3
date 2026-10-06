@@ -599,6 +599,28 @@ export default function App() {
     if (window.location.hash === "#sales-briefing") window.history.replaceState(null, "", window.location.pathname + window.location.search);
   };
 
+  const handleHome = () => {
+    setDesktopSection("dashboard");
+    setTopPage("dashboard");
+    closeNotifications();
+    setNotificationLead(null);
+    setShowActivityCentreMobile(false);
+    setShowSettings(false);
+    setShowOnboarding(false);
+    setShowDailyReports(false);
+    setCollectionView(null);
+    setQuotationView(null);
+    setShowOnboardingSettings(false);
+    setShowCrmSettings(false);
+    setShowDataHealth(false);
+    setShowAddExpense(false);
+    if (window.location.hash === "#sales-briefing" || /^#lead=[0-9a-f-]+$/i.test(window.location.hash)) {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
+    window.dispatchEvent(new CustomEvent("engage:go-home"));
+    window.scrollTo({ top: 0, behavior: "instant" });
+  };
+
 
   const handleLoggedIn = (sess) => {
     setSession(sess);
@@ -659,13 +681,14 @@ export default function App() {
 
   return (
     <div className={adminDesktop ? `engage-desktop-shell${sidebarCollapsed ? " sidebar-collapsed" : ""}` : undefined} style={{ fontFamily: "Inter, system-ui, sans-serif", background: T.paper, minHeight: "100vh", color: T.ink }}>
-      {adminDesktop && <DesktopSidebar active={topPage === "reports" ? "reports" : desktopSection === "reports" ? "dashboard" : desktopSection} collapsed={sidebarCollapsed} onCollapse={toggleSidebar} onSelect={selectDesktopSection} settingsOpen={showSettings} onSettings={() => { closeNotifications(); setShowOnboarding(false); setShowSettings(true); }} />}
+      {adminDesktop && <DesktopSidebar active={topPage === "reports" ? "reports" : desktopSection === "reports" ? "dashboard" : desktopSection} collapsed={sidebarCollapsed} onCollapse={toggleSidebar} onSelect={selectDesktopSection} onHome={handleHome} settingsOpen={showSettings} onSettings={() => { closeNotifications(); setShowOnboarding(false); setShowSettings(true); }} />}
       <TopBar
         hidePageNavigation={adminDesktop}
         online={online}
         session={session}
         page={session ? topPage : undefined}
         onChangePage={session ? setTopPage : undefined}
+        onHome={session ? handleHome : undefined}
         onAddExpense={session?.role === "admin" ? () => setShowAddExpense(true) : undefined}
         unreadCount={unreadCount}
         onOpenNotifications={session ? () => { setShowSettings(false); setShowNotifications(true); } : undefined}
