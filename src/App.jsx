@@ -122,6 +122,7 @@ const AdminMobileLeadTrend = lazyNamed(() => import("./AdminMobileEnhancements.j
 const AdminTeamActivitySheet = lazyNamed(() => import("./AdminMobileEnhancements.jsx"), "AdminTeamActivitySheet");
 const ExceptionCentre = lazyDefault(() => import("./ExceptionCentre.jsx"));
 const DataHealth = lazyDefault(() => import("./DataHealth.jsx"));
+const MyTeam = lazyDefault(() => import("./MyTeam.jsx"));
 const AttendanceReport = lazyDefault(() => import("./AttendanceReport.jsx"));
 const EnhancedDailyActivityReport = lazyDefault(() => import("./EnhancedDailyActivityReport.jsx"));
 
@@ -537,6 +538,7 @@ export default function App() {
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showActivityCentreMobile, setShowActivityCentreMobile] = useState(false);
+  const [showMyTeam, setShowMyTeam] = useState(false);
   const [notificationLead, setNotificationLead] = useState(null);
   const desktop = useDesktopSidebar();
   const [desktopSection, setDesktopSection] = useState("dashboard");
@@ -613,8 +615,16 @@ export default function App() {
     closeNotifications();
     setNotificationLead(null);
     setShowActivityCentreMobile(false);
+    setShowMyTeam(false);
     setShowOnboarding(false); setShowOnboardingSettings(false); setQuotationView(null); setShowDailyReports(false); setCollectionView(null);
   };
+
+  useEffect(() => {
+    if (session?.role !== "salesman") return;
+    const openMyTeam = () => { closeNotifications(); setShowSettings(false); setShowOnboarding(false); setQuotationView(null); setCollectionView(null); setShowDailyReports(false); setShowMyTeam(true); };
+    window.addEventListener("engage:open-my-team", openMyTeam);
+    return () => window.removeEventListener("engage:open-my-team", openMyTeam);
+  }, [session?.role]);
 
   useEffect(() => {
     if (session?.role !== "salesman") return;
@@ -700,6 +710,7 @@ export default function App() {
       {session && collectionView && <CollectionsPanel {...collectionView} onClose={()=>setCollectionView(null)}/>}
       {session && showDailyReports && <DayClosingReports onClose={()=>setShowDailyReports(false)}/>}
       {session && showOnboarding && <OnboardingPanel key={session.id} onClose={() => setShowOnboarding(false)} />}
+      {session?.role === "salesman" && showMyTeam && <MyTeam onClose={() => setShowMyTeam(false)} />}
       {session?.role === "admin" && showOnboardingSettings && <OnboardingTemplateEditor onClose={() => setShowOnboardingSettings(false)} />}
       {showCrmSettings && <CrmSettingsModal onClose={() => setShowCrmSettings(false)} />}
       {showDataHealth && <DataHealth onClose={() => setShowDataHealth(false)} />}
