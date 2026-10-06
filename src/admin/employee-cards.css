@@ -32,6 +32,8 @@
 .emp-status .is-working { background: #219162; }
 .emp-start { display: flex; align-items: center; gap: 7px; margin-top: 12px; font-size: 11px; color: var(--emp-muted); }
 .emp-start strong { color: var(--emp-ink); font-weight: 600; }
+.emp-start .emp-late { color: #c33f3f; font-weight: 700; }
+.emp-start .emp-on-time { color: #177247; font-weight: 700; }
 .emp-avatar[data-tone="1"] { background: #eee4fc; color: #67409b; }
 .emp-avatar[data-tone="2"] { background: #dff0ff; color: #235f93; }
 .emp-avatar[data-tone="3"] { background: #ffeadc; color: #9a501e; }
