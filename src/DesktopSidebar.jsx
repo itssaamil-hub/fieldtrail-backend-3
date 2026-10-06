@@ -50,7 +50,7 @@ export default function DesktopSidebar({ active, collapsed, onCollapse, onSelect
         className="engage-sidebar-brand"
         role={onHome ? "button" : undefined}
         tabIndex={onHome ? 0 : undefined}
-        aria-label={onHome ? "Go to Dashboard" : undefined}
+        aria-label={onHome ? "Home" : undefined}
         onClick={onHome}
         onKeyDown={onHome ? (event) => {
           if (event.key === "Enter" || event.key === " ") {
