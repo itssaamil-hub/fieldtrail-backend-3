@@ -389,32 +389,15 @@ export default function AdminLeadsPanel({
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: phone && section === "leads" ? 8 : 0, marginBottom: 12 }}>
-          {phone && section === "leads" && (
-            <DownloadMenu
-              iconOnly
-              ariaLabel="Download contacts"
-              onCsv={() => window.open(buildExportUrl("csv", { salesmanId: filterSalesman, status: filterStatus, date: filterDate }), "_blank")}
-              onXlsx={() => window.open(buildExportUrl("xlsx", { salesmanId: filterSalesman, status: filterStatus, date: filterDate }), "_blank")}
-              onSheets={async () => {
-                setSheetsError("");
-                try {
-                  const info = await api.adminExportSheetsInfo({ salesmanId: filterSalesman, status: filterStatus, date: filterDate });
-                  setSheetsInfo(info);
-                } catch (err) {
-                  setSheetsError(err.message || "Couldn't prepare the Sheets export.");
-                }
-              }}
-            />
-          )}
-          <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
-            <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: T.inkSoft }} />
+        <div style={{ display: "flex", alignItems: "center", gap: phone && section === "leads" ? 8 : 0, marginBottom: 12, width: "100%", minWidth: 0 }}>
+          <div style={{ position: "relative", flex: "1 1 0%", minWidth: 0 }}>
+            <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: T.inkSoft, pointerEvents: "none" }} />
             <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               aria-label={desktopContacts ? "Search contacts" : "Search leads"}
-              placeholder={desktopContacts ? "Search by contact, company, phone, or area…" : "Search leads by business, contact, phone, or area…"}
-              style={{ width: "100%", padding: "9px 32px 9px 32px", borderRadius: 10, border: `1px solid ${T.line}`, fontSize: 13.5, boxSizing: "border-box" }}
+              placeholder={phone && section === "leads" ? "Search contacts" : desktopContacts ? "Search by contact, company, phone, or area…" : "Search leads by business, contact, phone, or area…"}
+              style={{ width: "100%", minWidth: 0, height: phone && section === "leads" ? 38 : undefined, padding: "9px 32px 9px 32px", borderRadius: 10, border: `1px solid ${T.line}`, fontSize: 13.5, boxSizing: "border-box" }}
             />
             {searchQuery && (
               <button onClick={() => setSearchQuery("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer", color: T.inkSoft }}>
@@ -422,23 +405,48 @@ export default function AdminLeadsPanel({
               </button>
             )}
           </div>
+          {phone && section === "leads" && (
+            <div style={{ flex: "0 0 38px", width: 38, minWidth: 38 }}>
+              <DownloadMenu
+                iconOnly
+                ariaLabel="Download contacts"
+                onCsv={() => window.open(buildExportUrl("csv", { salesmanId: filterSalesman, status: filterStatus, date: filterDate }), "_blank")}
+                onXlsx={() => window.open(buildExportUrl("xlsx", { salesmanId: filterSalesman, status: filterStatus, date: filterDate }), "_blank")}
+                onSheets={async () => {
+                  setSheetsError("");
+                  try {
+                    const info = await api.adminExportSheetsInfo({ salesmanId: filterSalesman, status: filterStatus, date: filterDate });
+                    setSheetsInfo(info);
+                  } catch (err) {
+                    setSheetsError(err.message || "Couldn't prepare the Sheets export.");
+                  }
+                }}
+              />
+            </div>
+          )}
         </div>
 
         {phone && section === "leads" && !desktopSection ? (
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 7, marginBottom: 12, width: "100%", minWidth: 0 }}>
-            <div style={{ minWidth: 0 }}>
-              <input aria-label="City filter" list="engage-city-filter-mobile-contacts" value={filterCity} onChange={(e) => setFilterCity(e.target.value)} placeholder="All cities" style={{ ...dateInputStyle, width: "100%", height: 34, boxSizing: "border-box", borderRadius: 9, fontSize: 11.5, fontWeight: 650 }} />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8, marginBottom: 12, width: "100%", minWidth: 0 }}>
+            <div style={{ minWidth: 0, width: "100%", overflow: "hidden" }}>
+              <input aria-label="City filter" list="engage-city-filter-mobile-contacts" value={filterCity} onChange={(e) => setFilterCity(e.target.value)} placeholder="All cities" style={{ ...dateInputStyle, display: "block", width: "100%", minWidth: 0, height: 38, padding: "7px 10px", boxSizing: "border-box", borderRadius: 9, fontSize: 12, fontWeight: 650 }} />
               <datalist id="engage-city-filter-mobile-contacts">{cityOptions.map((city) => <option key={city} value={city} />)}</datalist>
             </div>
-            <select aria-label="Employee" value={filterSalesman} onChange={(e) => setFilterSalesman(e.target.value)} style={{ ...dateInputStyle, width: "100%", height: 34, minWidth: 0, boxSizing: "border-box", borderRadius: 9, fontSize: 11.5, fontWeight: 650 }}>
-              <option value="all">All employees</option>
-              {salesmen.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-            <select aria-label="Contact status" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={{ ...dateInputStyle, width: "100%", height: 34, minWidth: 0, boxSizing: "border-box", borderRadius: 9, fontSize: 11.5, fontWeight: 650 }}>
-              <option value="all">All statuses</option>
-              {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
-            </select>
-            <input aria-label="Contact date" type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} style={{ ...dateInputStyle, width: "100%", height: 34, minWidth: 0, boxSizing: "border-box", borderRadius: 9, fontSize: 11.5, fontWeight: 650 }} />
+            <div style={{ minWidth: 0, width: "100%", overflow: "hidden" }}>
+              <select aria-label="Employee" value={filterSalesman} onChange={(e) => setFilterSalesman(e.target.value)} style={{ ...dateInputStyle, display: "block", width: "100%", maxWidth: "100%", minWidth: 0, height: 38, padding: "7px 28px 7px 10px", boxSizing: "border-box", borderRadius: 9, fontSize: 12, fontWeight: 650 }}>
+                <option value="all">All employees</option>
+                {salesmen.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+            <div style={{ minWidth: 0, width: "100%", overflow: "hidden" }}>
+              <select aria-label="Contact status" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={{ ...dateInputStyle, display: "block", width: "100%", maxWidth: "100%", minWidth: 0, height: 38, padding: "7px 28px 7px 10px", boxSizing: "border-box", borderRadius: 9, fontSize: 12, fontWeight: 650 }}>
+                <option value="all">All statuses</option>
+                {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+              </select>
+            </div>
+            <div style={{ minWidth: 0, width: "100%", overflow: "hidden" }}>
+              <input aria-label="Contact date" type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} style={{ ...dateInputStyle, display: "block", width: "100%", minWidth: 0, maxWidth: "100%", height: 38, padding: "7px 10px", boxSizing: "border-box", borderRadius: 9, fontSize: 12, fontWeight: 650 }} />
+            </div>
           </div>
         ) : (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
