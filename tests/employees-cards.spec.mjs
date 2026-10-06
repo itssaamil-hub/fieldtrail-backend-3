@@ -85,9 +85,14 @@ test('Employees unavailable data is not shown as zero or Not started', async ({ 
   await expect(card.getByRole('progressbar')).toHaveCount(0);
 });
 
-test('Dashboard keeps the existing employee layout', async ({ page }) => {
+test('Dashboard keeps the map full width and omits employee panels', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
   await boot(page);
   await page.getByRole('button', { name: 'Dashboard', exact: true }).click();
-  await expect(page.locator('.engage-employee-panel-enhanced')).toBeVisible();
+  await expect(page.locator('.engage-employee-panel-enhanced')).toHaveCount(0);
   await expect(page.locator('.emp-page')).toHaveCount(0);
+  const mapCard = page.locator('.ft-card').filter({ hasText: 'Live Employees & Lead Map' }).first();
+  await expect(mapCard).toBeVisible();
+  const width = await mapCard.evaluate((node) => node.getBoundingClientRect().width);
+  expect(width).toBeGreaterThan(900);
 });
