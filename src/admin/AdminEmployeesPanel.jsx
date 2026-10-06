@@ -61,6 +61,7 @@ export default function AdminEmployeesPanel({ employeePage = false, salesmen, le
   const { T, inputStyle } = shared;
   const PAGE_SIZE = 8;
   const [query, setQuery] = useState("");
+  const [cityFilter, setCityFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [briefs, setBriefs] = useState({});
@@ -156,17 +157,20 @@ export default function AdminEmployeesPanel({ employeePage = false, salesmen, le
     const sessions = briefs[s.id]?.sessions || [];
     return sessions.length ? "offline" : "not-started";
   };
+  const cityOptions = useMemo(() => [...new Set(salesmen.map((s) => String(s.city || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)), [salesmen]);
   const q = query.trim().toLowerCase();
+  const cityQ = cityFilter.trim().toLowerCase();
   const filtered = salesmen.filter((s) => {
     const status = employeeStatus(s);
     const matchesStatus = statusFilter === "all" || status === statusFilter;
-    const haystack = `${s.name || ""} ${s.employeeCode || ""} ${s.area || ""}`.toLowerCase();
-    return matchesStatus && (!q || haystack.includes(q));
+    const matchesCity = !cityQ || String(s.city || "").toLowerCase().includes(cityQ);
+    const haystack = `${s.name || ""} ${s.employeeCode || ""} ${s.area || ""} ${s.city || ""} ${s.stateUt || ""}`.toLowerCase();
+    return matchesStatus && matchesCity && (!q || haystack.includes(q));
   });
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, pages);
   const visible = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  useEffect(() => { setPage(1); }, [query, statusFilter, monthFilter]);
+  useEffect(() => { setPage(1); }, [query, cityFilter, statusFilter, monthFilter]);
 
   const briefLine = (s) => {
     const brief = briefs[s.id];
@@ -182,7 +186,7 @@ export default function AdminEmployeesPanel({ employeePage = false, salesmen, le
   if (employeePage) return <EmployeeCardsView
     salesmen={salesmen} visible={visible} filteredCount={filtered.length}
     briefs={briefs} employeeStatus={employeeStatus}
-    query={query} setQuery={setQuery} statusFilter={statusFilter} setStatusFilter={setStatusFilter}
+    query={query} setQuery={setQuery} cityFilter={cityFilter} setCityFilter={setCityFilter} cityOptions={cityOptions} statusFilter={statusFilter} setStatusFilter={setStatusFilter}
     monthFilter={monthFilter} setMonthFilter={setMonthFilter} monthOptions={monthOptions} year={filterYear}
     metrics={revenueRows} metricsLoading={revenueLoading} metricsError={revenueError}
     page={safePage} pages={pages} pageSize={PAGE_SIZE} setPage={setPage}
@@ -204,6 +208,11 @@ export default function AdminEmployeesPanel({ employeePage = false, salesmen, le
         <div className="engage-employee-search-wrap" style={{ flex: "1 1 220px", position: "relative" }}>
           <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: T.inkSoft }} />
           <input value={query} onChange={(e) => setQuery(e.target.value)} type="search" placeholder="Search employees" aria-label="Search employees" style={{ ...inputStyle, margin: 0, paddingLeft: 31, width: "100%", boxSizing: "border-box" }} />
+        </div>
+        <div style={{ position: "relative", flex: "0 1 150px" }}>
+          <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: T.inkSoft, pointerEvents: "none" }} />
+          <input aria-label="Employee city filter" list="engage-employee-city-filter-dashboard" value={cityFilter} onChange={(e) => setCityFilter(e.target.value)} placeholder="All cities" style={{ ...inputStyle, margin: 0, paddingLeft: 31, width: "100%", boxSizing: "border-box" }} />
+          <datalist id="engage-employee-city-filter-dashboard">{cityOptions.map((city) => <option key={city} value={city} />)}</datalist>
         </div>
         <select aria-label="Employee revenue month" value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)} style={{ ...inputStyle, width: "auto", minWidth: 124, margin: 0, fontWeight: 700 }}>
           <option value="all">All Time</option>
