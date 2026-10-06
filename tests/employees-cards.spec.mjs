@@ -5,9 +5,9 @@ const employees = Array.from({ length: 10 }, (_, i) => ({
   area: i ? 'Hazratganj' : 'Gomti Nagar', employee_code: `EMP-${i}`, phone: '9999999999',
   daily_target: 15, monthly_target: 100, status: i === 0 ? 'online' : 'offline', is_active: true,
   state_ut: 'Uttar Pradesh', city: i === 0 ? 'Lucknow' : 'Kanpur',
-  last_battery_pct: 78, last_speed_mps: 0, last_seen_at: '2026-10-05T06:00:00Z', total_distance_m: 12400,
+  last_battery_pct: 78, last_speed_mps: 0, last_seen_at: i === 3 ? null : '2026-10-05T06:00:00Z', total_distance_m: 12400,
 }));
-const brief = (id) => ({ sessions: id === 'employee-2' ? [] : [{ startedAt: '2026-10-05T03:42:00Z', lateMinutes: id === 'employee-0' ? 22 : 0 }], glance: { leadsAdded: 8 }, followUpHealth: { dueToday: 4 }, unfinished: { pendingTasks: 2 } });
+const brief = (id) => ({ sessions: id === 'employee-2' ? [] : [id === 'employee-3' ? { startedAt: '2026-10-05T03:42:00Z' } : { startedAt: '2026-10-05T03:42:00Z', lateMinutes: id === 'employee-0' ? 22 : 0 }], glance: { leadsAdded: 8 }, followUpHealth: { dueToday: 4 }, unfinished: { pendingTasks: 2 } });
 
 async function boot(page, fail = false) {
   await page.route('http://127.0.0.1:9999/**', async route => {
@@ -77,6 +77,24 @@ for (const width of [390, 1440]) {
     expect(errors).toEqual([]);
   });
 }
+
+test('Employees use authoritative lateMinutes and real last_seen_at without fabricated fallbacks', async ({ page }) => {
+  await boot(page);
+  const anand = page.getByRole('article', { name: 'Anand employee card' });
+  const rohit = page.getByRole('article', { name: 'Rohit employee card' });
+  const jazeem = page.getByRole('article', { name: 'Jazeem employee card' });
+
+  await expect(anand.locator('.emp-start')).toContainText('22 min late');
+  await expect(rohit.locator('.emp-start')).toContainText('On time');
+
+  await expect(jazeem.locator('.emp-start')).toContainText('Started');
+  await expect(jazeem.locator('.emp-start')).not.toContainText('min late');
+  await expect(jazeem.locator('.emp-start')).not.toContainText('On time');
+
+  await expect(anand.locator('.emp-telemetry')).toContainText(/Last seen (Just now|\d+ min ago|\d+ hr ago|\d+ days? ago)/);
+  await expect(jazeem.locator('.emp-telemetry')).toContainText('Last seen Unavailable');
+  await expect(jazeem.locator('.emp-telemetry')).not.toContainText(/Last seen (Just now|\d+ min ago|\d+ hr ago|\d+ days? ago)/);
+});
 
 test('Employees unavailable data is not shown as zero or Not started', async ({ page }) => {
   await boot(page, true);
