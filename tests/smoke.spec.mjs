@@ -174,7 +174,7 @@ test('desktop Engage brand returns admin to Dashboard without changing sidebar n
   await bootAs(page, adminSession);
   await page.getByRole('button', { name: 'Employees', exact: true }).click();
   await expect(page.locator('body')).toContainText('Employees');
-  const homeLogo = page.getByRole('button', { name: 'Go to Dashboard' });
+  const homeLogo = page.getByRole('button', { name: 'Home', exact: true });
   await expect(homeLogo).toBeVisible();
   await homeLogo.click();
   await expect(page.getByText('Total Employees', { exact: true })).toBeVisible();
@@ -187,7 +187,7 @@ test('admin mobile Engage logo returns to Dashboard from another section', async
   await bootAs(page, adminSession);
   await page.getByRole('button', { name: 'Contacts', exact: true }).click();
   await expect(page.locator('body')).toContainText(/Contacts/i);
-  const homeLogo = page.getByRole('button', { name: 'Go to Dashboard' });
+  const homeLogo = page.getByRole('button', { name: 'Home', exact: true });
   await expect(homeLogo).toBeVisible();
   await homeLogo.click();
   await expect(page.getByText('Total Employees', { exact: true })).toBeVisible();
@@ -199,7 +199,7 @@ test('salesman mobile Engage logo returns to employee Dashboard from Contacts', 
   await bootAs(page, { id: 'smoke-salesman', role: 'salesman', name: 'Smoke Salesman', fullName: 'Smoke Salesman', token: 'smoke-token' });
   await page.getByRole('button', { name: 'Contacts', exact: true }).click();
   await expect(page.locator('body')).toContainText(/Contacts|Your contacts/i);
-  const homeLogo = page.getByRole('button', { name: 'Go to Dashboard' });
+  const homeLogo = page.getByRole('button', { name: 'Home', exact: true });
   await expect(homeLogo).toBeVisible();
   await homeLogo.click();
   await expect(page.getByRole('button', { name: 'Add Deal' })).toBeVisible();
