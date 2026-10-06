@@ -60,6 +60,8 @@ export default function EmployeeCardsView({ salesmen, visible, filteredCount, br
         const status = employeeStatus(s);
         const state = s.isActive === false ? "Deactivated" : status === "online" ? "Working" : status === "not-started" ? "Not started" : status === "unavailable" ? (loading ? "Loading…" : "Unavailable") : "Offline";
         const started = time(brief?.sessions?.[0]?.startedAt);
+        const lateMinutesRaw = brief?.sessions?.[0]?.lateMinutes;
+        const lateMinutes = lateMinutesRaw == null || !Number.isFinite(Number(lateMinutesRaw)) ? null : Number(lateMinutesRaw);
         const daily = count(brief?.glance?.leadsAdded);
         const monthly = count(metrics[s.id]?.leads_created);
         const battery = count(s.battery), speed = count(s.speed), distance = count(s.distanceM);
@@ -70,7 +72,7 @@ export default function EmployeeCardsView({ salesmen, visible, filteredCount, br
             <span className="emp-status"><i className={state === "Working" ? "is-working" : ""} />{state}</span>
             <button className="emp-settings" type="button" aria-label="Settings" title={`Settings for ${s.name}`} onClick={() => onSettingsClick(s)}><Settings size={17} /></button>
           </div>
-          <div className="emp-start"><Clock size={14} /><span>Today · {loading ? "Loading activity…" : !brief ? "Activity unavailable" : started ? <>Started <strong>{started}</strong></> : "Not started"}</span></div>
+          <div className="emp-start"><Clock size={14} /><span>Today · {loading ? "Loading activity…" : !brief ? "Activity unavailable" : started ? <>Started <strong>{started}</strong>{lateMinutes > 0 ? <> · <strong className="emp-late">{Math.round(lateMinutes)} min late</strong></> : lateMinutes === 0 ? <> · <strong className="emp-on-time">On time</strong></> : null}</> : "Not started"}</span></div>
           <div className="emp-metrics">
             {[["Leads today", daily], ["Follow-ups due", count(brief?.followUpHealth?.dueToday)], ["Pending tasks", count(brief?.unfinished?.pendingTasks)]].map(([label, value]) => <div className="emp-metric" key={label}><strong>{loading ? "…" : value ?? "—"}</strong><span>{label}</span></div>)}
           </div>
@@ -79,7 +81,7 @@ export default function EmployeeCardsView({ salesmen, visible, filteredCount, br
             <LeadProgress label={monthFilter === "all" ? "All-time leads" : "Monthly leads"} value={monthly} target={monthFilter === "all" ? null : s.monthlyTarget} loading={metricsLoading} error={metricsError} />
           </div>
           <div className="emp-telemetry">
-            <div><span><Battery size={14} /> Battery {battery == null ? "—" : `${Math.round(battery)}%`}</span><span title={s.lastUpdate ? new Date(s.lastUpdate).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : "No location update"}><Clock size={14} />Updated {lastSeen(s.lastUpdate)}</span></div>
+            <div><span><Battery size={14} /> Battery {battery == null ? "—" : `${Math.round(battery)}%`}</span><span title={s.lastUpdate ? new Date(s.lastUpdate).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : "No location update"}><Clock size={14} />Last seen {lastSeen(s.lastUpdate)}</span></div>
             <div><span><MapPin size={14} />{distance == null ? "—" : (distance / 1000).toFixed(1)} km today</span><span><Gauge size={14} />{speed == null ? "—" : speed.toFixed(1)} km/h</span></div>
           </div>
           <div className="emp-card-actions">

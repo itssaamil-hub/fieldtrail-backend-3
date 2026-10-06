@@ -7,7 +7,7 @@ const employees = Array.from({ length: 10 }, (_, i) => ({
   state_ut: 'Uttar Pradesh', city: i === 0 ? 'Lucknow' : 'Kanpur',
   last_battery_pct: 78, last_speed_mps: 0, last_seen_at: '2026-10-05T06:00:00Z', total_distance_m: 12400,
 }));
-const brief = (id) => ({ sessions: id === 'employee-2' ? [] : [{ startedAt: '2026-10-05T03:42:00Z' }], glance: { leadsAdded: 8 }, followUpHealth: { dueToday: 4 }, unfinished: { pendingTasks: 2 } });
+const brief = (id) => ({ sessions: id === 'employee-2' ? [] : [{ startedAt: '2026-10-05T03:42:00Z', lateMinutes: id === 'employee-0' ? 22 : 0 }], glance: { leadsAdded: 8 }, followUpHealth: { dueToday: 4 }, unfinished: { pendingTasks: 2 } });
 
 async function boot(page, fail = false) {
   await page.route('http://127.0.0.1:9999/**', async route => {
@@ -41,6 +41,8 @@ for (const width of [390, 1440]) {
     const panel = page.locator('.emp-page');
     const anand = panel.getByRole('article', { name: 'Anand employee card' });
     await expect(anand).toContainText('Working');
+    await expect(anand).toContainText('22 min late');
+    await expect(anand).toContainText('Last seen');
     await expect(anand.getByRole('progressbar', { name: 'Daily leads', exact: true })).toHaveAttribute('aria-valuetext', '8 of 15 leads');
     await expect(anand.getByRole('progressbar', { name: 'Monthly leads', exact: true })).toHaveAttribute('aria-valuetext', '48 of 100 leads');
     await expect(panel).not.toContainText(/Revenue|\bwon\b|\bOnline\b/);
