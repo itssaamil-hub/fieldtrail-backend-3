@@ -1,4 +1,6 @@
 import React from "react";
+import { ArrowUpDown, Download } from "lucide-react";
+import { buildSalesmanExportUrl } from "../api.js";
 
 // Lead and salesman UI extracted from App.jsx without changing business behavior.
 export function createLeadFeatures(deps) {
@@ -1416,7 +1418,7 @@ function GpsStatus({ gps, verification }) {
   );
 }
 
-function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads", allowDateFilter = false, embedded = false, employeeMobile = false, hasMore = false, onLoadMore, loadingMore = false, totalCount = null }) {
+function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads", allowDateFilter = false, embedded = false, employeeMobile = false, employeeCity = "", hasMore = false, onLoadMore, loadingMore = false, totalCount = null }) {
   const [briefLead, setBriefLead] = useState(null);
   const [filterDate, setFilterDate] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -1426,6 +1428,9 @@ function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads", allowD
   const [employeeDateFrom, setEmployeeDateFrom] = useState("");
   const [employeeDateTo, setEmployeeDateTo] = useState("");
   const [employeeSort, setEmployeeSort] = useState("latest_activity");
+  const [employeeCityFilter, setEmployeeCityFilter] = useState("");
+  const [employeeDownloadOpen, setEmployeeDownloadOpen] = useState(false);
+  const [employeeSortOpen, setEmployeeSortOpen] = useState(false);
   const isWonModal = title === "Won Leads";
 
   const localDayStart = (value) => {
@@ -1454,6 +1459,37 @@ function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads", allowD
     }
     return true;
   };
+  const employeeExportRange = () => {
+    const today = localDayStart(new Date());
+    const toIso = (date) => date.toISOString().slice(0, 10);
+    if (employeeDatePreset === "today") return { from: toIso(today), to: toIso(today) };
+    if (employeeDatePreset === "yesterday") {
+      const day = new Date(today); day.setDate(day.getDate() - 1);
+      return { from: toIso(day), to: toIso(day) };
+    }
+    if (employeeDatePreset === "last7" || employeeDatePreset === "last30") {
+      const days = employeeDatePreset === "last7" ? 6 : 29;
+      const from = new Date(today); from.setDate(from.getDate() - days);
+      return { from: toIso(from), to: toIso(today) };
+    }
+    if (employeeDatePreset === "month") {
+      const from = new Date(today.getFullYear(), today.getMonth(), 1);
+      return { from: toIso(from), to: toIso(today) };
+    }
+    if (employeeDatePreset === "custom") return { from: employeeDateFrom || "", to: employeeDateTo || "" };
+    return { from: "", to: "" };
+  };
+  const downloadEmployeeLeads = (format) => {
+    const range = employeeExportRange();
+    window.open(buildSalesmanExportUrl(format, {
+      status: filterStatus,
+      search: searchQuery.trim(),
+      from: range.from,
+      to: range.to,
+    }), "_blank");
+    setEmployeeDownloadOpen(false);
+  };
+
   const employeeAttention = (lead) => {
     const today = localDayStart(new Date());
     const followUp = lead.nextFollowUpDate ? localDayStart(`${String(lead.nextFollowUpDate).slice(0, 10)}T00:00:00`) : null;
@@ -1521,28 +1557,43 @@ function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads", allowD
           </div>
         </div>
       )}
-      <div style={{ position: "relative", marginBottom: 10 }}>
-        <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: T.inkSoft }} />
-        <input
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search by business, contact, phone, or area…"
-          style={{ ...inputStyle, marginBottom: 0, width: "100%", padding: "9px 12px 9px 32px", boxSizing: "border-box" }}
-        />
-        {searchQuery && (
-          <button onClick={() => setSearchQuery("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer", color: T.inkSoft }}>
-            <X size={14} />
-          </button>
+      <div style={{ display: "flex", alignItems: "center", gap: employeeMobile ? 8 : 0, marginBottom: 10 }}>
+        <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
+          <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: T.inkSoft }} />
+          <input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by business, contact, phone, or area…"
+            style={{ ...inputStyle, marginBottom: 0, width: "100%", padding: "9px 32px 9px 32px", boxSizing: "border-box" }}
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer", color: T.inkSoft }}>
+              <X size={14} />
+            </button>
+          )}
+        </div>
+        {employeeMobile && (
+          <div style={{ position: "relative", flexShrink: 0 }}>
+            <button type="button" aria-label="Download my deals" title="Download" onClick={() => setEmployeeDownloadOpen((open) => !open)} style={{ width: 38, height: 38, display: "inline-flex", alignItems: "center", justifyContent: "center", border: `1px solid ${T.line}`, borderRadius: 10, background: "#fff", color: T.ink, cursor: "pointer" }}>
+              <Download size={16} />
+            </button>
+            {employeeDownloadOpen && (
+              <div style={{ position: "absolute", top: 42, right: 0, zIndex: 40, minWidth: 140, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 10, boxShadow: "0 8px 24px rgba(20,30,35,.14)", padding: 5 }}>
+                <button type="button" onClick={() => downloadEmployeeLeads("csv")} style={{ width: "100%", textAlign: "left", border: "none", background: "transparent", borderRadius: 7, padding: "8px 9px", fontSize: 12, fontWeight: 650, color: T.ink, cursor: "pointer" }}>CSV</button>
+                <button type="button" onClick={() => downloadEmployeeLeads("xlsx")} style={{ width: "100%", textAlign: "left", border: "none", background: "transparent", borderRadius: 7, padding: "8px 9px", fontSize: 12, fontWeight: 650, color: T.ink, cursor: "pointer" }}>Excel</button>
+              </div>
+            )}
+          </div>
         )}
       </div>
       {employeeMobile ? (
         <>
-          <div className="employee-mobile-lead-filters">
-            <select aria-label="Lead status" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-              <option value="all">Status</option>
-              {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+          <div className="employee-mobile-lead-filters" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 8, marginBottom: 10 }}>
+            <select aria-label="Lead city" value={employeeCityFilter} onChange={(e) => setEmployeeCityFilter(e.target.value)} style={{ minWidth: 0 }}>
+              <option value="">All cities</option>
+              {employeeCity && <option value={employeeCity}>{employeeCity}</option>}
             </select>
-            <select aria-label="Lead date" value={employeeDatePreset} onChange={(e) => setEmployeeDatePreset(e.target.value)}>
+            <select aria-label="Lead date" value={employeeDatePreset} onChange={(e) => setEmployeeDatePreset(e.target.value)} style={{ minWidth: 0 }}>
               <option value="all">Date</option>
               <option value="today">Today</option>
               <option value="yesterday">Yesterday</option>
@@ -1551,13 +1602,23 @@ function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads", allowD
               <option value="month">This month</option>
               <option value="custom">Custom range</option>
             </select>
-            <select aria-label="Lead sort" value={employeeSort} onChange={(e) => setEmployeeSort(e.target.value)}>
-              <option value="latest_activity">Latest activity</option>
-              <option value="oldest_activity">Oldest activity</option>
-              <option value="newest_lead">Newest lead</option>
-              <option value="oldest_lead">Oldest lead</option>
-              <option value="follow_up">Follow-up due</option>
+            <select aria-label="Lead status" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={{ minWidth: 0 }}>
+              <option value="all">Status</option>
+              {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
             </select>
+            <div style={{ position: "relative", minWidth: 0 }}>
+              <button type="button" aria-label="Sort leads" onClick={() => setEmployeeSortOpen((open) => !open)} style={{ width: "100%", height: 36, border: `1px solid ${T.line}`, borderRadius: 9, background: "#fff", color: T.ink, display: "inline-flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "0 10px", fontSize: 11.5, fontWeight: 650, cursor: "pointer" }}>
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{employeeSort === "oldest_activity" ? "Oldest activity" : employeeSort === "newest_lead" ? "Newest lead" : employeeSort === "oldest_lead" ? "Oldest lead" : employeeSort === "follow_up" ? "Follow-up due" : "Latest activity"}</span>
+                <ArrowUpDown size={14} />
+              </button>
+              {employeeSortOpen && (
+                <div style={{ position: "absolute", top: 40, right: 0, zIndex: 40, width: 170, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 10, boxShadow: "0 8px 24px rgba(20,30,35,.14)", padding: 5 }}>
+                  {[["latest_activity","Latest activity"],["oldest_activity","Oldest activity"],["newest_lead","Newest lead"],["oldest_lead","Oldest lead"],["follow_up","Follow-up due"]].map(([value,label]) => (
+                    <button key={value} type="button" onClick={() => { setEmployeeSort(value); setEmployeeSortOpen(false); }} style={{ width: "100%", textAlign: "left", border: "none", background: employeeSort === value ? T.paperDeep : "transparent", color: T.ink, borderRadius: 7, padding: "8px 9px", fontSize: 12, fontWeight: employeeSort === value ? 800 : 650, cursor: "pointer" }}>{label}</button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           {employeeDatePreset === "custom" && (
             <div className="employee-mobile-custom-date">
