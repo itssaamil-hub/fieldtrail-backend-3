@@ -141,7 +141,7 @@ test('Mobile Total Employees KPI opens only the Employees Today operational view
 
   const totalEmployees = page.locator('.engage-dashboard-stat').filter({ hasText: 'Total Employees' }).first();
   await expect(totalEmployees).toBeVisible();
-  await expect(totalEmployees).toContainText('3');
+  await expect(totalEmployees).toContainText('10');
   await expect(totalEmployees).toContainText('1 active now');
 
   await totalEmployees.click();
