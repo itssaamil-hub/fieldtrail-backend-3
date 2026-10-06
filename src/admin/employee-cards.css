@@ -16,6 +16,7 @@
 .emp-search { flex: 1 1 250px; min-width: 0; }
 .emp-search input { border: 0; background: transparent; width: 100%; min-width: 0; padding: 10px 0; font-size: 12px; color: var(--emp-ink); }
 .emp-month select { border: 0; color: var(--emp-ink); background: transparent; padding: 9px 0; font-size: 12px; max-width: 100%; }
+.emp-mobile-filter-pair { display: contents; }
 .emp-filters { display: flex; gap: 5px; flex-wrap: wrap; }
 .emp-filters button { min-height: 36px; padding: 7px 12px; border: 1px solid transparent; border-radius: 999px; background: #edf0f2; color: #52606a; font-size: 12px; white-space: nowrap; }
 .emp-filters button[aria-pressed="true"] { background: var(--emp-teal); color: #fff; }
@@ -73,7 +74,10 @@
   .emp-header-actions button { padding: 7px 9px; font-size: 11px; gap: 5px; }
   .emp-search { flex-basis: 100%; }
   .emp-controls { gap: 8px; }
-  .emp-filters { gap: 5px; }
+  .emp-mobile-filter-pair { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 8px; width: 100%; min-width: 0; }
+  .emp-mobile-filter-pair .emp-month { min-width: 0; width: 100%; }
+  .emp-mobile-filter-pair .emp-month input, .emp-mobile-filter-pair .emp-month select { width: 100%; min-width: 0; }
+  .emp-filters { gap: 5px; width: 100%; }
   .emp-filters button { padding: 6px 10px; font-size: 11px; }
   .emp-card { padding: 13px; }
   .emp-metric { padding: 0 3px; }
