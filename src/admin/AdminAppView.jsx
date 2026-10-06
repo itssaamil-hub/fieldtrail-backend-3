@@ -325,7 +325,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
               <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 9px", borderRadius: 999, background: T.verifiedSoft, color: T.verified, fontSize: 10.5, fontWeight: 800, letterSpacing: ".04em" }}><Radio size={12} /> LIVE</span>
             </div>}
           />}
-          <AdminEmployeesPanel
+          {(!phone || section === "employees") && <AdminEmployeesPanel
             employeePage={phone || (sectionNavigation && section === "employees")}
             salesmen={salesmen}
             leads={leads}
@@ -337,7 +337,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
             onViewRoute={setRouteSalesman}
             onMessageClick={setMessageTarget}
             onOpenSalesmanLeads={setViewingSalesmanLeads}
-          />
+          />}
         </div>
       ) : (
         showDashboard && <LiveMap
