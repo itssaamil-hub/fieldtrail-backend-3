@@ -11,6 +11,7 @@ export default function useSalesmanSettings({ setEmployeeRepliesEnabled }) {
   const [attendanceLocationPolicy, setAttendanceLocationPolicy] = useState({ start: false, end: false });
   const [dailyTarget, setDailyTarget] = useState(8);
   const [monthlyTarget, setMonthlyTarget] = useState(200);
+  const [employeeCity, setEmployeeCity] = useState("");
 
   useEffect(() => {
     let mounted = true;
@@ -19,6 +20,7 @@ export default function useSalesmanSettings({ setEmployeeRepliesEnabled }) {
         if (!mounted) return;
         setDailyTarget(res.profile?.daily_target || 8);
         setMonthlyTarget(res.profile?.monthly_target || 200);
+        setEmployeeCity(res.profile?.city || "");
       })
       .catch(() => { /* profile targets do not affect location safety */ });
     return () => { mounted = false; };
@@ -66,5 +68,6 @@ export default function useSalesmanSettings({ setEmployeeRepliesEnabled }) {
     attendanceLocationPolicy,
     dailyTarget,
     monthlyTarget,
+    employeeCity,
   };
 }
