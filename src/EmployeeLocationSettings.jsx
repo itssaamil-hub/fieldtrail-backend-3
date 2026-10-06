@@ -14,7 +14,7 @@ async function locationRequest(path,opts={}){
   return data;
 }
 
-const defaults={gpsLocation:true,locationMandatoryForNewLead:true,continuousGpsTracking:true,version:0};
+const defaults={gpsLocation:true,locationMandatoryForNewLead:true,continuousGpsTracking:true,requireLocationToStartDay:true,requireLocationToEndDay:true,version:0};
 
 function PolicySwitch({label,description,checked,disabled,onChange}){
   return <label className="ft-q-check" style={{display:'flex',alignItems:'flex-start',gap:10,padding:'11px 0',cursor:disabled?'not-allowed':'pointer',borderBottom:'1px solid #edf1ef',opacity:disabled?.5:1}}>
@@ -38,12 +38,12 @@ export default function EmployeeLocationSettings({employeeId}){
     return()=>{live=false};
   },[employeeId]);
 
-  const dirty=!!policy&&!!draft&&['gpsLocation','locationMandatoryForNewLead','continuousGpsTracking'].some(k=>!!policy[k]!==!!draft[k]);
+  const dirty=!!policy&&!!draft&&['gpsLocation','locationMandatoryForNewLead','continuousGpsTracking','requireLocationToStartDay','requireLocationToEndDay'].some(k=>!!policy[k]!==!!draft[k]);
   const change=(key,value)=>{
     setMessage('');setError('');
     setDraft(current=>{
       const next={...(current||defaults),[key]:value};
-      if(key==='gpsLocation'&&!value){next.locationMandatoryForNewLead=false;next.continuousGpsTracking=false;}
+      if(key==='gpsLocation'&&!value){next.locationMandatoryForNewLead=false;next.continuousGpsTracking=false;next.requireLocationToStartDay=false;next.requireLocationToEndDay=false;}
       return next;
     });
   };
@@ -51,7 +51,7 @@ export default function EmployeeLocationSettings({employeeId}){
     if(!dirty){setMessage('No changes to save.');return;}
     setSaving(true);setError('');setMessage('');
     try{
-      const saved=await locationRequest(`/admin/employees/${employeeId}/location-policy`,{method:'PUT',body:JSON.stringify({gpsLocation:!!draft.gpsLocation,locationMandatoryForNewLead:!!draft.locationMandatoryForNewLead,continuousGpsTracking:!!draft.continuousGpsTracking,version:policy.version})});
+      const saved=await locationRequest(`/admin/employees/${employeeId}/location-policy`,{method:'PUT',body:JSON.stringify({gpsLocation:!!draft.gpsLocation,locationMandatoryForNewLead:!!draft.locationMandatoryForNewLead,continuousGpsTracking:!!draft.continuousGpsTracking,requireLocationToStartDay:!!draft.requireLocationToStartDay,requireLocationToEndDay:!!draft.requireLocationToEndDay,version:policy.version})});
       const next={...defaults,...saved};setPolicy(next);setDraft(next);setMessage('Location settings saved.');
     }catch(e){setError(e.message||'Could not save location settings.')}finally{setSaving(false)}
   };
@@ -65,6 +65,8 @@ export default function EmployeeLocationSettings({employeeId}){
       <PolicySwitch label="GPS Location" description="If off, leads can be saved with no location at all." checked={draft.gpsLocation} disabled={saving} onChange={v=>change('gpsLocation',v)}/>
       <PolicySwitch label="Location Mandatory for New Lead" description="When GPS is on, location must be captured before a new lead can be saved." checked={draft.locationMandatoryForNewLead} disabled={saving||!draft.gpsLocation} onChange={v=>change('locationMandatoryForNewLead',v)}/>
       <PolicySwitch label="Continuous GPS Tracking" description="Sends live location pings only while this employee's day is active." checked={draft.continuousGpsTracking} disabled={saving||!draft.gpsLocation} onChange={v=>change('continuousGpsTracking',v)}/>
+      <PolicySwitch label="Require Location to Start Day" description="Requires a GPS fix before this employee can start the day." checked={draft.requireLocationToStartDay} disabled={saving||!draft.gpsLocation} onChange={v=>change('requireLocationToStartDay',v)}/>
+      <PolicySwitch label="Require Location to End Day" description="Requires a GPS fix before this employee can end the day." checked={draft.requireLocationToEndDay} disabled={saving||!draft.gpsLocation} onChange={v=>change('requireLocationToEndDay',v)}/>
       <button type="button" className="ft-ob-primary" style={{marginTop:10}} disabled={saving} onClick={save}>{saving?'Saving…':'Save Location Settings'}</button>
       <div role="status" style={{fontSize:11.5,marginTop:8,minHeight:18,color:message==='Location settings saved.'?'#12805C':'#6f7a75'}}>{message}</div>
     </>}
