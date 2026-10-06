@@ -953,6 +953,7 @@ function SalesmanApp({ session, online, page, notificationLead }) {
     attendanceLocationPolicy,
     dailyTarget,
     monthlyTarget,
+    employeeCity,
   } = useSalesmanSettings({ setEmployeeRepliesEnabled });
 
   const getBatteryPct = useCallback(async () => {
@@ -1037,6 +1038,7 @@ function SalesmanApp({ session, online, page, notificationLead }) {
       employeeRepliesEnabled={employeeRepliesEnabled}
       dailyTarget={dailyTarget}
       monthlyTarget={monthlyTarget}
+      employeeCity={employeeCity}
       page={page}
       shared={{
         T, fmtMoney, isToday, isThisMonth, isWithinDays, isUpcomingRenewalMonth,
@@ -1514,6 +1516,7 @@ function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads", allowD
       (!filterDate || l.createdAt.toISOString().slice(0, 10) === filterDate) &&
       (filterStatus === "all" || l.status === filterStatus) &&
       (!isWonModal || revenuePeriod === "all" || isThisMonth(l.createdAt)) &&
+      (!employeeCityFilter || employeeCityFilter === employeeCity) &&
       employeeDateMatches(l) &&
       (!searchQuery.trim() || [l.business, l.owner, l.phone, l.subLocation].some((f) => f && f.toLowerCase().includes(searchQuery.trim().toLowerCase())))
   );
