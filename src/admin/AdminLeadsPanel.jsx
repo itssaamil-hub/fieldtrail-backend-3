@@ -380,20 +380,39 @@ export default function AdminLeadsPanel({
           </div>
         </div>
 
-        <div style={{ position: "relative", marginBottom: 12 }}>
-          <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: T.inkSoft }} />
-          <input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            aria-label={desktopContacts ? "Search contacts" : "Search leads"}
-            placeholder={desktopContacts ? "Search by contact, company, phone, or area…" : "Search leads by business, contact, phone, or area…"}
-            style={{ width: "100%", padding: "9px 12px 9px 32px", borderRadius: 10, border: `1px solid ${T.line}`, fontSize: 13.5, boxSizing: "border-box" }}
-          />
-          {searchQuery && (
-            <button onClick={() => setSearchQuery("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer", color: T.inkSoft }}>
-              <X size={14} />
-            </button>
+        <div style={{ display: "flex", alignItems: "center", gap: phone && section === "leads" ? 8 : 0, marginBottom: 12 }}>
+          {phone && section === "leads" && (
+            <DownloadMenu
+              iconOnly
+              ariaLabel="Download contacts"
+              onCsv={() => window.open(buildExportUrl("csv", { salesmanId: filterSalesman, status: filterStatus, date: filterDate }), "_blank")}
+              onXlsx={() => window.open(buildExportUrl("xlsx", { salesmanId: filterSalesman, status: filterStatus, date: filterDate }), "_blank")}
+              onSheets={async () => {
+                setSheetsError("");
+                try {
+                  const info = await api.adminExportSheetsInfo({ salesmanId: filterSalesman, status: filterStatus, date: filterDate });
+                  setSheetsInfo(info);
+                } catch (err) {
+                  setSheetsError(err.message || "Couldn't prepare the Sheets export.");
+                }
+              }}
+            />
           )}
+          <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
+            <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: T.inkSoft }} />
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label={desktopContacts ? "Search contacts" : "Search leads"}
+              placeholder={desktopContacts ? "Search by contact, company, phone, or area…" : "Search leads by business, contact, phone, or area…"}
+              style={{ width: "100%", padding: "9px 32px 9px 32px", borderRadius: 10, border: `1px solid ${T.line}`, fontSize: 13.5, boxSizing: "border-box" }}
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer", color: T.inkSoft }}>
+                <X size={14} />
+              </button>
+            )}
+          </div>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
@@ -451,7 +470,7 @@ export default function AdminLeadsPanel({
                 Reset filters
               </button>
             )}
-            <DownloadMenu
+            {!(phone && section === "leads") && <DownloadMenu
               onCsv={() => window.open(buildExportUrl("csv", { salesmanId: filterSalesman, status: filterStatus, date: filterDate }), "_blank")}
               onXlsx={() => window.open(buildExportUrl("xlsx", { salesmanId: filterSalesman, status: filterStatus, date: filterDate }), "_blank")}
               onSheets={async () => {
@@ -463,7 +482,7 @@ export default function AdminLeadsPanel({
                   setSheetsError(err.message || "Couldn't prepare the Sheets export.");
                 }
               }}
-            />
+            />}
           </div>
         </div>
 
