@@ -138,18 +138,59 @@ function AdminAddLeadModal({ salesmen, onClose, onSubmit }) {
   );
 }
 
+const INDIA_STATES_UTS = [
+  "Andaman and Nicobar Islands", "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar",
+  "Chandigarh", "Chhattisgarh", "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Goa",
+  "Gujarat", "Haryana", "Himachal Pradesh", "Jammu and Kashmir", "Jharkhand", "Karnataka",
+  "Kerala", "Ladakh", "Lakshadweep", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya",
+  "Mizoram", "Nagaland", "Odisha", "Puducherry", "Punjab", "Rajasthan", "Sikkim",
+  "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal"
+];
+
 function SalesmanFormModal({ existingCount, salesman, onClose, onSubmit }) {
   const isEdit = !!salesman;
   const [form, setForm] = useState({
     name: salesman?.name || "", phone: salesman?.phone || "", password: "",
+    stateUt: salesman?.stateUt || "", city: salesman?.city || "",
     area: salesman?.area && salesman.area !== "Unassigned" ? salesman.area : "",
     employeeCode: salesman?.employeeCode || "", dailyTarget: String(salesman?.dailyTarget || 8),
     monthlyTarget: String(salesman?.monthlyTarget || 200),
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [cityOptions, setCityOptions] = useState([]);
+  const [cityLoading, setCityLoading] = useState(false);
+  const [cityLoadError, setCityLoadError] = useState(false);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
-  const canSubmit = form.name.trim().length > 0 && form.phone.trim().length > 0 && (isEdit || form.password.length >= 6);
+  const setStateUt = (e) => {
+    const stateUt = e.target.value;
+    setForm((current) => ({ ...current, stateUt, city: current.stateUt === stateUt ? current.city : "" }));
+  };
+  useEffect(() => {
+    if (!form.stateUt) {
+      setCityOptions([]);
+      setCityLoadError(false);
+      return;
+    }
+    const controller = new AbortController();
+    setCityLoading(true);
+    setCityLoadError(false);
+    fetch("https://countriesnow.space/api/v0.1/countries/state/cities", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ country: "India", state: form.stateUt }),
+      signal: controller.signal,
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error("City list unavailable");
+        return response.json();
+      })
+      .then((payload) => setCityOptions(Array.isArray(payload?.data) ? [...new Set(payload.data)].sort((a, b) => a.localeCompare(b)) : []))
+      .catch((err) => { if (err.name !== "AbortError") { setCityOptions([]); setCityLoadError(true); } })
+      .finally(() => { if (!controller.signal.aborted) setCityLoading(false); });
+    return () => controller.abort();
+  }, [form.stateUt]);
+  const canSubmit = form.name.trim().length > 0 && form.phone.trim().length > 0 && form.stateUt && form.city.trim().length > 0 && (isEdit || form.password.length >= 6);
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -161,6 +202,8 @@ function SalesmanFormModal({ existingCount, salesman, onClose, onSubmit }) {
         employeeCode: form.employeeCode.trim() || (isEdit ? null : `EMP-${1000 + existingCount + 1}`),
         dailyTarget: Number(form.dailyTarget) || 8,
         monthlyTarget: Number(form.monthlyTarget) || 200,
+        stateUt: form.stateUt,
+        city: form.city.trim(),
         area: form.area.trim() || null,
       };
       if (form.password) payload.password = form.password; // only send if actually changing it
@@ -184,7 +227,9 @@ function SalesmanFormModal({ existingCount, salesman, onClose, onSubmit }) {
       <Field label={isEdit ? "Password (leave blank to keep current)" : "Password * (min 6 characters, share with them securely)"}>
         <input style={inputStyle} type="text" value={form.password} onChange={set("password")} placeholder={isEdit ? "Leave blank to keep unchanged" : "Set an initial password"} />
       </Field>
-      <Field label="Area / territory"><input style={inputStyle} value={form.area} onChange={set("area")} placeholder="e.g. Alambagh" /></Field>
+      <Field label="State / UT *"><select style={inputStyle} value={form.stateUt} onChange={setStateUt}><option value="">Select State / UT</option>{INDIA_STATES_UTS.map((state) => <option key={state} value={state}>{state}</option>)}</select></Field>
+      <Field label="City *"><input style={inputStyle} list="engage-india-cities" value={form.city} onChange={set("city")} disabled={!form.stateUt} placeholder={!form.stateUt ? "Select State / UT first" : cityLoading ? "Loading cities…" : "Select or type city"} /><datalist id="engage-india-cities">{cityOptions.map((city) => <option key={city} value={city} />)}</datalist>{cityLoadError && <div style={{fontSize:11.5,color:T.inkSoft,marginTop:4}}>City suggestions are temporarily unavailable. You can still type the city.</div>}</Field>
+      <Field label="Area / Territory"><input style={inputStyle} value={form.area} onChange={set("area")} placeholder="e.g. Gomti Nagar" /></Field>
       <Field label="Employee code"><input style={inputStyle} value={form.employeeCode} onChange={set("employeeCode")} placeholder="Auto-generated if left blank" /></Field>
       <div style={{ display: "flex", gap: 10 }}>
         <div style={{ flex: 1 }}><Field label="Daily lead target"><input style={inputStyle} type="number" min="1" value={form.dailyTarget} onChange={set("dailyTarget")} /></Field></div>
