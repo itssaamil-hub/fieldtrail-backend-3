@@ -18,7 +18,7 @@ function LogoMark({ size = 20 }) {
   );
 }
 
-function TopBar({ hidePageNavigation = false, online, session, page, onChangePage, onAddExpense, onOpenSettings, onOpenOnboarding, onOpenCollections, onOpenDailyReports, onOpenQuotations, onOpenApprovals, onOpenNotifications, onOpenActivityCentre, unreadCount = 0 }) {
+function TopBar({ hidePageNavigation = false, online, session, page, onChangePage, onHome, onAddExpense, onOpenSettings, onOpenOnboarding, onOpenCollections, onOpenDailyReports, onOpenQuotations, onOpenApprovals, onOpenNotifications, onOpenActivityCentre, unreadCount = 0 }) {
   const [narrow, setNarrow] = useState(window.innerWidth < 560);
   useEffect(() => {
     const onResize = () => setNarrow(window.innerWidth < 560);
@@ -31,7 +31,19 @@ function TopBar({ hidePageNavigation = false, online, session, page, onChangePag
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", paddingTop: "calc(14px + env(safe-area-inset-top))", background: hidePageNavigation ? "#F4F5F7" : "linear-gradient(135deg, #0F3D3E 0%, #145C5D 100%)", color: hidePageNavigation ? "#334155" : "#fff", borderBottom: hidePageNavigation ? "1px solid #E4E8EB" : undefined, gap: 10, flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           {!hidePageNavigation && <>
-          <div style={{ width: 30, height: 30, borderRadius: 7, background: "#145C5D", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <div
+            role={session && onHome ? "button" : undefined}
+            tabIndex={session && onHome ? 0 : undefined}
+            aria-label={session && onHome ? "Go to Dashboard" : undefined}
+            onClick={session && onHome ? onHome : undefined}
+            onKeyDown={session && onHome ? (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onHome();
+              }
+            } : undefined}
+            style={{ width: 30, height: 30, borderRadius: 7, background: "#145C5D", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+          >
             <LogoMark size={16} color="#fff" />
           </div>
           <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 17, letterSpacing: 0.2 }}>Engage</div>
