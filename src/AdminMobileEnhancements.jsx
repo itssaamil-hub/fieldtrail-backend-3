@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { getApiBase, getSession } from './api.js';
+import { attendanceV2Api } from './attendanceV2Api.js';
 
 const DAY = 86400000;
 const istKey = date => new Intl.DateTimeFormat('en-CA', { timeZone:'Asia/Kolkata', year:'numeric', month:'2-digit', day:'2-digit' }).format(date);
@@ -59,37 +60,202 @@ const relative = value => {
 const initials = name => String(name||'?').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase();
 
 export function AdminTeamActivitySheet({ salesmen = [], onClose }) {
-  const [briefs,setBriefs]=useState({});
-  const [query,setQuery]=useState('');
-  const [loading,setLoading]=useState(true);
-  useEffect(()=>{
-    let live=true; const base=getApiBase(), token=getSession()?.token;
-    if(!base||!token){setLoading(false);return;}
-    const day=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
-    Promise.all(salesmen.map(async s=>{try{const r=await fetch(`${base}/admin/salesmen/${encodeURIComponent(s.id)}/brief?date=${day}`,{headers:{Authorization:`Bearer ${token}`}});return [s.id,r.ok?await r.json():null]}catch{return [s.id,null]}})).then(rows=>{if(live){setBriefs(Object.fromEntries(rows));setLoading(false)}});
-    return()=>{live=false};
-  },[salesmen]);
-  useEffect(()=>{const key=e=>e.key==='Escape'&&onClose();document.addEventListener('keydown',key);return()=>document.removeEventListener('keydown',key)},[onClose]);
-  const employees=salesmen.map(s=>{
-    const b=briefs[s.id]; const sessions=b?.sessions||[]; const first=sessions[0], last=sessions[sessions.length-1];
-    const status=s.status==='online'?'active':sessions.length?(last?.endedAt?'ended':'offline'):'not-started';
-    const events=b?.events||[]; const lastEvent=events.reduce((a,e)=>!a||new Date(e.at)>new Date(a)?e.at:a,null);
-    return { ...s, brief:b, status, first, last, lastEvent };
+  const [briefs, setBriefs] = useState({});
+  const [attendance, setAttendance] = useState(null);
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let live = true;
+    const base = getApiBase();
+    const token = getSession()?.token;
+    if (!base || !token) {
+      setLoading(false);
+      return undefined;
+    }
+    const day = new Intl.DateTimeFormat('en-CA', {
+      timeZone:'Asia/Kolkata', year:'numeric', month:'2-digit', day:'2-digit',
+    }).format(new Date());
+
+    Promise.all([
+      Promise.all(salesmen.map(async (s) => {
+        try {
+          const r = await fetch(`${base}/admin/salesmen/${encodeURIComponent(s.id)}/brief?date=${day}`, {
+            headers:{ Authorization:`Bearer ${token}` },
+          });
+          return [s.id, r.ok ? await r.json() : null];
+        } catch {
+          return [s.id, null];
+        }
+      })),
+      attendanceV2Api.report({ from:day, to:day }).catch(() => null),
+    ]).then(([rows, report]) => {
+      if (!live) return;
+      setBriefs(Object.fromEntries(rows));
+      setAttendance(report);
+      setLoading(false);
+    });
+
+    return () => { live = false; };
+  }, [salesmen]);
+
+  useEffect(() => {
+    const key = (e) => e.key === 'Escape' && onClose();
+    document.addEventListener('keydown', key);
+    return () => document.removeEventListener('keydown', key);
+  }, [onClose]);
+
+  const attendanceByEmployee = useMemo(() => {
+    const map = new Map();
+    for (const employee of attendance?.employees || []) {
+      map.set(String(employee.userId), employee.details?.[0] || null);
+    }
+    return map;
+  }, [attendance]);
+
+  const employees = salesmen.map((s) => {
+    const brief = briefs[s.id] || null;
+    const day = attendanceByEmployee.get(String(s.id)) || null;
+    const sessions = brief?.sessions || [];
+    const first = sessions[0] || null;
+    const last = sessions[sessions.length - 1] || null;
+    const exceptionKind = day?.exception?.kind || null;
+
+    let status = 'unavailable';
+    if (exceptionKind === 'leave' || day?.state === 'leave') status = 'leave';
+    else if (day?.hasOpen === true) status = 'working';
+    else if ((day?.sessions?.length || 0) > 0 && day?.hasOpen === false) status = 'ended';
+    else if (day?.state === 'Not Started') status = 'not-started';
+    else if (['weekly_off','holiday','Off Day'].includes(day?.state) || ['weekly_off','holiday'].includes(exceptionKind)) status = 'off-day';
+
+    const lateMinutes = Number.isFinite(Number(first?.lateMinutes)) ? Number(first.lateMinutes) : null;
+    const closingRows = brief?.closing || [];
+    let closing = 'Unavailable';
+    if (closingRows.some((row) => row.status === 'submitted')) closing = 'Submitted';
+    else if (closingRows.some((row) => row.status === 'skipped')) closing = 'Skipped';
+    else if (day?.closing?.pending === true) closing = 'Pending';
+    else if (day?.closing?.required === false) closing = 'Not required';
+
+    const exceptions = (day?.anomalies || [])
+      .filter((item) => !['late_start','closing_pending'].includes(item.type))
+      .map((item) => item.type === 'gps_missing' ? 'Missing GPS'
+        : item.type === 'missing_end' ? 'Missing End Day'
+        : item.label)
+      .filter(Boolean);
+
+    return {
+      ...s,
+      brief,
+      day,
+      status,
+      first,
+      last,
+      lateMinutes,
+      closing,
+      exceptions,
+    };
   });
-  const visible=employees.filter(e=>!query.trim()||String(e.name||'').toLowerCase().includes(query.trim().toLowerCase()));
-  const counts=employees.reduce((a,e)=>{a[e.status]=(a[e.status]||0)+1;return a},{})
-  return <div className="engage-team-sheet-backdrop" onMouseDown={e=>e.target===e.currentTarget&&onClose()}>
-    <section className="engage-team-sheet" role="dialog" aria-modal="true" aria-label="Team Activity">
-      <div className="engage-team-handle" />
-      <div className="engage-team-sheet-head"><div><h2>Team Activity</h2><p className="engage-team-summary-text">{employees.length} Employees · {counts.active||0} Active now</p></div><button type="button" className="engage-team-close" aria-label="Close" onClick={onClose}>×</button></div>
-      <div className="engage-team-summary-cards"><div data-tone="active"><strong>{counts.active||0}</strong><span>Active now</span></div><div data-tone="ended"><strong>{counts.ended||0}</strong><span>Day ended</span></div><div data-tone="not-started"><strong>{counts['not-started']||0}</strong><span>Not started</span></div><div data-tone="offline"><strong>{counts.offline||0}</strong><span>Offline</span></div></div>
-      <div className="engage-team-search-wrap"><span>⌕</span><input type="search" placeholder="Search employee…" value={query} onChange={e=>setQuery(e.target.value)} /></div>
-      <div className="engage-team-list">{loading?<div className="engage-team-empty">Loading…</div>:visible.length?visible.map(e=><article key={e.id} className="engage-team-employee-card" data-status={e.status}>
-        <div className="engage-team-employee-top"><div className="engage-team-avatar">{initials(e.name)}</div><div className="engage-team-employee-name-wrap"><div className="engage-team-employee-name">{e.name}</div><div className="engage-team-employee-role">{e.area||'Sales Executive'}</div></div><span className="engage-team-status">{e.status==='active'?'Active now':e.status==='ended'?'Day ended':e.status==='offline'?'Offline':'Not started'}</span></div>
-        <div className="engage-team-meta-grid"><div className="engage-team-meta"><span>{e.status==='ended'?'Ended day':'Started'}</span><strong>{fmtTime(e.status==='ended'?e.last?.endedAt:e.first?.startedAt)}</strong></div><div className="engage-team-meta"><span>Last location</span><strong>{relative(e.lastUpdate)}</strong></div></div>
-        <div className="engage-team-metrics"><div><strong>{Number(e.brief?.glance?.leadsAdded||0)}</strong><span>Leads today</span></div><div><strong>{Number(e.brief?.followUpHealth?.dueToday||0)}</strong><span>Follow-ups due</span></div><div><strong>{Number(e.brief?.unfinished?.pendingTasks||0)}</strong><span>Open tasks</span></div><div className={Number(e.brief?.unfinished?.overdueTasks||0)?'is-alert':''}><strong>{Number(e.brief?.unfinished?.overdueTasks||0)}</strong><span>Overdue</span></div></div>
-        <div className="engage-team-last-activity"><span>Last activity</span><strong>{relative(e.lastEvent||e.lastUpdate)}</strong></div>
-      </article>):<div className="engage-team-empty">No employees found.</div>}</div>
+
+  const counts = employees.reduce((acc, employee) => {
+    acc[employee.status] = (acc[employee.status] || 0) + 1;
+    return acc;
+  }, {});
+
+  const visible = employees.filter((employee) => {
+    const matchesQuery = !query.trim() || String(employee.name || '').toLowerCase().includes(query.trim().toLowerCase());
+    const matchesFilter = filter === 'all' || employee.status === filter;
+    return matchesQuery && matchesFilter;
+  });
+
+  const statusLabel = (status) => status === 'working' ? 'Working'
+    : status === 'not-started' ? 'Not Started'
+    : status === 'leave' ? 'On Leave'
+    : status === 'ended' ? 'Ended Day'
+    : status === 'off-day' ? 'Off Day'
+    : 'Unavailable';
+
+  const tabs = [
+    ['all', 'All', employees.length],
+    ['working', 'Working', counts.working || 0],
+    ['not-started', 'Not Started', counts['not-started'] || 0],
+    ['leave', 'On Leave', counts.leave || 0],
+    ['ended', 'Ended Day', counts.ended || 0],
+  ];
+
+  return <div id="engage-admin-team-activity-sheet" className="engage-team-sheet-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <section className="engage-team-sheet" role="dialog" aria-modal="true" aria-label="Employees Today">
+      <div className="engage-team-sheet-head">
+        <div>
+          <h2>Employees — Today</h2>
+          <p className="engage-team-summary-text">Total {employees.length} · {counts.working || 0} active now</p>
+        </div>
+        <button type="button" className="engage-team-close" aria-label="Close" onClick={onClose}>×</button>
+      </div>
+
+      <div className="engage-team-status-tabs" role="tablist" aria-label="Employee work status">
+        {tabs.map(([key, label, count]) => <button
+          key={key}
+          type="button"
+          role="tab"
+          aria-selected={filter === key}
+          className={filter === key ? 'is-active' : ''}
+          onClick={() => setFilter(key)}
+        >{label} ({count})</button>)}
+      </div>
+
+      <div className="engage-team-search-wrap">
+        <span>⌕</span>
+        <input type="search" placeholder="Search employees…" value={query} onChange={(e) => setQuery(e.target.value)} />
+      </div>
+
+      <div className="engage-team-list">
+        {loading ? <div className="engage-team-empty">Loading…</div> : visible.length ? visible.map((employee) => {
+          const brief = employee.brief;
+          const dueToday = brief?.unfinished?.dueTodayTasks;
+          const overdue = brief?.unfinished?.overdueTasks;
+          const taskText = dueToday == null || overdue == null ? 'Unavailable' : `${Number(dueToday)} due · ${Number(overdue)} overdue`;
+          const area = [employee.area && employee.area !== 'Unassigned' ? employee.area : '', employee.city || ''].filter(Boolean).join(' · ') || 'Unavailable';
+
+          return <article key={employee.id} className="engage-team-employee-card" data-status={employee.status} aria-label={`${employee.name} today status`}>
+            <div className="engage-team-employee-top">
+              <div className="engage-team-avatar">{initials(employee.name)}</div>
+              <div className="engage-team-employee-name-wrap">
+                <div className="engage-team-employee-name">{employee.name}</div>
+                <div className="engage-team-employee-role">{area}</div>
+              </div>
+              <span className="engage-team-status">{statusLabel(employee.status)}</span>
+            </div>
+
+            <div className="engage-team-live-row">
+              <span>{employee.first?.startedAt ? <>Started <strong>{fmtTime(employee.first.startedAt)}</strong></> : 'Not started yet'}</span>
+              {employee.lateMinutes > 0 && <strong className="engage-team-late">{Math.round(employee.lateMinutes)} min late</strong>}
+              {employee.lateMinutes === 0 && employee.first?.startedAt && <strong className="engage-team-on-time">On time</strong>}
+            </div>
+
+            <div className="engage-team-live-row">
+              <span>Last seen <strong>{relative(employee.lastUpdate) === '—' ? 'Unavailable' : relative(employee.lastUpdate)}</strong></span>
+              <span>Area <strong>{area}</strong></span>
+            </div>
+
+            <div className="engage-team-metrics engage-team-metrics-today">
+              <div><strong>{brief ? Number(brief.glance?.leadsAdded || 0) : '—'}</strong><span>Leads today</span></div>
+              <div><strong>{brief ? Number(brief.followUpHealth?.dueToday || 0) : '—'}</strong><span>Follow-ups due</span></div>
+              <div className={Number(overdue || 0) > 0 ? 'is-alert' : ''}><strong>{brief ? taskText : '—'}</strong><span>Tasks today</span></div>
+            </div>
+
+            <div className="engage-team-closing-row">
+              <span>Day Closing</span>
+              <strong data-closing={employee.closing.toLowerCase().replace(/\\s+/g, '-')}>{employee.closing}</strong>
+            </div>
+
+            {employee.exceptions.length > 0 && <div className="engage-team-exceptions">
+              {employee.exceptions.slice(0, 2).map((label) => <span key={label}>⚠ {label}</span>)}
+            </div>}
+          </article>;
+        }) : <div className="engage-team-empty">No employees found.</div>}
+      </div>
     </section>
   </div>;
 }
+
