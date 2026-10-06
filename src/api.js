@@ -480,6 +480,8 @@ export function mapSalesmanRow(row) {
     name: row.full_name,
     phone: row.phone,
     area: row.area || "Unassigned",
+    stateUt: row.state_ut || "",
+    city: row.city || "",
     employeeCode: row.employee_code || "",
     dailyTarget: row.daily_target || 8,
     monthlyTarget: row.monthly_target || 200,
