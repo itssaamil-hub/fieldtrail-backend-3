@@ -138,11 +138,14 @@ function AdminAddLeadModal({ salesmen, onClose, onSubmit }) {
   );
 }
 
-function SalesmanFormModal({ existingCount, salesman, onClose, onSubmit }) {
+function SalesmanFormModal({ existingCount, salesman, salesmen = [], onClose, onSubmit }) {
   const isEdit = !!salesman;
   const [form, setForm] = useState({
     name: salesman?.name || "", phone: salesman?.phone || "", password: "",
     area: salesman?.area && salesman.area !== "Unassigned" ? salesman.area : "",
+    region: salesman?.region || "",
+    isReportingManager: salesman?.isReportingManager ? "yes" : "no",
+    reportingManagerId: salesman?.reportingManagerId || "",
     employeeCode: salesman?.employeeCode || "", dailyTarget: String(salesman?.dailyTarget || 8),
     monthlyTarget: String(salesman?.monthlyTarget || 200),
   });
@@ -162,6 +165,9 @@ function SalesmanFormModal({ existingCount, salesman, onClose, onSubmit }) {
         dailyTarget: Number(form.dailyTarget) || 8,
         monthlyTarget: Number(form.monthlyTarget) || 200,
         area: form.area.trim() || null,
+        region: form.region.trim() || null,
+        isReportingManager: form.isReportingManager === "yes",
+        reportingManagerId: form.isReportingManager === "yes" ? null : (form.reportingManagerId || null),
       };
       if (form.password) payload.password = form.password; // only send if actually changing it
       await onSubmit(payload);
@@ -184,7 +190,10 @@ function SalesmanFormModal({ existingCount, salesman, onClose, onSubmit }) {
       <Field label={isEdit ? "Password (leave blank to keep current)" : "Password * (min 6 characters, share with them securely)"}>
         <input style={inputStyle} type="text" value={form.password} onChange={set("password")} placeholder={isEdit ? "Leave blank to keep unchanged" : "Set an initial password"} />
       </Field>
+      <Field label="State / Region"><input style={inputStyle} value={form.region} onChange={set("region")} placeholder="e.g. Uttar Pradesh" /></Field>
       <Field label="Area / territory"><input style={inputStyle} value={form.area} onChange={set("area")} placeholder="e.g. Alambagh" /></Field>
+      <Field label="Role"><select style={inputStyle} value={form.isReportingManager} onChange={set("isReportingManager")}><option value="no">Salesman</option><option value="yes">Reporting Manager</option></select></Field>
+      <Field label="Reporting Manager"><select style={inputStyle} value={form.reportingManagerId} onChange={set("reportingManagerId")} disabled={form.isReportingManager==="yes"}><option value="">No reporting manager</option>{salesmen.filter(person=>person.id!==salesman?.id&&person.isReportingManager&&person.isActive!==false).map(person=><option key={person.id} value={person.id}>{person.name}{person.region?" · "+person.region:""}</option>)}</select></Field>
       <Field label="Employee code"><input style={inputStyle} value={form.employeeCode} onChange={set("employeeCode")} placeholder="Auto-generated if left blank" /></Field>
       <div style={{ display: "flex", gap: 10 }}>
         <div style={{ flex: 1 }}><Field label="Daily lead target"><input style={inputStyle} type="number" min="1" value={form.dailyTarget} onChange={set("dailyTarget")} /></Field></div>
