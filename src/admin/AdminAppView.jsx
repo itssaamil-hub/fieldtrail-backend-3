@@ -117,8 +117,8 @@ function LiveMap({ salesmen, leads, onSelectLead, title = "Live Employees & Lead
         {headerControls || (!subtitle && <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: T.verified, fontFamily: "'IBM Plex Mono', monospace" }}><Radio size={12} /> LIVE</div>)}
       </div>
       {subtitle && <div style={{ fontSize: 11.5, color: T.inkSoft, marginBottom: 8 }}>{subtitle}</div>}
-      <div style={{ position: "relative", flex: 1, minHeight: subtitle ? 460 : 360 }}>
-        <div ref={containerRef} style={{ width: "100%", height: "100%", minHeight: subtitle ? 460 : 360, borderRadius: 11, overflow: "hidden" }} />
+      <div style={{ position: "relative", flex: 1, minHeight: 460 }}>
+        <div ref={containerRef} style={{ width: "100%", height: "100%", minHeight: 460, borderRadius: 11, overflow: "hidden" }} />
         <button
           onClick={() => setLocked((v) => !v)}
           title={locked ? "Map is locked — tap to unlock and move it" : "Map is unlocked — tap to lock it in place"}
@@ -319,9 +319,8 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
         }}
       />
       <div className={phone && showDashboard ? "engage-admin-mobile-map-stack" : undefined} hidden={!showDashboard && section !== "employees"}>
-            {mapView === "live" || (sectionNavigation && section === "employees") ? (
-        <div className={sectionNavigation && section === "employees" ? undefined : "ft-dashboard-grid"}>
-          {showDashboard && <LiveMap
+        {showDashboard && (mapView === "live" ? (
+          <LiveMap
             salesmen={salesmen}
             leads={leads}
             onSelectLead={setSelectedLead}
@@ -330,36 +329,35 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
               <Tab active={mapView === "leads"} onClick={() => setMapView("leads")} label="Lead Locations" />
               <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 9px", borderRadius: 999, background: T.verifiedSoft, color: T.verified, fontSize: 10.5, fontWeight: 800, letterSpacing: ".04em" }}><Radio size={12} /> LIVE</span>
             </div>}
-          />}
-          {(!phone || section === "employees") && <AdminEmployeesPanel
-            employeePage={phone || (sectionNavigation && section === "employees")}
-            salesmen={salesmen}
-            leads={leads}
-            shared={{ T, inputStyle }}
-            onAddClick={() => setShowAddSalesman(true)}
-            onSettingsClick={setEmployeeSettings}
-            onBriefClick={setBriefSalesman}
-            onDeleteClick={setDeleteSalesmanConfirm}
-            onViewRoute={setRouteSalesman}
-            onMessageClick={setMessageTarget}
-            onOpenSalesmanLeads={setViewingSalesmanLeads}
-          />}
-        </div>
-      ) : (
-        showDashboard && <LiveMap
-          salesmen={[]}
-          leads={filteredLeads}
-          onSelectLead={setSelectedLead}
-          title="Live Employees & Lead Map"
-          subtitle="Respects the employee/status/date filters below"
-          headerControls={<div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-            <Tab active={mapView === "live"} onClick={() => setMapView("live")} label="Live Map" />
-            <Tab active={mapView === "leads"} onClick={() => setMapView("leads")} label="Lead Locations" />
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 9px", borderRadius: 999, background: T.verifiedSoft, color: T.verified, fontSize: 10.5, fontWeight: 800, letterSpacing: ".04em" }}><Radio size={12} /> LIVE</span>
-          </div>}
-        />
-      )}
+          />
+        ) : (
+          <LiveMap
+            salesmen={[]}
+            leads={filteredLeads}
+            onSelectLead={setSelectedLead}
+            title="Live Employees & Lead Map"
+            subtitle="Respects the employee/status/date filters below"
+            headerControls={<div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+              <Tab active={mapView === "live"} onClick={() => setMapView("live")} label="Live Map" />
+              <Tab active={mapView === "leads"} onClick={() => setMapView("leads")} label="Lead Locations" />
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 9px", borderRadius: 999, background: T.verifiedSoft, color: T.verified, fontSize: 10.5, fontWeight: 800, letterSpacing: ".04em" }}><Radio size={12} /> LIVE</span>
+            </div>}
+          />
+        ))}
 
+        {sectionNavigation && section === "employees" && <AdminEmployeesPanel
+          employeePage
+          salesmen={salesmen}
+          leads={leads}
+          shared={{ T, inputStyle }}
+          onAddClick={() => setShowAddSalesman(true)}
+          onSettingsClick={setEmployeeSettings}
+          onBriefClick={setBriefSalesman}
+          onDeleteClick={setDeleteSalesmanConfirm}
+          onViewRoute={setRouteSalesman}
+          onMessageClick={setMessageTarget}
+          onOpenSalesmanLeads={setViewingSalesmanLeads}
+        />}
       </div>
       <AdminLeadsPanel
         showLeads={showLeads}
