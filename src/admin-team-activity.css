@@ -294,3 +294,167 @@
   from{transform:translateY(20px);opacity:.5}
   to{transform:translateY(0);opacity:1}
 }
+
+
+@media (max-width:900px){
+  #engage-admin-team-activity-sheet.engage-team-sheet-backdrop{
+    align-items:stretch;
+    background:#F7F9F9;
+    backdrop-filter:none;
+  }
+
+  #engage-admin-team-activity-sheet .engage-team-sheet{
+    height:100dvh;
+    max-height:100dvh;
+    box-sizing:border-box;
+    border-radius:0;
+    padding:18px 14px calc(24px + env(safe-area-inset-bottom));
+    box-shadow:none;
+  }
+
+  #engage-admin-team-activity-sheet .engage-team-sheet-head{
+    position:sticky;
+    top:-18px;
+    z-index:4;
+    margin:0 -14px 10px;
+    padding:18px 14px 10px;
+    background:#F7F9F9;
+  }
+
+  #engage-admin-team-activity-sheet .engage-team-sheet-head h2{
+    font-size:21px;
+  }
+
+  .engage-team-status-tabs{
+    display:flex;
+    gap:7px;
+    overflow-x:auto;
+    margin:0 0 10px;
+    padding:1px 0 2px;
+    scrollbar-width:none;
+  }
+
+  .engage-team-status-tabs::-webkit-scrollbar{display:none}
+
+  .engage-team-status-tabs button{
+    flex:0 0 auto;
+    min-height:34px;
+    padding:7px 11px;
+    border:1px solid #E2E7E7;
+    border-radius:10px;
+    background:#fff;
+    color:#617072;
+    font-size:10.5px;
+    font-weight:700;
+    white-space:nowrap;
+  }
+
+  .engage-team-status-tabs button.is-active{
+    border-color:#145C5D;
+    background:#145C5D;
+    color:#fff;
+  }
+
+  .engage-team-live-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-top:10px;
+    color:#6F7B7D;
+    font-size:10.5px;
+  }
+
+  .engage-team-live-row>span{
+    min-width:0;
+  }
+
+  .engage-team-live-row strong{
+    color:#26383A;
+    font-weight:700;
+  }
+
+  .engage-team-live-row .engage-team-late{
+    flex:0 0 auto;
+    color:#C0392B;
+  }
+
+  .engage-team-live-row .engage-team-on-time{
+    flex:0 0 auto;
+    color:#12805C;
+  }
+
+  .engage-team-metrics.engage-team-metrics-today{
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    margin-top:12px;
+    padding-top:11px;
+    border-top:1px solid #EEF1F1;
+  }
+
+  .engage-team-metrics.engage-team-metrics-today strong{
+    font-size:14px;
+    line-height:1.15;
+  }
+
+  .engage-team-metrics.engage-team-metrics-today>div:last-child strong{
+    font-size:11px;
+  }
+
+  .engage-team-closing-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-top:11px;
+    padding-top:10px;
+    border-top:1px solid #EEF1F1;
+    color:#788583;
+    font-size:10.5px;
+  }
+
+  .engage-team-closing-row strong{
+    padding:5px 8px;
+    border-radius:8px;
+    background:#EEF1F2;
+    color:#5F6D70;
+    font-size:10px;
+  }
+
+  .engage-team-closing-row strong[data-closing="pending"]{
+    background:#FFF4DA;
+    color:#9A6B11;
+  }
+
+  .engage-team-closing-row strong[data-closing="submitted"]{
+    background:#EAF7F1;
+    color:#12805C;
+  }
+
+  .engage-team-closing-row strong[data-closing="skipped"]{
+    background:#F1F3F4;
+    color:#657275;
+  }
+
+  .engage-team-exceptions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-top:9px;
+  }
+
+  .engage-team-exceptions span{
+    padding:7px 9px;
+    border-radius:9px;
+    background:#FBEAE8;
+    color:#C0392B;
+    font-size:10px;
+    font-weight:700;
+  }
+
+  [data-status="working"] .engage-team-status{background:#EAF7F1;color:#12805C}
+  [data-status="leave"] .engage-team-status{background:#F3EEFF;color:#7651A8}
+  [data-status="ended"] .engage-team-status{background:#EEF3FF;color:#4C69A8}
+  [data-status="not-started"] .engage-team-status{background:#FFF4DA;color:#9A6B11}
+  [data-status="off-day"] .engage-team-status{background:#EFF1F2;color:#657275}
+  [data-status="unavailable"] .engage-team-status{background:#EFF1F2;color:#657275}
+}
