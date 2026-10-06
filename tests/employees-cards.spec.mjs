@@ -7,7 +7,7 @@ const employees = Array.from({ length: 10 }, (_, i) => ({
   state_ut: 'Uttar Pradesh', city: i === 0 ? 'Lucknow' : 'Kanpur',
   last_battery_pct: 78, last_speed_mps: 0, last_seen_at: i === 3 ? null : '2026-10-05T06:00:00Z', total_distance_m: 12400,
 }));
-const brief = (id) => ({ sessions: id === 'employee-2' ? [] : [id === 'employee-3' ? { startedAt: '2026-10-05T03:42:00Z' } : { startedAt: '2026-10-05T03:42:00Z', lateMinutes: id === 'employee-0' ? 22 : 0 }], glance: { leadsAdded: 8 }, followUpHealth: { dueToday: 4 }, unfinished: { pendingTasks: 2 } });
+const brief = (id) => ({ sessions: id === 'employee-2' ? [] : [id === 'employee-3' ? { startedAt: '2026-10-05T03:42:00Z' } : { startedAt: '2026-10-05T03:42:00Z', lateMinutes: id === 'employee-0' ? 22 : 0 }], glance: { leadsAdded: 8 }, followUpHealth: { dueToday: 4 }, unfinished: { pendingTasks: 2, dueTodayTasks: id === 'employee-0' ? 2 : 1, overdueTasks: id === 'employee-0' ? 1 : 0 }, closing: id === 'employee-0' ? [] : [{ status: 'submitted' }] });
 
 async function boot(page, fail = false) {
   await page.route('http://127.0.0.1:9999/**', async route => {
@@ -15,6 +15,20 @@ async function boot(page, fail = false) {
     const path = url.pathname;
     let data = {};
     if (path === '/admin/salesmen') data = { salesmen: employees };
+    else if (path === '/attendance-v2/report') data = {
+      employees: employees.map((s, i) => ({
+        userId: s.id,
+        details: [{
+          day: '2026-10-05',
+          state: i === 2 ? 'leave' : i === 1 ? 'Present' : i === 0 ? 'Day Open' : 'Not Started',
+          hasOpen: i === 0,
+          sessions: i === 2 || i >= 3 ? [] : [{ id: `session-${i}` }],
+          exception: i === 2 ? { kind: 'leave', label: 'Approved leave' } : null,
+          closing: i === 0 ? { required: true, completed: false, pending: true } : i === 1 ? { required: true, completed: true, pending: false } : { required: false, completed: false, pending: false },
+          anomalies: i === 0 ? [{ type: 'gps_missing', label: 'GPS missing' }] : [],
+        }],
+      })),
+    };
     else if (path === '/admin/employees/revenue') data = { rows: employees.map(s => ({ salesman_id: s.id, leads_created: url.searchParams.get('month') === 'all' ? 148 : 48, revenue: 45000, won: 3 })) };
     else if (/\/salesmen\/[^/]+\/brief$/.test(path)) data = brief(path.split('/')[3]);
     else if (path.includes('/history')) data = { route: [], leads: [] };
@@ -115,4 +129,52 @@ test('Dashboard keeps the map full width and omits employee panels', async ({ pa
   await expect(mapCard).toBeVisible();
   const width = await mapCard.evaluate((node) => node.getBoundingClientRect().width);
   expect(width).toBeGreaterThan(900);
+});
+
+
+test('Mobile Total Employees KPI opens only the Employees Today operational view', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await boot(page);
+  await page.getByRole('button', { name: 'Dashboard', exact: true }).click();
+
+  const totalEmployees = page.locator('.engage-dashboard-stat').filter({ hasText: 'Total Employees' }).first();
+  await expect(totalEmployees).toBeVisible();
+  await expect(totalEmployees).toContainText('3');
+  await expect(totalEmployees).toContainText('1 active now');
+
+  await totalEmployees.click();
+  const sheet = page.getByRole('dialog', { name: 'Employees Today' });
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByRole('heading', { name: 'Employees — Today' })).toBeVisible();
+  await expect(sheet).toContainText('Total 10 · 1 active now');
+
+  const anand = sheet.getByRole('article', { name: 'Anand today status' });
+  await expect(anand).toContainText('Working');
+  await expect(anand).toContainText('22 min late');
+  await expect(anand).toContainText('Last seen');
+  await expect(anand).toContainText('Gomti Nagar');
+  await expect(anand).toContainText('8');
+  await expect(anand).toContainText('4');
+  await expect(anand).toContainText('2 due · 1 overdue');
+  await expect(anand).toContainText('Pending');
+  await expect(anand).toContainText('Missing GPS');
+
+  await sheet.getByRole('tab', { name: 'On Leave (1)' }).click();
+  await expect(sheet.getByRole('article', { name: 'Sandeep today status' })).toContainText('On Leave');
+  await expect(sheet.getByRole('article', { name: 'Anand today status' })).toHaveCount(0);
+
+  await sheet.getByRole('button', { name: 'Close' }).click();
+  await expect(sheet).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test('Desktop Total Employees KPI does not open the mobile Employees Today view', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await boot(page);
+  await page.getByRole('button', { name: 'Dashboard', exact: true }).click();
+  const totalEmployees = page.locator('.engage-dashboard-stat').filter({ hasText: 'Total Employees' }).first();
+  await totalEmployees.click();
+  await expect(page.getByRole('dialog', { name: 'Employees Today' })).toHaveCount(0);
 });
