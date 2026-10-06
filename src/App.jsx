@@ -536,6 +536,7 @@ export default function App() {
   const [showDataHealth, setShowDataHealth] = useState(false);
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showActivityCentreMobile, setShowActivityCentreMobile] = useState(false);
   const [notificationLead, setNotificationLead] = useState(null);
   const desktop = useDesktopSidebar();
   const [desktopSection, setDesktopSection] = useState("dashboard");
@@ -611,6 +612,7 @@ export default function App() {
     setTopPage("dashboard");
     closeNotifications();
     setNotificationLead(null);
+    setShowActivityCentreMobile(false);
     setShowOnboarding(false); setShowOnboardingSettings(false); setQuotationView(null); setShowDailyReports(false); setCollectionView(null);
   };
 
@@ -642,7 +644,9 @@ export default function App() {
   } else if (!session) {
     body = <LoginScreen apiBase={apiBase} online={online} onLoggedIn={handleLoggedIn} onOpenSettings={() => setShowSettings(true)} />;
   } else if (session.role === "admin") {
-    body = adminDesktop && desktopSection === "payments" && topPage !== "reports"
+    body = !adminDesktop && showActivityCentreMobile
+      ? <ActivityCentre mobile onClose={() => setShowActivityCentreMobile(false)} onOpenLead={lead => { setShowActivityCentreMobile(false); setTopPage("dashboard"); setNotificationLead({id:lead.id, lead, openedAt:Date.now()}); }} />
+      : adminDesktop && desktopSection === "payments" && topPage !== "reports"
       ? <CollectionsPanel embedded />
       : adminDesktop && desktopSection === "exceptions" && topPage !== "reports"
       ? <ExceptionCentre onNavigate={selectDesktopSection} />
@@ -665,6 +669,7 @@ export default function App() {
         onAddExpense={session?.role === "admin" ? () => setShowAddExpense(true) : undefined}
         unreadCount={unreadCount}
         onOpenNotifications={session ? () => { setShowSettings(false); setShowNotifications(true); } : undefined}
+        onOpenActivityCentre={session?.role === "admin" && !adminDesktop ? () => { closeNotifications(); setShowSettings(false); setShowOnboarding(false); setQuotationView(null); setCollectionView(null); setShowDailyReports(false); setShowActivityCentreMobile(true); } : undefined}
         onOpenSettings={() => { closeNotifications(); setShowOnboarding(false); setShowSettings(true); }}
         onOpenCollections={()=>{closeNotifications();setShowSettings(false);setShowOnboarding(false);setQuotationView(null);setShowDailyReports(false);setCollectionView({});}}
         onOpenDailyReports={() => { closeNotifications(); setShowSettings(false); setShowOnboarding(false); setQuotationView(null); setShowDailyReports(true); }}
