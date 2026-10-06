@@ -698,7 +698,7 @@ function FieldOptionsSection() {
   );
 }
 
-function DownloadMenu({ onCsv, onXlsx, onSheets, onPdf }) {
+function DownloadMenu({ onCsv, onXlsx, onSheets, onPdf, iconOnly = false, ariaLabel = "Download" }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
 
@@ -719,9 +719,11 @@ function DownloadMenu({ onCsv, onXlsx, onSheets, onPdf }) {
     <div ref={containerRef} style={{ position: "relative" }}>
       <button
         onClick={() => setOpen((o) => !o)}
-        style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: T.ink, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 6, padding: "6px 10px", cursor: "pointer" }}
+        aria-label={ariaLabel}
+        title={ariaLabel}
+        style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: iconOnly ? 0 : 6, fontSize: 12, fontWeight: 600, color: T.ink, background: "#fff", border: `1px solid ${T.line}`, borderRadius: iconOnly ? 9 : 6, padding: iconOnly ? 0 : "6px 10px", width: iconOnly ? 38 : undefined, height: iconOnly ? 38 : undefined, cursor: "pointer" }}
       >
-        <Download size={12} /> Download
+        <Download size={iconOnly ? 16 : 12} />{!iconOnly && " Download"}
       </button>
       {open && (
         <div style={{ position: "absolute", top: "calc(100% + 4px)", right: 0, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 11, boxShadow: "0 6px 20px rgba(28,36,48,0.15)", zIndex: 100, minWidth: 150, overflow: "hidden" }}>
