@@ -4,6 +4,10 @@ const employees = Array.from({ length: 10 }, (_, i) => ({
   id: `employee-${i}`, full_name: ['Anand', 'Rohit', 'Sandeep', 'Jazeem'][i] || `Employee ${i}`,
   area: i ? 'Hazratganj' : 'Gomti Nagar', employee_code: `EMP-${i}`, phone: '9999999999',
   daily_target: 15, monthly_target: 100, status: i === 0 ? 'online' : 'offline', is_active: true,
+  region: i < 5 ? 'Uttar Pradesh' : 'Karnataka',
+  is_reporting_manager: i === 0,
+  reporting_manager_id: i > 0 && i < 5 ? 'employee-0' : null,
+  reporting_manager_name: i > 0 && i < 5 ? 'Anand' : null,
   last_battery_pct: 78, last_speed_mps: 0, last_seen_at: '2026-10-05T06:00:00Z', total_distance_m: 12400,
 }));
 const brief = (id) => ({ sessions: id === 'employee-2' ? [] : [{ startedAt: '2026-10-05T03:42:00Z' }], glance: { leadsAdded: 8 }, followUpHealth: { dueToday: 4 }, unfinished: { pendingTasks: 2 } });
@@ -58,7 +62,7 @@ for (const width of [390, 1440]) {
     await expect(panel.locator('.emp-card')).toHaveCount(2);
     await panel.getByRole('searchbox').fill('Gomti');
     await expect(panel.locator('.emp-card')).toHaveCount(1);
-    await panel.getByRole('combobox').selectOption('all');
+    await panel.getByLabel('Employee lead month').selectOption('all');
     await expect(anand).toContainText('148 leads');
     await expect(anand.getByRole('progressbar')).toHaveCount(1);
     await anand.getByRole('button', { name: 'Daily Brief', exact: true }).click();
