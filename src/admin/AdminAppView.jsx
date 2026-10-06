@@ -417,6 +417,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
       {showAddSalesman && (
         <SalesmanFormModal
           existingCount={salesmen.length}
+          salesmen={salesmen}
           onClose={() => setShowAddSalesman(false)}
           onSubmit={async (s) => { await onAddSalesman(s); setShowAddSalesman(false); }}
         />
@@ -426,6 +427,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
       {editSalesman && (
         <SalesmanFormModal
           salesman={editSalesman}
+          salesmen={salesmen}
           onClose={() => setEditSalesman(null)}
           onSubmit={async (payload) => { await onEditSalesman(editSalesman.id, payload); setEditSalesman(null); }}
         />
