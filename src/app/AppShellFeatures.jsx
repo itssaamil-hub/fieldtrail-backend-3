@@ -18,7 +18,7 @@ function LogoMark({ size = 20 }) {
   );
 }
 
-function TopBar({ hidePageNavigation = false, online, session, page, onChangePage, onAddExpense, onOpenSettings, onOpenOnboarding, onOpenCollections, onOpenDailyReports, onOpenQuotations, onOpenApprovals, onOpenNotifications, unreadCount = 0 }) {
+function TopBar({ hidePageNavigation = false, online, session, page, onChangePage, onAddExpense, onOpenSettings, onOpenOnboarding, onOpenCollections, onOpenDailyReports, onOpenQuotations, onOpenApprovals, onOpenNotifications, onOpenActivityCentre, unreadCount = 0 }) {
   const [narrow, setNarrow] = useState(window.innerWidth < 560);
   useEffect(() => {
     const onResize = () => setNarrow(window.innerWidth < 560);
@@ -78,7 +78,7 @@ function TopBar({ hidePageNavigation = false, online, session, page, onChangePag
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <ConnectionPill online={online} />
           {onOpenNotifications && <button type="button" onClick={onOpenNotifications} title="Notifications" aria-label={unreadCount ? `Notifications, ${unreadCount} unread` : "Notifications"} className={session?.role === "salesman" ? "employee-notification-button" : undefined} style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 6, border: hidePageNavigation ? "1px solid #E4E8EB" : "1px solid rgba(255,255,255,0.22)", cursor: "pointer", background: hidePageNavigation ? "#fff" : "rgba(255,255,255,0.14)", color: hidePageNavigation ? "#334155" : "#fff" }}><Bell size={14} />{unreadCount > 0 && <span className="ft-notification-badge" aria-hidden="true">{unreadCount > 99 ? "99+" : unreadCount}</span>}</button>}
-          {session?.role !== "salesman" && <AppMenu onExpenses={narrow && session?.role === "admin" ? onAddExpense : undefined} onCollections={onOpenCollections} signedIn={!!session} role={session?.role} onSettings={onOpenSettings} onOnboarding={onOpenOnboarding} onQuotations={onOpenQuotations} onApprovals={onOpenApprovals} onDailyReports={undefined} />}
+          {session?.role !== "salesman" && <AppMenu onExpenses={narrow && session?.role === "admin" ? onAddExpense : undefined} onCollections={onOpenCollections} signedIn={!!session} role={session?.role} onSettings={onOpenSettings} onOnboarding={onOpenOnboarding} onQuotations={onOpenQuotations} onApprovals={onOpenApprovals} onDailyReports={undefined} onActivityCentre={onOpenActivityCentre} />}
         </div>
       </div>
     </div>
