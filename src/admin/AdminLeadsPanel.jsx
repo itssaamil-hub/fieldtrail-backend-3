@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { LayoutGrid, List, Plus, Search, X } from "lucide-react";
+import { ArrowUpDown, LayoutGrid, List, Plus, Search, X } from "lucide-react";
 import DesktopContacts from "../DesktopContacts.jsx";
 import MobileContacts from "../MobileContacts.jsx";
 import DesktopDealsBoard from "../DesktopDealsBoard";
@@ -103,6 +103,7 @@ export default function AdminLeadsPanel({
   const [sheetsInfo, setSheetsInfo] = useState(null);
   const [sheetsError, setSheetsError] = useState("");
   const [mobileDealsSort, setMobileDealsSort] = useState("recent_activity");
+  const [mobileDealsSortOpen, setMobileDealsSortOpen] = useState(false);
   const [pipelineDatePreset, setPipelineDatePreset] = useState("all");
   const [pipelineDateFrom, setPipelineDateFrom] = useState("");
   const [pipelineDateTo, setPipelineDateTo] = useState("");
@@ -242,20 +243,34 @@ export default function AdminLeadsPanel({
             )}
           </div>
 
-          <div style={{ position: "relative", marginBottom: 9 }}>
-            <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: T.inkSoft, pointerEvents: "none" }} />
-            <input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              aria-label="Search deals"
-              placeholder="Search deals"
-              style={{ width: "100%", height: 38, padding: "8px 34px 8px 33px", borderRadius: 10, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontSize: 13, outline: "none" }}
-            />
-            {searchQuery && (
-              <button type="button" aria-label="Clear search" onClick={() => setSearchQuery("")} style={{ position: "absolute", right: 7, top: "50%", transform: "translateY(-50%)", width: 28, height: 28, display: "inline-flex", alignItems: "center", justifyContent: "center", border: "none", background: "transparent", color: T.inkSoft, cursor: "pointer" }}>
-                <X size={14} />
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 9 }}>
+            <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
+              <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: T.inkSoft, pointerEvents: "none" }} />
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label="Search deals"
+                placeholder="Search deals"
+                style={{ width: "100%", height: 38, padding: "8px 34px 8px 33px", borderRadius: 10, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontSize: 13, outline: "none", boxSizing: "border-box" }}
+              />
+              {searchQuery && (
+                <button type="button" aria-label="Clear search" onClick={() => setSearchQuery("")} style={{ position: "absolute", right: 7, top: "50%", transform: "translateY(-50%)", width: 28, height: 28, display: "inline-flex", alignItems: "center", justifyContent: "center", border: "none", background: "transparent", color: T.inkSoft, cursor: "pointer" }}>
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+            <div style={{ position: "relative", flexShrink: 0 }}>
+              <button type="button" aria-label="Sort deals" title="Sort deals" onClick={() => setMobileDealsSortOpen((open) => !open)} style={{ width: 38, height: 38, border: `1px solid ${T.line}`, borderRadius: 10, background: "#fff", color: T.ink, display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                <ArrowUpDown size={16} />
               </button>
-            )}
+              {mobileDealsSortOpen && (
+                <div style={{ position: "absolute", right: 0, top: 42, zIndex: 40, width: 170, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 10, boxShadow: "0 8px 24px rgba(20,30,35,.14)", padding: 5 }}>
+                  {[["recent_activity","Recent activity"],["oldest_activity","Oldest activity"],["newest_lead","Newest deal"],["oldest_lead","Oldest deal"]].map(([value,label]) => (
+                    <button key={value} type="button" onClick={() => { setMobileDealsSort(value); setMobileDealsSortOpen(false); }} style={{ width: "100%", textAlign: "left", border: "none", background: mobileDealsSort === value ? T.paperDeep : "transparent", color: T.ink, borderRadius: 7, padding: "8px 9px", fontSize: 12, fontWeight: mobileDealsSort === value ? 800 : 650, cursor: "pointer" }}>{label}</button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 7, marginBottom: 7 }}>
@@ -272,12 +287,6 @@ export default function AdminLeadsPanel({
               {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
             </select>
             <input aria-label="Deal date" type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} style={{ ...controlStyle, width: "100%" }} />
-            <select aria-label="Sort deals" value={mobileDealsSort} onChange={(e) => setMobileDealsSort(e.target.value)} style={controlStyle}>
-              <option value="recent_activity">Recent activity</option>
-              <option value="oldest_activity">Oldest activity</option>
-              <option value="newest_lead">Newest deal</option>
-              <option value="oldest_lead">Oldest deal</option>
-            </select>
           </div>
 
           {(filterSalesman !== "all" || filterCity.trim() || filterStatus !== "all" || filterDate || searchQuery.trim()) && (
@@ -415,6 +424,23 @@ export default function AdminLeadsPanel({
           </div>
         </div>
 
+        {phone && section === "leads" && !desktopSection ? (
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 7, marginBottom: 12, width: "100%", minWidth: 0 }}>
+            <div style={{ minWidth: 0 }}>
+              <input aria-label="City filter" list="engage-city-filter-mobile-contacts" value={filterCity} onChange={(e) => setFilterCity(e.target.value)} placeholder="All cities" style={{ ...dateInputStyle, width: "100%", height: 34, boxSizing: "border-box", borderRadius: 9, fontSize: 11.5, fontWeight: 650 }} />
+              <datalist id="engage-city-filter-mobile-contacts">{cityOptions.map((city) => <option key={city} value={city} />)}</datalist>
+            </div>
+            <select aria-label="Employee" value={filterSalesman} onChange={(e) => setFilterSalesman(e.target.value)} style={{ ...dateInputStyle, width: "100%", height: 34, minWidth: 0, boxSizing: "border-box", borderRadius: 9, fontSize: 11.5, fontWeight: 650 }}>
+              <option value="all">All employees</option>
+              {salesmen.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+            <select aria-label="Contact status" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={{ ...dateInputStyle, width: "100%", height: 34, minWidth: 0, boxSizing: "border-box", borderRadius: 9, fontSize: 11.5, fontWeight: 650 }}>
+              <option value="all">All statuses</option>
+              {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+            </select>
+            <input aria-label="Contact date" type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} style={{ ...dateInputStyle, width: "100%", height: 34, minWidth: 0, boxSizing: "border-box", borderRadius: 9, fontSize: 11.5, fontWeight: 650 }} />
+          </div>
+        ) : (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
             {(desktopDeals || desktopContacts || (phone && section === "leads")) && <div style={{ position: "relative" }}>
@@ -485,6 +511,7 @@ export default function AdminLeadsPanel({
             />}
           </div>
         </div>
+        )}
 
         {sheetsError && <div style={{ fontSize: 12, color: T.danger, marginBottom: 10 }}>{sheetsError}</div>}
         {sheetsInfo && (
