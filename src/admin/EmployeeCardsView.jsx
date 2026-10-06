@@ -33,7 +33,7 @@ function LeadProgress({ label, value, target, loading, error }) {
   </div>;
 }
 
-export default function EmployeeCardsView({ salesmen, visible, filteredCount, briefs, employeeStatus, query, setQuery, statusFilter, setStatusFilter, monthFilter, setMonthFilter, monthOptions, year, metrics, metricsLoading, metricsError, page, pages, pageSize, setPage, onAddClick, onSettingsClick, onBriefClick, onViewRoute, onMessageClick, onOpenSalesmanLeads }) {
+export default function EmployeeCardsView({ salesmen, visible, filteredCount, briefs, employeeStatus, query, setQuery, statusFilter, setStatusFilter, regionFilter, setRegionFilter, regionOptions = [], managerFilter, setManagerFilter, managerOptions = [], monthFilter, setMonthFilter, monthOptions, year, metrics, metricsLoading, metricsError, page, pages, pageSize, setPage, onAddClick, onSettingsClick, onBriefClick, onViewRoute, onMessageClick, onOpenSalesmanLeads }) {
   return <section className="emp-page" aria-label="Employees">
     <header className="emp-page-header">
       <div><h2>Employees</h2><p>Your team at a glance</p></div>
@@ -44,6 +44,8 @@ export default function EmployeeCardsView({ salesmen, visible, filteredCount, br
     </header>
     <div className="emp-controls">
       <label className="emp-search"><Search size={17} /><input type="search" aria-label="Search employees" placeholder="Search employees by name, code or location…" value={query} onChange={(e) => setQuery(e.target.value)} /></label>
+      <label className="emp-month"><select aria-label="Employee region" value={regionFilter} onChange={(e) => setRegionFilter(e.target.value)}><option value="all">All regions</option>{regionOptions.map((region) => <option key={region} value={region}>{region}</option>)}</select></label>
+      <label className="emp-month"><select aria-label="Reporting manager" value={managerFilter} onChange={(e) => setManagerFilter(e.target.value)}><option value="all">All managers</option><option value="unassigned">No manager</option>{managerOptions.map((manager) => <option key={manager.id} value={manager.id}>{manager.name}</option>)}</select></label>
       <label className="emp-month"><CalendarDays size={16} /><select aria-label="Employee lead month" value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)}><option value="all">All time</option>{monthOptions.map((option) => <option key={option.value} value={option.value}>{option.label} {year}</option>)}</select></label>
       <div className="emp-filters" aria-label="Employee status">
         {[["all", "All"], ["online", "Working"], ["offline", "Offline"], ["not-started", "Not started"]].map(([key, label]) => <button type="button" key={key} aria-pressed={statusFilter === key} onClick={() => setStatusFilter(key)}>{label}</button>)}
@@ -63,7 +65,7 @@ export default function EmployeeCardsView({ salesmen, visible, filteredCount, br
         return <article className="emp-card" key={s.id} aria-label={`${s.name} employee card`} data-status={state}>
           <div className="emp-card-header">
             <span className="emp-avatar" data-tone={avatarTone(s.id)} aria-hidden="true">{(s.name || "?").trim().slice(0, 1).toUpperCase()}</span>
-            <div className="emp-identity"><button type="button" onClick={() => onOpenSalesmanLeads(s)}>{s.name}<ChevronRight size={16} /></button><p>{s.area}{s.employeeCode ? ` · ${s.employeeCode}` : ""}</p></div>
+            <div className="emp-identity"><button type="button" onClick={() => onOpenSalesmanLeads(s)}>{s.name}<ChevronRight size={16} /></button><p>{[s.region,s.area,s.employeeCode].filter(Boolean).join(" · ")}</p>{(s.isReportingManager||s.reportingManagerName)&&<p>{s.isReportingManager?"Reporting Manager":`Reports to ${s.reportingManagerName}`}</p>}</div>
             <span className="emp-status"><i className={state === "Working" ? "is-working" : ""} />{state}</span>
             <button className="emp-settings" type="button" aria-label="Settings" title={`Settings for ${s.name}`} onClick={() => onSettingsClick(s)}><Settings size={17} /></button>
           </div>
