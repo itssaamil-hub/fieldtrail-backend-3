@@ -34,7 +34,7 @@ function TopBar({ hidePageNavigation = false, online, session, page, onChangePag
           <div
             role={session && onHome ? "button" : undefined}
             tabIndex={session && onHome ? 0 : undefined}
-            aria-label={session && onHome ? "Go to Dashboard" : undefined}
+            aria-label={session && onHome ? "Home" : undefined}
             onClick={session && onHome ? onHome : undefined}
             onKeyDown={session && onHome ? (event) => {
               if (event.key === "Enter" || event.key === " ") {
