@@ -20,7 +20,7 @@ function eventIcon(a) {
   if(a.action.startsWith('lead.created')) return UserPlus;
   return Activity;
 }
-export default function ActivityCentre({onOpenLead}) {
+export default function ActivityCentre({onOpenLead,onClose,mobile=false}) {
   const [filters,setFilters] = useState({from:today(),through:today(),employee:'all',category:'all',action:'',search:''});
   const [query,setQuery] = useState('');
   const [offset,setOffset] = useState(0);
