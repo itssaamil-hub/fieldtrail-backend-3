@@ -15,7 +15,7 @@ export function useDesktopSidebar() {
   return desktop;
 }
 const sections = [['dashboard', 'Dashboard', Gauge], ['leads', 'Contacts', Contact2], ['deals', 'Pipeline', Columns3], ['quotations', 'Quotations', FileText], ['employees', 'Employees', Users], ['tasks', 'Tasks', ClipboardList], ['payments', 'Payments', Wallet], ['expenses', 'Expenses', ReceiptText], ['activity', 'Activity Centre', History], ['exceptions', 'Exception Centre', ShieldAlert], ['reports', 'Reports', BarChart3]];
-export default function DesktopSidebar({ active, collapsed, onCollapse, onSelect, onSettings, settingsOpen }) {
+export default function DesktopSidebar({ active, collapsed, onCollapse, onSelect, onHome, onSettings, settingsOpen }) {
   const [directActive, setDirectActive] = useState(null);
   const quotationsActive = active === 'quotations' && !settingsOpen;
   useEffect(() => { if (active !== 'reports') setDirectActive(null); }, [active]);
@@ -46,7 +46,19 @@ export default function DesktopSidebar({ active, collapsed, onCollapse, onSelect
   const openAccount = () => window.dispatchEvent(new CustomEvent('engage:open-account-settings'));
   return <>
     <aside className={`engage-desktop-sidebar${collapsed ? ' is-collapsed' : ''}`} aria-label="Admin sidebar">
-      <div className="engage-sidebar-brand"><img src="/engage-logo.png" alt="" width="28" height="28"/><span>Engage</span></div>
+      <div
+        className="engage-sidebar-brand"
+        role={onHome ? "button" : undefined}
+        tabIndex={onHome ? 0 : undefined}
+        aria-label={onHome ? "Go to Dashboard" : undefined}
+        onClick={onHome}
+        onKeyDown={onHome ? (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onHome();
+          }
+        } : undefined}
+      ><img src="/engage-logo.png" alt="" width="28" height="28"/><span>Engage</span></div>
       <nav aria-label="Admin sections">{sections.map(item)}</nav>
       <div className="engage-sidebar-footer">
         <button type="button" aria-label="My Account" title={collapsed ? 'My Account' : undefined} onClick={openAccount}><UserRound size={19} aria-hidden="true"/><span>My Account</span></button>
