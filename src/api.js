@@ -461,6 +461,15 @@ export const api = {
 // as a query param, since these are opened as plain navigations/downloads
 // rather than fetch() calls — a normal Authorization header isn't possible
 // for a direct link click.
+export function buildSalesmanExportUrl(format, params = {}) {
+  const base = getApiBase();
+  const session = getSession();
+  const entries = Object.entries(params).filter(([, value]) => value != null && value !== "" && value !== "all");
+  const qs = new URLSearchParams(entries);
+  if (session?.token) qs.set("token", session.token);
+  return `${base}/salesman/leads/export.${format}?${qs.toString()}`;
+}
+
 export function buildExportUrl(format, params = {}, resource = "leads") {
   const base = getApiBase();
   const session = getSession();

@@ -44,8 +44,10 @@ export default function EmployeeCardsView({ salesmen, visible, filteredCount, br
     </header>
     <div className="emp-controls">
       <label className="emp-search"><Search size={17} /><input type="search" aria-label="Search employees" placeholder="Search employees by name, code or location…" value={query} onChange={(e) => setQuery(e.target.value)} /></label>
-      <label className="emp-month"><Search size={16} /><input aria-label="Employee city filter" list="engage-employee-city-filter" value={cityFilter} onChange={(e) => setCityFilter(e.target.value)} placeholder="All cities" /><datalist id="engage-employee-city-filter">{cityOptions.map((city) => <option key={city} value={city} />)}</datalist></label>
-      <label className="emp-month"><CalendarDays size={16} /><select aria-label="Employee lead month" value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)}><option value="all">All time</option>{monthOptions.map((option) => <option key={option.value} value={option.value}>{option.label} {year}</option>)}</select></label>
+      <div className="emp-mobile-filter-pair">
+        <label className="emp-month"><Search size={16} /><input aria-label="Employee city filter" list="engage-employee-city-filter" value={cityFilter} onChange={(e) => setCityFilter(e.target.value)} placeholder="All cities" /><datalist id="engage-employee-city-filter">{cityOptions.map((city) => <option key={city} value={city} />)}</datalist></label>
+        <label className="emp-month"><CalendarDays size={16} /><select aria-label="Employee lead month" value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)}><option value="all">All time</option>{monthOptions.map((option) => <option key={option.value} value={option.value}>{option.label} {year}</option>)}</select></label>
+      </div>
       <div className="emp-filters" aria-label="Employee status">
         {[["all", "All"], ["online", "Working"], ["offline", "Offline"], ["not-started", "Not started"]].map(([key, label]) => <button type="button" key={key} aria-pressed={statusFilter === key} onClick={() => setStatusFilter(key)}>{label}</button>)}
       </div>

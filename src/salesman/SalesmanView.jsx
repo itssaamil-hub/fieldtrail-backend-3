@@ -29,7 +29,7 @@ function greetingForNow() {
   return "Good evening";
 }
 
-export default function SalesmanView({ notificationLead, session, leads, leadSummary, hasMoreLeads, loadMoreLeads, loadingMoreLeads, totalLeadCount, dayStarted, allowLeadWithoutStartDay, onToggleDay, togglingDay, justToggledDay, onAddLead, onUpdateLeadStatus, onUpdateLeadDetails, online, gpsStatus, loadError, messages, onMarkMessageRead, onDeleteMessage, onReplyMessage, employeeRepliesEnabled = true, dailyTarget, monthlyTarget, page, shared }) {
+export default function SalesmanView({ notificationLead, session, leads, leadSummary, hasMoreLeads, loadMoreLeads, loadingMoreLeads, totalLeadCount, dayStarted, allowLeadWithoutStartDay, onToggleDay, togglingDay, justToggledDay, onAddLead, onUpdateLeadStatus, onUpdateLeadDetails, online, gpsStatus, loadError, messages, onMarkMessageRead, onDeleteMessage, onReplyMessage, employeeRepliesEnabled = true, dailyTarget, monthlyTarget, employeeCity = "", page, shared }) {
   const { T, fmtMoney, isToday, isThisMonth, isWithinDays, isUpcomingRenewalMonth, SalesmanReportsPage, StatCard, MessagesSection, MyLeadsModal, AddLeadModal, LeadDetailDrawer, VerificationStamp, NoLocationBadge } = shared;
   const { pendingTasks, handlePendingTasksChange } = useSalesmanTasks();
   const phone = useAdminPhone();
@@ -215,7 +215,7 @@ export default function SalesmanView({ notificationLead, session, leads, leadSum
         <MessagesSection messages={messages} onMarkRead={onMarkMessageRead} onDelete={onDeleteMessage} onReply={onReplyMessage} employeeRepliesEnabled={employeeRepliesEnabled} onOpenLead={openBriefingLead} />
       </div>}
       {visited.leads && <div hidden={!phone || mobileTab !== "leads"}>
-        <MyLeadsModal {...leadPagingProps} embedded leads={leads} onSelectLead={setViewingLead} allowDateFilter employeeMobile />
+        <MyLeadsModal {...leadPagingProps} embedded leads={leads} onSelectLead={setViewingLead} allowDateFilter employeeMobile employeeCity={employeeCity} />
       </div>}
       {visited.contacts && <section hidden={!phone || mobileTab !== "contacts"} className="engage-salesman-contacts">
         <div style={{ marginBottom: 14 }}>
