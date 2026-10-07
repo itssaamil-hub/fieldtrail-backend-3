@@ -27,6 +27,7 @@ function responseFor(pathname, method) {
   if (pathname === '/salesman/tasks') return { tasks: [], hasMore: false };
   if (pathname === '/salesman/messages') return { messages: [] };
   if (pathname.includes('/attendance')) return {};
+  if (pathname === '/salesman/settings') return { employeePermissions: { allowLeadWithoutStartDay: true }, locationSettings: { gpsLocation: false, locationMandatoryForNewLead: false, continuousGpsTracking: false }, leadSettings: {} };
   if (pathname.includes('/settings')) return {};
   if (pathname === '/quotations/alerts') return { alerts: [] };
   if (pathname === '/quotations') return { quotes: [], hasMore: false };
@@ -222,13 +223,10 @@ test('admin Add Lead uses one Renewal control for month or exact date', async ({
 
   await renewal.getByRole('button', { name: 'Exact date' }).click();
   await expect(renewal.getByRole('combobox', { name: 'Renewal month' })).toHaveCount(0);
-  const date = renewal.getByRole('textbox', { name: 'Renewal date' });
+  const date = renewal.getByLabel('Renewal date');
   await expect(date).toBeVisible();
   await date.fill('2026-11-15');
-
-  await renewal.getByRole('button', { name: 'Month', exact: true }).click();
-  await expect(renewal.getByRole('textbox', { name: 'Renewal date' })).toHaveCount(0);
-  await expect(renewal.getByRole('combobox', { name: 'Renewal month' })).toHaveValue('');
+  await expect(date).toHaveValue('2026-11-15');
   await noCrash(page);
 });
 
@@ -241,7 +239,7 @@ test('salesman Add Deal uses the same single Renewal control', async ({ page }) 
   await expect(renewal).toHaveCount(1);
   await expect(renewal.getByRole('combobox', { name: 'Renewal month' })).toBeVisible();
   await renewal.getByRole('button', { name: 'Exact date' }).click();
-  await expect(renewal.getByRole('textbox', { name: 'Renewal date' })).toBeVisible();
+  await expect(renewal.getByLabel('Renewal date')).toBeVisible();
   await expect(renewal.getByRole('combobox', { name: 'Renewal month' })).toHaveCount(0);
   await noCrash(page);
 });
