@@ -50,6 +50,26 @@ function Field({ label, required, children }) {
   </label>;
 }
 
+function RenewalField({ renewalMonth, renewalDate, onMonthChange, onDateChange }) {
+  const [mode, setMode] = useState(renewalDate ? "date" : "month");
+  const chooseMode = (next) => {
+    setMode(next);
+    if (next === "month") onDateChange("");
+    else onMonthChange("");
+  };
+  return <Field label="Renewal">
+    <div data-renewal-control="true" style={{ display:"grid", gap:7 }}>
+      <div role="group" aria-label="Renewal precision" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:4, padding:3, borderRadius:9, background:"#F1F4F3", border:`1px solid ${C.line}` }}>
+        <button type="button" aria-pressed={mode==="month"} onClick={()=>chooseMode("month")} style={{ height:30, border:0, borderRadius:7, background:mode==="month"?"#fff":"transparent", color:mode==="month"?C.green:C.soft, fontSize:11.5, fontWeight:800, cursor:"pointer", boxShadow:mode==="month"?"0 1px 2px rgba(20,40,35,.08)":"none" }}>Month</button>
+        <button type="button" aria-pressed={mode==="date"} onClick={()=>chooseMode("date")} style={{ height:30, border:0, borderRadius:7, background:mode==="date"?"#fff":"transparent", color:mode==="date"?C.green:C.soft, fontSize:11.5, fontWeight:800, cursor:"pointer", boxShadow:mode==="date"?"0 1px 2px rgba(20,40,35,.08)":"none" }}>Exact date</button>
+      </div>
+      {mode === "month"
+        ? <select aria-label="Renewal month" value={renewalMonth} onChange={(e)=>onMonthChange(e.target.value)} style={input}><option value="">Select renewal month</option>{MONTHS.map((m)=><option key={m}>{m}</option>)}</select>
+        : <input aria-label="Renewal date" type="date" value={renewalDate} onChange={(e)=>onDateChange(e.target.value)} style={input}/>}
+    </div>
+  </Field>;
+}
+
 function Card({ icon: Icon, title, subtitle, children }) {
   return <section style={{ background:C.card, border:`1px solid ${C.line}`, borderRadius:15, padding:18, boxShadow:"0 1px 2px rgba(20,40,35,.025)" }}>
     <div style={{ display:"flex", gap:10, alignItems:"flex-start", marginBottom:16 }}>
@@ -157,7 +177,6 @@ export default function AdminAddLeadModal({ salesmen, onClose, onSubmit }) {
                 <Field label="Sub Location / Branch"><input value={form.subLocation} onChange={set("subLocation")} placeholder="e.g. Gomti Nagar, Lucknow" style={input} list="admin-sub-location-options"/><datalist id="admin-sub-location-options">{fieldOptions.sub_location.map((v)=><option key={v} value={v}/>)}</datalist></Field>
                 <Field label="Current POS"><input value={form.posName} onChange={set("posName")} placeholder="e.g. Petpooja" style={input} list="admin-pos-name-options"/><datalist id="admin-pos-name-options">{fieldOptions.pos_name.map((v)=><option key={v} value={v}/>)}</datalist></Field>
                 <Field label="Category"><input value={form.category} onChange={set("category")} placeholder="e.g. Cafe" style={input} list="admin-category-options"/><datalist id="admin-category-options">{(fieldOptions.category.length ? fieldOptions.category : ["Cafe","QSR","Casual Dining","Fine Dining","Cloud Kitchen","Bakery"]).map((v)=><option key={v} value={v}/>)}</datalist></Field>
-                <Field label="Renewal Month"><select value={form.renewalMonth} onChange={set("renewalMonth")} style={input}><option value="">Select renewal month</option>{MONTHS.map((m)=><option key={m}>{m}</option>)}</select></Field>
               </div>
             </Card>
 
@@ -172,7 +191,12 @@ export default function AdminAddLeadModal({ salesmen, onClose, onSubmit }) {
             <Card icon={CalendarClock} title="Deal & Follow-up" subtitle="Commercial details and the next sales action.">
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
                 <Field label="Next Follow-up" required={!!leadSettings?.requireFollowUpDate}><input type="date" value={form.nextFollowUpDate} onChange={set("nextFollowUpDate")} style={input}/></Field>
-                <Field label="Renewal Date"><input type="date" value={form.renewalDate} onChange={set("renewalDate")} style={input}/></Field>
+                <RenewalField
+                  renewalMonth={form.renewalMonth}
+                  renewalDate={form.renewalDate}
+                  onMonthChange={(value)=>setForm((current)=>({...current,renewalMonth:value,renewalDate:""}))}
+                  onDateChange={(value)=>setForm((current)=>({...current,renewalDate:value,renewalMonth:""}))}
+                />
                 <Field label="Expected Deal Value"><div style={{ position:"relative" }}><IndianRupee size={14} style={{ position:"absolute", left:11, top:14, color:C.soft }}/><input type="number" min="0" value={form.dealValue} onChange={set("dealValue")} placeholder="e.g. 50000" style={{...input,paddingLeft:31}}/></div></Field>
                 <div style={{ display:"flex", alignItems:"end", paddingBottom:1 }}><div style={{ width:"100%", minHeight:42, borderRadius:10, background:C.greenSoft, color:C.green, padding:"8px 11px", boxSizing:"border-box", fontSize:11.5, lineHeight:1.35 }}><MapPin size={13} style={{verticalAlign:"-2px",marginRight:5}}/>Admin-created leads are assigned to the employee but do not create a GPS visit.</div></div>
               </div>
