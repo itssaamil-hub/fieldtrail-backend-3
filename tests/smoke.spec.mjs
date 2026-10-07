@@ -27,6 +27,7 @@ function responseFor(pathname, method) {
   if (pathname === '/salesman/tasks') return { tasks: [], hasMore: false };
   if (pathname === '/salesman/messages') return { messages: [] };
   if (pathname.includes('/attendance')) return {};
+  if (pathname === '/salesman/settings') return { employeePermissions: { allowLeadWithoutStartDay: true }, locationSettings: { gpsLocation: false, locationMandatoryForNewLead: false, continuousGpsTracking: false }, leadSettings: {} };
   if (pathname.includes('/settings')) return {};
   if (pathname === '/quotations/alerts') return { alerts: [] };
   if (pathname === '/quotations') return { quotes: [], hasMore: false };
@@ -204,5 +205,41 @@ test('salesman mobile Engage logo returns to employee Dashboard from Contacts', 
   await homeLogo.click();
   await expect(page.getByRole('button', { name: 'Add Deal' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'My Deal' })).toBeVisible();
+  await noCrash(page);
+});
+
+
+test('admin Add Lead uses one Renewal control for month or exact date', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await bootAs(page, adminSession);
+  await page.getByRole('button', { name: 'Pipeline', exact: true }).click();
+  await page.getByRole('button', { name: /add lead/i }).first().click();
+
+  const dialog = page.getByRole('dialog', { name: 'Add Lead' });
+  const renewal = dialog.locator('[data-renewal-control="true"]');
+  await expect(renewal).toHaveCount(1);
+  await expect(renewal.getByRole('combobox', { name: 'Renewal month' })).toBeVisible();
+  await renewal.getByRole('combobox', { name: 'Renewal month' }).selectOption({ label: 'November' });
+
+  await renewal.getByRole('button', { name: 'Exact date' }).click();
+  await expect(renewal.getByRole('combobox', { name: 'Renewal month' })).toHaveCount(0);
+  const date = renewal.getByLabel('Renewal date');
+  await expect(date).toBeVisible();
+  await date.fill('2026-11-15');
+  await expect(date).toHaveValue('2026-11-15');
+  await noCrash(page);
+});
+
+test('salesman Add Deal uses the same single Renewal control', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await bootAs(page, { id: 'smoke-salesman', role: 'salesman', name: 'Smoke Salesman', fullName: 'Smoke Salesman', token: 'smoke-token' });
+  await page.getByRole('button', { name: 'Add Deal' }).click();
+
+  const renewal = page.locator('[data-renewal-control="true"]');
+  await expect(renewal).toHaveCount(1);
+  await expect(renewal.getByRole('combobox', { name: 'Renewal month' })).toBeVisible();
+  await renewal.getByRole('button', { name: 'Exact date' }).click();
+  await expect(renewal.getByLabel('Renewal date')).toBeVisible();
+  await expect(renewal.getByRole('combobox', { name: 'Renewal month' })).toHaveCount(0);
   await noCrash(page);
 });
