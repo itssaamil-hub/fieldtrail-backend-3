@@ -25,6 +25,27 @@ function AddLeadField({ label, children }) {
   return <div style={{ marginBottom: 8, minWidth: 0 }}><div style={{ fontSize: 11.5, color: T.inkSoft, fontWeight: 600, marginBottom: 4 }}>{label}</div>{children}</div>;
 }
 
+function RenewalInput({ renewalMonth, renewalDate, onMonthChange, onDateChange, compact = true }) {
+  const [mode, setMode] = useState(renewalDate ? "date" : "month");
+  const chooseMode = (next) => {
+    setMode(next);
+    if (next === "month") onDateChange("");
+    else onMonthChange("");
+  };
+  return <div data-renewal-control="true" style={{ minWidth:0 }}>
+    <div style={{ fontSize: compact ? 11.5 : 12, color: T.inkSoft, fontWeight: 600, marginBottom: 4 }}>Renewal</div>
+    <div style={{ display:"grid", gap:7 }}>
+      <div role="group" aria-label="Renewal precision" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:4, padding:3, borderRadius:9, background:"#F1F4F3", border:`1px solid ${T.line}` }}>
+        <button type="button" aria-pressed={mode==="month"} onClick={()=>chooseMode("month")} style={{ height:30, border:0, borderRadius:7, background:mode==="month"?"#fff":"transparent", color:mode==="month"?T.route:T.inkSoft, fontSize:11.5, fontWeight:800, cursor:"pointer", boxShadow:mode==="month"?"0 1px 2px rgba(20,40,35,.08)":"none" }}>Month</button>
+        <button type="button" aria-pressed={mode==="date"} onClick={()=>chooseMode("date")} style={{ height:30, border:0, borderRadius:7, background:mode==="date"?"#fff":"transparent", color:mode==="date"?T.route:T.inkSoft, fontSize:11.5, fontWeight:800, cursor:"pointer", boxShadow:mode==="date"?"0 1px 2px rgba(20,40,35,.08)":"none" }}>Exact date</button>
+      </div>
+      {mode === "month"
+        ? <select aria-label="Renewal month" style={inputStyle} value={renewalMonth} onChange={(e)=>onMonthChange(e.target.value)}><option value="">Select…</option>{MONTH_NAMES.map((m)=><option key={m} value={m}>{m}</option>)}</select>
+        : <input aria-label="Renewal date" style={inputStyle} type="date" value={renewalDate} onChange={(e)=>onDateChange(e.target.value)}/>}
+    </div>
+  </div>;
+}
+
 function AddLeadSection({ children }) {
   return <div role="heading" aria-level={3} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11.5, fontWeight: 700, color: T.route, marginBottom: 6 }}><span>{children}</span><span aria-hidden="true" style={{ flex: 1, height: 1, background: T.line }} /></div>;
 }
@@ -106,15 +127,12 @@ function AdminAddLeadModal({ salesmen, onClose, onSubmit }) {
           <AddLeadField label="Contact Number"><input style={inputStyle} value={form.phone} onChange={set("phone")} /></AddLeadField>
           <DuplicateLeadWarning result={duplicateResult} />
           <AddLeadSection>Deal &amp; follow-up</AddLeadSection>
-          <div style={{ display: "flex", gap: 10 }}>
-            <div style={{ flex: 1, minWidth: 0 }}><AddLeadField label="Renewal Month">
-              <select style={inputStyle} value={form.renewalMonth} onChange={set("renewalMonth")}>
-                <option value="">Select…</option>
-                {MONTH_NAMES.map((m) => <option key={m} value={m}>{m}</option>)}
-              </select>
-            </AddLeadField></div>
-            <div style={{ flex: 1, minWidth: 0 }}><AddLeadField label="Renewal Date"><input style={inputStyle} type="date" value={form.renewalDate} onChange={set("renewalDate")} /></AddLeadField></div>
-          </div>
+          <RenewalInput
+            renewalMonth={form.renewalMonth}
+            renewalDate={form.renewalDate}
+            onMonthChange={(value)=>setForm((current)=>({...current,renewalMonth:value,renewalDate:""}))}
+            onDateChange={(value)=>setForm((current)=>({...current,renewalDate:value,renewalMonth:""}))}
+          />
           <div style={{ display: "flex", gap: 10 }}>
             <div style={{ flex: 1, minWidth: 0 }}><AddLeadField label="Stage">
               <select style={inputStyle} value={form.status} onChange={set("status")}>
@@ -582,15 +600,13 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
             <Field label="POS Name"><input style={inputStyle} value={form.posName} onChange={set("posName")} /></Field>
             <Field label="Contact Name"><input style={inputStyle} value={form.owner} onChange={set("owner")} /></Field>
             <Field label="Contact Number"><input style={inputStyle} value={form.phone} onChange={set("phone")} /></Field>
-            <div style={{ display: "flex", gap: 10 }}>
-              <div style={{ flex: 1 }}><Field label="Renewal Month">
-                <select style={inputStyle} value={form.renewalMonth} onChange={set("renewalMonth")}>
-                  <option value="">Select…</option>
-                  {MONTH_NAMES.map((m) => <option key={m} value={m}>{m}</option>)}
-                </select>
-              </Field></div>
-              <div style={{ flex: 1 }}><Field label="Renewal Date"><input style={inputStyle} type="date" value={form.renewalDate} onChange={set("renewalDate")} /></Field></div>
-            </div>
+            <RenewalInput
+              renewalMonth={form.renewalMonth}
+              renewalDate={form.renewalDate}
+              onMonthChange={(value)=>setForm((current)=>({...current,renewalMonth:value,renewalDate:""}))}
+              onDateChange={(value)=>setForm((current)=>({...current,renewalDate:value,renewalMonth:""}))}
+              compact={false}
+            />
             <div style={{ display: "flex", gap: 10 }}>
               <div style={{ flex: 1 }}><Field label="Expected Deal Value"><input style={inputStyle} type="number" min="0" value={form.dealValue} onChange={set("dealValue")} placeholder="₹ e.g. 45000" /></Field></div>
               <div style={{ flex: 1 }}><Field label="Next Follow-up Date"><input style={inputStyle} type="date" value={form.nextFollowUpDate} onChange={set("nextFollowUpDate")} /></Field></div>
@@ -1364,19 +1380,12 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
           </AddLeadField>
         </div>
       </div>
-      <div style={{ display: "flex", gap: 10 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <AddLeadField label="Renewal Month">
-            <select style={inputStyle} value={form.renewalMonth} onChange={set("renewalMonth")}>
-              <option value="">Select…</option>
-              {MONTH_NAMES.map((m) => <option key={m} value={m}>{m}</option>)}
-            </select>
-          </AddLeadField>
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <AddLeadField label="Renewal Date"><input style={inputStyle} type="date" value={form.renewalDate} onChange={set("renewalDate")} /></AddLeadField>
-        </div>
-      </div>
+      <RenewalInput
+        renewalMonth={form.renewalMonth}
+        renewalDate={form.renewalDate}
+        onMonthChange={(value)=>setForm((current)=>({...current,renewalMonth:value,renewalDate:""}))}
+        onDateChange={(value)=>setForm((current)=>({...current,renewalDate:value,renewalMonth:""}))}
+      />
       <div data-mobile-lead-comments="true"><AddLeadField label={`Comments${leadSettings.requireComments ? " *" : ""}`}>
         <textarea style={{ ...inputStyle, minHeight: 60 }} value={form.notes} onChange={set("notes")} />
       </AddLeadField></div>
