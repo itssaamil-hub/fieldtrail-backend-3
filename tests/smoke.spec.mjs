@@ -276,6 +276,7 @@ test('CRM Settings configures inactive lead follow-up automation without changin
   });
 
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page.getByRole('button', { name: 'CRM Settings', exact: true }).click();
   const rules = page.locator('[data-automation-rules="true"]');
   await expect(rules).toBeVisible();
   await expect(rules).toContainText('Automation Rules');
