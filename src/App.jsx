@@ -528,7 +528,7 @@ export default function App() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showDailyReports,setShowDailyReports] = useState(false);
   const [collectionView,setCollectionView]=useState(null);
-  useEffect(()=>{const open=e=>{setQuotationView(null);setShowOnboarding(false);setShowSettings(false);setCollectionView({initialKey:e.detail?.key||null});};window.addEventListener('fieldtrail:open-collections',open);return()=>window.removeEventListener('fieldtrail:open-collections',open);},[]);
+  useEffect(()=>{const open=e=>{setQuotationView(null);setShowOnboarding(false);setShowSettings(false);setShowCrmSettings(false);setCollectionView({initialKey:e.detail?.key||null});};window.addEventListener('fieldtrail:open-collections',open);return()=>window.removeEventListener('fieldtrail:open-collections',open);},[]);
 
   const [quotationView, setQuotationView] = useState(null);
   const [showOnboardingSettings, setShowOnboardingSettings] = useState(false);
@@ -552,7 +552,7 @@ export default function App() {
   };
   useEffect(() => {
     if (!adminDesktop) return;
-    const open = () => { setDesktopSection("activity"); setTopPage("dashboard"); };
+    const open = () => { setShowSettings(false); setShowCrmSettings(false); setDesktopSection("activity"); setTopPage("dashboard"); };
     window.addEventListener("engage:open-activity-centre", open);
     return () => window.removeEventListener("engage:open-activity-centre", open);
   }, [adminDesktop]);
@@ -709,14 +709,14 @@ export default function App() {
         onHome={session ? handleHome : undefined}
         onAddExpense={session?.role === "admin" ? () => setShowAddExpense(true) : undefined}
         unreadCount={unreadCount}
-        onOpenNotifications={session ? () => { setShowSettings(false); setShowNotifications(true); } : undefined}
+        onOpenNotifications={session ? () => { setShowSettings(false); setShowCrmSettings(false); setShowNotifications(true); } : undefined}
         onOpenActivityCentre={session?.role === "admin" && !adminDesktop ? () => { closeNotifications(); setShowSettings(false); setShowOnboarding(false); setQuotationView(null); setCollectionView(null); setShowDailyReports(false); setShowActivityCentreMobile(true); } : undefined}
-        onOpenSettings={() => { closeNotifications(); setShowOnboarding(false); setShowSettings(true); }}
-        onOpenCollections={()=>{closeNotifications();setShowSettings(false);setShowOnboarding(false);setQuotationView(null);setShowDailyReports(false);setCollectionView({});}}
-        onOpenDailyReports={() => { closeNotifications(); setShowSettings(false); setShowOnboarding(false); setQuotationView(null); setShowDailyReports(true); }}
-        onOpenOnboarding={() => { closeNotifications(); setQuotationView(null); setShowSettings(false); setShowOnboarding(true); }}
-        onOpenQuotations={() => { closeNotifications(); setShowSettings(false); setShowOnboarding(false); setQuotationView({}); }}
-        onOpenApprovals={session?.role === "admin" ? () => { closeNotifications(); setShowSettings(false); setShowOnboarding(false); setQuotationView({approvals:true}); } : undefined}
+        onOpenSettings={() => { closeNotifications(); setShowOnboarding(false); setShowCrmSettings(false); setShowSettings(true); }}
+        onOpenCollections={()=>{closeNotifications();setShowSettings(false);setShowCrmSettings(false);setShowOnboarding(false);setQuotationView(null);setShowDailyReports(false);setCollectionView({});}}
+        onOpenDailyReports={() => { closeNotifications(); setShowSettings(false); setShowCrmSettings(false); setShowOnboarding(false); setQuotationView(null); setShowDailyReports(true); }}
+        onOpenOnboarding={() => { closeNotifications(); setQuotationView(null); setShowSettings(false); setShowCrmSettings(false); setShowOnboarding(true); }}
+        onOpenQuotations={() => { closeNotifications(); setShowSettings(false); setShowCrmSettings(false); setShowOnboarding(false); setQuotationView({}); }}
+        onOpenApprovals={session?.role === "admin" ? () => { closeNotifications(); setShowSettings(false); setShowCrmSettings(false); setShowOnboarding(false); setQuotationView({approvals:true}); } : undefined}
       />
       {body}
       {session && <SaveFeedback key={session.id} />}
