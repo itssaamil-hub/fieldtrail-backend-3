@@ -563,7 +563,13 @@ function CrmSettingsModal({ onClose }) {
   const toggleLead = (key) => (val) => save({ ...leadSettings, [key]: val }, locationSettings);
   const toggleLocation = (key) => (val) => save(leadSettings, { ...locationSettings, [key]: val }, messageSettings);
   const toggleMessage = (key) => (val) => save(leadSettings, locationSettings, { ...messageSettings, [key]: val });
-  const inactiveAutomation = leadSettings?.automationRules?.inactiveLeadFollowUp || { enabled: false, inactivityDays: 5 };
+  const automationStageOptions = [
+    ["cold","Cold"],["conversation","Conversation"],["hot","Hot"],["demo","Demo"],
+    ["negotiation","Negotiation"],["won","Won"],["lost","Lost"],["nurture","Nurture"],
+  ];
+  const defaultAutomationStages = ["cold","conversation","hot","demo","negotiation","nurture"];
+  const inactiveAutomation = leadSettings?.automationRules?.inactiveLeadFollowUp || { enabled: false, inactivityDays: 5, stages: defaultAutomationStages };
+  const selectedAutomationStages = Array.isArray(inactiveAutomation.stages) && inactiveAutomation.stages.length ? inactiveAutomation.stages : defaultAutomationStages;
   const saveInactiveAutomation = (patch) => {
     const next = {
       ...leadSettings,
@@ -602,7 +608,7 @@ function CrmSettingsModal({ onClose }) {
             <div style={{ fontSize: 12, color: T.inkSoft, marginBottom: 8 }}>Automatically create follow-up work when a lead needs attention.</div>
             <SettingToggle
               label="Inactive lead follow-up"
-              description="Create a follow-up task for the lead owner when there has been no lead activity for the configured number of days. Won and Lost leads are excluded."
+              description="Create a follow-up task for the lead owner when there has been no lead activity for the configured number of days."
               checked={inactiveAutomation.enabled === true}
               onChange={(enabled) => saveInactiveAutomation({ enabled })}
             />
@@ -640,6 +646,34 @@ function CrmSettingsModal({ onClose }) {
                   style={{ ...inputStyle, width: 74, height: 36, padding: "0 9px", textAlign: "center" }}
                 />
                 <span style={{ fontSize: 12, color: T.inkSoft }}>days</span>
+              </div>
+            </div>
+            <div style={{ padding: "12px 0", borderBottom: `1px solid ${T.line}` }}>
+              <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Apply to stages</div>
+              <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 2, marginBottom: 10 }}>Choose which lead stages can trigger this automation.</div>
+              <div data-automation-stages="true" style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "8px 14px" }}>
+                {automationStageOptions.map(([value, label]) => {
+                  const checked = selectedAutomationStages.includes(value);
+                  return (
+                    <label key={value} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: T.ink, cursor: "pointer" }}>
+                      <input
+                        type="checkbox"
+                        aria-label={`Automation stage ${label}`}
+                        checked={checked}
+                        disabled={saving}
+                        onChange={(event) => {
+                          const nextStages = event.target.checked
+                            ? [...new Set([...selectedAutomationStages, value])]
+                            : selectedAutomationStages.filter((stage) => stage !== value);
+                          if (!nextStages.length) return;
+                          saveInactiveAutomation({ stages: nextStages });
+                        }}
+                        style={{ width: 16, height: 16, accentColor: T.route, cursor: "pointer" }}
+                      />
+                      <span>{label}</span>
+                    </label>
+                  );
+                })}
               </div>
             </div>
           </div>

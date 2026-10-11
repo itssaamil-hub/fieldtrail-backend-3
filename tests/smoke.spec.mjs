@@ -34,7 +34,7 @@ function responseFor(pathname, method) {
       requireContactNumber: true, requireStatus: true, requireComments: false, requireDealValue: false,
       requireFollowUpDate: false, duplicateProtectionEnabled: true, duplicateCheckPhone: true,
       duplicateCheckBusinessLocation: true, allowDuplicateOverride: false,
-      automationRules: { inactiveLeadFollowUp: { enabled: false, inactivityDays: 5 } },
+      automationRules: { inactiveLeadFollowUp: { enabled: false, inactivityDays: 5, stages: ["cold","conversation","hot","demo","negotiation","nurture"] } },
     },
     locationSettings: { gpsLocation: true, locationMandatoryForNewLead: true, continuousGpsTracking: true },
     messageSettings: { employeeRepliesEnabled: true },
@@ -292,6 +292,19 @@ test('CRM Settings configures inactive lead follow-up automation without changin
   await days.fill('7');
   await days.blur();
   await expect.poll(() => savedLeadSettings?.automationRules?.inactiveLeadFollowUp?.inactivityDays).toBe(7);
+
+  const stages = rules.locator('[data-automation-stages="true"]');
+  for (const label of ['Cold','Conversation','Hot','Demo','Negotiation','Won','Lost','Nurture']) {
+    await expect(stages.getByLabel(`Automation stage ${label}`)).toBeVisible();
+  }
+  await expect(stages.getByLabel('Automation stage Won')).not.toBeChecked();
+  await stages.getByLabel('Automation stage Won').click();
+  await expect.poll(() => savedLeadSettings?.automationRules?.inactiveLeadFollowUp?.stages?.includes('won')).toBe(true);
+  await expect(stages.getByLabel('Automation stage Won')).toBeChecked();
+
+  await stages.getByLabel('Automation stage Hot').click();
+  await expect.poll(() => savedLeadSettings?.automationRules?.inactiveLeadFollowUp?.stages?.includes('hot')).toBe(false);
+  await expect(stages.getByLabel('Automation stage Hot')).not.toBeChecked();
   await expect(savedLeadSettings.requireBusinessName).toBe(true);
   await noCrash(page);
 });
