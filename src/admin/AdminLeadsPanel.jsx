@@ -315,6 +315,17 @@ export default function AdminLeadsPanel({
                       <div style={{ fontWeight: 700, fontSize: 13.5, lineHeight: 1.25, overflowWrap: "anywhere" }}>{lead.business}</div>
                       <div style={{ marginTop: 3, display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap", fontSize: 11.2, color: T.inkSoft }}>
                         <span>{lead.salesmanName || "Unassigned"}</span>
+                        {lead.inactiveDays != null && (
+                          <>
+                            <span aria-hidden="true">·</span>
+                            <span
+                              data-inactive-badge="true"
+                              style={{ display: "inline-flex", alignItems: "center", borderRadius: 999, padding: "2px 7px", background: T.dangerSoft, color: T.danger, border: `1px solid ${T.danger}33`, fontSize: 10.5, lineHeight: 1.15, fontWeight: 800 }}
+                            >
+                              Inactive · {lead.inactiveDays}d
+                            </span>
+                          </>
+                        )}
                         {attention.label && <><span aria-hidden="true">·</span><strong style={{ color: attention.tone, fontWeight: 800 }}>{attention.label}</strong></>}
                       </div>
                     </div>

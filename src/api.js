@@ -530,6 +530,8 @@ export function mapLeadRow(row) {
     verification: row.verification_status,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at || row.created_at),
+    inactiveDays: row.inactive_days != null ? Number(row.inactive_days) : null,
+    inactiveSince: row.inactive_since ? new Date(row.inactive_since) : null,
     notes: row.notes || "",
     syncStatus: "synced",
   };
