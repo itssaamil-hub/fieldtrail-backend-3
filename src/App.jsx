@@ -528,7 +528,7 @@ export default function App() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showDailyReports,setShowDailyReports] = useState(false);
   const [collectionView,setCollectionView]=useState(null);
-  useEffect(()=>{const open=e=>{setQuotationView(null);setShowOnboarding(false);setShowSettings(false);setCollectionView({initialKey:e.detail?.key||null});};window.addEventListener('fieldtrail:open-collections',open);return()=>window.removeEventListener('fieldtrail:open-collections',open);},[]);
+  useEffect(()=>{const open=e=>{setQuotationView(null);setShowOnboarding(false);setShowSettings(false);setShowCrmSettings(false);setCollectionView({initialKey:e.detail?.key||null});};window.addEventListener('fieldtrail:open-collections',open);return()=>window.removeEventListener('fieldtrail:open-collections',open);},[]);
 
   const [quotationView, setQuotationView] = useState(null);
   const [showOnboardingSettings, setShowOnboardingSettings] = useState(false);
@@ -545,12 +545,14 @@ export default function App() {
   });
   const adminDesktop = desktop && session?.role === "admin";
   const selectDesktopSection = section => {
+    setShowSettings(false);
+    setShowCrmSettings(false);
     setDesktopSection(section);
     setTopPage(section === "reports" ? "reports" : "dashboard");
   };
   useEffect(() => {
     if (!adminDesktop) return;
-    const open = () => { setDesktopSection("activity"); setTopPage("dashboard"); };
+    const open = () => { setShowSettings(false); setShowCrmSettings(false); setDesktopSection("activity"); setTopPage("dashboard"); };
     window.addEventListener("engage:open-activity-centre", open);
     return () => window.removeEventListener("engage:open-activity-centre", open);
   }, [adminDesktop]);
@@ -666,7 +668,23 @@ export default function App() {
   } else if (!session) {
     body = <LoginScreen apiBase={apiBase} online={online} onLoggedIn={handleLoggedIn} onOpenSettings={() => setShowSettings(true)} />;
   } else if (session.role === "admin") {
-    body = !adminDesktop && showActivityCentreMobile
+    body = adminDesktop && showCrmSettings
+      ? <CrmSettingsModal desktopPage onClose={() => { setShowCrmSettings(false); setShowSettings(true); }} />
+      : adminDesktop && showSettings
+      ? <SettingsModal
+          desktopPage
+          onClose={() => setShowSettings(false)}
+          onLogout={() => { setShowSettings(false); handleLogout(); }}
+          onOpenCrmSettings={() => { setShowSettings(false); setShowCrmSettings(true); }}
+          onOpenDataHealth={() => { setShowSettings(false); setShowDataHealth(true); }}
+          onOpenQuotationSettings={() => { setShowSettings(false); setQuotationView({settings:true}); }}
+          onOpenOnboardingSettings={() => { setShowSettings(false); setShowOnboardingSettings(true); }}
+          canInstall={canInstall}
+          installed={installed}
+          promptInstall={promptInstall}
+          push={pushNotifications}
+        />
+      : !adminDesktop && showActivityCentreMobile
       ? <ActivityCentre mobile onClose={() => setShowActivityCentreMobile(false)} onOpenLead={lead => { setShowActivityCentreMobile(false); setTopPage("dashboard"); setNotificationLead({id:lead.id, lead, openedAt:Date.now()}); }} />
       : adminDesktop && desktopSection === "payments" && topPage !== "reports"
       ? <CollectionsPanel embedded />
@@ -681,7 +699,7 @@ export default function App() {
 
   return (
     <div className={adminDesktop ? `engage-desktop-shell${sidebarCollapsed ? " sidebar-collapsed" : ""}` : undefined} style={{ fontFamily: "Inter, system-ui, sans-serif", background: T.paper, minHeight: "100vh", color: T.ink }}>
-      {adminDesktop && <DesktopSidebar active={topPage === "reports" ? "reports" : desktopSection === "reports" ? "dashboard" : desktopSection} collapsed={sidebarCollapsed} onCollapse={toggleSidebar} onSelect={selectDesktopSection} onHome={handleHome} settingsOpen={showSettings} onSettings={() => { closeNotifications(); setShowOnboarding(false); setShowSettings(true); }} />}
+      {adminDesktop && <DesktopSidebar active={topPage === "reports" ? "reports" : desktopSection === "reports" ? "dashboard" : desktopSection} collapsed={sidebarCollapsed} onCollapse={toggleSidebar} onSelect={selectDesktopSection} onHome={handleHome} settingsOpen={showSettings || showCrmSettings} onSettings={() => { closeNotifications(); setShowOnboarding(false); setShowCrmSettings(false); setShowSettings(true); }} />}
       <TopBar
         hidePageNavigation={adminDesktop}
         online={online}
@@ -691,21 +709,21 @@ export default function App() {
         onHome={session ? handleHome : undefined}
         onAddExpense={session?.role === "admin" ? () => setShowAddExpense(true) : undefined}
         unreadCount={unreadCount}
-        onOpenNotifications={session ? () => { setShowSettings(false); setShowNotifications(true); } : undefined}
+        onOpenNotifications={session ? () => { setShowSettings(false); setShowCrmSettings(false); setShowNotifications(true); } : undefined}
         onOpenActivityCentre={session?.role === "admin" && !adminDesktop ? () => { closeNotifications(); setShowSettings(false); setShowOnboarding(false); setQuotationView(null); setCollectionView(null); setShowDailyReports(false); setShowActivityCentreMobile(true); } : undefined}
-        onOpenSettings={() => { closeNotifications(); setShowOnboarding(false); setShowSettings(true); }}
-        onOpenCollections={()=>{closeNotifications();setShowSettings(false);setShowOnboarding(false);setQuotationView(null);setShowDailyReports(false);setCollectionView({});}}
-        onOpenDailyReports={() => { closeNotifications(); setShowSettings(false); setShowOnboarding(false); setQuotationView(null); setShowDailyReports(true); }}
-        onOpenOnboarding={() => { closeNotifications(); setQuotationView(null); setShowSettings(false); setShowOnboarding(true); }}
-        onOpenQuotations={() => { closeNotifications(); setShowSettings(false); setShowOnboarding(false); setQuotationView({}); }}
-        onOpenApprovals={session?.role === "admin" ? () => { closeNotifications(); setShowSettings(false); setShowOnboarding(false); setQuotationView({approvals:true}); } : undefined}
+        onOpenSettings={() => { closeNotifications(); setShowOnboarding(false); setShowCrmSettings(false); setShowSettings(true); }}
+        onOpenCollections={()=>{closeNotifications();setShowSettings(false);setShowCrmSettings(false);setShowOnboarding(false);setQuotationView(null);setShowDailyReports(false);setCollectionView({});}}
+        onOpenDailyReports={() => { closeNotifications(); setShowSettings(false); setShowCrmSettings(false); setShowOnboarding(false); setQuotationView(null); setShowDailyReports(true); }}
+        onOpenOnboarding={() => { closeNotifications(); setQuotationView(null); setShowSettings(false); setShowCrmSettings(false); setShowOnboarding(true); }}
+        onOpenQuotations={() => { closeNotifications(); setShowSettings(false); setShowCrmSettings(false); setShowOnboarding(false); setQuotationView({}); }}
+        onOpenApprovals={session?.role === "admin" ? () => { closeNotifications(); setShowSettings(false); setShowCrmSettings(false); setShowOnboarding(false); setQuotationView({approvals:true}); } : undefined}
       />
       {body}
       {session && <SaveFeedback key={session.id} />}
       {session && showNotifications && <NotificationsPanel key={`notifications-${session.id}`} session={session} online={online} onClose={closeNotifications} onOpenQuote={id => { closeNotifications(); setQuotationView({initialId:id}); }} onOpenLead={id => {
         closeNotifications(); setTopPage("dashboard"); setNotificationLead({ id, openedAt: Date.now() });
       }} />}
-      {showSettings && (
+      {showSettings && !adminDesktop && (
         <SettingsModal
           onClose={() => setShowSettings(false)}
           onLogout={session ? () => { setShowSettings(false); handleLogout(); } : undefined}
@@ -724,7 +742,7 @@ export default function App() {
       {session && showDailyReports && <DayClosingReports onClose={()=>setShowDailyReports(false)}/>}
       {session && showOnboarding && <OnboardingPanel key={session.id} onClose={() => setShowOnboarding(false)} />}
       {session?.role === "admin" && showOnboardingSettings && <OnboardingTemplateEditor onClose={() => setShowOnboardingSettings(false)} />}
-      {showCrmSettings && <CrmSettingsModal onClose={() => setShowCrmSettings(false)} />}
+      {showCrmSettings && !adminDesktop && <CrmSettingsModal onClose={() => setShowCrmSettings(false)} />}
       {showDataHealth && <DataHealth onClose={() => setShowDataHealth(false)} />}
       {showAddExpense && <AddExpenseModal onClose={() => setShowAddExpense(false)} />}
     </div>
