@@ -28,6 +28,17 @@ function responseFor(pathname, method) {
   if (pathname === '/salesman/messages') return { messages: [] };
   if (pathname.includes('/attendance')) return {};
   if (pathname === '/salesman/settings') return { employeePermissions: { allowLeadWithoutStartDay: true }, locationSettings: { gpsLocation: false, locationMandatoryForNewLead: false, continuousGpsTracking: false }, leadSettings: {} };
+  if (pathname === '/admin/settings') return {
+    leadSettings: {
+      requireBusinessName: true, requireSubLocation: true, requirePosName: true, requireContactName: true,
+      requireContactNumber: true, requireStatus: true, requireComments: false, requireDealValue: false,
+      requireFollowUpDate: false, duplicateProtectionEnabled: true, duplicateCheckPhone: true,
+      duplicateCheckBusinessLocation: true, allowDuplicateOverride: false,
+      automationRules: { inactiveLeadFollowUp: { enabled: false, inactivityDays: 5 } },
+    },
+    locationSettings: { gpsLocation: true, locationMandatoryForNewLead: true, continuousGpsTracking: true },
+    messageSettings: { employeeRepliesEnabled: true },
+  };
   if (pathname.includes('/settings')) return {};
   if (pathname === '/quotations/alerts') return { alerts: [] };
   if (pathname === '/quotations') return { quotes: [], hasMore: false };
@@ -41,6 +52,14 @@ async function mockBackend(page) {
   await page.route(`${apiBase}/**`, async route => {
     const req = route.request();
     const url = new URL(req.url());
+    if (url.pathname === '/admin/settings' && req.method() === 'PATCH') {
+      const body = req.postDataJSON();
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+        leadSettings: body.leadSettings,
+        locationSettings: body.locationSettings,
+        messageSettings: body.messageSettings,
+      }) });
+    }
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(responseFor(url.pathname, req.method())) });
   });
 }
@@ -241,5 +260,38 @@ test('salesman Add Deal uses the same single Renewal control', async ({ page }) 
   await renewal.getByRole('button', { name: 'Exact date' }).click();
   await expect(renewal.getByLabel('Renewal date')).toBeVisible();
   await expect(renewal.getByRole('combobox', { name: 'Renewal month' })).toHaveCount(0);
+  await noCrash(page);
+});
+
+
+test('CRM Settings configures inactive lead follow-up automation without changing other settings', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await bootAs(page, adminSession);
+
+  let savedLeadSettings = null;
+  page.on('request', req => {
+    if (new URL(req.url()).pathname === '/admin/settings' && req.method() === 'PATCH') {
+      savedLeadSettings = req.postDataJSON()?.leadSettings || null;
+    }
+  });
+
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page.getByRole('button', { name: 'CRM Settings', exact: true }).click();
+  const rules = page.locator('[data-automation-rules="true"]');
+  await expect(rules).toBeVisible();
+  await expect(rules).toContainText('Automation Rules');
+  await expect(rules).toContainText('Inactive lead follow-up');
+
+  const toggle = rules.getByRole('switch').first();
+  await expect(toggle).toHaveAttribute('aria-checked', 'false');
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-checked', 'true');
+  await expect.poll(() => savedLeadSettings?.automationRules?.inactiveLeadFollowUp?.enabled).toBe(true);
+
+  const days = rules.getByLabel('Inactive lead days');
+  await days.fill('7');
+  await days.blur();
+  await expect.poll(() => savedLeadSettings?.automationRules?.inactiveLeadFollowUp?.inactivityDays).toBe(7);
+  await expect(savedLeadSettings.requireBusinessName).toBe(true);
   await noCrash(page);
 });

@@ -563,6 +563,17 @@ function CrmSettingsModal({ onClose }) {
   const toggleLead = (key) => (val) => save({ ...leadSettings, [key]: val }, locationSettings);
   const toggleLocation = (key) => (val) => save(leadSettings, { ...locationSettings, [key]: val }, messageSettings);
   const toggleMessage = (key) => (val) => save(leadSettings, locationSettings, { ...messageSettings, [key]: val });
+  const inactiveAutomation = leadSettings?.automationRules?.inactiveLeadFollowUp || { enabled: false, inactivityDays: 5 };
+  const saveInactiveAutomation = (patch) => {
+    const next = {
+      ...leadSettings,
+      automationRules: {
+        ...(leadSettings.automationRules || {}),
+        inactiveLeadFollowUp: { ...inactiveAutomation, ...patch },
+      },
+    };
+    return save(next, locationSettings, messageSettings);
+  };
 
   return (
     <Overlay onClose={onClose} title="CRM Settings">
@@ -585,6 +596,53 @@ function CrmSettingsModal({ onClose }) {
           <SettingToggle label="Require Comments" checked={leadSettings.requireComments} onChange={toggleLead("requireComments")} />
           <SettingToggle label="Require Expected Deal Value" checked={leadSettings.requireDealValue} onChange={toggleLead("requireDealValue")} />
           <SettingToggle label="Require Next Follow-up Date" checked={leadSettings.requireFollowUpDate} onChange={toggleLead("requireFollowUpDate")} />
+
+          <div data-automation-rules="true" style={{ marginTop: 22 }}>
+            <div style={{ fontSize: 11, textTransform: "uppercase", color: T.inkSoft, fontWeight: 700, letterSpacing: 0.4, marginBottom: 4 }}>Automation Rules</div>
+            <div style={{ fontSize: 12, color: T.inkSoft, marginBottom: 8 }}>Automatically create follow-up work when a lead needs attention.</div>
+            <SettingToggle
+              label="Inactive lead follow-up"
+              description="Create a follow-up task for the lead owner when there has been no lead activity for the configured number of days. Won and Lost leads are excluded."
+              checked={inactiveAutomation.enabled === true}
+              onChange={(enabled) => saveInactiveAutomation({ enabled })}
+            />
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "12px 0", borderBottom: `1px solid ${T.line}` }}>
+              <div>
+                <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>No activity for</div>
+                <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 2 }}>Then create a linked follow-up task assigned to the lead owner.</div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 7, flexShrink: 0 }}>
+                <input
+                  aria-label="Inactive lead days"
+                  type="number"
+                  min="1"
+                  max="90"
+                  disabled={saving}
+                  value={inactiveAutomation.inactivityDays ?? 5}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setLeadSettings((current) => ({
+                      ...current,
+                      automationRules: {
+                        ...(current.automationRules || {}),
+                        inactiveLeadFollowUp: {
+                          ...(current.automationRules?.inactiveLeadFollowUp || { enabled: false }),
+                          inactivityDays: value === "" ? "" : Number(value),
+                        },
+                      },
+                    }));
+                  }}
+                  onBlur={(event) => {
+                    const raw = Number(event.target.value);
+                    const inactivityDays = Number.isInteger(raw) && raw >= 1 && raw <= 90 ? raw : 5;
+                    saveInactiveAutomation({ inactivityDays });
+                  }}
+                  style={{ ...inputStyle, width: 74, height: 36, padding: "0 9px", textAlign: "center" }}
+                />
+                <span style={{ fontSize: 12, color: T.inkSoft }}>days</span>
+              </div>
+            </div>
+          </div>
 
           <div style={{ fontSize: 11, textTransform: "uppercase", color: T.inkSoft, fontWeight: 700, letterSpacing: 0.4, marginTop: 22, marginBottom: 4 }}>Duplicate Protection</div>
           <div style={{ fontSize: 12, color: T.inkSoft, marginBottom: 8 }}>Warns before the same restaurant is entered twice. Exact contact-number matches can be blocked.</div>
