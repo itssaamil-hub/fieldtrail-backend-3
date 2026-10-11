@@ -344,7 +344,8 @@ test('admin mobile Deals shows the small inactivity capsule from backend state',
   const badge = page.locator('[data-inactive-badge="true"]');
   await expect(badge).toHaveCount(1);
   await expect(badge).toHaveText('Inactive · 6d');
-  await expect(page.getByText('Cafe 91', { exact: true })).toBeVisible();
-  await expect(page.getByText('Hot', { exact: true })).toBeVisible();
+  const cafeCard = page.getByRole('button', { name: /Cafe 91/ });
+  await expect(cafeCard.getByText('Cafe 91', { exact: true })).toBeVisible();
+  await expect(cafeCard.getByText('Hot', { exact: true })).toBeVisible();
   await noCrash(page);
 });
