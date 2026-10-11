@@ -298,11 +298,13 @@ test('CRM Settings configures inactive lead follow-up automation without changin
     await expect(stages.getByLabel(`Automation stage ${label}`)).toBeVisible();
   }
   await expect(stages.getByLabel('Automation stage Won')).not.toBeChecked();
-  await stages.getByLabel('Automation stage Won').check();
+  await stages.getByLabel('Automation stage Won').click();
   await expect.poll(() => savedLeadSettings?.automationRules?.inactiveLeadFollowUp?.stages?.includes('won')).toBe(true);
+  await expect(stages.getByLabel('Automation stage Won')).toBeChecked();
 
-  await stages.getByLabel('Automation stage Hot').uncheck();
+  await stages.getByLabel('Automation stage Hot').click();
   await expect.poll(() => savedLeadSettings?.automationRules?.inactiveLeadFollowUp?.stages?.includes('hot')).toBe(false);
+  await expect(stages.getByLabel('Automation stage Hot')).not.toBeChecked();
   await expect(savedLeadSettings.requireBusinessName).toBe(true);
   await noCrash(page);
 });
