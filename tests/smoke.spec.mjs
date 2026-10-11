@@ -243,3 +243,63 @@ test('salesman Add Deal uses the same single Renewal control', async ({ page }) 
   await expect(renewal.getByRole('combobox', { name: 'Renewal month' })).toHaveCount(0);
   await noCrash(page);
 });
+
+
+test('CRM Settings configures inactive lead follow-up automation without changing other settings', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await bootAs(page, adminSession);
+
+  let savedLeadSettings = null;
+  await page.route(`${apiBase}/admin/settings`, async route => {
+    const req = route.request();
+    const base = {
+      requireBusinessName: true,
+      requireSubLocation: true,
+      requirePosName: true,
+      requireContactName: true,
+      requireContactNumber: true,
+      requireStatus: true,
+      requireComments: false,
+      requireDealValue: false,
+      requireFollowUpDate: false,
+      duplicateProtectionEnabled: true,
+      duplicateCheckPhone: true,
+      duplicateCheckBusinessLocation: true,
+      allowDuplicateOverride: false,
+      automationRules: { inactiveLeadFollowUp: { enabled: false, inactivityDays: 5 } },
+    };
+    if (req.method() === 'PATCH') {
+      const body = req.postDataJSON();
+      savedLeadSettings = body.leadSettings;
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+        leadSettings: body.leadSettings,
+        locationSettings: body.locationSettings,
+        messageSettings: body.messageSettings,
+      }) });
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+      leadSettings: base,
+      locationSettings: { gpsLocation: true, locationMandatoryForNewLead: true, continuousGpsTracking: true },
+      messageSettings: { employeeRepliesEnabled: true },
+    }) });
+  });
+
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  const rules = page.locator('[data-automation-rules="true"]');
+  await expect(rules).toBeVisible();
+  await expect(rules).toContainText('Automation Rules');
+  await expect(rules).toContainText('Inactive lead follow-up');
+
+  const toggle = rules.getByRole('switch').first();
+  await expect(toggle).toHaveAttribute('aria-checked', 'false');
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-checked', 'true');
+  await expect.poll(() => savedLeadSettings?.automationRules?.inactiveLeadFollowUp?.enabled).toBe(true);
+
+  const days = rules.getByLabel('Inactive lead days');
+  await days.fill('7');
+  await days.blur();
+  await expect.poll(() => savedLeadSettings?.automationRules?.inactiveLeadFollowUp?.inactivityDays).toBe(7);
+  await expect(savedLeadSettings.requireBusinessName).toBe(true);
+  await noCrash(page);
+});
