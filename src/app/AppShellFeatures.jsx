@@ -239,7 +239,37 @@ function LoginScreen({ apiBase, online, onLoggedIn, onOpenSettings }) {
   );
 }
 
-function SettingsModal({ onClose, onLogout, onOpenCrmSettings, onOpenDataHealth, onOpenOnboardingSettings, onOpenQuotationSettings, canInstall, installed, promptInstall, push }) {
+function SettingsSurface({ desktopPage = false, title, onClose, backLabel, children }) {
+  if (!desktopPage) return <Overlay onClose={onClose} title={title}>{children}</Overlay>;
+  return (
+    <main data-desktop-settings-page="true" aria-label={title} style={{ width: "100%", boxSizing: "border-box", padding: "28px 32px 48px" }}>
+      <div style={{ maxWidth: 1080, margin: "0 auto" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, marginBottom: 18 }}>
+          <div>
+            {backLabel && (
+              <button
+                type="button"
+                onClick={onClose}
+                style={{ border: "none", background: "transparent", color: T.route, padding: 0, marginBottom: 7, fontSize: 12.5, fontWeight: 750, cursor: "pointer" }}
+              >
+                ← Back to {backLabel}
+              </button>
+            )}
+            <h1 style={{ margin: 0, fontFamily: "'Space Grotesk', sans-serif", fontSize: 24, lineHeight: 1.2, color: T.ink }}>{title}</h1>
+            <div style={{ marginTop: 5, color: T.inkSoft, fontSize: 12.5 }}>
+              {title === "CRM Settings" ? "Manage lead rules, automation, duplicate protection and CRM behavior." : "Manage Engage configuration and notification preferences."}
+            </div>
+          </div>
+        </div>
+        <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, padding: 24, boxSizing: "border-box" }}>
+          {children}
+        </section>
+      </div>
+    </main>
+  );
+}
+
+function SettingsModal({ onClose, onLogout, onOpenCrmSettings, onOpenDataHealth, onOpenOnboardingSettings, onOpenQuotationSettings, canInstall, installed, promptInstall, push, desktopPage = false }) {
   const isIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
   const [showIosHint, setShowIosHint] = useState(false);
 
@@ -252,7 +282,7 @@ function SettingsModal({ onClose, onLogout, onOpenCrmSettings, onOpenDataHealth,
   ] : [["Notifications", [["hotLead","🔥 Hot leads"],["statusConversation","Conversation status"],["statusNegotiation","Negotiation status"],["statusDemo","Demo status"],["renewalDue","Renewals due"],["followUpDue","Follow-ups due"],["dayStartDigest","Day-start report (~1pm)"],["salesBriefing","Daily sales briefing"]]]];
 
   return (
-    <Overlay onClose={onClose} title="Settings">
+    <SettingsSurface desktopPage={desktopPage} onClose={onClose} title="Settings">
       {!installed && (
         <div style={{ marginBottom: 18 }}>
           <button
@@ -341,7 +371,7 @@ function SettingsModal({ onClose, onLogout, onOpenCrmSettings, onOpenDataHealth,
           </button>
         </>
       )}
-    </Overlay>
+    </SettingsSurface>
   );
 }
 
@@ -532,7 +562,7 @@ function AddExpenseModal({ onClose }) {
   );
 }
 
-function CrmSettingsModal({ onClose }) {
+function CrmSettingsModal({ onClose, desktopPage = false }) {
   const [leadSettings, setLeadSettings] = useState(null);
   const [locationSettings, setLocationSettings] = useState(null);
   const [messageSettings, setMessageSettings] = useState(null);
@@ -582,7 +612,7 @@ function CrmSettingsModal({ onClose }) {
   };
 
   return (
-    <Overlay onClose={onClose} title="CRM Settings">
+    <SettingsSurface desktopPage={desktopPage} onClose={onClose} title="CRM Settings" backLabel={desktopPage ? "Settings" : undefined}>
       {!leadSettings || !locationSettings || !messageSettings ? (
         <div style={{ display: "flex", alignItems: "center", gap: 8, color: T.inkSoft, fontSize: 13, padding: 20 }}>
           <Loader2 size={16} className="spin" /> Loading settings…
@@ -701,7 +731,7 @@ function CrmSettingsModal({ onClose }) {
           {saving && <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 12, display: "flex", alignItems: "center", gap: 6 }}><Loader2 size={12} className="spin" /> Saving…</div>}
         </>
       )}
-    </Overlay>
+    </SettingsSurface>
   );
 }
 
