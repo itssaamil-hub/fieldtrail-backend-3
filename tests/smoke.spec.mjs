@@ -349,3 +349,43 @@ test('admin mobile Deals shows the small inactivity capsule from backend state',
   await expect(cafeCard.getByText('Hot', { exact: true })).toBeVisible();
   await noCrash(page);
 });
+
+
+test('desktop admin Settings and CRM Settings are full-page and normal sidebar navigation exits safely', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await bootAs(page, adminSession);
+
+  const settingsButton = page.getByRole('button', { name: 'Settings', exact: true }).first();
+  await settingsButton.click();
+
+  const settingsPage = page.locator('[data-desktop-settings-page="true"]');
+  await expect(settingsPage).toHaveCount(1);
+  await expect(settingsPage.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+  await expect(settingsButton).toHaveAttribute('aria-pressed', 'true');
+  const settingsBox = await settingsPage.boundingBox();
+  expect(settingsBox?.width || 0).toBeGreaterThan(800);
+
+  await settingsPage.getByRole('button', { name: 'CRM Settings', exact: true }).click();
+  await expect(page.locator('[data-desktop-settings-page="true"]')).toHaveCount(1);
+  const crmPage = page.locator('[data-desktop-settings-page="true"]');
+  await expect(crmPage.getByRole('heading', { name: 'CRM Settings', exact: true })).toBeVisible();
+  await expect(crmPage.getByRole('button', { name: 'Back to Settings' })).toBeVisible();
+  await expect(crmPage.locator('[data-automation-rules="true"]')).toBeVisible();
+  await expect(settingsButton).toHaveAttribute('aria-pressed', 'true');
+
+  await page.getByRole('button', { name: 'Dashboard', exact: true }).click();
+  await expect(page.locator('[data-desktop-settings-page="true"]')).toHaveCount(0);
+  await expect(settingsButton).toHaveAttribute('aria-pressed', 'false');
+  await noCrash(page);
+});
+
+test('mobile admin Settings keeps the existing overlay behavior', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await bootAs(page, adminSession);
+
+  const settingsButton = page.getByRole('button', { name: 'Settings', exact: true }).first();
+  await settingsButton.click();
+  await expect(page.locator('[data-desktop-settings-page="true"]')).toHaveCount(0);
+  await expect(page.locator('body')).toContainText('Settings');
+  await noCrash(page);
+});
