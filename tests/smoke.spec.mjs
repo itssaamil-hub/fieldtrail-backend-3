@@ -391,3 +391,24 @@ test('mobile admin Settings keeps the existing overlay behavior', async ({ page 
   await expect(page.locator('body')).toContainText('Settings');
   await noCrash(page);
 });
+
+
+test('Exception Centre Rules adds only stale Cold and Conversation rows without changing overview cards', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await bootAs(page, adminSession);
+
+  await page.getByRole('button', { name: 'Exception Centre', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Exception Centre', exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Rules', exact: true }).click();
+  await expect(page.getByText('Stale Cold leads', { exact: true })).toBeVisible();
+  await expect(page.getByText('Stale Conversation leads', { exact: true })).toBeVisible();
+  await expect(page.getByText('Stale Hot leads', { exact: true })).toBeVisible();
+  await expect(page.getByText('Stuck Negotiations', { exact: true })).toBeVisible();
+
+  await expect(page.getByText('Stale hot leads', { exact: true })).toBeVisible();
+  await expect(page.getByText('Stuck negotiations', { exact: true })).toBeVisible();
+  await expect(page.getByText('Stale cold leads', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Stale conversation leads', { exact: true })).toHaveCount(0);
+  await noCrash(page);
+});
