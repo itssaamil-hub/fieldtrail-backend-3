@@ -281,6 +281,8 @@ test('CRM Settings configures inactive lead follow-up automation without changin
   await expect(rules).toBeVisible();
   await expect(rules).toContainText('Automation Rules');
   await expect(rules).toContainText('Inactive lead follow-up');
+  await expect(rules).toContainText('Show a small Inactive · Xd badge on matching leads.');
+  await expect(rules).not.toContainText('create a linked follow-up task');
 
   const toggle = rules.getByRole('switch').first();
   await expect(toggle).toHaveAttribute('aria-checked', 'false');
@@ -306,5 +308,43 @@ test('CRM Settings configures inactive lead follow-up automation without changin
   await expect.poll(() => savedLeadSettings?.automationRules?.inactiveLeadFollowUp?.stages?.includes('hot')).toBe(false);
   await expect(stages.getByLabel('Automation stage Hot')).not.toBeChecked();
   await expect(savedLeadSettings.requireBusinessName).toBe(true);
+  await noCrash(page);
+});
+
+
+test('admin mobile Deals shows the small inactivity capsule from backend state', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await bootAs(page, adminSession);
+
+  const inactiveLead = {
+    id: '11111111-1111-4111-8111-111111111111',
+    client_uuid: '22222222-2222-4222-8222-222222222222',
+    salesman_id: employee.id,
+    salesman_name: employee.full_name,
+    business_name: 'Cafe 91',
+    sub_location: 'Gomti Nagar',
+    contact_name: 'Aamil',
+    phone: '9999999998',
+    status: 'hot',
+    deal_value: 25000,
+    created_at: '2026-10-01T10:00:00.000Z',
+    updated_at: '2026-10-06T10:00:00.000Z',
+    inactive_days: 6,
+    inactive_since: '2026-10-06T10:00:00.000Z',
+  };
+
+  await page.route(`${apiBase}/admin/leads**`, async route => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ leads: [inactiveLead], total: 1, page: 1, totalPages: 1 }) });
+  });
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(750);
+
+  await page.getByRole('button', { name: 'Deals', exact: true }).click();
+  const badge = page.locator('[data-inactive-badge="true"]');
+  await expect(badge).toHaveCount(1);
+  await expect(badge).toHaveText('Inactive · 6d');
+  await expect(page.getByText('Cafe 91', { exact: true })).toBeVisible();
+  await expect(page.getByText('Hot', { exact: true })).toBeVisible();
   await noCrash(page);
 });
