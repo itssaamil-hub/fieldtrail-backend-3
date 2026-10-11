@@ -10,7 +10,10 @@ import ExceptionLeadDrawer from './exceptionLeadDrawer.jsx';
 
 const DAY = 86400000;
 const DEFAULT_RULES = {
-  followup_enabled:true, hot_enabled:true, hot_stale_days:3, hot_critical_days:5,
+  followup_enabled:true,
+  cold_enabled:true, cold_stale_days:3, cold_critical_days:5,
+  conversation_enabled:true, conversation_stale_days:3, conversation_critical_days:5,
+  hot_enabled:true, hot_stale_days:3, hot_critical_days:5,
   negotiation_enabled:true, negotiation_stale_days:2, negotiation_critical_days:5,
   renewal_enabled:true, renewal_warning_days:7, tasks_enabled:true,
   payments_enabled:true, data_quality_enabled:true,
@@ -208,6 +211,8 @@ function RuleDrawer({rules,busy,onClose,onSave}) {
   const number=(key,min=1,max=180,onChangeExtra=null)=><input type="number" min={min} max={max} value={draft[key]} onChange={e=>{const n=Math.max(min,Math.min(max,Number(e.target.value)||min));setDraft(v=>onChangeExtra?onChangeExtra(v,n):({...v,[key]:n}));}}/>;
   return <div className="exception-drawer-backdrop"><aside className="exception-drawer"><header><div><small>EXCEPTION RULES</small><h2>Manager thresholds</h2></div><button onClick={onClose}><X size={18}/></button></header><p className="exception-drawer-intro">Tune when Engage should interrupt you. These settings change live detection for the whole admin team.</p>
     <div className="exception-rule"><div><strong>Overdue follow-ups</strong><span>Flag active leads after their next follow-up date passes.</span></div>{toggle('followup_enabled')}</div>
+    <div className="exception-rule"><div><strong>Stale Cold leads</strong><span>Warn after {draft.cold_stale_days} days; critical after {draft.cold_critical_days}.</span></div>{toggle('cold_enabled')}<div className="exception-rule-numbers">{number('cold_stale_days',1,90,(v,n)=>({...v,cold_stale_days:n,cold_critical_days:Math.max(Number(v.cold_critical_days)||n,n)}))}<span>→</span>{number('cold_critical_days',Number(draft.cold_stale_days)||1,180)}</div></div>
+    <div className="exception-rule"><div><strong>Stale Conversation leads</strong><span>Warn after {draft.conversation_stale_days} days; critical after {draft.conversation_critical_days}.</span></div>{toggle('conversation_enabled')}<div className="exception-rule-numbers">{number('conversation_stale_days',1,90,(v,n)=>({...v,conversation_stale_days:n,conversation_critical_days:Math.max(Number(v.conversation_critical_days)||n,n)}))}<span>→</span>{number('conversation_critical_days',Number(draft.conversation_stale_days)||1,180)}</div></div>
     <div className="exception-rule"><div><strong>Stale Hot leads</strong><span>Warn after {draft.hot_stale_days} days; critical after {draft.hot_critical_days}.</span></div>{toggle('hot_enabled')}<div className="exception-rule-numbers">{number('hot_stale_days',1,90,(v,n)=>({...v,hot_stale_days:n,hot_critical_days:Math.max(Number(v.hot_critical_days)||n,n)}))}<span>→</span>{number('hot_critical_days',Number(draft.hot_stale_days)||1,180)}</div></div>
     <div className="exception-rule"><div><strong>Stuck Negotiations</strong><span>Warn after {draft.negotiation_stale_days} days; critical after {draft.negotiation_critical_days}.</span></div>{toggle('negotiation_enabled')}<div className="exception-rule-numbers">{number('negotiation_stale_days',1,90,(v,n)=>({...v,negotiation_stale_days:n,negotiation_critical_days:Math.max(Number(v.negotiation_critical_days)||n,n)}))}<span>→</span>{number('negotiation_critical_days',Number(draft.negotiation_stale_days)||1,180)}</div></div>
     <div className="exception-rule"><div><strong>Renewal risk</strong><span>Start warning {draft.renewal_warning_days} days before renewal.</span></div>{toggle('renewal_enabled')}<div className="exception-rule-numbers">{number('renewal_warning_days',1,180)}</div></div>
