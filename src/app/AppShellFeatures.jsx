@@ -605,17 +605,17 @@ function CrmSettingsModal({ onClose }) {
 
           <div data-automation-rules="true" style={{ marginTop: 22 }}>
             <div style={{ fontSize: 11, textTransform: "uppercase", color: T.inkSoft, fontWeight: 700, letterSpacing: 0.4, marginBottom: 4 }}>Automation Rules</div>
-            <div style={{ fontSize: 12, color: T.inkSoft, marginBottom: 8 }}>Automatically create follow-up work when a lead needs attention.</div>
+            <div style={{ fontSize: 12, color: T.inkSoft, marginBottom: 8 }}>Automatically flag leads that need attention.</div>
             <SettingToggle
               label="Inactive lead follow-up"
-              description="Create a follow-up task for the lead owner when there has been no lead activity for the configured number of days."
+              description="Show a small inactivity badge when there has been no lead activity for the configured number of days."
               checked={inactiveAutomation.enabled === true}
               onChange={(enabled) => saveInactiveAutomation({ enabled })}
             />
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "12px 0", borderBottom: `1px solid ${T.line}` }}>
               <div>
                 <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>No activity for</div>
-                <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 2 }}>Then create a linked follow-up task assigned to the lead owner.</div>
+                <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 2 }}>Show a small Inactive · Xd badge on matching leads.</div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 7, flexShrink: 0 }}>
                 <input
