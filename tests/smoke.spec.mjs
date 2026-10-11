@@ -383,7 +383,7 @@ test('mobile admin Settings keeps the existing overlay behavior', async ({ page 
   await page.setViewportSize({ width: 390, height: 844 });
   await bootAs(page, adminSession);
 
-  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await page.getByRole('button', { name: 'More', exact: true }).click();
   const appMenu = page.getByRole('navigation', { name: 'App menu' });
   await appMenu.getByRole('button', { name: 'Settings', exact: true }).click();
 
