@@ -28,6 +28,17 @@ function responseFor(pathname, method) {
   if (pathname === '/salesman/messages') return { messages: [] };
   if (pathname.includes('/attendance')) return {};
   if (pathname === '/salesman/settings') return { employeePermissions: { allowLeadWithoutStartDay: true }, locationSettings: { gpsLocation: false, locationMandatoryForNewLead: false, continuousGpsTracking: false }, leadSettings: {} };
+  if (pathname === '/admin/settings') return {
+    leadSettings: {
+      requireBusinessName: true, requireSubLocation: true, requirePosName: true, requireContactName: true,
+      requireContactNumber: true, requireStatus: true, requireComments: false, requireDealValue: false,
+      requireFollowUpDate: false, duplicateProtectionEnabled: true, duplicateCheckPhone: true,
+      duplicateCheckBusinessLocation: true, allowDuplicateOverride: false,
+      automationRules: { inactiveLeadFollowUp: { enabled: false, inactivityDays: 5 } },
+    },
+    locationSettings: { gpsLocation: true, locationMandatoryForNewLead: true, continuousGpsTracking: true },
+    messageSettings: { employeeRepliesEnabled: true },
+  };
   if (pathname.includes('/settings')) return {};
   if (pathname === '/quotations/alerts') return { alerts: [] };
   if (pathname === '/quotations') return { quotes: [], hasMore: false };
@@ -41,6 +52,14 @@ async function mockBackend(page) {
   await page.route(`${apiBase}/**`, async route => {
     const req = route.request();
     const url = new URL(req.url());
+    if (url.pathname === '/admin/settings' && req.method() === 'PATCH') {
+      const body = req.postDataJSON();
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+        leadSettings: body.leadSettings,
+        locationSettings: body.locationSettings,
+        messageSettings: body.messageSettings,
+      }) });
+    }
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(responseFor(url.pathname, req.method())) });
   });
 }
@@ -250,38 +269,10 @@ test('CRM Settings configures inactive lead follow-up automation without changin
   await bootAs(page, adminSession);
 
   let savedLeadSettings = null;
-  await page.route(`${apiBase}/admin/settings`, async route => {
-    const req = route.request();
-    const base = {
-      requireBusinessName: true,
-      requireSubLocation: true,
-      requirePosName: true,
-      requireContactName: true,
-      requireContactNumber: true,
-      requireStatus: true,
-      requireComments: false,
-      requireDealValue: false,
-      requireFollowUpDate: false,
-      duplicateProtectionEnabled: true,
-      duplicateCheckPhone: true,
-      duplicateCheckBusinessLocation: true,
-      allowDuplicateOverride: false,
-      automationRules: { inactiveLeadFollowUp: { enabled: false, inactivityDays: 5 } },
-    };
-    if (req.method() === 'PATCH') {
-      const body = req.postDataJSON();
-      savedLeadSettings = body.leadSettings;
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
-        leadSettings: body.leadSettings,
-        locationSettings: body.locationSettings,
-        messageSettings: body.messageSettings,
-      }) });
+  page.on('request', req => {
+    if (new URL(req.url()).pathname === '/admin/settings' && req.method() === 'PATCH') {
+      savedLeadSettings = req.postDataJSON()?.leadSettings || null;
     }
-    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
-      leadSettings: base,
-      locationSettings: { gpsLocation: true, locationMandatoryForNewLead: true, continuousGpsTracking: true },
-      messageSettings: { employeeRepliesEnabled: true },
-    }) });
   });
 
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
