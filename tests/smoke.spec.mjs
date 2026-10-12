@@ -511,3 +511,46 @@ test('admin mobile Contacts filters stay responsive and within the viewport', as
   expect(overflow).toBeLessThanOrEqual(1);
   await noCrash(page);
 });
+
+
+test('admin mobile Deals shows lead avatars in list and Kanban without changing card behavior', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await bootAs(page, adminSession);
+
+  const avatarLead = {
+    id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+    client_uuid: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
+    salesman_id: employee.id,
+    salesman_name: employee.full_name,
+    business_name: 'Pocket Friendly Cafe',
+    sub_location: 'Gomti Nagar',
+    contact_name: 'Aamil',
+    phone: '9999999998',
+    status: 'cold',
+    deal_value: 25000,
+    created_at: '2026-10-01T10:00:00.000Z',
+    updated_at: '2026-10-06T10:00:00.000Z',
+  };
+
+  await page.route(`${apiBase}/admin/leads**`, async route => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ leads: [avatarLead], total: 1, page: 1, totalPages: 1 }) });
+  });
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(750);
+
+  await page.getByRole('button', { name: 'Deals', exact: true }).click();
+  await page.getByLabel('Deals view').getByRole('button', { name: 'List view' }).click();
+  let avatars = page.locator('[data-mobile-deal-avatar="true"]');
+  await expect(avatars).toHaveCount(1);
+  await expect(avatars.first()).toHaveText('PF');
+
+  await page.getByLabel('Deals view').getByRole('button', { name: 'Kanban view' }).click();
+  avatars = page.locator('[data-mobile-deal-avatar="true"]');
+  await expect(avatars).toHaveCount(1);
+  await expect(avatars.first()).toHaveText('PF');
+
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
+  await noCrash(page);
+});
