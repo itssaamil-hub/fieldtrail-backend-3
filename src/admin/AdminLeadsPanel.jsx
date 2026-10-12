@@ -570,25 +570,25 @@ export default function AdminLeadsPanel({
         </div>
 
         {phone && section === "leads" && !desktopSection ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8, marginBottom: 12, width: "100%", minWidth: 0 }}>
-            <div style={{ minWidth: 0, width: "100%", overflow: "hidden" }}>
-              <input aria-label="City filter" list="engage-city-filter-mobile-contacts" value={filterCity} onChange={(e) => setFilterCity(e.target.value)} placeholder="All cities" style={{ ...dateInputStyle, display: "block", width: "100%", minWidth: 0, height: 38, padding: "7px 10px", boxSizing: "border-box", borderRadius: 9, fontSize: 12, fontWeight: 650 }} />
+          <div data-mobile-contact-filters="true" style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8, marginBottom: 12, width: "100%", maxWidth: "100%", minWidth: 0, overflow: "hidden", boxSizing: "border-box" }}>
+            <div style={{ minWidth: 0, width: "100%", maxWidth: "100%", overflow: "hidden" }}>
+              <input aria-label="City filter" list="engage-city-filter-mobile-contacts" value={filterCity} onChange={(e) => setFilterCity(e.target.value)} placeholder="All cities" style={{ ...dateInputStyle, display: "block", width: "100%", maxWidth: "100%", minWidth: 0, inlineSize: "100%", maxInlineSize: "100%", minInlineSize: 0, height: 38, padding: "7px 10px", boxSizing: "border-box", borderRadius: 9, fontSize: 12, fontWeight: 650 }} />
               <datalist id="engage-city-filter-mobile-contacts">{cityOptions.map((city) => <option key={city} value={city} />)}</datalist>
             </div>
-            <div style={{ minWidth: 0, width: "100%", overflow: "hidden" }}>
-              <select aria-label="Employee" value={filterSalesman} onChange={(e) => setFilterSalesman(e.target.value)} style={{ ...dateInputStyle, display: "block", width: "100%", maxWidth: "100%", minWidth: 0, height: 38, padding: "7px 28px 7px 10px", boxSizing: "border-box", borderRadius: 9, fontSize: 12, fontWeight: 650 }}>
+            <div style={{ minWidth: 0, width: "100%", maxWidth: "100%", overflow: "hidden" }}>
+              <select aria-label="Employee" value={filterSalesman} onChange={(e) => setFilterSalesman(e.target.value)} style={{ ...dateInputStyle, display: "block", width: "100%", maxWidth: "100%", minWidth: 0, inlineSize: "100%", maxInlineSize: "100%", minInlineSize: 0, height: 38, padding: "7px 28px 7px 10px", boxSizing: "border-box", borderRadius: 9, fontSize: 12, fontWeight: 650, textOverflow: "ellipsis" }}>
                 <option value="all">All employees</option>
                 {salesmen.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
-            <div style={{ minWidth: 0, width: "100%", overflow: "hidden" }}>
-              <select aria-label="Contact status" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={{ ...dateInputStyle, display: "block", width: "100%", maxWidth: "100%", minWidth: 0, height: 38, padding: "7px 28px 7px 10px", boxSizing: "border-box", borderRadius: 9, fontSize: 12, fontWeight: 650 }}>
+            <div style={{ minWidth: 0, width: "100%", maxWidth: "100%", overflow: "hidden" }}>
+              <select aria-label="Contact status" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={{ ...dateInputStyle, display: "block", width: "100%", maxWidth: "100%", minWidth: 0, inlineSize: "100%", maxInlineSize: "100%", minInlineSize: 0, height: 38, padding: "7px 28px 7px 10px", boxSizing: "border-box", borderRadius: 9, fontSize: 12, fontWeight: 650, textOverflow: "ellipsis" }}>
                 <option value="all">All statuses</option>
                 {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
               </select>
             </div>
-            <div style={{ minWidth: 0, width: "100%", overflow: "hidden" }}>
-              <input aria-label="Contact date" type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} style={{ ...dateInputStyle, display: "block", width: "100%", minWidth: 0, maxWidth: "100%", height: 38, padding: "7px 10px", boxSizing: "border-box", borderRadius: 9, fontSize: 12, fontWeight: 650 }} />
+            <div style={{ minWidth: 0, width: "100%", maxWidth: "100%", overflow: "hidden" }}>
+              <input aria-label="Contact date" type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} style={{ ...dateInputStyle, display: "block", width: "100%", maxWidth: "100%", minWidth: 0, inlineSize: "100%", maxInlineSize: "100%", minInlineSize: 0, height: 38, padding: "7px 10px", boxSizing: "border-box", borderRadius: 9, fontSize: 12, fontWeight: 650 }} />
             </div>
           </div>
         ) : (
