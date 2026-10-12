@@ -385,8 +385,10 @@ export default function AdminLeadsPanel({
                           style={{ width: "100%", minWidth: 0, textAlign: "left", border: `1px solid ${T.line}`, borderRadius: 11, background: "#fff", padding: "10px 11px", cursor: "pointer", color: T.ink, boxSizing: "border-box" }}
                         >
                           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
-                            <div style={{ minWidth: 0, flex: 1 }}>
-                              <div style={{ fontWeight: 750, fontSize: 13.5, lineHeight: 1.25, overflowWrap: "anywhere" }}>{lead.business}</div>
+                            <div style={{ display: "flex", alignItems: "flex-start", gap: 8, minWidth: 0, flex: 1 }}>
+                              <div data-mobile-deal-avatar="true" aria-hidden="true" style={leadAvatarStyle(lead.business)}>{leadInitials(lead.business)}</div>
+                              <div style={{ minWidth: 0, flex: 1 }}>
+                                <div style={{ fontWeight: 750, fontSize: 13.5, lineHeight: 1.25, overflowWrap: "anywhere" }}>{lead.business}</div>
                               <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap", fontSize: 11.1, color: T.inkSoft }}>
                                 <span>{lead.salesmanName || "Unassigned"}</span>
                                 <span aria-hidden="true">·</span>
@@ -403,6 +405,7 @@ export default function AdminLeadsPanel({
                                   </>
                                 )}
                                 {attention.label && <><span aria-hidden="true">·</span><strong style={{ color: attention.tone, fontWeight: 800 }}>{attention.label}</strong></>}
+                              </div>
                               </div>
                             </div>
                             {lead.dealValue != null && Number(lead.dealValue) > 0 && (
@@ -442,8 +445,10 @@ export default function AdminLeadsPanel({
                     style={{ width: "100%", textAlign: "left", border: `1px solid ${T.line}`, borderRadius: 12, background: "#fff", padding: "10px 11px", cursor: "pointer", color: T.ink }}
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 9 }}>
-                      <div style={{ minWidth: 0, flex: 1 }}>
-                        <div style={{ fontWeight: 700, fontSize: 13.5, lineHeight: 1.25, overflowWrap: "anywhere" }}>{lead.business}</div>
+                      <div style={{ display: "flex", alignItems: "flex-start", gap: 8, minWidth: 0, flex: 1 }}>
+                        <div data-mobile-deal-avatar="true" aria-hidden="true" style={leadAvatarStyle(lead.business)}>{leadInitials(lead.business)}</div>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ fontWeight: 700, fontSize: 13.5, lineHeight: 1.25, overflowWrap: "anywhere" }}>{lead.business}</div>
                         <div style={{ marginTop: 3, display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap", fontSize: 11.2, color: T.inkSoft }}>
                           <span>{lead.salesmanName || "Unassigned"}</span>
                           {lead.inactiveDays != null && (
@@ -458,6 +463,7 @@ export default function AdminLeadsPanel({
                             </>
                           )}
                           {attention.label && <><span aria-hidden="true">·</span><strong style={{ color: attention.tone, fontWeight: 800 }}>{attention.label}</strong></>}
+                        </div>
                         </div>
                       </div>
                       <span style={{ flexShrink: 0, border: `1px solid ${statusStyle.border}`, borderRadius: 999, background: statusStyle.background, color: statusStyle.color, padding: "4px 8px", fontSize: 10.5, lineHeight: 1, fontWeight: 800 }}>
