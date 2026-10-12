@@ -412,3 +412,66 @@ test('Exception Centre Rules adds only stale Cold and Conversation rows without 
   await expect(page.getByText('Stale conversation leads', { exact: true })).toHaveCount(0);
   await noCrash(page);
 });
+
+
+test('admin mobile Kanban is single-column, readable, and does not overflow the viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await bootAs(page, adminSession);
+
+  const leads = [
+    {
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      client_uuid: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      salesman_id: employee.id,
+      salesman_name: employee.full_name,
+      business_name: 'Pocket Friendly Cafe',
+      sub_location: 'Gomti Nagar',
+      contact_name: 'Aamil',
+      phone: '9999999998',
+      status: 'cold',
+      deal_value: 25000,
+      created_at: '2026-10-01T10:00:00.000Z',
+      updated_at: '2026-10-06T10:00:00.000Z',
+    },
+    {
+      id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+      client_uuid: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+      salesman_id: employee.id,
+      salesman_name: employee.full_name,
+      business_name: 'Hot Cafe',
+      sub_location: 'Hazratganj',
+      contact_name: 'Owner',
+      phone: '9999999997',
+      status: 'hot',
+      deal_value: 10000,
+      created_at: '2026-10-02T10:00:00.000Z',
+      updated_at: '2026-10-07T10:00:00.000Z',
+    },
+  ];
+
+  await page.route(`${apiBase}/admin/leads**`, async route => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ leads, total: leads.length, page: 1, totalPages: 1 }) });
+  });
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(750);
+
+  await page.getByRole('button', { name: 'Deals', exact: true }).click();
+  await page.getByRole('button', { name: 'Kanban view', exact: true }).click();
+
+  const board = page.locator('[data-mobile-kanban="true"]');
+  await expect(board).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Cold 1', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Hot 1', exact: true })).toBeVisible();
+  await expect(board.getByText('Pocket Friendly Cafe', { exact: true })).toBeVisible();
+  await expect(board.getByText(employee.full_name, { exact: true })).toBeVisible();
+  await expect(board.getByText('Cold', { exact: true }).first()).toBeVisible();
+
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
+
+  await page.getByRole('button', { name: 'Hot 1', exact: true }).click();
+  await expect(board.getByText('Hot Cafe', { exact: true })).toBeVisible();
+  await expect(board.getByText('Pocket Friendly Cafe', { exact: true })).toHaveCount(0);
+  await noCrash(page);
+});
