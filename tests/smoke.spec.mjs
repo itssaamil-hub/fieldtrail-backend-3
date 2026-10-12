@@ -476,3 +476,38 @@ test('admin mobile Kanban is single-column, readable, and does not overflow the 
   await expect(board.getByText('Pocket Friendly Cafe', { exact: true })).toHaveCount(0);
   await noCrash(page);
 });
+
+
+test('admin mobile Contacts filters stay responsive and within the viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  await bootAs(page, adminSession);
+
+  await page.getByRole('button', { name: 'Contacts', exact: true }).click();
+
+  const filters = page.locator('[data-mobile-contact-filters="true"]');
+  await expect(filters).toBeVisible();
+
+  const city = filters.getByLabel('City filter');
+  const employeeFilter = filters.getByLabel('Employee');
+  const status = filters.getByLabel('Contact status');
+  const date = filters.getByLabel('Contact date');
+
+  for (const control of [city, employeeFilter, status, date]) {
+    await expect(control).toBeVisible();
+    const box = await control.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(360);
+  }
+
+  await employeeFilter.selectOption(employee.id);
+  await expect(employeeFilter).toHaveValue(employee.id);
+  await status.selectOption('hot');
+  await expect(status).toHaveValue('hot');
+  await date.fill('2026-10-12');
+  await expect(date).toHaveValue('2026-10-12');
+
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
+  await noCrash(page);
+});
