@@ -406,7 +406,7 @@ function urlBase64ToUint8Array(base64String) {
 
 const NOTIFICATION_PREF_DEFAULTS = {
   hotLead: true, statusConversation: true, statusNegotiation: true,
-  statusDemo: true, renewalDue: true, followUpDue: true, dayStartDigest: true, salesBriefing: true, dayActivity: true, dealWon: true, targetMilestone: true, dayStartedEnded: true, dayClosingMissing: true, dayActivitySummary: true,
+  statusDemo: true, renewalDue: true, followUpDue: true, inactiveLead: true, dayStartDigest: true, salesBriefing: true, dayActivity: true, dealWon: true, targetMilestone: true, dayStartedEnded: true, dayClosingMissing: true, dayActivitySummary: true,
 };
 
 function usePushNotifications(session) {
