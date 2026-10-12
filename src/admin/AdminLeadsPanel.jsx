@@ -104,6 +104,7 @@ export default function AdminLeadsPanel({
   const [sheetsError, setSheetsError] = useState("");
   const [mobileDealsSort, setMobileDealsSort] = useState("recent_activity");
   const [mobileDealsSortOpen, setMobileDealsSortOpen] = useState(false);
+  const [mobileBoardStatus, setMobileBoardStatus] = useState("cold");
   const [pipelineDatePreset, setPipelineDatePreset] = useState("all");
   const [pipelineDateFrom, setPipelineDateFrom] = useState("");
   const [pipelineDateTo, setPipelineDateTo] = useState("");
@@ -174,6 +175,10 @@ export default function AdminLeadsPanel({
     return rows;
   }, [filteredLeads, mobileDeals, mobileDealsSort]);
 
+  useEffect(() => {
+    if (mobileDeals && filterStatus !== "all") setMobileBoardStatus(filterStatus);
+  }, [mobileDeals, filterStatus]);
+
   const listMode = (sectionNavigation && section === "leads")
     || ((desktopDeals || !(sectionNavigation && section === "deals")) && leadsViewMode === "list");
   const refreshKey = `${filteredLeads.length}:${filteredLeads[0]?.id || ""}:${filteredLeads[0]?.status || ""}`;
@@ -231,16 +236,38 @@ export default function AdminLeadsPanel({
                 {mobileDealRows.length} deals · {fmtMoney(mobileTotalValue)} recorded value
               </div>
             </div>
-            {onAddClick && (
-              <button
-                type="button"
-                onClick={onAddClick}
-                aria-label="Add Deal"
-                style={{ flexShrink: 0, minHeight: 34, display: "inline-flex", alignItems: "center", gap: 5, border: "none", borderRadius: 9, padding: "7px 10px", background: T.route, color: "#fff", fontSize: 11.5, fontWeight: 800, cursor: "pointer" }}
-              >
-                <Plus size={14} /> Add Deal
-              </button>
-            )}
+            <div style={{ display: "flex", alignItems: "center", gap: 7, flexShrink: 0 }}>
+              <div aria-label="Deals view" style={{ display: "flex", gap: 2, padding: 2, borderRadius: 9, background: T.paperDeep, border: `1px solid ${T.line}` }}>
+                <button
+                  type="button"
+                  aria-label="List view"
+                  aria-pressed={leadsViewMode === "list"}
+                  onClick={() => setLeadsViewMode("list")}
+                  style={{ width: 31, height: 29, display: "inline-flex", alignItems: "center", justifyContent: "center", border: "none", borderRadius: 7, background: leadsViewMode === "list" ? "#fff" : "transparent", color: leadsViewMode === "list" ? T.route : T.inkSoft, boxShadow: leadsViewMode === "list" ? "0 1px 2px rgba(20,20,30,.08)" : "none", cursor: "pointer" }}
+                >
+                  <List size={15} />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Kanban view"
+                  aria-pressed={leadsViewMode === "board"}
+                  onClick={() => setLeadsViewMode("board")}
+                  style={{ width: 31, height: 29, display: "inline-flex", alignItems: "center", justifyContent: "center", border: "none", borderRadius: 7, background: leadsViewMode === "board" ? T.route : "transparent", color: leadsViewMode === "board" ? "#fff" : T.inkSoft, boxShadow: leadsViewMode === "board" ? "0 1px 2px rgba(20,20,30,.08)" : "none", cursor: "pointer" }}
+                >
+                  <LayoutGrid size={15} />
+                </button>
+              </div>
+              {onAddClick && (
+                <button
+                  type="button"
+                  onClick={onAddClick}
+                  aria-label="Add Deal"
+                  style={{ minHeight: 34, display: "inline-flex", alignItems: "center", gap: 5, border: "none", borderRadius: 9, padding: "7px 10px", background: T.route, color: "#fff", fontSize: 11.5, fontWeight: 800, cursor: "pointer" }}
+                >
+                  <Plus size={14} /> Add Deal
+                </button>
+              )}
+            </div>
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 9 }}>
@@ -297,61 +324,166 @@ export default function AdminLeadsPanel({
             </div>
           )}
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-            {mobileDealRows.map((lead) => {
-              const statusStyle = MOBILE_STATUS_STYLE[lead.status] || MOBILE_STATUS_STYLE.cold;
-              const attention = mobileAttention(lead);
-              const activityTime = lead.updatedAt || lead.createdAt;
-              return (
-                <button
-                  key={lead.id}
-                  type="button"
-                  className="ft-row"
-                  onClick={() => onSelectLead(lead)}
-                  style={{ width: "100%", textAlign: "left", border: `1px solid ${T.line}`, borderRadius: 12, background: "#fff", padding: "10px 11px", cursor: "pointer", color: T.ink }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 9 }}>
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <div style={{ fontWeight: 700, fontSize: 13.5, lineHeight: 1.25, overflowWrap: "anywhere" }}>{lead.business}</div>
-                      <div style={{ marginTop: 3, display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap", fontSize: 11.2, color: T.inkSoft }}>
-                        <span>{lead.salesmanName || "Unassigned"}</span>
-                        {lead.inactiveDays != null && (
-                          <>
-                            <span aria-hidden="true">·</span>
-                            <span
-                              data-inactive-badge="true"
-                              style={{ display: "inline-flex", alignItems: "center", borderRadius: 999, padding: "2px 7px", background: T.dangerSoft, color: T.danger, border: `1px solid ${T.danger}33`, fontSize: 10.5, lineHeight: 1.15, fontWeight: 800 }}
-                            >
-                              Inactive · {lead.inactiveDays}d
-                            </span>
-                          </>
-                        )}
-                        {attention.label && <><span aria-hidden="true">·</span><strong style={{ color: attention.tone, fontWeight: 800 }}>{attention.label}</strong></>}
-                      </div>
-                    </div>
-                    <span style={{ flexShrink: 0, border: `1px solid ${statusStyle.border}`, borderRadius: 999, background: statusStyle.background, color: statusStyle.color, padding: "4px 8px", fontSize: 10.5, lineHeight: 1, fontWeight: 800 }}>
-                      {STATUS_LABEL[lead.status] || lead.status}
-                    </span>
+          {leadsViewMode === "board" ? (() => {
+            const boardStatuses = filterStatus !== "all" ? [filterStatus] : STATUSES;
+            const selectedStatus = boardStatuses.includes(mobileBoardStatus) ? mobileBoardStatus : boardStatuses[0];
+            const boardRows = mobileDealRows.filter((lead) => lead.status === selectedStatus);
+            const boardValue = boardRows.reduce((sum, lead) => sum + (Number(lead.dealValue) || 0), 0);
+            const selectedStyle = MOBILE_STATUS_STYLE[selectedStatus] || MOBILE_STATUS_STYLE.cold;
+            return (
+              <div data-mobile-kanban="true" style={{ width: "100%", minWidth: 0, overflow: "hidden" }}>
+                {filterStatus === "all" && (
+                  <div
+                    aria-label="Kanban stages"
+                    style={{ display: "flex", gap: 7, overflowX: "auto", overscrollBehaviorX: "contain", WebkitOverflowScrolling: "touch", padding: "2px 1px 8px", marginBottom: 1, scrollbarWidth: "none" }}
+                  >
+                    {STATUSES.map((status) => {
+                      const style = MOBILE_STATUS_STYLE[status] || MOBILE_STATUS_STYLE.cold;
+                      const count = mobileDealRows.filter((lead) => lead.status === status).length;
+                      const active = status === selectedStatus;
+                      return (
+                        <button
+                          key={status}
+                          type="button"
+                          aria-label={`${STATUS_LABEL[status]} ${count}`}
+                          aria-pressed={active}
+                          onClick={() => setMobileBoardStatus(status)}
+                          style={{
+                            flex: "0 0 auto", whiteSpace: "nowrap", borderRadius: 999, padding: "6px 10px",
+                            border: `1px solid ${active ? style.color : style.border}`,
+                            background: active ? style.background : "#fff", color: active ? style.color : T.inkSoft,
+                            fontSize: 11.5, fontWeight: active ? 850 : 700, cursor: "pointer",
+                          }}
+                        >
+                          {STATUS_LABEL[status]} <span style={{ opacity: .78 }}>{count}</span>
+                        </button>
+                      );
+                    })}
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 10, marginTop: 8 }}>
-                    <div style={{ minWidth: 0, fontSize: 10.8, color: T.inkSoft, lineHeight: 1.3 }}>
-                      {[lead.subLocation, lead.owner || lead.phone].filter(Boolean).join(" · ") || "No contact details"}
-                      <div style={{ marginTop: 2 }}>{activityTime ? fmtTime(activityTime) : ""}</div>
+                )}
+
+                <div style={{ border: `1px solid ${selectedStyle.border}`, borderTop: `3px solid ${selectedStyle.color}`, borderRadius: 13, background: "#FAFBFB", padding: 9, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "1px 2px 9px" }}>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 7, minWidth: 0 }}>
+                      <strong style={{ fontSize: 13.5, color: selectedStyle.color }}>{STATUS_LABEL[selectedStatus]}</strong>
+                      <span style={{ fontSize: 11, color: T.inkSoft }}>{boardRows.length} deal{boardRows.length === 1 ? "" : "s"}</span>
                     </div>
-                    {lead.dealValue != null && Number(lead.dealValue) > 0 && (
-                      <div style={{ flexShrink: 0, fontSize: 12, fontWeight: 850, color: T.route }}>{fmtMoney(Number(lead.dealValue))}</div>
+                    <div style={{ flexShrink: 0, fontSize: 12, fontWeight: 850, color: T.ink }}>{fmtMoney(boardValue)}</div>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                    {boardRows.map((lead) => {
+                      const attention = mobileAttention(lead);
+                      const activityTime = lead.updatedAt || lead.createdAt;
+                      const contactLine = [lead.subLocation, lead.owner || lead.phone].filter(Boolean).join(" · ");
+                      return (
+                        <button
+                          key={lead.id}
+                          type="button"
+                          className="ft-row"
+                          onClick={() => onSelectLead(lead)}
+                          style={{ width: "100%", minWidth: 0, textAlign: "left", border: `1px solid ${T.line}`, borderRadius: 11, background: "#fff", padding: "10px 11px", cursor: "pointer", color: T.ink, boxSizing: "border-box" }}
+                        >
+                          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div style={{ fontWeight: 750, fontSize: 13.5, lineHeight: 1.25, overflowWrap: "anywhere" }}>{lead.business}</div>
+                              <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap", fontSize: 11.1, color: T.inkSoft }}>
+                                <span>{lead.salesmanName || "Unassigned"}</span>
+                                <span aria-hidden="true">·</span>
+                                <span>{STATUS_LABEL[lead.status] || lead.status}</span>
+                                {lead.inactiveDays != null && (
+                                  <>
+                                    <span aria-hidden="true">·</span>
+                                    <span
+                                      data-inactive-badge="true"
+                                      style={{ display: "inline-flex", alignItems: "center", borderRadius: 999, padding: "2px 7px", background: T.dangerSoft, color: T.danger, border: `1px solid ${T.danger}33`, fontSize: 10.3, lineHeight: 1.15, fontWeight: 800 }}
+                                    >
+                                      Inactive · {lead.inactiveDays}d
+                                    </span>
+                                  </>
+                                )}
+                                {attention.label && <><span aria-hidden="true">·</span><strong style={{ color: attention.tone, fontWeight: 800 }}>{attention.label}</strong></>}
+                              </div>
+                            </div>
+                            {lead.dealValue != null && Number(lead.dealValue) > 0 && (
+                              <div style={{ flexShrink: 0, fontSize: 11.7, fontWeight: 850, color: T.route }}>{fmtMoney(Number(lead.dealValue))}</div>
+                            )}
+                          </div>
+                          {(contactLine || activityTime) && (
+                            <div style={{ marginTop: 7, paddingTop: 7, borderTop: `1px solid ${T.line}`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, minWidth: 0, fontSize: 10.7, color: T.inkSoft }}>
+                              <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{contactLine || "No contact details"}</span>
+                              <span style={{ flexShrink: 0 }}>{activityTime ? fmtTime(activityTime) : ""}</span>
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                    {boardRows.length === 0 && (
+                      <div style={{ textAlign: "center", color: T.inkSoft, fontSize: 11.5, padding: "24px 8px" }}>
+                        No {String(STATUS_LABEL[selectedStatus] || selectedStatus).toLowerCase()} deals match these filters.
+                      </div>
                     )}
                   </div>
-                </button>
-              );
-            })}
-            {mobileDealRows.length === 0 && (
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7, color: T.inkSoft, fontSize: 12.5, padding: "30px 8px" }}>
-                <List size={20} style={{ opacity: 0.45 }} />
-                No deals match these filters.
+                </div>
               </div>
-            )}
-          </div>
+            );
+          })() : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+              {mobileDealRows.map((lead) => {
+                const statusStyle = MOBILE_STATUS_STYLE[lead.status] || MOBILE_STATUS_STYLE.cold;
+                const attention = mobileAttention(lead);
+                const activityTime = lead.updatedAt || lead.createdAt;
+                return (
+                  <button
+                    key={lead.id}
+                    type="button"
+                    className="ft-row"
+                    onClick={() => onSelectLead(lead)}
+                    style={{ width: "100%", textAlign: "left", border: `1px solid ${T.line}`, borderRadius: 12, background: "#fff", padding: "10px 11px", cursor: "pointer", color: T.ink }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 9 }}>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontWeight: 700, fontSize: 13.5, lineHeight: 1.25, overflowWrap: "anywhere" }}>{lead.business}</div>
+                        <div style={{ marginTop: 3, display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap", fontSize: 11.2, color: T.inkSoft }}>
+                          <span>{lead.salesmanName || "Unassigned"}</span>
+                          {lead.inactiveDays != null && (
+                            <>
+                              <span aria-hidden="true">·</span>
+                              <span
+                                data-inactive-badge="true"
+                                style={{ display: "inline-flex", alignItems: "center", borderRadius: 999, padding: "2px 7px", background: T.dangerSoft, color: T.danger, border: `1px solid ${T.danger}33`, fontSize: 10.5, lineHeight: 1.15, fontWeight: 800 }}
+                              >
+                                Inactive · {lead.inactiveDays}d
+                              </span>
+                            </>
+                          )}
+                          {attention.label && <><span aria-hidden="true">·</span><strong style={{ color: attention.tone, fontWeight: 800 }}>{attention.label}</strong></>}
+                        </div>
+                      </div>
+                      <span style={{ flexShrink: 0, border: `1px solid ${statusStyle.border}`, borderRadius: 999, background: statusStyle.background, color: statusStyle.color, padding: "4px 8px", fontSize: 10.5, lineHeight: 1, fontWeight: 800 }}>
+                        {STATUS_LABEL[lead.status] || lead.status}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 10, marginTop: 8 }}>
+                      <div style={{ minWidth: 0, fontSize: 10.8, color: T.inkSoft, lineHeight: 1.3 }}>
+                        {[lead.subLocation, lead.owner || lead.phone].filter(Boolean).join(" · ") || "No contact details"}
+                        <div style={{ marginTop: 2 }}>{activityTime ? fmtTime(activityTime) : ""}</div>
+                      </div>
+                      {lead.dealValue != null && Number(lead.dealValue) > 0 && (
+                        <div style={{ flexShrink: 0, fontSize: 12, fontWeight: 850, color: T.route }}>{fmtMoney(Number(lead.dealValue))}</div>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+              {mobileDealRows.length === 0 && (
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7, color: T.inkSoft, fontSize: 12.5, padding: "30px 8px" }}>
+                  <List size={20} style={{ opacity: 0.45 }} />
+                  No deals match these filters.
+                </div>
+              )}
+            </div>
+          )}
         </section>
       </div>
     );
