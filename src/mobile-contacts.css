@@ -51,7 +51,7 @@
 /* Admin mobile Contacts filter grid: each control already occupies one 50% grid
    column. Prevent the older generic flex-filter rule from shrinking selects to
    half of that column on Android/Samsung browsers. */
-.engage-admin-mobile-content [data-mobile-contact-filters="true"] > div > select{
+.engage-admin-mobile-content .ft-card:has(.engage-mobile-contacts-list) [data-mobile-contact-filters="true"] > div > select{
   flex:none!important;
   width:100%!important;
   max-width:100%!important;
