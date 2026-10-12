@@ -341,6 +341,7 @@ test('admin mobile Deals shows the small inactivity capsule from backend state',
   await page.waitForTimeout(750);
 
   await page.getByRole('button', { name: 'Deals', exact: true }).click();
+  await page.getByRole('button', { name: 'List view', exact: true }).click();
   const badge = page.locator('[data-inactive-badge="true"]');
   await expect(badge).toHaveCount(1);
   await expect(badge).toHaveText('Inactive · 6d');
