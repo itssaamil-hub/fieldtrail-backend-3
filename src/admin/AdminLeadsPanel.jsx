@@ -153,7 +153,8 @@ export default function AdminLeadsPanel({
   const contactsDateActive = Boolean(desktopContacts && contactsRange && (contactsRange.from || contactsRange.to));
   const rangeDateActive = pipelineDateActive || contactsDateActive;
   const cityFilterActive = Boolean(filterCity.trim());
-  const localFilterActive = rangeDateActive || cityFilterActive;
+  const mobileContacts = Boolean(phone && sectionNavigation && section === "leads" && !desktopSection);
+  const localFilterActive = rangeDateActive || cityFilterActive || mobileContacts;
 
   useEffect(() => {
     setPipelinePage(1);
@@ -161,7 +162,7 @@ export default function AdminLeadsPanel({
 
   useEffect(() => {
     setContactsPage(1);
-  }, [contactsDatePreset, contactsDateFrom, contactsDateTo, filterSalesman, filterCity, filterStatus, searchQuery]);
+  }, [contactsDatePreset, contactsDateFrom, contactsDateTo, filterSalesman, filterCity, filterStatus, filterDate, searchQuery]);
 
   const mobileDeals = Boolean(phone && sectionNavigation && section === "deals" && !desktopSection);
   const mobileDealRows = useMemo(() => {
