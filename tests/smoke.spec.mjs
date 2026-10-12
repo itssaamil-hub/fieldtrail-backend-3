@@ -528,13 +528,17 @@ test('admin mobile Contacts filters stay responsive and update visible contacts 
   const status = filters.getByLabel('Contact status');
   const date = filters.getByLabel('Contact date');
 
+  const boxes = [];
   for (const control of [city, employeeFilter, status, date]) {
     await expect(control).toBeVisible();
     const box = await control.boundingBox();
     expect(box).not.toBeNull();
     expect(box.x).toBeGreaterThanOrEqual(0);
     expect(box.x + box.width).toBeLessThanOrEqual(360);
+    boxes.push(box);
   }
+  expect(Math.abs(boxes[0].width - boxes[1].width)).toBeLessThanOrEqual(1);
+  expect(Math.abs(boxes[2].width - boxes[3].width)).toBeLessThanOrEqual(1);
 
   await expect(page.getByText('Hot Contact Cafe', { exact: true })).toBeVisible();
   await expect(page.getByText('Cold Contact Cafe', { exact: true })).toBeVisible();
