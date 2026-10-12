@@ -478,9 +478,45 @@ test('admin mobile Kanban is single-column, readable, and does not overflow the 
 });
 
 
-test('admin mobile Contacts filters stay responsive and within the viewport', async ({ page }) => {
+test('admin mobile Contacts filters stay responsive and update visible contacts immediately', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 800 });
   await bootAs(page, adminSession);
+
+  const contacts = [
+    {
+      id: '11111111-aaaa-4aaa-8aaa-111111111111',
+      client_uuid: '11111111-bbbb-4bbb-8bbb-111111111111',
+      salesman_id: employee.id,
+      salesman_name: employee.full_name,
+      business_name: 'Hot Contact Cafe',
+      sub_location: 'Gomti Nagar',
+      contact_name: 'Hot Owner',
+      phone: '9000000001',
+      status: 'hot',
+      created_at: '2026-10-12T08:00:00.000Z',
+      updated_at: '2026-10-12T09:00:00.000Z',
+    },
+    {
+      id: '22222222-aaaa-4aaa-8aaa-222222222222',
+      client_uuid: '22222222-bbbb-4bbb-8bbb-222222222222',
+      salesman_id: employee.id,
+      salesman_name: employee.full_name,
+      business_name: 'Cold Contact Cafe',
+      sub_location: 'Hazratganj',
+      contact_name: 'Cold Owner',
+      phone: '9000000002',
+      status: 'cold',
+      created_at: '2026-10-11T08:00:00.000Z',
+      updated_at: '2026-10-11T09:00:00.000Z',
+    },
+  ];
+
+  await page.route(`${apiBase}/admin/leads**`, async route => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ leads: contacts, total: contacts.length, page: 1, totalPages: 1 }) });
+  });
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(750);
 
   await page.getByRole('button', { name: 'Contacts', exact: true }).click();
 
@@ -500,18 +536,30 @@ test('admin mobile Contacts filters stay responsive and within the viewport', as
     expect(box.x + box.width).toBeLessThanOrEqual(360);
   }
 
-  await employeeFilter.selectOption(employee.id);
-  await expect(employeeFilter).toHaveValue(employee.id);
+  await expect(page.getByText('Hot Contact Cafe', { exact: true })).toBeVisible();
+  await expect(page.getByText('Cold Contact Cafe', { exact: true })).toBeVisible();
+
   await status.selectOption('hot');
   await expect(status).toHaveValue('hot');
-  await date.fill('2026-10-12');
-  await expect(date).toHaveValue('2026-10-12');
+  await expect(page.getByText('Hot Contact Cafe', { exact: true })).toBeVisible();
+  await expect(page.getByText('Cold Contact Cafe', { exact: true })).toHaveCount(0);
+
+  await status.selectOption('all');
+  await date.fill('2026-10-11');
+  await expect(date).toHaveValue('2026-10-11');
+  await expect(page.getByText('Cold Contact Cafe', { exact: true })).toBeVisible();
+  await expect(page.getByText('Hot Contact Cafe', { exact: true })).toHaveCount(0);
+
+  await date.fill('');
+  await employeeFilter.selectOption(employee.id);
+  await expect(employeeFilter).toHaveValue(employee.id);
+  await expect(page.getByText('Hot Contact Cafe', { exact: true })).toBeVisible();
+  await expect(page.getByText('Cold Contact Cafe', { exact: true })).toBeVisible();
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(1);
   await noCrash(page);
 });
-
 
 test('admin mobile Deals shows lead avatars in list and Kanban without changing card behavior', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
