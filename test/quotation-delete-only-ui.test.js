@@ -22,3 +22,13 @@ test('quotation delete action remains available under existing lifecycle safegua
   assert.match(quotations, /const canDelete=/);
   assert.match(quotations, /api\.deleteQuote\(selected,body\)/);
 });
+
+
+test('quotation delete confirmation never asks for a deletion reason', () => {
+  const quotations = read('src/Quotations.jsx');
+
+  assert.doesNotMatch(quotations, /Deletion reason/);
+  assert.doesNotMatch(quotations, /deleteRequiresReason/);
+  assert.doesNotMatch(quotations, /deleteReason/);
+  assert.match(quotations, />Delete permanently<\/button>/);
+});
