@@ -216,7 +216,14 @@ export function TasksModal({lead,onClose,startCreate=false,focusId,embedded=fals
 
 export function TaskNotifications(){
  const [items,setItems]=useState([]),[error,setError]=useState(''),[focus,setFocus]=useState(null),[version,setVersion]=useState(0);
- useEffect(()=>{let cancelled=false;api.taskNotifications().then(r=>{if(!cancelled){setItems(r.notifications);setError('')}}).catch(e=>{if(!cancelled)setError(e.message)});return()=>{cancelled=true}},[version]);
+ useEffect(()=>{
+  let cancelled=false,timer=null;
+  const load=()=>{if(cancelled||document.visibilityState!=='visible')return;api.taskNotifications().then(r=>{if(!cancelled){setItems(r.notifications);setError('')}}).catch(e=>{if(!cancelled)setError(e.message)})};
+  const schedule=()=>{if(cancelled)return;timer=window.setTimeout(()=>{load();schedule()},60000)};
+  const visible=()=>{if(document.visibilityState==='visible')load()};
+  load();schedule();document.addEventListener('visibilitychange',visible);
+  return()=>{cancelled=true;if(timer)window.clearTimeout(timer);document.removeEventListener('visibilitychange',visible)};
+ },[version]);
  const open=async item=>{setFocus(item.task_id);try{await api.readTaskNotifications([item.id]);setItems(v=>v.filter(n=>n.id!==item.id));changed()}catch(e){setError('Task opened, but could not mark the alert read.')}};
  return <div className="ft-task-notifications">{error&&<div role="alert">{error} <button onClick={()=>setVersion(v=>v+1)}>Retry</button></div>}{items.length>0&&<><h3>Task alerts</h3>{items.map(n=><button key={n.id} className="ft-task-alert" onClick={()=>open(n)}><strong>{n.kind==='assigned'?'New task: ':'Task reminder: '}{n.title}</strong><span>{time(n.due_at)} IST · View task →</span></button>)}</>}{focus&&<TasksModal focusId={focus} onClose={()=>{setFocus(null);setVersion(v=>v+1)}}/>}</div>;
 }
