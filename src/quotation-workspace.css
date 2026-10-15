@@ -51,3 +51,12 @@
  .ft-q-create-workspace>form>.ft-q-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
  .ft-q-page .ft-ob-back{background:transparent;border:0;padding-left:0;color:#637d7c}
 }
+
+/* Compact quotation discount selector; existing mode handlers are unchanged. */
+.ft-q .ft-q-discount-toggle{position:relative;isolation:isolate;display:inline-grid;grid-template-columns:1fr 1fr;width:132px;padding:3px;margin:4px 0 8px;border:1px solid #dce5e5;border-radius:999px;background:#edf5f3}
+.ft-q .ft-q-discount-toggle::before{content:'';position:absolute;z-index:-1;top:3px;bottom:3px;left:3px;width:calc((100% - 6px)/2);border-radius:999px;background:#145c5d;transition:transform .18s ease}
+.ft-q .ft-q-discount-toggle[data-mode="value"]::before{transform:translateX(100%)}
+.ft-q .ft-q-discount-toggle>button:not(.ft-ob-primary):not(.ft-ob-customer):not(.ft-ob-back){min-width:0;min-height:30px;margin:0;padding:4px 8px;border:0;border-radius:999px;background:transparent;color:#234646;font-family:inherit;font-size:12px;font-weight:600;line-height:1.2;box-shadow:none}
+.ft-q .ft-q-discount-toggle>button[aria-pressed="true"]{color:#fff!important}
+.ft-q .ft-q-discount-toggle>button:focus-visible{outline:2px solid #38837d;outline-offset:3px}
+@media(prefers-reduced-motion:reduce){.ft-q .ft-q-discount-toggle::before{transition:none}}
