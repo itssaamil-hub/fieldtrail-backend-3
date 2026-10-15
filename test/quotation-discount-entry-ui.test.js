@@ -18,3 +18,24 @@ test('package and add-on discounts support both percent and manual value after f
   assert.match(src,/addonDiscountValues:Object\.fromEntries/);
   assert.match(src,/ft-q-text ft-ob-muted.*discount \(%\)/s);
 });
+
+
+test('discount mode toggle submits only percent or value for each module',()=>{
+  assert.match(src,/packageDiscountMode.*'percent'/s);
+  assert.match(src,/addonDiscountModes/);
+  assert.match(src,/packageDiscountMode==='value'\?\{discountValue:Number\(packageDiscountValue\|\|0\)\}:\{discount:packageDiscountPct\}/);
+  assert.match(src,/filter\(a=>\(addonDiscountModes\[a\.id\]\|\|'percent'\)==='percent'\)/);
+  assert.match(src,/filter\(id=>\(addonDiscountModes\[id\]\|\|'percent'\)==='value'\)/);
+  assert.match(src,/aria-pressed=\{packageDiscountMode==='percent'\}/);
+  assert.match(src,/aria-pressed=\{packageDiscountMode==='value'\}/);
+});
+
+test('quotation output hides yearly and advance breakdown',()=>{
+  const publicQuote=fs.readFileSync(new URL('../public/q/index.html',import.meta.url),'utf8');
+  assert.match(src,/a\.period==='yearly'\?'':periods\[a\.period\]/);
+  assert.doesNotMatch(src,/Advance required \(\{s\.advancePercent\}%\)/);
+  assert.doesNotMatch(src,/Remaining after advance/);
+  assert.match(publicQuote,/yearly:''/);
+  assert.doesNotMatch(publicQuote,/Advance required/);
+  assert.doesNotMatch(publicQuote,/Remaining after advance/);
+});
