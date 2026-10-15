@@ -9,12 +9,12 @@ test('quotation builder supports per-module discounts and hides zero total disco
   assert.match(quotations,/addonDiscounts:Object\.fromEntries/);
   assert.match(quotations,/\$\{a\.name\} discount \(%\)/);
   assert.match(quotations,/maxDiscount=Math\.max/);
-  assert.match(quotations,/reduction>0&&<div className="ft-q-line"><span>Total discounts<\/span>/);
+  assert.match(quotations,/reduction>0&&<div className="ft-q-line ft-q-discount-line"><span>Total discounts<\/span>/);
 });
 
 test('quotation detail removes quantity-times-unit-price line and shows module discount only when present',()=>{
   assert.doesNotMatch(quotations,/\{a\.quantity\|\|1\} × \{money\(Math\.round\(a\.price\*100\)/);
-  assert.match(quotations,/discountMinor>0&&<div className="ft-q-line"><span>\{a\.name\} discount/);
+  assert.match(quotations,/discountMinor>0&&<div className="ft-q-line ft-q-discount-line"><span>\{a\.name\} discount/);
   assert.match(quotations,/periods\[a\.period\].*Qty/);
 });
 
