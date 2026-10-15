@@ -60,3 +60,5 @@
 .ft-q .ft-q-discount-toggle>button[aria-pressed="true"]{color:#fff!important}
 .ft-q .ft-q-discount-toggle>button:focus-visible{outline:2px solid #38837d;outline-offset:3px}
 @media(prefers-reduced-motion:reduce){.ft-q .ft-q-discount-toggle::before{transition:none}}
+
+.ft-q .ft-q-discount-line,.ft-q .ft-q-discount-toggle+.ft-q-grid>.ft-ob-field{font-weight:600}
