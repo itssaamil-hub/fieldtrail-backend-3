@@ -574,6 +574,14 @@ export default function App() {
         setShowNotifications(true);
         return;
       }
+      const quotationMatch = window.location.hash.match(/^#quotation=([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+      if (quotationMatch) {
+        setShowSettings(false); setShowCrmSettings(false); setShowAddExpense(false); setShowNotifications(false);
+        setNotificationLead(null); setShowOnboarding(false); setShowOnboardingSettings(false);
+        setShowDailyReports(false); setCollectionView(null); setShowActivityCentreMobile(false);
+        setQuotationView({ initialId: quotationMatch[1], notificationKey: Date.now() });
+        return;
+      }
       const leadMatch = window.location.hash.match(/^#lead=([0-9a-f-]+)$/i);
       if (leadMatch) {
         setShowSettings(false); setShowCrmSettings(false); setShowAddExpense(false); setShowNotifications(false);
@@ -585,7 +593,7 @@ export default function App() {
       try {
         const url = new URL(event.data.url, window.location.origin);
         if (url.origin !== window.location.origin) return;
-        if (url.hash !== "#sales-briefing" && !/^#lead=[0-9a-f-]+$/i.test(url.hash)) return;
+        if (url.hash !== "#sales-briefing" && !/^#lead=[0-9a-f-]+$/i.test(url.hash) && !/^#quotation=[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(url.hash)) return;
         if (window.location.hash !== url.hash) window.location.hash = url.hash;
         openFromLocation();
       } catch { /* Ignore malformed messages. */ }
@@ -616,7 +624,7 @@ export default function App() {
     setShowCrmSettings(false);
     setShowDataHealth(false);
     setShowAddExpense(false);
-    if (window.location.hash === "#sales-briefing" || /^#lead=[0-9a-f-]+$/i.test(window.location.hash)) {
+    if (window.location.hash === "#sales-briefing" || /^#(?:lead|quotation)=[0-9a-f-]+$/i.test(window.location.hash)) {
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
     }
     window.dispatchEvent(new CustomEvent("engage:go-home"));
@@ -737,7 +745,7 @@ export default function App() {
           push={pushNotifications}
         />
       )}
-      {session && quotationView && (quotationView.settings ? session.role === "admin" && <QuotationSettings onClose={() => setQuotationView(null)} /> : <QuotationsPanel key={`${session.id}-${quotationView.initialId||"list"}-${!!quotationView.approvals}`} {...quotationView} onClose={() => setQuotationView(null)} />)}
+      {session && quotationView && (quotationView.settings ? session.role === "admin" && <QuotationSettings onClose={() => setQuotationView(null)} /> : <QuotationsPanel key={`${session.id}-${quotationView.initialId||"list"}-${!!quotationView.approvals}-${quotationView.notificationKey||""}`} {...quotationView} onClose={() => { setQuotationView(null); if (/^#quotation=[0-9a-f-]+$/i.test(window.location.hash)) window.history.replaceState(null, "", window.location.pathname + window.location.search); }} />)}
       {session && collectionView && <CollectionsPanel {...collectionView} onClose={()=>setCollectionView(null)}/>}
       {session && showDailyReports && <DayClosingReports onClose={()=>setShowDailyReports(false)}/>}
       {session && showOnboarding && <OnboardingPanel key={session.id} onClose={() => setShowOnboarding(false)} />}
@@ -761,3 +769,4 @@ const { DataQualityReport, SalesmanPerformanceReport, FunnelReport, RenewalsRepo
 const { DuplicateLeadWarning, AddLeadField, AddLeadSection, AdminAddLeadModal, SalesmanFormModal, LeadDetailDrawer, SalesmanApp, MessagesSection, AddLeadOverlay, AddLeadModal, GpsStatus, MyLeadsModal, EmbeddedLeads } = createLeadFeatures({ useState, useEffect, useRef, useCallback, api, ApiError, T, inputStyle, STATUSES, STATUS_LABEL, MONTH_NAMES, uuid, fmtMoney, fmtTime, isToday, isThisMonth, isWithinDays, isUpcomingRenewalMonth, LeadBriefPopup, buildLeadBrief, leadAvatarStyle, leadInitials, VerificationStamp, SyncBadge, NoLocationBadge, Overlay, Select, Field, StatCard, SalesmanReportsPage, TasksEntry, getDeviceId, getDayStarted, setDayStartedFlag, useSalesmanMessages, useSalesmanSettings, useAttendanceGps, useSalesmanLeads, useAttendanceDay, SalesmanView, DayClosingForm, Loader2, AlertTriangle, WifiOff, Navigation, Contact2, Search, List, Sparkles, Trash2, PhoneIcon, WhatsAppIcon, MessageSquare, X });
 
 const { LiveMap, AdminApp, AdminView } = createAdminAppView({ useState, useEffect, useRef, L, api, ApiError, T, fmtMoney, fmtTime, isToday, isWithinDays, isUpcomingRenewalMonth, comparisonFor, dailyComparisonFor, getDashboardDisplaySettings, STATUS_LABEL, STATUSES, useAdminPhone, AdminMobileNav, AdminAddLeadModalV2, AdminEmployeesPanel, AdminDashboardPanel, AdminLeadsPanel, AdminReportsPage, useAdminData, TasksModal, DataQualityReport, SalesmanPerformanceReport, FunnelReport, RenewalsReport, ExpensesReport, TimeInStageReport, LeadExportReport, LeadsBoardView, MessageComposeModal, LeadDetailDrawer, SalesmanFormModal, MyLeadsModal, SalesmanRouteModal, VerificationStamp, NoLocationBadge, leadAvatarStyle, leadInitials, Overlay, Select, Tab, LegendDot, DownloadMenu, inputStyle, Loader2, Radio, Lock, LockOpen, AlertTriangle, RefreshCw, AdminTeamActivitySheet, SalesmanBriefPopup, EmployeeSettings, showSaveFeedback });
+
