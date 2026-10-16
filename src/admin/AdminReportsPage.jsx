@@ -113,10 +113,10 @@ export default function AdminReportsPage({ salesmen, leads, shared }) {
       >
         ← Back to reports
       </button>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
+      {!["quality", "attendance", "performance"].includes(active) && <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
         {activeCard && <activeCard.icon size={18} color={activeCard.color} />}
         <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 17 }}>{activeCard?.title}</div>
-      </div>
+      </div>}
       {active === "deal-values" && <DealValueReport />}
       {active === "performance" && <SalesmanPerformanceReport salesmen={salesmen} leads={leads} />}
       {active === "funnel" && <FunnelReport leads={leads} />}
