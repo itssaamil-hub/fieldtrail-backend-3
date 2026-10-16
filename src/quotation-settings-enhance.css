@@ -94,3 +94,20 @@
   .ft-q-settings-page .ft-q-settings-description{margin:0 0 12px;color:#6a7978;font-size:12px;line-height:1.5}
   .ft-q-settings-page .ft-q-settings-heading{margin-bottom:4px}
 }
+
+/* Quotation Settings only: retain the existing mobile dialog and styling. */
+@media (min-width:1024px){
+  .ft-onboarding:has(> .ft-q-settings-shell){
+    width:calc(100vw - 64px);
+    max-width:1280px;
+    max-height:calc(100dvh - 64px);
+  }
+  .ft-q-settings-shell .ft-q-grid> .ft-ob-field{min-width:0}
+  .ft-q-settings-shell input,.ft-q-settings-shell select,.ft-q-settings-shell textarea{max-width:100%}
+  .ft-q-settings-shell textarea{resize:vertical}
+}
+@media (min-width:1200px){
+  .ft-q-settings-shell .ft-q-box> .ft-q-grid{
+    grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr);
+  }
+}
