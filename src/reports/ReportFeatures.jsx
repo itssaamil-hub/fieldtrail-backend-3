@@ -844,10 +844,10 @@ function SalesmanReportsPage({ leads, dailyTarget, monthlyTarget }) {
       >
         ← Back to reports
       </button>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
+      {active !== "performance" && <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
         {activeCard && <activeCard.icon size={18} color={activeCard.color} />}
         <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 17 }}>{activeCard?.title}</div>
-      </div>
+      </div>}
       {active === "performance" && <MyPerformanceReport leads={leads} dailyTarget={dailyTarget} monthlyTarget={monthlyTarget} />}
       {active === "renewals" && <RenewalsReport leads={leads} />}
     </div>
