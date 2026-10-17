@@ -69,16 +69,17 @@ export function createLeadFeatures(deps) {
       : initialValue);
   };
 
-  // "Allow lead entry without Start Day / GPS" is scoped to lead creation only.
-  // The core Add Deal modal reads salesmanGetSettings directly, so present GPS as
-  // OFF to that lead-capture path when the employee is trusted. Attendance and
-  // continuous tracking keep using useSalesmanSettings, which reads the real
-  // employee GPS policy independently and is therefore unchanged.
+  // Trusted lead entry remains GPS-free only when mandatory lead GPS is not ON.
+  // If Admin explicitly enables both GPS Location and Location Mandatory for New
+  // Lead, that explicit lead policy wins and Add Deal receives the real location
+  // settings. Attendance and continuous tracking remain independent as before.
   const leadCaptureApi = {
     ...deps.api,
     salesmanGetSettings: async (...args) => {
       const result = await deps.api.salesmanGetSettings(...args);
-      if (result?.employeePermissions?.allowLeadWithoutStartDay !== true) return result;
+      const mandatoryLeadGps = result?.locationSettings?.gpsLocation === true
+        && result?.locationSettings?.locationMandatoryForNewLead === true;
+      if (result?.employeePermissions?.allowLeadWithoutStartDay !== true || mandatoryLeadGps) return result;
       return {
         ...result,
         locationSettings: {
