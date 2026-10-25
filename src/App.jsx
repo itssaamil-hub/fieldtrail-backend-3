@@ -101,6 +101,7 @@ const lazyDefault = (loader) => withLazyBoundary(lazy(loader));
 const lazyNamed = (loader, exportName) => withLazyBoundary(lazy(() => loader().then((mod) => ({ default: mod[exportName] }))));
 
 const ActivityCentre = lazyDefault(() => import("./ActivityCentre.jsx"));
+const BroadcastData = lazyDefault(() => import("./BroadcastData.jsx"));
 const CollectionsPanel = lazyDefault(() => import("./Collections.jsx"));
 const CollectionsEntry = lazyNamed(() => import("./Collections.jsx"), "CollectionsEntry");
 const SalesmanBriefPopup = lazyDefault(() => import("./SalesmanBrief.jsx"));
@@ -525,6 +526,7 @@ export default function App() {
   const apiBase = getApiBase();
   const [session, setSessionState] = useState(getSession());
   const [showSettings, setShowSettings] = useState(false);
+  const [showBroadcast, setShowBroadcast] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showDailyReports,setShowDailyReports] = useState(false);
   const [collectionView,setCollectionView]=useState(null);
@@ -638,6 +640,7 @@ export default function App() {
   };
 
   const handleLogout = () => {
+    setShowBroadcast(false);
     clearSession();
     setSessionState(null);
     setDesktopSection("dashboard");
@@ -685,6 +688,7 @@ export default function App() {
           onLogout={() => { setShowSettings(false); handleLogout(); }}
           onOpenCrmSettings={() => { setShowSettings(false); setShowCrmSettings(true); }}
           onOpenDataHealth={() => { setShowSettings(false); setShowDataHealth(true); }}
+          onOpenBroadcastData={() => { setShowSettings(false); setShowBroadcast(true); }}
           onOpenQuotationSettings={() => { setShowSettings(false); setQuotationView({settings:true}); }}
           onOpenOnboardingSettings={() => { setShowSettings(false); setShowOnboardingSettings(true); }}
           canInstall={canInstall}
@@ -737,6 +741,7 @@ export default function App() {
           onLogout={session ? () => { setShowSettings(false); handleLogout(); } : undefined}
           onOpenCrmSettings={session?.role === "admin" ? () => { setShowSettings(false); setShowCrmSettings(true); } : undefined}
           onOpenDataHealth={session?.role === "admin" ? () => { setShowSettings(false); setShowDataHealth(true); } : undefined}
+          onOpenBroadcastData={session?.role === "admin" ? () => { setShowSettings(false); setShowBroadcast(true); } : undefined}
           onOpenQuotationSettings={session?.role === "admin" ? () => { setShowSettings(false); setQuotationView({settings:true}); } : undefined}
           onOpenOnboardingSettings={session?.role === "admin" ? () => { setShowSettings(false); setShowOnboardingSettings(true); } : undefined}
           canInstall={canInstall}
@@ -745,6 +750,7 @@ export default function App() {
           push={pushNotifications}
         />
       )}
+      {session?.role === "admin" && showBroadcast && <BroadcastData onClose={() => { setShowBroadcast(false); setShowSettings(true); }} />}
       {session && quotationView && (quotationView.settings ? session.role === "admin" && <QuotationSettings onClose={() => setQuotationView(null)} /> : <QuotationsPanel key={`${session.id}-${quotationView.initialId||"list"}-${!!quotationView.approvals}-${quotationView.notificationKey||""}`} {...quotationView} onClose={() => { setQuotationView(null); if (/^#quotation=[0-9a-f-]+$/i.test(window.location.hash)) window.history.replaceState(null, "", window.location.pathname + window.location.search); }} />)}
       {session && collectionView && <CollectionsPanel {...collectionView} onClose={()=>setCollectionView(null)}/>}
       {session && showDailyReports && <DayClosingReports onClose={()=>setShowDailyReports(false)}/>}
