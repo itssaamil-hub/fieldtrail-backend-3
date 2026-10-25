@@ -4,8 +4,9 @@
 
 /* All dimensions below are scoped to Broadcast Data only. */
 @media(min-width:1024px){
- .ft-onboarding.ft-q-page:has(> .broadcast-data){padding-inline:clamp(28px,3vw,64px)}
- .ft-onboarding.ft-q-page:has(> .broadcast-data)>header{max-width:none}
+ .ft-onboarding-backdrop:has(.broadcast-data){align-items:stretch;padding:20px 24px}
+ .ft-onboarding.ft-q-page:has(> .broadcast-data){width:min(1480px,calc(100vw - 48px));max-width:none;height:calc(100dvh - 40px);max-height:none;padding:26px 32px}
+ .ft-onboarding.ft-q-page:has(> .broadcast-data)>header{max-width:none;top:-26px;margin-top:-26px;padding-top:26px}
  .ft-onboarding.ft-q-page:has(> .broadcast-data) .broadcast-data{width:100%;max-width:none}
  .broadcast-data .broadcast-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
  .broadcast-data .broadcast-preview,.broadcast-data .broadcast-link{padding:24px}
@@ -41,4 +42,10 @@
  .broadcast-data .broadcast-mobile-fields small{display:block;font-size:10px;color:#859992}
  .broadcast-data .broadcast-mobile-fields span{font-size:13px;font-weight:700}
  .broadcast-data .broadcast-actions button,.broadcast-data .broadcast-actions a{flex:1 1 auto;text-align:center}
+}
+
+@media(max-width:700px){
+ .ft-onboarding-backdrop:has(.broadcast-data){padding:0;align-items:stretch}
+ .ft-onboarding.ft-q-page:has(> .broadcast-data){width:100vw;max-width:none;max-height:100dvh;height:100dvh;border-radius:0;padding:15px 14px 34px}
+ .ft-onboarding.ft-q-page:has(> .broadcast-data)>header{top:-15px;margin-top:-15px;padding-top:15px}
 }
