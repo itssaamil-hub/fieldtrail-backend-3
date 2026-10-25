@@ -19,7 +19,7 @@ for(const width of [1440,390])test('Broadcast Data settings flow at '+width,asyn
  await page.getByRole('button',{name:'Settings',exact:true}).first().click();
  await page.getByRole('button',{name:'Broadcast Data',exact:true}).click();
  await page.getByLabel('Report name').fill('October won deals');await page.getByLabel('Six-digit PIN').fill('123456');
- await page.getByRole('button',{name:'Preview report',exact:true}).click();await expect(page.getByText('Isolated test customer')).toBeVisible();
+ await page.getByRole('button',{name:'Preview report',exact:true}).click();await expect(page.locator(width<700?'.broadcast-mobile-cards':'.broadcast-table-scroll').getByText('Isolated test customer')).toBeVisible();
  await page.getByRole('button',{name:'Create live link',exact:true}).click();await expect(page.getByRole('link',{name:'Share on WhatsApp'})).toHaveAttribute('href',/wa.me/);
  await expect(page.locator('.broadcast-data')).toBeVisible();expect(await page.locator('.broadcast-data').evaluate(e=>e.getBoundingClientRect().right<=innerWidth)).toBe(true);
  await page.getByRole('button',{name:'Revoke',exact:true}).click();await page.getByRole('button',{name:'Confirm revoke'}).click();await expect(page.getByRole('link',{name:'Share on WhatsApp'})).toHaveCount(0);await expect(page.getByText('Link revoked.',{exact:true})).toBeVisible();
@@ -42,10 +42,26 @@ for(const width of [1440,390])test('combined Deal and Payment Broadcast remains 
  await expect(page.getByText('Deals tab',{exact:true})).toBeVisible();
  await expect(page.getByText('Payments tab',{exact:true})).toBeVisible();
  await page.getByRole('button',{name:'Preview report',exact:true}).click();
- await expect(page.getByText('Isolated test customer')).toBeVisible();
+ await expect(page.locator(width<700?'.broadcast-mobile-cards':'.broadcast-table-scroll').getByText('Isolated test customer')).toBeVisible();
  await page.locator('.broadcast-preview-tabs').getByRole('button',{name:'Payments'}).click();
- await expect(page.getByText('Isolated test customer')).toBeVisible();
+ await expect(page.locator(width<700?'.broadcast-mobile-cards':'.broadcast-table-scroll').getByText('Isolated test customer')).toBeVisible();
  await page.getByRole('button',{name:'Create live link',exact:true}).click();
  await expect(page.getByRole('link',{name:'Open report'})).toHaveAttribute('href',/^https:\/\/engage-backend-65xk\.onrender\.com\/public\/broadcast\/view\?mode=combined#/);
  expect(await page.locator('.broadcast-data').evaluate(e=>e.getBoundingClientRect().right<=innerWidth)).toBe(true);
+});
+
+for(const width of [1440,390])test('Broadcast-only width and Employee label at '+width,async({page})=>{
+ await page.setViewportSize({width,height:920});await boot(page);
+ if(width<1024)await page.getByRole('button',{name:'More',exact:true}).click();
+ await page.getByRole('button',{name:'Settings',exact:true}).first().click();
+ await page.getByRole('button',{name:'Broadcast Data',exact:true}).click();
+ const broadcast=page.locator('.broadcast-data');
+ await expect(broadcast.getByLabel('Employee',{exact:true})).toBeVisible();
+ await expect(broadcast.getByText('Salesman',{exact:true})).toHaveCount(0);
+ if(width===1440)expect(await broadcast.evaluate(el=>el.getBoundingClientRect().width)).toBeGreaterThan(1080);
+ await page.getByLabel('Report name').fill('Employee payments report');
+ await page.getByLabel('Six-digit PIN').fill('123456');
+ await page.getByRole('button',{name:'Preview report',exact:true}).click();
+ if(width===390)await expect(page.locator('.broadcast-mobile-cards')).toBeVisible();
+ else await expect(page.locator('.broadcast-table-scroll')).toBeVisible();
 });

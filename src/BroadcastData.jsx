@@ -3,9 +3,15 @@ import {api} from './api.js';
 import {OnboardingDialog} from './Onboarding.jsx';
 import './broadcast-data.css';
 const types={leads:'Leads',won:'Won deals',payments:'Payments',combined:'Deals & Payments'};
-const fields={leads:{business:'Business name',employee:'Salesman',status:'Status',created:'Created date',followup:'Next follow-up',value:'Deal value'},won:{business:'Business name',employee:'Salesman',won:'Won date',value:'Deal value'},payments:{business:'Business name',employee:'Salesman',total:'Total',paid:'Paid',remaining:'Remaining',due:'Due date',status:'Payment status'}};
+const fields={leads:{business:'Business name',employee:'Employee',status:'Status',created:'Created date',followup:'Next follow-up',value:'Deal value'},won:{business:'Business name',employee:'Employee',won:'Won date',value:'Deal value'},payments:{business:'Business name',employee:'Employee',total:'Total',paid:'Paid',remaining:'Remaining',due:'Due date',status:'Payment status'}};
 const initial={title:'',type:'won',columns:Object.keys(fields.won),dealColumns:Object.keys(fields.leads),paymentColumns:Object.keys(fields.payments),employee:'',period:'month',from:'',to:'',status:'all',currency:'INR',expiryDays:7};
-export function ReportTable({report}){return <div className="broadcast-table"><table><thead><tr>{report.columns.map(c=><th key={c.key}>{c.label}</th>)}</tr></thead><tbody>{report.rows.map((r,i)=><tr key={i}>{report.columns.map(c=><td key={c.key}>{r[c.key]==null?'—':['total','paid','remaining','value'].includes(c.key)?new Intl.NumberFormat('en-IN',{style:'currency',currency:report.currency}).format(Number(r[c.key])):String(r[c.key])}</td>)}</tr>)}</tbody></table>{!report.rows.length&&<p>No matching records.</p>}</div>}
+export function ReportTable({report}){
+ const format=(row,key)=>row[key]==null?'—':['total','paid','remaining','value'].includes(key)?new Intl.NumberFormat('en-IN',{style:'currency',currency:report.currency}).format(Number(row[key])):String(row[key]);
+ return <div className="broadcast-table">
+ <div className="broadcast-table-scroll"><table><thead><tr>{report.columns.map(c=><th key={c.key}>{c.label}</th>)}</tr></thead><tbody>{report.rows.map((r,i)=><tr key={i}>{report.columns.map(c=><td key={c.key}>{format(r,c.key)}</td>)}</tr>)}</tbody></table></div>
+ <div className="broadcast-mobile-cards">{report.rows.map((r,i)=><article key={i} className="broadcast-mobile-card"><strong>{report.columns.some(c=>c.key==='business')?r.business||'—':report.title}</strong><div className="broadcast-mobile-fields">{report.columns.filter(c=>c.key!=='business').map(c=><div key={c.key}><small>{c.label}</small><span>{format(r,c.key)}</span></div>)}</div></article>)}</div>
+ {!report.rows.length&&<p>No matching records.</p>}</div>;
+}
 export default function BroadcastData({onClose}){
  const [form,setForm]=useState(initial),[previewTab,setPreviewTab]=useState('deals'),[protectedLink,setProtected]=useState(true),[pin,setPin]=useState(''),[employees,setEmployees]=useState([]),[links,setLinks]=useState([]),[preview,setPreview]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState(''),[listPage,setListPage]=useState(0),[more,setMore]=useState(false),[confirm,setConfirm]=useState(null);
  const requestId=useRef(crypto.randomUUID()),generation=useRef(0);
@@ -18,7 +24,7 @@ export default function BroadcastData({onClose}){
  const copy=async(token,type)=>{await navigator.clipboard.writeText(url(token,type));setMessage('Link copied. Share the PIN separately.');};
  const statuses=form.type==='payments'?{all:'All accounts',pending:'Pending',partial:'Partially paid',overdue:'Overdue',paid:'Paid'}:form.type==='leads'?{all:'All stages',cold:'Cold',conversation:'Conversation',hot:'Hot',demo:'Demo',negotiation:'Negotiation',won:'Won',lost:'Lost',nurture:'Nurture'}:{all:'Won only'};
  return <OnboardingDialog title="Broadcast Data" fullPage onClose={onClose} busy={busy}><div className="broadcast-data">
- <p>Create a read-only live report, then share its link on WhatsApp. Only the columns selected below are shared.</p>
+ <div className="broadcast-intro"><span className="broadcast-kicker">ADMIN · SECURE DATA SHARING</span><h3>Share live CRM reports</h3><p>Create a read-only live report, then share its link on WhatsApp. Only the columns selected below are shared.</p></div>
  {error&&<p role="alert" className="broadcast-error">{error}</p>}{message&&<p role="status">{message}</p>}
  <form onSubmit={e=>{e.preventDefault();work(async()=>{await reportPreview();});}}>
  <fieldset disabled={busy}><div className="broadcast-grid">
