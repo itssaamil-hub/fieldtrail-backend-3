@@ -264,6 +264,11 @@ async function request(path, { method = "GET", body, auth = true, expectedUserId
 }
 
 export const api = {
+ broadcastLinks: offset=>request('/broadcast-data?'+new URLSearchParams({offset})),
+ broadcastEmployees: ()=>request('/broadcast-data/employees'),
+ broadcastPreview: body=>request('/broadcast-data/preview',{method:'POST',body}),
+ broadcastCreate: body=>request('/broadcast-data',{method:'POST',body}),
+ broadcastRevoke: id=>request('/broadcast-data/'+id+'/revoke',{method:'POST'}),
  employeeClosingPermissions: id=>request('/day-closing/permissions/'+id),
  saveEmployeeClosingPermissions:(id,body)=>request('/day-closing/permissions/'+id,{method:'PUT',body}),
  closingStatus:()=>request('/day-closing/status'),
