@@ -6,7 +6,7 @@ async function boot(page){
  await page.route('http://127.0.0.1:9999/**',async route=>{const p=new URL(route.request().url()).pathname,m=route.request().method();let body={};
  if(p==='/admin/salesmen')body={salesmen:[]};else if(p.startsWith('/admin/leads'))body={leads:[],total:0};else if(p.includes('/expenses'))body=[];
  else if(p==='/broadcast-data/employees')body={employees:[]};
- else if(p==='/broadcast-data/preview')body=report;
+ else if(p==='/broadcast-data/preview'){const d=route.request().postDataJSON();body=d.type==='combined'?{...report,type:d.tab==='payments'?'payments':'leads',columns:[{key:'business',label:'Business name'},{key:'value',label:'Deal value'}]}:report;}
  else if(p==='/broadcast-data'&&m==='POST'){const data=route.request().postDataJSON();expect(data.pin).toBe('123456');links=[{id:'test-link',config:data,token:'test-token',protected:true,expires_at:null,revoked_at:null}];body={link:links[0]};}
  else if(p.endsWith('/revoke')){links=links.map(l=>({...l,revoked_at:new Date().toISOString()}));body={ok:true};}
  else if(p==='/broadcast-data')body={links,hasMore:false};
@@ -29,4 +29,23 @@ test('recipient PIN, refresh, revocation and XSS safe text',async({page})=>{
  await page.route('https://engage-backend-65xk.onrender.com/public/broadcast/read',async route=>{const b=route.request().postDataJSON();count++;if(revoked)return route.fulfill({status:404,json:{error:'Link revoked'}});if(b.pin!=='123456')return route.fulfill({status:401,json:{error:'Enter the report PIN.'}});return route.fulfill({json:{...report,rows:[{business:'<img src=x onerror=alert(1)>',value:count}]}});});
  await page.goto('/broadcast/index.html#isolated-test-token');await page.getByLabel('Report PIN').fill('123456');await page.getByRole('button',{name:'Open report',exact:true}).click();await expect(page.getByText('<img src=x onerror=alert(1)>')).toBeVisible();await expect(page.locator('#rows img')).toHaveCount(0);
  const before=count;await page.getByRole('button',{name:'Refresh',exact:true}).click();await expect.poll(()=>count).toBeGreaterThan(before);revoked=true;await page.getByRole('button',{name:'Refresh',exact:true}).click();await expect(page.locator('#report')).toBeHidden();await expect(page.locator('#rows')).toBeEmpty();
+});
+
+for(const width of [1440,390])test('combined Deal and Payment Broadcast remains responsive at '+width,async({page})=>{
+ await page.setViewportSize({width,height:1000});await boot(page);
+ if(width<1024)await page.getByRole('button',{name:'More',exact:true}).click();
+ await page.getByRole('button',{name:'Settings',exact:true}).first().click();
+ await page.getByRole('button',{name:'Broadcast Data',exact:true}).click();
+ await page.getByLabel('Data to share').selectOption('combined');
+ await page.getByLabel('Report name').fill('All deals and payments');
+ await page.getByLabel('Six-digit PIN').fill('123456');
+ await expect(page.getByText('Deals tab',{exact:true})).toBeVisible();
+ await expect(page.getByText('Payments tab',{exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Preview report',exact:true}).click();
+ await expect(page.getByText('Isolated test customer')).toBeVisible();
+ await page.locator('.broadcast-preview-tabs').getByRole('button',{name:'Payments'}).click();
+ await expect(page.getByText('Isolated test customer')).toBeVisible();
+ await page.getByRole('button',{name:'Create live link',exact:true}).click();
+ await expect(page.getByRole('link',{name:'Open report'})).toHaveAttribute('href',/^https:\/\/engage-backend-65xk\.onrender\.com\/public\/broadcast\/view\?mode=combined#/);
+ expect(await page.locator('.broadcast-data').evaluate(e=>e.getBoundingClientRect().right<=innerWidth)).toBe(true);
 });
