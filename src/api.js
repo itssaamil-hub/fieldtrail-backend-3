@@ -407,6 +407,8 @@ export const api = {
   notificationsUnsubscribeAll: () => request(`/notifications/subscriptions-all`, { method: "DELETE" }),
   notificationsGetPreferences: () => request(`/notifications/preferences`),
   notificationsSetPreferences: (payload) => request(`/notifications/preferences`, { method: "PATCH", body: payload }),
+  notificationsDebug: () => request("/notifications/debug"),
+  notificationsTest: () => request("/notifications/test", { method: "POST" }),
   adminGetSettings: () => request("/admin/settings"),
   adminUpdateSettings: (payload) => request("/admin/settings", { method: "PATCH", body: payload }),
   adminExportSheetsInfo: (params = {}) => {
