@@ -601,7 +601,7 @@ export default function App() {
         const url = new URL(event.data.url, window.location.origin);
         if (url.origin !== window.location.origin || !["/", "/index.html"].includes(url.pathname)) return;
         if (!url.hash && !url.search) url.hash = "#notifications"; // Legacy push workers send root URLs.
-        if (url.hash !== "#notifications" && url.hash !== "#sales-briefing" && !/^#lead=[0-9a-f-]+$/i.test(url.hash) && !/^#quotation=[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(url.hash)) return;
+        if (url.hash !== "#notifications" && url.hash !== "#sales-briefing" && !/^#lead=[0-9a-f-]+$/i.test(url.hash) && !/^#quotation=[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(url.hash)) return;
         if (window.location.hash !== url.hash) window.location.hash = url.hash;
         openFromLocation();
       } catch { /* Ignore malformed messages. */ }
