@@ -111,8 +111,9 @@ test('Admin Push Notifications page fits narrow phones with independently scroll
     Object.defineProperty(window, 'Notification', { configurable: true, value: { permission: 'granted', requestPermission: async () => 'granted' } });
   });
   await page.goto('/', { waitUntil: 'domcontentloaded' });
-  await page.getByRole('button', { name: 'Menu' }).click();
-  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page.getByRole('button', { name: 'More', exact: true }).click();
+  const appMenu = page.getByRole('navigation', { name: 'App menu' });
+  await appMenu.getByRole('button', { name: 'Settings', exact: true }).click();
   await page.locator('[data-open-push-settings="true"]').click();
   await expect(page.locator('[data-full-push-page="true"]')).toBeVisible();
   await expect(page.getByRole('checkbox', { name: 'Hot leads' })).toBeVisible();
