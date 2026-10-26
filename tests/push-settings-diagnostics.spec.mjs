@@ -73,3 +73,74 @@ test('Admin push settings provides role-scoped toggles and a working signed-in t
   await expect(page.locator('[data-open-push-settings="true"]')).toBeVisible();
   expect(testRequests).toBe(1);
 });
+
+test('Admin Push Notifications page fits narrow phones with independently scrollable settings and diagnostics', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.route('http://127.0.0.1:9999/**', async route => {
+    const url = new URL(route.request().url());
+    let result = {};
+    if (url.pathname === '/notifications/preferences') {
+      result = { preferences: { hotLead: true, dealWon: true, statusConversation: true, statusDemo: true, statusNegotiation: true } };
+    } else if (url.pathname === '/notifications/debug') {
+      result = { serverConfigured: true, subscriptionCount: 1 };
+    } else if (url.pathname === '/notifications/unread') {
+      result = { count: 0 };
+    } else if (url.pathname === '/admin/salesmen') {
+      result = { salesmen: [] };
+    } else if (url.pathname.startsWith('/admin/leads')) {
+      result = { leads: [], total: 0 };
+    } else if (url.pathname === '/tasks/notifications') {
+      result = { notifications: [] };
+    }
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(result) });
+  });
+  await page.addInitScript(() => {
+    localStorage.setItem('fieldtrail:session', JSON.stringify({
+      id: 'admin-responsive-test', token: 'test-token', role: 'admin',
+      name: 'Responsive Admin', fullName: 'Responsive Admin',
+    }));
+    const subscription = {
+      toJSON: () => ({ endpoint: 'https://push.test/user', keys: { p256dh: 'x', auth: 'y' } }),
+    };
+    const reg = { pushManager: { getSubscription: async () => subscription } };
+    Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: {
+      getRegistrations: async () => [], register: async () => reg,
+      addEventListener: () => {}, removeEventListener: () => {},
+    }});
+    Object.defineProperty(window, 'PushManager', { configurable: true, value: function PushManager() {} });
+    Object.defineProperty(window, 'Notification', { configurable: true, value: { permission: 'granted', requestPermission: async () => 'granted' } });
+  });
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await page.getByRole('button', { name: 'Menu' }).click();
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page.locator('[data-open-push-settings="true"]').click();
+  await expect(page.locator('[data-full-push-page="true"]')).toBeVisible();
+  await expect(page.getByRole('checkbox', { name: 'Hot leads' })).toBeVisible();
+
+  for (const width of [320, 375, 430, 768]) {
+    await page.setViewportSize({ width, height: 640 });
+    await expect(page.locator('[data-full-push-page="true"]')).toBeVisible();
+    const state = await page.evaluate(() => {
+      const fullPage = document.querySelector('[data-full-push-page="true"]');
+      const panel = document.querySelector('[data-push-settings-page="true"]');
+      const bounds = fullPage.getBoundingClientRect();
+      const panelBounds = panel.getBoundingClientRect();
+      return {
+        pageWidth: Math.round(bounds.width), panelRight: panelBounds.right,
+        pageScrollHeight: fullPage.scrollHeight, pageClientHeight: fullPage.clientHeight,
+        viewportWidth: window.innerWidth, docScrollWidth: document.documentElement.scrollWidth,
+      };
+    });
+    expect(state.pageWidth).toBe(width);
+    expect(state.panelRight).toBeLessThanOrEqual(width + 1);
+    expect(state.docScrollWidth).toBeLessThanOrEqual(width + 1);
+    expect(state.pageScrollHeight).toBeGreaterThan(state.pageClientHeight);
+  }
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.getByRole('tab', { name: 'Test & Verify' }).click();
+  await expect(page.getByText('Verification checklist', { exact: true })).toBeVisible();
+  const diagnosticWidth = await page.locator('[data-push-test-page="true"]').evaluate(el => el.getBoundingClientRect().right);
+  expect(diagnosticWidth).toBeLessThanOrEqual(321);
+  await page.getByRole('button', { name: 'Back to Settings' }).click();
+  await expect(page.locator('[data-open-push-settings="true"]')).toBeVisible();
+});
