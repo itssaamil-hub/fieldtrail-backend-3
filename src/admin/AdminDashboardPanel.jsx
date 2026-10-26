@@ -239,6 +239,7 @@ export default function AdminDashboardPanel({
   const leadsTodayValue = serverMetrics.leadsToday ?? todayLeads.length;
   const hotTodayValue = serverMetrics.hotToday ?? hotLeadsToday.length;
   const negotiationValue = serverMetrics.negotiation ?? inNegotiation.length;
+  const negotiationDealValue = serverMetrics.negotiationValue ?? inNegotiation.reduce((sum, lead) => sum + (Number(lead.dealValue) || 0), 0);
   const totalValue = serverMetrics.total ?? dashboardLeads.length;
   const monthlyWonMetrics = adminWonPeriod === "month" && completeWonLeads
     ? adminWonScopeMetrics(completeWonLeads, "month")
@@ -312,7 +313,7 @@ export default function AdminDashboardPanel({
         <DashboardStatCard T={T} label="Conversation" value={conversationValue ?? "—"} comparison={comparisons.conversation} comparisonPeriod={comparisonPeriod} icon={MessageSquare} color={T.route} onClick={openConversationLeads} />
         <DashboardStatCard T={T} label="Leads Today" value={leadsTodayValue} comparison={comparisons.leadsToday} comparisonPeriod={comparisonPeriod} icon={TargetIcon} color="#3B82F6" onClick={() => onOpenStatLeads({ title: "Leads Today", leads: todayLeads })} />
         <DashboardStatCard T={T} label={<>Hot Leads <span style={{ fontSize: 8.5, opacity: 0.65 }}>TODAY</span></>} value={hotTodayValue} icon={Flame} comparison={comparisons.hotToday} comparisonPeriod={comparisonPeriod} color={T.danger} onClick={() => onOpenStatLeads({ title: "Hot Leads Today", leads: hotLeadsToday })} />
-        <DashboardStatCard T={T} label="In Negotiation" value={negotiationValue} comparison={comparisons.negotiation} comparisonPeriod={comparisonPeriod} icon={Handshake} color="#8B5CF6" onClick={() => onOpenStatLeads({ title: "In Negotiation", leads: inNegotiation })} />
+        <DashboardStatCard T={T} label="In Negotiation" value={negotiationValue} sub={fmtMoney(negotiationDealValue)} subInline comparison={comparisons.negotiation} comparisonPeriod={comparisonPeriod} icon={Handshake} color="#8B5CF6" onClick={() => onOpenStatLeads({ title: "In Negotiation", leads: inNegotiation })} />
         <DashboardStatCard T={T} label="Total Leads" value={totalValue} comparison={comparisons.total} comparisonPeriod={comparisonPeriod} icon={Contact2} color="#0891B2" />
         <DashboardStatCard T={T} label="Won" value={wonValue} sub={wonSub} subInline comparison={comparisons.won} comparisonPeriod={comparisonPeriod} icon={CheckCircle2} color={T.verified} onClick={openWonLeads} />
         <DashboardStatCard T={T} label="Tasks" value={adminPendingTasks ?? 0} sub="pending" icon={List} color="#145C5D" />
