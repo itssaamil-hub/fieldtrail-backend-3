@@ -6,7 +6,9 @@ const source = readFileSync(path.join(__dirname, "../src/app/AppShellFeatures.js
 
 test("push preferences have their own Settings page and a back path", () => {
   assert.match(source, /const \[pushSettingsPage, setPushSettingsPage\] = useState\(false\)/);
-  assert.match(source, /if \(pushSettingsPage\) \{[\s\S]*?<SettingsSurface desktopPage=\{desktopPage\} title="Push Notifications"/);
+  assert.match(source, /if \(pushSettingsPage\) \{[\s\S]*?<SettingsSurface desktopPage=\{desktopPage\} fullPushPage title="Push Notifications"/);
+  assert.match(source, /data-full-push-page="true"/);
+  assert.match(source, /import "\.\/push-notification-settings\.css"/);
   assert.match(source, /onClose=\{\(\) => setPushSettingsPage\(false\)\}/);
   assert.match(source, /data-open-push-settings="true" onClick=\{\(\) => setPushSettingsPage\(true\)\}/);
   assert.match(source, /data-push-settings-page="true"/);
