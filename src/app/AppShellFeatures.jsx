@@ -269,17 +269,125 @@ function SettingsSurface({ desktopPage = false, title, onClose, backLabel, child
   );
 }
 
+const PUSH_NOTIFICATION_GROUPS = {
+  admin: [
+    ["Lead Activity", "Be informed when a deal enters a priority pipeline stage.", [
+      ["hotLead", "Hot leads", "A new Hot lead is created or an existing deal moves to Hot."],
+      ["statusConversation", "Conversation", "A deal moves into Conversation."],
+      ["statusDemo", "Demo", "A deal moves into Demo."],
+      ["statusNegotiation", "Negotiation", "A deal moves into Negotiation."],
+    ]],
+    ["Sales", "Stay aware of closed deals and sales milestones.", [
+      ["dealWon", "Deals won", "A deal is marked Won."],
+      ["targetMilestone", "Target milestones", "An employee reaches a configured sales target milestone."],
+    ]],
+    ["Team Activity", "Get updates about your team's working day.", [
+      ["dayStartedEnded", "Day started / ended", "An employee starts or ends their working day."],
+      ["dayClosingMissing", "Missing day closing", "A working day ends without a required day-closing report."],
+      ["dayActivitySummary", "Day activity summary", "An employee submits their day closing."],
+    ]],
+    ["Reminders", "Scheduled alerts depend on the daily reminder service running.", [
+      ["renewalDue", "Renewals", "A renewal is due today or is approaching in three days."],
+      ["followUpDue", "Follow-ups due", "A scheduled follow-up reaches its due date."],
+      ["dayStartDigest", "Day-start report", "A scheduled summary of employees' day-start activity."],
+      ["salesBriefing", "Sales briefing", "A scheduled daily sales briefing."],
+    ]],
+  ],
+  salesman: [
+    ["Lead Activity", "Updates about deals assigned to you.", [
+      ["hotLead", "Hot leads", "A lead assigned to you becomes Hot."],
+      ["statusConversation", "Conversation", "Reserved for Conversation updates when available to your role."],
+      ["statusNegotiation", "Negotiation", "Reserved for Negotiation updates when available to your role."],
+      ["statusDemo", "Demo", "Reserved for Demo updates when available to your role."],
+    ]],
+    ["Reminders", "Manage alerts for deadlines and neglected leads.", [
+      ["renewalDue", "Renewals", "Your assigned lead's renewal is due today or in three days."],
+      ["followUpDue", "Follow-ups due", "A follow-up assigned to you reaches its due date."],
+      ["inactiveLead", "Inactive leads", "An assigned lead passes the inactivity limit set by your admin. One push per inactivity period."],
+      ["dayStartDigest", "Day-start report", "An admin-focused scheduled summary; no employee alert is currently sent for this type."],
+      ["salesBriefing", "Sales briefing", "Your scheduled daily sales briefing."],
+    ]],
+  ],
+};
+
+function PushNotificationSettings({ push, isAdmin }) {
+  const groups = PUSH_NOTIFICATION_GROUPS[isAdmin ? "admin" : "salesman"];
+  return (
+    <div data-push-settings-page="true" style={{ maxWidth: 760 }}>
+      <div style={{ display: "flex", gap: 12, padding: "14px 15px", borderRadius: 13, background: "#F5F9F8", border: "1px solid #E1ECE9", marginBottom: 18, alignItems: "flex-start" }}>
+        <span style={{ background: "#E4F2EE", borderRadius: 11, width: 38, height: 38, display: "flex", alignItems: "center", justifyContent: "center", color: T.route, flexShrink: 0 }}><Bell size={19} /></span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>Push notifications</div>
+          <div style={{ fontSize: 12, lineHeight: 1.55, color: T.inkSoft, marginTop: 4 }}>Choose the updates you want to receive. Preferences are saved to your account; receiving push alerts also requires notification permission and an active subscription on this device.</div>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: push.checking ? T.inkSoft : push.subscribed ? T.verified : T.inkSoft, marginTop: 8 }}>
+            {push.checking ? "Checking this device…" : !push.supported ? "Not supported on this device" : push.subscribed ? "Notifications enabled on this device" : "Notifications disabled on this device"}
+          </div>
+        </div>
+      </div>
+
+      {!push.supported ? (
+        <div role="status" style={{ padding: 15, border: `1px solid ${T.line}`, borderRadius: 12, color: T.inkSoft, lineHeight: 1.55, fontSize: 12.5 }}>
+          Push notifications are not supported in this browser. On an iPhone, open Engage from the Home Screen after installing it in Safari, then return here to enable notifications.
+        </div>
+      ) : push.checking ? (
+        <div role="status" style={{ padding: 16, color: T.inkSoft, fontSize: 13 }}>Checking your push subscription…</div>
+      ) : !push.subscribed ? (
+        <div style={{ padding: 17, border: `1px solid ${T.line}`, borderRadius: 13, background: T.card, marginBottom: 16 }}>
+          <div style={{ fontWeight: 750, fontSize: 13.5 }}>Enable notifications on this device</div>
+          <p style={{ fontSize: 12.5, color: T.inkSoft, lineHeight: 1.55, margin: "6px 0 13px" }}>Turn on push notifications first. Then you can select exactly which alerts you receive below.</p>
+          <button type="button" onClick={push.enable} disabled={push.busy} style={{ border: "none", background: T.route, color: "#fff", padding: "11px 16px", borderRadius: 10, fontSize: 13, fontWeight: 750, cursor: push.busy ? "default" : "pointer", opacity: push.busy ? 0.7 : 1 }}>
+            {push.busy ? "Turning on…" : "Turn on push notifications"}
+          </button>
+        </div>
+      ) : (
+        <>
+          {groups.map(([group, description, rows]) => (
+            <section key={group} aria-label={group} style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>{group}</div>
+              <div style={{ margin: "4px 0 10px", color: T.inkSoft, fontSize: 12, lineHeight: 1.5 }}>{description}</div>
+              <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 13, overflow: "hidden" }}>
+                {rows.map(([key, label, description], index) => (
+                  <label key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 15, padding: "13px 15px", borderTop: index ? `1px solid ${T.line}` : "none", cursor: "pointer", minWidth: 0 }}>
+                    <span style={{ display: "block", flex: 1, minWidth: 0 }}>
+                      <span style={{ display: "block", fontSize: 13, fontWeight: 750, color: T.ink }}>{label}</span>
+                      <span style={{ display: "block", marginTop: 4, fontSize: 11.5, lineHeight: 1.55, color: T.inkSoft }}>{description}</span>
+                    </span>
+                    <input type="checkbox" aria-label={label} checked={!!push.preferences[key]} onChange={(event) => push.setPreference(key, event.target.checked)} style={{ width: 19, height: 19, flexShrink: 0, accentColor: T.route, cursor: "pointer" }} />
+                  </label>
+                ))}
+              </div>
+            </section>
+          ))}
+          <div style={{ fontSize: 11.5, lineHeight: 1.5, color: T.inkSoft, marginTop: 4 }}>Scheduled reminders are sent only when their backend job runs successfully. Disabling a category stops push alerts for that category; it does not change CRM records or workflows.</div>
+          <button type="button" onClick={push.disable} disabled={push.busy} style={{ marginTop: 16, padding: "10px 14px", borderRadius: 10, border: `1px solid ${T.line}`, background: T.card, color: T.inkSoft, fontWeight: 700, fontSize: 12.5, cursor: push.busy ? "default" : "pointer", opacity: push.busy ? 0.7 : 1 }}>
+            {push.busy ? "Turning off…" : "Turn off notifications on this account"}
+          </button>
+        </>
+      )}
+      {push.error && <div role="alert" style={{ color: T.danger, marginTop: 12, fontSize: 12.5, lineHeight: 1.5 }}>{push.error}</div>}
+    </div>
+  );
+}
+
 function SettingsModal({ onClose, onLogout, onOpenCrmSettings, onOpenDataHealth, onOpenOnboardingSettings, onOpenQuotationSettings, onOpenBroadcastData, canInstall, installed, promptInstall, push, desktopPage = false }) {
   const isIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
   const [showIosHint, setShowIosHint] = useState(false);
 
   const isAdmin = getSession()?.role === "admin";
-  const PREF_GROUPS = isAdmin ? [
-    ["Lead Activity", [["hotLead","🔥 Hot leads"],["statusConversation","Conversation status"],["statusDemo","Demo status"],["statusNegotiation","Negotiation status"]]],
-    ["Sales", [["dealWon","Deal Won"],["targetMilestone","Target Milestone"]]],
-    ["Team Activity", [["dayStartedEnded","Day Started / Ended"],["dayClosingMissing","Day Closing Missing"],["dayActivitySummary","Day Activity Summary"]]],
-    ["Reminders", [["renewalDue","Renewals due"],["followUpDue","Follow-ups due"],["dayStartDigest","Day-start report (~1pm)"],["salesBriefing","Daily sales briefing"]]],
-  ] : [["Notifications", [["hotLead","🔥 Hot leads"],["statusConversation","Conversation status"],["statusNegotiation","Negotiation status"],["statusDemo","Demo status"],["renewalDue","Renewals due"],["followUpDue","Follow-ups due"],["inactiveLead","Inactive leads"],["dayStartDigest","Day-start report (~1pm)"],["salesBriefing","Daily sales briefing"]]]];
+  const [pushSettingsPage, setPushSettingsPage] = useState(false);
+
+  if (pushSettingsPage) {
+    return (
+      <SettingsSurface desktopPage={desktopPage} title="Push Notifications" backLabel={desktopPage ? "Settings" : undefined} onClose={() => setPushSettingsPage(false)}>
+        {!desktopPage && (
+          <button type="button" onClick={() => setPushSettingsPage(false)} style={{ display: "inline-flex", alignItems: "center", gap: 7, border: "none", background: "transparent", color: T.route, fontSize: 13, fontWeight: 750, cursor: "pointer", padding: "2px 0 14px" }}>
+            ← Back to Settings
+          </button>
+        )}
+        <PushNotificationSettings push={push} isAdmin={isAdmin} />
+      </SettingsSurface>
+    );
+  }
 
   return (
     <SettingsSurface desktopPage={desktopPage} onClose={onClose} title="Settings">
@@ -317,48 +425,22 @@ function SettingsModal({ onClose, onLogout, onOpenCrmSettings, onOpenDataHealth,
       )}
 
       {push && (
-        <div style={{ marginBottom: 18 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: T.inkSoft, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 8 }}>Notifications</div>
-          {!push.supported ? (
-            <div style={{ fontSize: 12, color: T.inkSoft, background: T.paperDeep, borderRadius: 10, padding: 12 }}>
-              Push notifications aren't supported in this browser. On iPhone, install the app first (Add to Home Screen), then try again from there.
-            </div>
-          ) : push.checking ? (
-            <div style={{ fontSize: 12, color: T.inkSoft }}>Checking…</div>
-          ) : !push.subscribed ? (
-            <button
-              onClick={push.enable}
-              disabled={push.busy}
-              style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "11px", borderRadius: 11, border: `1px solid ${T.line}`, cursor: push.busy ? "default" : "pointer", background: T.paperDeep, color: T.ink, fontWeight: 700, fontSize: 13.5, opacity: push.busy ? 0.7 : 1 }}
-            >
-              <Bell size={14} /> {push.busy ? "Turning on…" : "Turn on push notifications"}
-            </button>
-          ) : (
-            <>
-              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                {PREF_GROUPS.map(([group, rows]) => (
-                  <div key={group}>
-                    {isAdmin && <div style={{fontSize:10.5,fontWeight:800,color:T.inkSoft,textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>{group}</div>}
-                    {rows.map(([key,label]) => (
-                      <label key={key} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 2px",cursor:"pointer"}}>
-                        <span style={{fontSize:13}}>{label}</span>
-                        <input type="checkbox" checked={!!push.preferences[key]} onChange={(e)=>push.setPreference(key,e.target.checked)} style={{width:18,height:18,accentColor:T.route,cursor:"pointer"}} />
-                      </label>
-                    ))}
-                  </div>
-                ))}
-              </div>
-              <button
-                onClick={push.disable}
-                disabled={push.busy}
-                style={{ width: "100%", marginTop: 10, padding: "9px", borderRadius: 10, border: `1px solid ${T.line}`, cursor: push.busy ? "default" : "pointer", background: "#fff", color: T.inkSoft, fontWeight: 600, fontSize: 12.5, opacity: push.busy ? 0.7 : 1 }}
-              >
-                {push.busy ? "Turning off…" : "Turn off notifications"}
-              </button>
-            </>
-          )}
-          {push.error && <div style={{ fontSize: 11.5, color: T.danger, marginTop: 8 }}>{push.error}</div>}
-        </div>
+        <button type="button" data-open-push-settings="true" onClick={() => setPushSettingsPage(true)}
+          style={{ display: "flex", width: "100%", alignItems: "center", gap: 11, textAlign: "left", padding: 13, marginBottom: 18, borderRadius: 12, border: `1px solid ${T.line}`, background: T.paperDeep, color: T.ink, cursor: "pointer" }}>
+          <span style={{ width: 37, height: 37, borderRadius: 11, background: "#EAF4F2", color: T.route, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <Bell size={18} />
+          </span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: "block", fontSize: 13.5, fontWeight: 750 }}>Push Notifications</span>
+            <span style={{ display: "block", marginTop: 3, fontSize: 11.5, lineHeight: 1.4, color: T.inkSoft }}>
+              Manage alerts and choose which updates you receive
+            </span>
+          </span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: push.checking ? T.inkSoft : push.subscribed ? T.verified : T.inkSoft, whiteSpace: "nowrap" }}>
+            {push.checking ? "Checking" : !push.supported ? "Unavailable" : push.subscribed ? "On" : "Off"}
+          </span>
+          <span style={{ fontSize: 19, color: T.inkSoft, lineHeight: 1 }} aria-hidden="true">›</span>
+        </button>
       )}
 
       {onLogout && (
