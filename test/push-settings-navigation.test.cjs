@@ -1,7 +1,8 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { readFileSync } = require("node:fs");
-const source = readFileSync(new URL("../src/app/AppShellFeatures.jsx", import.meta.url), "utf8");
+const path = require("node:path");
+const source = readFileSync(path.join(__dirname, "../src/app/AppShellFeatures.jsx"), "utf8");
 
 test("push preferences have their own Settings page and a back path", () => {
   assert.match(source, /const \[pushSettingsPage, setPushSettingsPage\] = useState\(false\)/);
