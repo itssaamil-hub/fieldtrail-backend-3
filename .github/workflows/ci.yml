@@ -34,6 +34,8 @@ jobs:
             --rule 'no-undef:error'
       - run: npm audit --omit=dev --audit-level=critical
       - run: npm run build
+      - name: Test push notification navigation
+        run: node --test test/push-navigation.test.cjs test/quotation-notification-navigation.test.cjs
       - name: Install Playwright smoke-test runner
         run: |
           npm install --no-save --no-package-lock @playwright/test@1.55.0
