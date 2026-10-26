@@ -571,8 +571,10 @@ export default function App() {
   useEffect(() => {
     const openFromLocation = () => {
       if (!session) return;
-      if (window.location.hash === "#sales-briefing") {
+      if (window.location.hash === "#sales-briefing" || window.location.hash === "#notifications") {
         setShowSettings(false); setShowCrmSettings(false); setShowAddExpense(false);
+        setQuotationView(null); setCollectionView(null); setShowOnboarding(false); setShowOnboardingSettings(false);
+        setShowDailyReports(false); setShowActivityCentreMobile(false); setShowBroadcast(false); setShowDataHealth(false);
         setShowNotifications(true);
         return;
       }
@@ -580,22 +582,26 @@ export default function App() {
       if (quotationMatch) {
         setShowSettings(false); setShowCrmSettings(false); setShowAddExpense(false); setShowNotifications(false);
         setNotificationLead(null); setShowOnboarding(false); setShowOnboardingSettings(false);
-        setShowDailyReports(false); setCollectionView(null); setShowActivityCentreMobile(false);
+        setShowDailyReports(false); setCollectionView(null); setShowActivityCentreMobile(false); setShowBroadcast(false); setShowDataHealth(false);
         setQuotationView({ initialId: quotationMatch[1], notificationKey: Date.now() });
         return;
       }
       const leadMatch = window.location.hash.match(/^#lead=([0-9a-f-]+)$/i);
       if (leadMatch) {
         setShowSettings(false); setShowCrmSettings(false); setShowAddExpense(false); setShowNotifications(false);
-        setTopPage("dashboard"); setNotificationLead({ id: leadMatch[1], openedAt: Date.now() });
+        setQuotationView(null); setCollectionView(null); setShowOnboarding(false); setShowOnboardingSettings(false);
+        setShowDailyReports(false); setShowActivityCentreMobile(false); setShowBroadcast(false); setShowDataHealth(false);
+        setTopPage("dashboard"); setDesktopSection("dashboard");
+        setNotificationLead({ id: leadMatch[1], openedAt: Date.now() });
       }
     };
     const onNotification = event => {
       if (event.data?.type !== "OPEN_NOTIFICATION") return;
       try {
         const url = new URL(event.data.url, window.location.origin);
-        if (url.origin !== window.location.origin) return;
-        if (url.hash !== "#sales-briefing" && !/^#lead=[0-9a-f-]+$/i.test(url.hash) && !/^#quotation=[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(url.hash)) return;
+        if (url.origin !== window.location.origin || !["/", "/index.html"].includes(url.pathname)) return;
+        if (!url.hash && !url.search) url.hash = "#notifications"; // Legacy push workers send root URLs.
+        if (url.hash !== "#notifications" && url.hash !== "#sales-briefing" && !/^#lead=[0-9a-f-]+$/i.test(url.hash) && !/^#quotation=[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(url.hash)) return;
         if (window.location.hash !== url.hash) window.location.hash = url.hash;
         openFromLocation();
       } catch { /* Ignore malformed messages. */ }
@@ -608,7 +614,7 @@ export default function App() {
 
   const closeNotifications = () => {
     setShowNotifications(false);
-    if (window.location.hash === "#sales-briefing") window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    if (["#sales-briefing", "#notifications"].includes(window.location.hash)) window.history.replaceState(null, "", window.location.pathname + window.location.search);
   };
 
   const handleHome = () => {
@@ -626,7 +632,7 @@ export default function App() {
     setShowCrmSettings(false);
     setShowDataHealth(false);
     setShowAddExpense(false);
-    if (window.location.hash === "#sales-briefing" || /^#(?:lead|quotation)=[0-9a-f-]+$/i.test(window.location.hash)) {
+    if (["#sales-briefing", "#notifications"].includes(window.location.hash) || /^#(?:lead|quotation)=[0-9a-f-]+$/i.test(window.location.hash)) {
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
     }
     window.dispatchEvent(new CustomEvent("engage:go-home"));
