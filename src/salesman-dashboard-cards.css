@@ -101,6 +101,9 @@
     text-overflow: ellipsis !important;
   }
 
+  /* Negotiation on employee phones uses the exact same amount position as Won.
+     Only apply when an amount is present, so a comparison line is never misplaced. */
+  .engage-salesman-water-card[data-kpi="negotiation"][data-kpi-has-amount="true"] > div:nth-child(3),
   .engage-salesman-water-card[data-kpi="won"] > div:nth-child(3) {
     position: absolute !important;
     top: 39px !important;
@@ -113,6 +116,7 @@
     line-height: 1 !important;
   }
 
+  .engage-salesman-water-card[data-kpi="negotiation"][data-kpi-has-amount="true"] > div:nth-child(4),
   .engage-salesman-water-card[data-kpi="won"] > div:nth-child(4) {
     margin-top: 3px !important;
     padding-right: 0 !important;
