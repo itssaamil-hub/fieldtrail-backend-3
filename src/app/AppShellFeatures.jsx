@@ -415,6 +415,7 @@ function StatCard({ label, value, sub, color, icon: IconC, onClick, comparison, 
   return (
     <div
       className={`${onClick ? "ft-card ft-row" : "ft-card"}${salesmanKpi ? " engage-salesman-water-card" : ""}`} data-kpi={salesmanKpi ? labelText.toLowerCase() : undefined}
+      data-kpi-has-amount={labelText === "Negotiation" && Boolean(sub) ? "true" : undefined}
       onClick={onClick}
       style={{
         background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, padding: "14px 16px",
