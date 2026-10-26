@@ -114,6 +114,7 @@ export default function SalesmanView({ notificationLead, session, leads, leadSum
   const hotCount = serverMetrics.hot ?? leadSummary?.hot ?? allHotLeads.length;
   const conversationCount = serverMetrics.conversation ?? leadSummary?.conversation ?? inConversation.length;
   const negotiationCount = serverMetrics.negotiation ?? leadSummary?.negotiation ?? inNegotiation.length;
+  const negotiationDealValue = serverMetrics.negotiationValue ?? leadSummary?.negotiationValue ?? inNegotiation.reduce((sum, lead) => sum + (Number(lead.dealValue) || 0), 0);
   const wonCount = serverMetrics.won ?? leadSummary?.won ?? converted;
   const wonValue = serverMetrics.wonValue ?? leadSummary?.wonValue ?? convertedValue;
   const renewalCount = serverMetrics.renewalsDue ?? leadSummary?.renewalsDue ?? upcomingRenewals.length;
@@ -202,7 +203,7 @@ export default function SalesmanView({ notificationLead, session, leads, leadSum
         <StatCard label="Today" value={todayCount} comparison={comparisons.today} comparisonPeriod={comparisonPeriod} icon={TargetIcon} color={T.route} onClick={() => setShowTodayLeads(true)} />
         <StatCard label="Hot" value={hotCount} comparison={comparisons.hot} comparisonPeriod={comparisonPeriod} icon={Flame} color={T.danger} onClick={() => setShowHotLeads(true)} />
         <StatCard label="Conversation" value={conversationCount} comparison={comparisons.conversation} comparisonPeriod={comparisonPeriod} icon={MessageSquare} color={T.accent} onClick={() => setShowConversation(true)} />
-        <StatCard label="Negotiation" value={negotiationCount} comparison={comparisons.negotiation} comparisonPeriod={comparisonPeriod} icon={Handshake} color={T.warn} onClick={() => setShowNegotiation(true)} />
+        <StatCard label="Negotiation" value={negotiationCount} sub={negotiationDealValue > 0 ? fmtMoney(negotiationDealValue) : undefined} comparison={comparisons.negotiation} comparisonPeriod={comparisonPeriod} icon={Handshake} color={T.warn} onClick={() => setShowNegotiation(true)} />
         <StatCard label="Won" value={wonCount} sub={wonValue > 0 ? fmtMoney(wonValue) : undefined} comparison={comparisons.won} comparisonPeriod={comparisonPeriod} icon={CheckCircle2} color={T.verified} onClick={() => setShowConverted(true)} />
         <StatCard label="Renewals" value={renewalCount} sub="next 30 days" icon={CalendarClock} color={T.accent} onClick={() => setShowRenewals(true)} />
       </div>
