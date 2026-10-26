@@ -1,0 +1,100 @@
+/* Dedicated Push Notifications settings page only. Other Settings and CRM overlays remain unchanged. */
+.engage-push-page {
+  position: fixed;
+  inset: 0;
+  z-index: 2100;
+  width: 100%;
+  max-width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  background: #f4f5f7;
+  color: #1c2430;
+}
+.engage-push-page-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f4f5f7;
+  border-bottom: 1px solid #e4e8eb;
+  padding: calc(11px + env(safe-area-inset-top)) clamp(12px, 4vw, 28px) 12px;
+}
+.engage-push-page-header-inner,
+.engage-push-page-body {
+  width: 100%;
+  max-width: 800px;
+  min-width: 0;
+  margin-inline: auto;
+}
+.engage-push-page-back {
+  background: none;
+  border: none;
+  padding: 4px 0 8px;
+  font-size: 13px;
+  font-weight: 750;
+  color: #145c5d;
+  cursor: pointer;
+}
+.engage-push-page h1 {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: clamp(19px, 5vw, 24px);
+  line-height: 1.2;
+  margin: 0;
+}
+.engage-push-page-body {
+  padding: 14px clamp(12px, 4vw, 24px) calc(26px + env(safe-area-inset-bottom));
+}
+.engage-push-page-content {
+  min-width: 0;
+  width: 100%;
+  background: white;
+  border: 1px solid #e4e8eb;
+  border-radius: 14px;
+  padding: clamp(12px, 3vw, 22px);
+}
+.engage-push-settings {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.engage-push-settings-preference {
+  width: 100%;
+  min-width: 0;
+}
+.engage-push-settings-preference > span {
+  min-width: 0;
+}
+.engage-push-settings-diagnostics > strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+@media (max-width: 390px) {
+  .engage-push-page-body {
+    padding: 10px 10px calc(20px + env(safe-area-inset-bottom));
+  }
+  .engage-push-page-content {
+    padding: 11px;
+    border-radius: 11px;
+  }
+  .engage-push-settings-hero {
+    gap: 9px !important;
+    padding: 11px !important;
+  }
+  .engage-push-settings-tabs {
+    gap: 2px !important;
+  }
+  .engage-push-settings-preference {
+    gap: 10px !important;
+    padding: 12px 10px !important;
+  }
+  .engage-push-settings-diagnostics {
+    grid-template-columns: minmax(0,1fr) minmax(75px,auto) !important;
+    column-gap: 8px !important;
+  }
+  .engage-push-settings-checklist-header {
+    flex-wrap: wrap;
+  }
+}

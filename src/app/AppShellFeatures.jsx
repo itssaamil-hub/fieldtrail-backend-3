@@ -1,5 +1,6 @@
 import React from "react";
 import DashboardDisplaySettingsControl from "../DashboardDisplaySettingsControl.jsx";
+import "./push-notification-settings.css";
 
 // Shared application shell/settings UI extracted from App.jsx without changing behavior.
 export function createAppShellFeatures(deps) {
@@ -239,7 +240,22 @@ function LoginScreen({ apiBase, online, onLoggedIn, onOpenSettings }) {
   );
 }
 
-function SettingsSurface({ desktopPage = false, title, onClose, backLabel, children }) {
+function SettingsSurface({ desktopPage = false, fullPushPage = false, title, onClose, backLabel, children }) {
+  if (fullPushPage && !desktopPage) return (
+    <main className="engage-push-page" aria-label={title} data-full-push-page="true">
+      <div className="engage-push-page-header">
+        <div className="engage-push-page-header-inner">
+          <button type="button" className="engage-push-page-back" onClick={onClose}>
+            ← Back to {backLabel || "Settings"}
+          </button>
+          <h1>{title}</h1>
+        </div>
+      </div>
+      <div className="engage-push-page-body">
+        <section className="engage-push-page-content">{children}</section>
+      </div>
+    </main>
+  );
   if (!desktopPage) return <Overlay onClose={onClose} title={title}>{children}</Overlay>;
   return (
     <main data-desktop-settings-page="true" aria-label={title} style={{ width: "100%", boxSizing: "border-box", padding: "28px 32px 48px" }}>
@@ -363,8 +379,8 @@ function PushNotificationSettings({ push, isAdmin }) {
   });
 
   return (
-    <div data-push-settings-page="true" style={{ maxWidth: 760 }}>
-      <div style={{ display: "flex", gap: 12, padding: "14px 15px", borderRadius: 13, background: "#F5F9F8", border: "1px solid #E1ECE9", marginBottom: 18, alignItems: "flex-start" }}>
+    <div data-push-settings-page="true" className="engage-push-settings" style={{ width: "100%", maxWidth: 760, minWidth: 0 }}>
+      <div  className="engage-push-settings-hero" style={{ display: "flex", gap: 12, padding: "14px 15px", borderRadius: 13, background: "#F5F9F8", border: "1px solid #E1ECE9", marginBottom: 18, alignItems: "flex-start", minWidth: 0 }}>
         <span style={{ background: "#E4F2EE", borderRadius: 11, width: 38, height: 38, display: "flex", alignItems: "center", justifyContent: "center", color: T.route, flexShrink: 0 }}><Bell size={19} /></span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>Push notifications</div>
@@ -375,7 +391,7 @@ function PushNotificationSettings({ push, isAdmin }) {
         </div>
       </div>
 
-      <div role="tablist" aria-label="Push Notifications sections" style={{ display: "flex", gap: 4, padding: 4, borderRadius: 12, background: T.paperDeep, marginBottom: 18 }}>
+      <div role="tablist" aria-label="Push Notifications sections" className="engage-push-settings-tabs" style={{ display: "flex", gap: 4, padding: 4, borderRadius: 12, background: T.paperDeep, marginBottom: 18, minWidth: 0 }}>
         <button type="button" role="tab" aria-selected={activeTab === "preferences"} aria-controls="push-notification-tab-panel"
           onClick={() => setActiveTab("preferences")} style={tabStyle(activeTab === "preferences")}>
           Preferences
@@ -411,7 +427,7 @@ function PushNotificationSettings({ push, isAdmin }) {
                     <div style={{ margin: "4px 0 10px", color: T.inkSoft, fontSize: 12, lineHeight: 1.5 }}>{description}</div>
                     <div style={{ background: T.card, border, borderRadius: 13, overflow: "hidden" }}>
                       {rows.map(([key, label, description], index) => (
-                        <label key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 15, padding: "13px 15px", borderTop: index ? border : "none", cursor: "pointer", minWidth: 0 }}>
+                        <label key={key} className="engage-push-settings-preference" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 15, padding: "13px 15px", borderTop: index ? border : "none", cursor: "pointer", minWidth: 0 }}>
                           <span style={{ display: "block", flex: 1, minWidth: 0 }}>
                             <span style={{ display: "block", fontSize: 13, fontWeight: 750, color: T.ink }}>{label}</span>
                             <span style={{ display: "block", marginTop: 4, fontSize: 11.5, lineHeight: 1.55, color: T.inkSoft }}>{description}</span>
@@ -437,7 +453,7 @@ function PushNotificationSettings({ push, isAdmin }) {
               <p style={{ margin: "0 0 14px", lineHeight: 1.55, color: T.inkSoft, fontSize: 12 }}>
                 This test uses your signed-in Engage account and sends to that account's registered devices only. It does not change lead data or send a test alert to other employees.
               </p>
-              <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", columnGap: 12, rowGap: 9, alignItems: "center", fontSize: 12.5, marginBottom: 15 }}>
+              <div className="engage-push-settings-diagnostics" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(90px,auto)", columnGap: 12, rowGap: 9, alignItems: "center", fontSize: 12.5, marginBottom: 15, minWidth: 0 }}>
                 <span style={{ color: T.inkSoft }}>Browser permission</span>
                 <strong>{permission === "granted" ? "Allowed" : permission === "denied" ? "Blocked" : permission === "default" ? "Not granted" : "Unavailable"}</strong>
                 <span style={{ color: T.inkSoft }}>This device</span>
@@ -467,7 +483,7 @@ function PushNotificationSettings({ push, isAdmin }) {
             </section>
 
             <section aria-label="Verification checklist">
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 8 }}>
+              <div className="engage-push-settings-checklist-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 8, minWidth: 0 }}>
                 <strong style={{ fontSize: 14 }}>Verification checklist</strong>
                 <span style={{ fontSize: 12, fontWeight: 750, color: T.inkSoft }}>{verified} / {PUSH_VERIFICATION_STEPS.length} user-confirmed</span>
               </div>
@@ -503,12 +519,7 @@ function SettingsModal({ onClose, onLogout, onOpenCrmSettings, onOpenDataHealth,
 
   if (pushSettingsPage) {
     return (
-      <SettingsSurface desktopPage={desktopPage} title="Push Notifications" backLabel={desktopPage ? "Settings" : undefined} onClose={() => setPushSettingsPage(false)}>
-        {!desktopPage && (
-          <button type="button" onClick={() => setPushSettingsPage(false)} style={{ display: "inline-flex", alignItems: "center", gap: 7, border: "none", background: "transparent", color: T.route, fontSize: 13, fontWeight: 750, cursor: "pointer", padding: "2px 0 14px" }}>
-            ← Back to Settings
-          </button>
-        )}
+      <SettingsSurface desktopPage={desktopPage} fullPushPage title="Push Notifications" backLabel="Settings" onClose={() => setPushSettingsPage(false)}>
         <PushNotificationSettings push={push} isAdmin={isAdmin} />
       </SettingsSurface>
     );
