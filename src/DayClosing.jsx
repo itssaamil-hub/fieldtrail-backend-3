@@ -3,6 +3,7 @@ import {AlertTriangle,ArrowRight,CheckCircle2,FileText,Save,SkipForward,Target,T
 import {api,getSession} from './api.js';
 import {OnboardingDialog} from './Onboarding.jsx';
 import EmployeeLocationSettings from './EmployeeLocationSettings.jsx';
+import EmployeeDeviceAccessSettings from './EmployeeDeviceAccessSettings.jsx';
 import './quotations.css';
 import './day-closing.css';
 const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
@@ -18,7 +19,7 @@ export function EmployeeSettings({employee,isActive=true,onClose,onEdit,onDelete
  const [tab,setTab]=useState('general');
  const tabButton=(key,label)=><button type="button" onClick={()=>setTab(key)} style={{flex:1,minWidth:105,border:0,borderRadius:9,padding:'9px 10px',fontSize:11.5,fontWeight:750,cursor:'pointer',background:tab===key?'#fff':'transparent',color:tab===key?'#145C5D':'#64706b',boxShadow:tab===key?'0 1px 4px rgba(20,40,35,.09)':'none'}}>{label}</button>;
  return <OnboardingDialog title={`Employee Settings — ${employee.name||employee.fullName||'Employee'}`} onClose={onClose} busy={busy}><div className="ft-q">
-  <div style={{display:'flex',gap:4,padding:4,background:'#f1f5f3',borderRadius:12,marginBottom:18,overflowX:'auto'}}>{tabButton('general','General')}{tabButton('work','Work Rules')}{tabButton('targets','Targets & Incentives')}</div>
+  <div style={{display:'flex',gap:4,padding:4,background:'#f1f5f3',borderRadius:12,marginBottom:18,overflowX:'auto'}}>{tabButton('general','General')}{tabButton('work','Work Rules')}{tabButton('device','Device Access')}{tabButton('targets','Targets & Incentives')}</div>
 
   {tab==='general'&&<>
    <div className="ft-q-box"><div style={{fontSize:11,fontWeight:800,letterSpacing:.6,color:'#7a8580',marginBottom:10}}>EMPLOYEE</div><div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}><div><div style={{fontSize:17,fontWeight:800}}>{employee.name||employee.fullName||'Employee'}</div><div className="ft-ob-muted" style={{marginTop:3}}>Salesman · {isActive?'Active':'Inactive'}</div></div><button disabled={busy} onClick={onEdit}>Edit employee</button></div></div>
@@ -31,6 +32,8 @@ export function EmployeeSettings({employee,isActive=true,onClose,onEdit,onDelete
    <EmployeeLocationSettings employeeId={employee.id}/>
    {p&&<><button className="ft-ob-primary" style={{marginTop:14}} disabled={busy} onClick={async()=>{setBusy(true);setError('');try{setP(await api.saveEmployeeClosingPermissions(employee.id,p));setSaved('Work rules saved.')}catch(e){setError(e.message)}finally{setBusy(false)}}}>Save Work Rules</button>{saved&&<p role="status">{saved}</p>}</>}
   </>}
+
+  {tab==='device'&&<EmployeeDeviceAccessSettings employeeId={employee.id}/>}
 
   {tab==='targets'&&<>
    <div className="ft-q-box"><h3 style={{margin:'0 0 4px'}}>Performance Targets</h3><p className="ft-ob-muted" style={{marginTop:0}}>Monthly expectations. Visits, leads and demos do not earn incentives.</p><label className="ft-ob-field">Month<input type="month" value={targetMonth.slice(0,7)} onChange={e=>setTargetMonth(e.target.value+'-01')}/></label>{targetError&&<p role="alert">{targetError}</p>}{target&&<div><div className="ft-q-grid">{[['Restaurant visits','visits_target'],['New leads','leads_target'],['Demos','demos_target'],['Deals won','won_target'],['Sales value ₹','sales_value_target']].map(([label,key])=><label className="ft-ob-field" key={key}>{label}<input type="number" min="0" value={target[key]} onChange={e=>setTarget(v=>({...v,[key]:e.target.value}))}/></label>)}</div><button className="ft-ob-primary" disabled={busy} onClick={async()=>{setBusy(true);setTargetError('');try{await api.savePerformanceTarget(employee.id,{month:targetMonth,...target,visits_incentive:0,leads_incentive:0,demos_incentive:0,won_incentive:0,sales_value_incentive_pct:0});setTargetSaved('Monthly targets saved.')}catch(e){setTargetError(e.message)}finally{setBusy(false)}}}>Save Targets</button>{targetSaved&&<p role="status">{targetSaved}</p>}</div>}</div>
