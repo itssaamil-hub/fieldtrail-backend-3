@@ -34,7 +34,7 @@ export default function EmployeeDeviceAccessSettings({ employeeId }) {
   const save = async () => {
     if (saving || savedPolicy === null || draft === savedPolicy) return;
     if (draft === "mobile_only" && !window.confirm(
-      "Set this employee to Mobile Only? Their current laptop sessions will be blocked immediately. Check that they can log in on a phone before continuing."
+      "Set this employee to Mobile Only? All existing sessions for this employee will be signed out. Check that they can log in on a phone before continuing."
     )) return;
     setSaving(true); setError(""); setNotice("");
     try {
@@ -76,7 +76,7 @@ export default function EmployeeDeviceAccessSettings({ employeeId }) {
         ))}
       </div>
       {draft === "mobile_only" && <p style={{ fontSize: 12, lineHeight: 1.55, padding: 11, borderRadius: 10, background: "#fff6e5", color: "#75500d", marginTop: 12 }}>
-        Mobile Only will prevent normal laptop sign-ins and block existing laptop API sessions immediately. Ensure this salesman has phone access before saving.
+        Mobile Only will block normal laptop sign-ins. When you save, this employee will need to sign in again on their phone; all existing sessions will be invalidated.
       </p>}
       <p className="ft-ob-muted" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 10 }}>
         Browser identification is not hardware verification; technically skilled users can spoof a mobile browser. This policy deters ordinary desktop access but does not prove the device is a physical phone.
