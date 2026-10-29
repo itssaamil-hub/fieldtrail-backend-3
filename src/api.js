@@ -364,6 +364,8 @@ export const api = {
   adminCreateSalesman: (payload) => request("/admin/salesmen", { method: "POST", body: payload }),
   adminUpdateSalesman: (id, payload) => request(`/admin/salesmen/${id}`, { method: "PATCH", body: payload }),
   adminDeleteSalesman: (id) => request(`/admin/salesmen/${id}`, { method: "DELETE" }),
+  adminGetEmployeeDevicePolicy: (id) => request(`/admin/employees/${id}/device-policy`),
+  adminSaveEmployeeDevicePolicy: (id, payload) => request(`/admin/employees/${id}/device-policy`, { method: "PUT", body: payload }),
   adminLeads: (params = {}) => {
     const entries = Object.entries(params).filter(([, v]) => v != null && v !== "" && v !== "all");
     const qs = new URLSearchParams(entries).toString();

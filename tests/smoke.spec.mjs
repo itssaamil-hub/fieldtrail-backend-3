@@ -606,3 +606,31 @@ test('admin mobile Deals shows lead avatars in list and Kanban without changing 
   expect(overflow).toBeLessThanOrEqual(1);
   await noCrash(page);
 });
+
+test('admin can set mobile-only device access for one employee from Employee Settings', async ({ page }) => {
+  await bootAs(page, adminSession);
+  const updates = [];
+  await page.route('**/admin/employees/*/device-policy', async route => {
+    const req = route.request();
+    if (req.method() === 'PUT') {
+      const payload = req.postDataJSON();
+      updates.push(payload);
+      await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({policy:payload.policy,version:1})});
+    } else {
+      await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({policy:'both',version:0})});
+    }
+  });
+  await page.getByRole('button', { name: 'Employees' }).click();
+  await expect(page.getByText('Smoke Salesman', { exact: true }).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Settings' }).last().click();
+  await page.getByRole('button', { name: 'Device Access' }).click();
+  await expect(page.locator('[data-device-access-settings="true"]')).toBeVisible();
+  await expect(page.getByRole('radio', { name: /Mobile \+ Desktop/ })).toBeChecked();
+  await page.getByRole('radio', { name: /Mobile Only/ }).check();
+  await expect(page.getByRole('button', { name: 'Save Device Access' })).toBeEnabled();
+  page.once('dialog', dialog => dialog.accept());
+  await page.getByRole('button', { name: 'Save Device Access' }).click();
+  await expect(page.getByText('Device access policy saved.')).toBeVisible();
+  expect(updates).toEqual([{policy:'mobile_only',version:0}]);
+  await expect(page.getByRole('radio', { name: /Mobile Only/ })).toBeChecked();
+});
