@@ -510,7 +510,7 @@ function PushNotificationSettings({ push, isAdmin }) {
   );
 }
 
-function SettingsModal({ onClose, onLogout, onOpenCrmSettings, onOpenDataHealth, onOpenOnboardingSettings, onOpenQuotationSettings, onOpenBroadcastData, canInstall, installed, promptInstall, push, desktopPage = false }) {
+function SettingsModal({ onClose, onLogout, onOpenCrmSettings, onOpenDataHealth, onOpenOnboardingSettings, onOpenQuotationSettings, onOpenBroadcastData, onOpenAiTraining, canInstall, installed, promptInstall, push, desktopPage = false }) {
   const isIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
   const [showIosHint, setShowIosHint] = useState(false);
 
@@ -544,6 +544,7 @@ function SettingsModal({ onClose, onLogout, onOpenCrmSettings, onOpenDataHealth,
       )}
 
       {isAdmin && onOpenBroadcastData && <button type="button" onClick={onOpenBroadcastData} style={{width:"100%",padding:11,borderRadius:11,border:`1px solid ${T.line}`,background:T.paperDeep,color:T.ink,fontWeight:700,fontSize:13.5,marginBottom:12,cursor:"pointer"}}>Broadcast Data</button>}
+      {isAdmin && onOpenAiTraining && <button type="button" onClick={onOpenAiTraining} style={{width:"100%",padding:11,borderRadius:11,border:`1px solid ${T.line}`,background:T.paperDeep,color:T.ink,fontWeight:700,fontSize:13.5,marginBottom:12,cursor:"pointer"}}>AI Training Centre</button>}
       {onOpenQuotationSettings && <button type="button" onClick={onOpenQuotationSettings} style={{width:"100%",padding:11,borderRadius:11,border:`1px solid ${T.line}`,background:T.paperDeep,color:T.ink,fontWeight:700,fontSize:13.5,marginBottom:12,cursor:"pointer"}}>Quotation settings</button>}
       {onOpenOnboardingSettings && <button type="button" onClick={onOpenOnboardingSettings} style={{width:"100%",padding:11,borderRadius:11,border:`1px solid ${T.line}`,background:T.paperDeep,color:T.ink,fontWeight:700,fontSize:13.5,marginBottom:18,cursor:"pointer"}}>Edit onboarding checklist</button>}
       {onOpenCrmSettings && (

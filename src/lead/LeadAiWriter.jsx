@@ -49,6 +49,8 @@ export default function LeadAiWriter({ lead, onClose }) {
   const [notice,setNotice]=useState("");
   const [copied,setCopied]=useState(false);
   const [source,setSource]=useState("");
+  const [savingExample,setSavingExample]=useState(false);
+  const [exampleNotice,setExampleNotice]=useState("");
   const [preview,setPreview]=useState(false);
 
   useEffect(()=>{
@@ -56,10 +58,10 @@ export default function LeadAiWriter({ lead, onClose }) {
     document.addEventListener("keydown",onKey);
     return ()=>document.removeEventListener("keydown",onKey);
   },[onClose]);
-  const change=(setter)=>(v)=>{setter(v);setDrafts(null);setError("");setPreview(false);};
+  const change=(setter)=>(v)=>{setter(v);setDrafts(null);setError("");setExampleNotice("");setPreview(false);};
   const generate=async()=>{
     if(busy)return;
-    setBusy(true);setError("");setNotice("");setPreview(false);
+    setBusy(true);setError("");setNotice("");setExampleNotice("");setPreview(false);
     try{
       const result=await api.generateLeadAiMessage(lead.id,{type,goal,language,tone,notes,useGemini});
       if(!result?.drafts?.natural)throw new Error("No draft was generated.");
@@ -69,9 +71,18 @@ export default function LeadAiWriter({ lead, onClose }) {
     finally{setBusy(false);}
   };
   const current=drafts?.[variant]||"";
-  const updateDraft=v=>setDrafts(d=>d?{...d,[variant]:v}:d);
+  const updateDraft=v=>{setDrafts(d=>d?{...d,[variant]:v}:d);setExampleNotice("");};
   const url=current.trim()?whatsappUrl(lead.phone,current):null;
   const share=()=>{if(url)window.open(url,"_blank","noopener,noreferrer");};
+  const saveGoodExample=async()=>{
+    if(!current.trim()||savingExample)return;
+    setSavingExample(true);setError("");setExampleNotice("");
+    try{
+      const r=await api.aiTrainingSubmitExample({leadId:lead.id,message:current,language,type,goal,tone});
+      setExampleNotice(r.example?.status==="approved"?"Training example approved.":"Submitted for admin approval. Not used for training yet.");
+    }catch(e){setError(e.message||"Could not submit training example.");}
+    finally{setSavingExample(false);}
+  };
   const copy=async()=>{
     if(!current.trim())return;
     try{await navigator.clipboard.writeText(current);setCopied(true);}
@@ -144,6 +155,14 @@ export default function LeadAiWriter({ lead, onClose }) {
             <button type="button" disabled={!url} onClick={share} style={{border:0,borderRadius:10,padding:"11px 6px",background:"#1D8B62",color:"#fff",cursor:url?"pointer":"not-allowed",opacity:url?1:.45,fontSize:12.5,fontWeight:800}}>
               <MessageCircle size={15} style={{verticalAlign:"middle"}}/> Open WhatsApp
             </button>
+          </div>
+          <div style={{borderTop:"1px solid #E1E6E3",paddingTop:12}}>
+            <button type="button" disabled={busy||savingExample||!current.trim()||!!exampleNotice} onClick={saveGoodExample}
+              style={{...h,fontWeight:750,color:purple,fontSize:12,opacity:savingExample?.6:1}}>
+              {savingExample?"Saving…":"☆ Save as Good Example"}
+            </button>
+            <div style={{fontSize:11,color:"#7B8590",marginTop:4}}>Submit this draft as a team writing example. Known customer names and contact details are removed; admin approval is required before Gemini uses it. Review the text for other private details first.</div>
+            {exampleNotice&&<div role="status" style={{fontSize:12,color:"#256B48",marginTop:7}}>{exampleNotice}</div>}
           </div>
           {!url && <div style={{fontSize:11.5,color:"#7C5963"}}>Add a valid contact number to this lead to open WhatsApp directly.</div>}
           <div style={{fontSize:11.5,color:"#7B8590",lineHeight:1.5}}>Opening WhatsApp only prepares the message. It will not send automatically or mark the message as sent in CRM.</div>
