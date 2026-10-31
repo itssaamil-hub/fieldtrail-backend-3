@@ -12,7 +12,7 @@ const field = {
 const labels = {
   type: [["first","First message"],["after","After a talk"],["followup","Follow-up"]],
   goal: [["demo","Book a demo"],["trial","Discuss a trial"],["pricing","Share pricing"],["decision","Get a decision"],["stay","Stay in touch"]],
-  language: [["hinglish","Hinglish"],["english","English"],["hindi","हिंदी"]],
+  language: [["english","English"],["hinglish","Hinglish"],["hindi","हिंदी"]],
   tone: [["respectful","Respectful"],["friendly","Friendly"],["casual","Casual"]],
   variant: [["short","Short"],["natural","Natural"],["professional","Professional"]]
 };
@@ -38,7 +38,7 @@ function whatsappUrl(phone,text) {
 export default function LeadAiWriter({ lead, onClose }) {
   const [type,setType]=useState("after");
   const [goal,setGoal]=useState("demo");
-  const [language,setLanguage]=useState("hinglish");
+  const [language,setLanguage]=useState("english");
   const [tone,setTone]=useState("respectful");
   const [notes,setNotes]=useState("");
   const [useGemini,setUseGemini]=useState(false);
@@ -123,7 +123,7 @@ export default function LeadAiWriter({ lead, onClose }) {
         </div>
         <label style={{display:"flex",gap:9,alignItems:"flex-start",fontSize:12,color:"#4B5563",padding:"10px",border:"1px solid #E5E7EB",borderRadius:10,background:"#fff"}}>
           <input type="checkbox" checked={useGemini} onChange={e=>change(setUseGemini)(e.target.checked)} style={{marginTop:2,accentColor:purple}}/>
-          <span><strong>Use Gemini AI when available</strong><span style={{display:"block",fontSize:11.5,marginTop:3,lineHeight:1.5}}>Optional. Your note is partly redacted (phone numbers, emails and links) before sending to Google. Remove other sensitive details yourself. Free-tier data may be used by Google to improve products. Leave off for private templates.</span></span>
+          <span><strong>Use Gemini AI when available</strong><span style={{display:"block",fontSize:11.5,marginTop:3,lineHeight:1.5}}>Optional. When enabled, your discussion note (with known names, phone numbers, emails and links redacted) and the lead stage/follow-up date are provided to Google. Remove other sensitive details yourself. Free-tier data may be used by Google to improve products. Leave off for private templates.</span></span>
         </label>
         <button type="button" onClick={generate} disabled={busy}
           style={{border:0,borderRadius:11,background:purple,color:"#fff",minHeight:43,fontSize:13,fontWeight:800,cursor:busy?"wait":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,opacity:busy ? 0.7 : 1}}>

@@ -5,11 +5,11 @@ import "./ai-training.css";
 
 const choices = {
   type: [["first","First message"],["after","After a talk"],["followup","Follow-up"]],
-  language: [["hinglish","Hinglish"],["english","English"],["hindi","Hindi"]],
+  language: [["english","English"],["hinglish","Hinglish"],["hindi","Hindi"]],
   tone: [["respectful","Respectful"],["friendly","Friendly"],["casual","Casual"]],
   goal: [["demo","Book a demo"],["trial","Discuss a trial"],["pricing","Share pricing"],["decision","Get a decision"],["stay","Stay in touch"]]
 };
-const defaults = { type:"after", language:"hinglish", tone:"respectful", goal:"demo", message:"" };
+const defaults = { type:"after", language:"english", tone:"respectful", goal:"demo", message:"" };
 const choice = (name, value, change) => (
   <label key={name}>{name === "type" ? "Message type" : name.charAt(0).toUpperCase()+name.slice(1)}
     <select value={value} onChange={e=>change(name,e.target.value)}>
