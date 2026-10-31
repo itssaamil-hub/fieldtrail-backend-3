@@ -37,7 +37,7 @@ test("AI Writer V2 defaults to English without opting users into Google", () => 
   assert.match(writer,/language: \[\["english","English"\]/);
   assert.match(training,/const defaults = \{ type:"after", language:"english"/);
   assert.match(training,/language: \[\["english","English"\]/);
-  assert.match(writer,/lead stage\/follow-up date are provided to Google/);
+  assert.match(writer,/previous draft plus limited lead context are shared with Google/);
   assert.match(writer,/setDraft\(nextDraft\)/);
 });
 
