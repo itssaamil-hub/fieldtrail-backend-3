@@ -27,3 +27,16 @@ test("AI Training Centre includes knowledge, example review and isolated test fl
   assert.match(api,/aiTrainingReviewExample:/);
   assert.match(api,/aiTrainingTest:/);
 });
+
+
+test("AI Writer V2 defaults to English without opting users into Google", () => {
+  const writer=read("lead/LeadAiWriter.jsx");
+  const training=read("AiTrainingCentre.jsx");
+  assert.match(writer,/const \[language,setLanguage\]=useState\("english"\)/);
+  assert.match(writer,/const \[useGemini,setUseGemini\]=useState\(false\)/);
+  assert.match(writer,/language: \[\["english","English"\]/);
+  assert.match(training,/const defaults = \{ type:"after", language:"english"/);
+  assert.match(training,/language: \[\["english","English"\]/);
+  assert.match(writer,/lead stage\/follow-up date are provided to Google/);
+  assert.match(writer,/setVariant\("natural"\)/);
+});
