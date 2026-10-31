@@ -112,10 +112,10 @@ export default function LeadAiWriter({ lead, onClose }) {
         </div>
         <label style={{display:"flex",gap:9,alignItems:"flex-start",fontSize:12,color:"#4B5563",padding:"10px",border:"1px solid #E5E7EB",borderRadius:10,background:"#fff"}}>
           <input type="checkbox" checked={useGemini} onChange={e=>change(setUseGemini)(e.target.checked)} style={{marginTop:2,accentColor:purple}}/>
-          <span><strong>Use Gemini AI when available</strong><span style={{display:"block",fontSize:11.5,marginTop:3,lineHeight:1.5}}>Optional. Your discussion note will be redacted and sent to Google for generation. Free-tier data may be used to improve Google products. Leave off for private templates.</span></span>
+          <span><strong>Use Gemini AI when available</strong><span style={{display:"block",fontSize:11.5,marginTop:3,lineHeight:1.5}}>Optional. Your note is partly redacted (phone numbers, emails and links) before sending to Google. Remove other sensitive details yourself. Free-tier data may be used by Google to improve products. Leave off for private templates.</span></span>
         </label>
         <button type="button" onClick={generate} disabled={busy}
-          style={{border:0,borderRadius:11,background:purple,color:"#fff",minHeight:43,fontSize:13,fontWeight:800,cursor:busy?"wait":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,opacity:busy?.7:1}}>
+          style={{border:0,borderRadius:11,background:purple,color:"#fff",minHeight:43,fontSize:13,fontWeight:800,cursor:busy?"wait":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,opacity:busy ? 0.7 : 1}}>
           {busy?<Loader2 size={16}/>:<Sparkles size={16}/>} {busy?"Generating…":"Generate message"}
         </button>
         {error && <div role="alert" style={{fontSize:12,color:"#B42318",padding:10,background:"#FFF0F0",borderRadius:9}}>{error}</div>}
