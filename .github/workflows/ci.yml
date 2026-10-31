@@ -36,6 +36,8 @@ jobs:
       - run: npm run build
       - name: Test push notification navigation
         run: node --test test/push-navigation.test.cjs test/quotation-notification-navigation.test.cjs test/push-settings-navigation.test.cjs
+      - name: Test AI Training Centre UI wiring
+        run: node --test test/ai-training-ui.test.js
       - name: Install Playwright smoke-test runner
         run: |
           npm install --no-save --no-package-lock @playwright/test@1.55.0
