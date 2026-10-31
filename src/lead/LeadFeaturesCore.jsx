@@ -562,15 +562,10 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
           >
             <MessageSquare size={13} /> Chat
           </button>
-          <button
-          type="button"
-          onClick={() => setShowAiWriter(true)}
-          aria-label={`Open AI Writer for ${displayLead.business}`}
-          style={{ display:"inline-flex", alignItems:"center", gap:5, padding:"4px 9px", borderRadius:999, border:"1px solid #E2D4FF", cursor:"pointer", background:"#F4EEFF", color:"#653DB2", fontSize:11.5, fontWeight:750 }}
-        >
-          <span aria-hidden="true" style={{ display:"inline-grid", placeItems:"center", minWidth:21, height:20, borderRadius:6, background:"#7548CF", color:"#fff", fontWeight:850, fontSize:10 }}>AI</span>
-          AI Writer
-        </button>
+          <button type="button" onClick={() => setShowAiWriter(true)} title="AI Writer"
+            style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 999, border: "1px solid #E2D4FF", cursor: "pointer", background: "#F4EEFF", color: "#653DB2", fontSize: 11.5, fontWeight: 750 }}>
+            <span aria-hidden="true" style={{ background: "#7548CF", color: "#fff", borderRadius: 5, padding: "2px 4px", fontSize: 10, fontWeight: 850 }}>AI</span> AI Writer
+          </button>
         </div>
 
         {showBrief && <LeadBriefPopup key={lead.id} lead={displayLead} buildBrief={buildLeadBrief} onClose={() => setShowBrief(false)} />}
