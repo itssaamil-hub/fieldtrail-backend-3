@@ -456,6 +456,7 @@ export const api = {
   salesmanLeadHistory: (id) => request(`/salesman/leads/${id}/history`),
   salesmanCreateLead: (payload, expectedUserId) => request("/salesman/leads", { method: "POST", body: normalizeRenewalPayload(payload), expectedUserId }),
   generateLeadAiMessage: (id, payload) => request(`/ai-writer/leads/${encodeURIComponent(id)}/draft`, { method: "POST", body: payload }),
+  converseLeadAiMessage: (id, payload) => request(`/ai-writer/leads/${encodeURIComponent(id)}/converse`, { method: "POST", body: payload }),
   aiTrainingConfig: () => request("/ai-writer/training/config"),
   aiTrainingSaveConfig: (body) => request("/ai-writer/training/config", { method: "PUT", body }),
   aiTrainingExamples: (status="pending",offset=0) => request(`/ai-writer/training/examples?status=${encodeURIComponent(status)}&offset=${offset}`),
