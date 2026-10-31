@@ -13,9 +13,9 @@ test("AI Training Centre is admin-only and linked from existing settings",()=>{
 test("AI Writer only submits an edited example on explicit click",()=>{
   const writer=read("lead/LeadAiWriter.jsx");
   assert.match(writer,/onClick=\{saveGoodExample\}/);
-  assert.match(writer,/leadId:lead.id,message:current,language,type,goal,tone/);
+  assert.match(writer,/leadId:lead.id,message:draft,language/);
   assert.match(writer,/Submitted for admin approval/);
-  assert.match(writer,/Known customer names and contact details are removed/);
+  assert.match(writer,/Known customer details are redacted/);
 });
 test("AI Training Centre includes knowledge, example review and isolated test flow",()=>{
   const screen=read("AiTrainingCentre.jsx"),api=read("api.js");
@@ -38,5 +38,26 @@ test("AI Writer V2 defaults to English without opting users into Google", () => 
   assert.match(training,/const defaults = \{ type:"after", language:"english"/);
   assert.match(training,/language: \[\["english","English"\]/);
   assert.match(writer,/lead stage\/follow-up date are provided to Google/);
-  assert.match(writer,/setVariant\("natural"\)/);
+  assert.match(writer,/setDraft\(nextDraft\)/);
+});
+
+test("conversational AI Writer offers one editable message and a Write My Own type",()=>{
+  const writer=read("lead/LeadAiWriter.jsx");
+  const api=read("api.js");
+  assert.match(writer,/\["custom","Write My Own"\]/);
+  assert.match(writer,/Describe what you want AI to write/);
+  assert.match(writer,/api\.converseLeadAiMessage/);
+  assert.match(api,/converseLeadAiMessage:/);
+  assert.match(writer,/previousMessage:refining\?draft:""/);
+  assert.match(writer,/role:"assistant"/);
+  assert.match(writer,/value=\{draft\}/);
+  assert.match(writer,/More natural/);
+  assert.match(writer,/Less salesy/);
+  assert.match(writer,/Write your own request/);
+  assert.match(writer,/Enable Gemini AI to refine/);
+  assert.match(writer,/type!=="custom"&&<SelectField name="goal"/);
+  assert.doesNotMatch(writer,/Message style|setVariant|labels\.variant/);
+  assert.match(writer,/Open WhatsApp/);
+  assert.match(writer,/Nothing is sent automatically/);
+  assert.match(writer,/onClick=\{saveGoodExample\}/);
 });
