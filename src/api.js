@@ -455,6 +455,7 @@ export const api = {
   salesmanLead: (id) => request(`/salesman/leads/${id}`),
   salesmanLeadHistory: (id) => request(`/salesman/leads/${id}/history`),
   salesmanCreateLead: (payload, expectedUserId) => request("/salesman/leads", { method: "POST", body: normalizeRenewalPayload(payload), expectedUserId }),
+  generateLeadAiMessage: (id, payload) => request(`/ai-writer/leads/${encodeURIComponent(id)}/draft`, { method: "POST", body: payload }),
   salesmanCheckDuplicateLead: (payload) => request("/salesman/leads/duplicate-check", { method: "POST", body: payload }),
   salesmanUpdateLead: (id, payload, expectedUserId) => request(`/salesman/leads/${id}`, { method: "PATCH", body: normalizeRenewalPayload(payload), expectedUserId }),
   salesmanGetSettings: () => request("/salesman/settings"),

@@ -1,4 +1,5 @@
 import React from "react";
+import LeadAiWriter from "./LeadAiWriter.jsx";
 import { ArrowUpDown, Download } from "lucide-react";
 import { buildSalesmanExportUrl } from "../api.js";
 
@@ -292,6 +293,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
   const [history, setHistory] = useState(null); // null = loading, [] = loaded & empty
   const [historyError, setHistoryError] = useState("");
   const [showBrief, setShowBrief] = useState(false);
+  const [showAiWriter, setShowAiWriter] = useState(false);
   useEffect(() => { if (notificationOpenedAt) setShowBrief(true); }, [notificationOpenedAt, lead.id]);
   const [detailTab, setDetailTab] = useState("overview");
   const [showReschedule, setShowReschedule] = useState(false);
@@ -562,7 +564,18 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
           </button>
         </div>
 
+        <button
+          type="button"
+          onClick={() => setShowAiWriter(true)}
+          aria-label={`Open AI Writer for ${displayLead.business}`}
+          style={{ display:"inline-flex", alignItems:"center", gap:5, padding:"4px 9px", borderRadius:999, border:"1px solid #E2D4FF", cursor:"pointer", background:"#F4EEFF", color:"#653DB2", fontSize:11.5, fontWeight:750 }}
+        >
+          <span aria-hidden="true" style={{ display:"inline-grid", placeItems:"center", minWidth:21, height:20, borderRadius:6, background:"#7548CF", color:"#fff", fontWeight:850, fontSize:10 }}>AI</span>
+          AI Writer
+        </button>
+
         {showBrief && <LeadBriefPopup key={lead.id} lead={displayLead} buildBrief={buildLeadBrief} onClose={() => setShowBrief(false)} />}
+        {showAiWriter && <LeadAiWriter key={lead.id} lead={displayLead} onClose={() => setShowAiWriter(false)} />
 
         {onStatusChange && !editing && (
           <div style={{ marginTop: 12, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 12, padding: 13 }}>
