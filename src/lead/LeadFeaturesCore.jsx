@@ -569,7 +569,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
         </div>
 
         {showBrief && <LeadBriefPopup key={lead.id} lead={displayLead} buildBrief={buildLeadBrief} onClose={() => setShowBrief(false)} />}
-        {showAiWriter && <LeadAiWriter key={lead.id} lead={displayLead} onClose={() => setShowAiWriter(false)} />
+        {showAiWriter && <LeadAiWriter key={lead.id} lead={displayLead} onClose={() => setShowAiWriter(false)} />}
 
         {onStatusChange && !editing && (
           <div style={{ marginTop: 12, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 12, padding: 13 }}>
