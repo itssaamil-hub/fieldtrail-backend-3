@@ -22,7 +22,8 @@ const quickActions = [
   ["Make shorter", "Rewrite this message more concisely without losing its main point."],
   ["More natural", "Rewrite this like a thoughtful real salesperson texting naturally. No corporate or scripted phrasing."],
   ["Less salesy", "Make this softer and less sales-focused, without pressuring the customer."],
-  ["Handle objection", "Address the concern mentioned in the discussion notes tactfully. Do not invent an objection or promise."]
+  ["Handle objection", "Address the concern mentioned in the discussion notes tactfully. Do not invent an objection or promise."],
+  ["Try again", "Write a fresh alternative that feels authentic, while keeping only the supported facts."]
 ];
 
 function SelectField({ name, title, value, onChange }) {
@@ -74,6 +75,7 @@ export default function LeadAiWriter({ lead, onClose }) {
     if(type==="custom"&&!instruction){setError("Describe what you want AI to write.");return;}
     if(refining&&!instruction){setError("Tell AI what to change.");return;}
     if(refining&&!useGemini){setError("Enable Gemini AI to refine your message.");return;}
+    if(instruction&&!useGemini){setError("Enable Gemini AI to follow your own writing instructions.");return;}
     if(type==="custom"&&!useGemini){setError("Enable Gemini AI to use Write My Own.");return;}
     setBusy(true);setError("");setNotice("");setExampleNotice("");setCopied(false);
     try{
@@ -148,7 +150,7 @@ export default function LeadAiWriter({ lead, onClose }) {
             placeholder="Relevant interests, concerns or agreed next steps"
             style={{...field,resize:"vertical",minHeight:62,lineHeight:1.5}}/>
         </label>
-        <SelectField name="goal" title="Next step" value={goal} onChange={change(setGoal)}/>
+        {type!=="custom"&&<SelectField name="goal" title="Next step" value={goal} onChange={change(setGoal)}/>}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
           <SelectField name="language" title="Language" value={language} onChange={change(setLanguage)}/>
           <SelectField name="tone" title="Tone" value={tone} onChange={change(setTone)}/>
