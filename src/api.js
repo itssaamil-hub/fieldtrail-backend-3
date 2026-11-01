@@ -264,6 +264,9 @@ async function request(path, { method = "GET", body, auth = true, expectedUserId
 }
 
 export const api = {
+  restaurantFinderStatus: () => request('/admin/restaurant-finder/status'),
+  restaurantFinderSearch: body => request('/admin/restaurant-finder/search', {method:'POST',body}),
+  restaurantFinderContact: placeId => request('/admin/restaurant-finder/contact', {method:'POST',body:{placeId}}),
  broadcastLinks: offset=>request('/broadcast-data?'+new URLSearchParams({offset})),
  broadcastEmployees: ()=>request('/broadcast-data/employees'),
  broadcastPreview: body=>request('/broadcast-data/preview',{method:'POST',body}),
