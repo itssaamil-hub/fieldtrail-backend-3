@@ -103,6 +103,7 @@ const lazyNamed = (loader, exportName) => withLazyBoundary(lazy(() => loader().t
 const ActivityCentre = lazyDefault(() => import("./ActivityCentre.jsx"));
 const BroadcastData = lazyDefault(() => import("./BroadcastData.jsx"));
 const AiTrainingCentre = lazyDefault(() => import("./AiTrainingCentre.jsx"));
+const RestaurantLeadFinder = lazyDefault(() => import("./RestaurantLeadFinder.jsx"));
 const CollectionsPanel = lazyDefault(() => import("./Collections.jsx"));
 const CollectionsEntry = lazyNamed(() => import("./Collections.jsx"), "CollectionsEntry");
 const SalesmanBriefPopup = lazyDefault(() => import("./SalesmanBrief.jsx"));
@@ -529,6 +530,7 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showBroadcast, setShowBroadcast] = useState(false);
   const [showAiTraining, setShowAiTraining] = useState(false);
+  const [showRestaurantFinder, setShowRestaurantFinder] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showDailyReports,setShowDailyReports] = useState(false);
   const [collectionView,setCollectionView]=useState(null);
@@ -649,6 +651,7 @@ export default function App() {
 
   const handleLogout = () => {
     setShowBroadcast(false);
+    setShowRestaurantFinder(false);
     clearSession();
     setSessionState(null);
     setDesktopSection("dashboard");
@@ -732,6 +735,7 @@ export default function App() {
         unreadCount={unreadCount}
         onOpenNotifications={session ? () => { setShowSettings(false); setShowCrmSettings(false); setShowNotifications(true); } : undefined}
         onOpenActivityCentre={session?.role === "admin" && !adminDesktop ? () => { closeNotifications(); setShowSettings(false); setShowOnboarding(false); setQuotationView(null); setCollectionView(null); setShowDailyReports(false); setShowActivityCentreMobile(true); } : undefined}
+        onOpenRestaurantLeadFinder={session?.role === "admin" ? () => { closeNotifications(); setShowSettings(false); setShowRestaurantFinder(true); } : undefined}
         onOpenSettings={() => { closeNotifications(); setShowOnboarding(false); setShowCrmSettings(false); setShowSettings(true); }}
         onOpenCollections={()=>{closeNotifications();setShowSettings(false);setShowCrmSettings(false);setShowOnboarding(false);setQuotationView(null);setShowDailyReports(false);setCollectionView({});}}
         onOpenDailyReports={() => { closeNotifications(); setShowSettings(false); setShowCrmSettings(false); setShowOnboarding(false); setQuotationView(null); setShowDailyReports(true); }}
@@ -762,6 +766,7 @@ export default function App() {
       )}
       {session?.role === "admin" && showBroadcast && <BroadcastData onClose={() => { setShowBroadcast(false); setShowSettings(true); }} />}
       {session?.role === "admin" && showAiTraining && <AiTrainingCentre onClose={() => { setShowAiTraining(false); setShowSettings(true); }} />}
+      {session?.role === "admin" && showRestaurantFinder && <RestaurantLeadFinder onClose={() => setShowRestaurantFinder(false)} />}
       {session && quotationView && (quotationView.settings ? session.role === "admin" && <QuotationSettings onClose={() => setQuotationView(null)} /> : <QuotationsPanel key={`${session.id}-${quotationView.initialId||"list"}-${!!quotationView.approvals}-${quotationView.notificationKey||""}`} {...quotationView} onClose={() => { setQuotationView(null); if (/^#quotation=[0-9a-f-]+$/i.test(window.location.hash)) window.history.replaceState(null, "", window.location.pathname + window.location.search); }} />)}
       {session && collectionView && <CollectionsPanel {...collectionView} onClose={()=>setCollectionView(null)}/>}
       {session && showDailyReports && <DayClosingReports onClose={()=>setShowDailyReports(false)}/>}
