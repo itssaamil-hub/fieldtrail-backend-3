@@ -122,12 +122,12 @@ test("Phone layout swaps AI Writer and Location Verified without altering deskto
 
 test("AI Writer defaults to Write My Own and hides empty Conversation introduction",()=>{
   const writer=read("lead/LeadAiWriter.jsx");
-  assert.match(writer,/const \\[type,setType\\]=useState\\("custom"\\)/);
-  assert.match(writer,/\\["custom","Write My Own"\\]/);
-  assert.match(writer,/>Conversation<\\/div>/);
-  assert.match(writer,/messages\\.map\\(/);
+  assert.match(writer,/const \[type,setType\]=useState\("custom"\)/);
+  assert.match(writer,/\["custom","Write My Own"\]/);
+  assert.match(writer,/>Conversation<\/div>/);
+  assert.match(writer,/messages\.map\(/);
   assert.doesNotMatch(writer,/Generate a natural first message|Write your own request below/);
-  assert.doesNotMatch(writer,/!messages\\.length&&<div/);
+  assert.doesNotMatch(writer,/!messages\.length&&<div/);
   assert.match(writer,/type==="custom"&&!instruction/);
   assert.match(writer,/useGemini:true/);
 });
