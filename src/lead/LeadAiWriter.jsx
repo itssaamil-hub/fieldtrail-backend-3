@@ -46,15 +46,12 @@ export default function LeadAiWriter({ lead, onClose }) {
   const [language,setLanguage]=useState("english");
   const [tone,setTone]=useState("respectful");
   const [notes,setNotes]=useState("");
-  const [useGemini,setUseGemini]=useState(false);
   const [input,setInput]=useState("");
   const [messages,setMessages]=useState([]);
   const [draft,setDraft]=useState("");
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState("");
-  const [notice,setNotice]=useState("");
   const [copied,setCopied]=useState(false);
-  const [source,setSource]=useState("");
   const [savingExample,setSavingExample]=useState(false);
   const [exampleNotice,setExampleNotice]=useState("");
 
@@ -64,8 +61,8 @@ export default function LeadAiWriter({ lead, onClose }) {
     return ()=>document.removeEventListener("keydown",onKey);
   },[onClose]);
   const resetConversation=()=>{
-    setMessages([]);setDraft("");setError("");setNotice("");
-    setExampleNotice("");setSource("");setCopied(false);
+    setMessages([]);setDraft("");setError("");
+    setExampleNotice("");setCopied(false);
   };
   const change=(setter)=>(value)=>{setter(value);resetConversation();};
   const sendPrompt=async (quickText)=>{
@@ -74,31 +71,23 @@ export default function LeadAiWriter({ lead, onClose }) {
     const refining=Boolean(draft);
     if(type==="custom"&&!instruction){setError("Describe what you want AI to write.");return;}
     if(refining&&!instruction){setError("Tell AI what to change.");return;}
-    if(refining&&!useGemini){setError("Enable Gemini AI to refine your message.");return;}
-    if(instruction&&!useGemini){setError("Enable Gemini AI to follow your own writing instructions.");return;}
-    if(type==="custom"&&!useGemini){setError("Enable Gemini AI to use Write My Own.");return;}
-    setBusy(true);setError("");setNotice("");setExampleNotice("");setCopied(false);
+    setBusy(true);setError("");setExampleNotice("");setCopied(false);
     try{
-      let nextDraft, nextSource, nextNotice="";
-      if(useGemini){
-        const result=await api.converseLeadAiMessage(lead.id,{
-          type,goal,language,tone,notes,useGemini:true,
-          instruction,previousMessage:refining?draft:""
-        });
-        if(!result?.message?.trim()||result.source!=="gemini")throw new Error("Gemini did not generate a message.");
-        nextDraft=result.message;nextSource="gemini";
-      }else{
-        const result=await api.generateLeadAiMessage(lead.id,{type,goal,language,tone,notes,useGemini:false});
-        if(!result?.drafts?.natural)throw new Error("Could not generate a message.");
-        nextDraft=result.drafts.natural;nextSource="template";nextNotice=result.notice||"Private template draft. Enable Gemini AI to refine conversationally.";
+      const result=await api.converseLeadAiMessage(lead.id,{
+        type,goal,language,tone,notes,useGemini:true,
+        instruction,previousMessage:refining?draft:""
+      });
+      if(!result?.message?.trim()||result.source!=="gemini"){
+        throw new Error("AI could not generate a message. Please try again.");
       }
+      const nextDraft=result.message;
       const requestLabel=instruction||(
         type==="first"?"Write a first WhatsApp message":
         type==="followup"?"Write a gentle follow-up":
         "Write a message based on our discussion"
       );
       setMessages(list=>[...list,{role:"user",text:requestLabel},{role:"assistant",text:nextDraft}]);
-      setDraft(nextDraft);setSource(nextSource);setNotice(nextNotice);setInput("");
+      setDraft(nextDraft);setInput("");
     }catch(e){setError(e?.message||"Could not generate your message. Please try again.");}
     finally{setBusy(false);}
   };
@@ -155,10 +144,7 @@ export default function LeadAiWriter({ lead, onClose }) {
           <SelectField name="language" title="Language" value={language} onChange={change(setLanguage)}/>
           <SelectField name="tone" title="Tone" value={tone} onChange={change(setTone)}/>
         </div>
-        <label style={{display:"flex",gap:9,alignItems:"flex-start",fontSize:12,color:"#4B5563",padding:"10px",border:"1px solid #E5E7EB",borderRadius:10,background:"#fff"}}>
-          <input type="checkbox" checked={useGemini} onChange={e=>change(setUseGemini)(e.target.checked)} style={{marginTop:2,accentColor:purple}}/>
-          <span><strong>Use Gemini AI for conversation</strong><span style={{display:"block",fontSize:11.5,marginTop:3,lineHeight:1.5}}>Optional. When enabled, your request, redacted notes and previous draft plus limited lead context are shared with Google. Remove sensitive details yourself. Free-tier data may be used by Google to improve products. Leave off for private templates.</span></span>
-        </label>
+        <div style={{fontSize:11,color:"#7B8590",lineHeight:1.5}}>AI drafting processes your request and redacted notes with Google. Avoid sensitive details and review each message before sending.</div>
         <div style={{borderTop:"1px solid #E1E6E3",paddingTop:14,display:"flex",flexDirection:"column",gap:10}}>
           <div style={{fontWeight:800,fontSize:13,color:"#24303A"}}>Conversation</div>
           {!messages.length&&<div style={{padding:14,borderRadius:10,background:"#fff",border:"1px solid #E1E6E3",color:"#68737E",fontSize:12.5,lineHeight:1.6}}>
@@ -171,13 +157,13 @@ export default function LeadAiWriter({ lead, onClose }) {
         {draft&&<>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
             <span style={{fontWeight:800,fontSize:13,color:"#24303A"}}>Edit message before sending</span>
-            <span style={{fontSize:11,color:"#67747D"}}>{source==="gemini"?"Generated with Gemini":"Private template draft"}</span>
+            <span style={{fontSize:11,color:"#67747D"}}>AI-generated message</span>
           </div>
           <textarea value={draft} onChange={e=>{setDraft(e.target.value);setCopied(false);setExampleNotice("");}} rows={5}
             aria-label="Editable WhatsApp message" style={{...field,resize:"vertical",lineHeight:1.55,minHeight:120}}/>
           <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-            {quickActions.map(([name,request])=><button key={name} type="button" onClick={()=>sendPrompt(request)} disabled={busy||!useGemini}
-              style={{border:"1px solid #D9D3E6",borderRadius:18,background:"#fff",padding:"7px 10px",fontSize:11.5,color:"#6035AC",cursor:!busy&&useGemini?"pointer":"not-allowed",opacity:useGemini?1:.55}}>{name}</button>)}
+            {quickActions.map(([name,request])=><button key={name} type="button" onClick={()=>sendPrompt(request)} disabled={busy}
+              style={{border:"1px solid #D9D3E6",borderRadius:18,background:"#fff",padding:"7px 10px",fontSize:11.5,color:"#6035AC",cursor:busy?"wait":"pointer",opacity:busy?.55:1}}>{name}</button>)}
           </div>
         </>}
         <label>
@@ -192,7 +178,6 @@ export default function LeadAiWriter({ lead, onClose }) {
           {busy?"Generating…":draft?"Refine message":"Generate message"}
         </button>
         {error&&<div role="alert" style={{fontSize:12,color:"#B42318",padding:10,background:"#FFF0F0",borderRadius:9}}>{error}</div>}
-        {notice&&<div role="status" style={{fontSize:12,color:"#7C5B22",padding:10,background:"#FFF8E7",borderRadius:9}}>{notice}</div>}
         {draft&&<>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
             <span style={{fontSize:11,color:"#68737E"}}>{draft.trim()?draft.trim().split(/\s+/).length:0} words</span>
