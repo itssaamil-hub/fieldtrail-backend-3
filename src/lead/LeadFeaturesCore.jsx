@@ -1,5 +1,6 @@
 import React from "react";
 import LeadAiWriter from "./LeadAiWriter.jsx";
+import "./lead-detail-ai-mobile.css";
 import { ArrowUpDown, Download } from "lucide-react";
 import { buildSalesmanExportUrl } from "../api.js";
 
@@ -545,7 +546,11 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
         </div>
 
         <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-          {lead.hasLocation ? <VerificationStamp status={lead.verification} /> : <NoLocationBadge />}
+          <button className="ft-lead-detail-ai-mobile" type="button" onClick={() => setShowAiWriter(true)} title="AI Writer"
+            style={{ alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 999, border: "1px solid #E2D4FF", cursor: "pointer", background: "#F4EEFF", color: "#653DB2", fontSize: 11.5, fontWeight: 750 }}>
+            <span aria-hidden="true" style={{ background: "#7548CF", color: "#fff", borderRadius: 5, padding: "2px 4px", fontSize: 10, fontWeight: 850 }}>AI</span> AI Writer
+          </button>
+          <span className="ft-lead-detail-header-verification">{lead.hasLocation ? <VerificationStamp status={lead.verification} /> : <NoLocationBadge />}</span>
           <SyncBadge syncStatus={lead.syncStatus} />
           <TasksEntry lead={lead} compact />
           <button
@@ -562,8 +567,8 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
           >
             <MessageSquare size={13} /> Chat
           </button>
-          <button type="button" onClick={() => setShowAiWriter(true)} title="AI Writer"
-            style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 999, border: "1px solid #E2D4FF", cursor: "pointer", background: "#F4EEFF", color: "#653DB2", fontSize: 11.5, fontWeight: 750 }}>
+          <button className="ft-lead-detail-ai-desktop" type="button" onClick={() => setShowAiWriter(true)} title="AI Writer"
+            style={{ alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 999, border: "1px solid #E2D4FF", cursor: "pointer", background: "#F4EEFF", color: "#653DB2", fontSize: 11.5, fontWeight: 750 }}>
             <span aria-hidden="true" style={{ background: "#7548CF", color: "#fff", borderRadius: 5, padding: "2px 4px", fontSize: 10, fontWeight: 850 }}>AI</span> AI Writer
           </button>
         </div>
@@ -680,7 +685,10 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
             )}
 
             <div style={{ marginTop: 12, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 14 }}>
-              <div style={{ fontSize: 13.5, fontWeight: 800, marginBottom: 8, color: T.ink }}>Lead Information</div>
+              <div className="ft-lead-detail-info-heading" style={{ marginBottom: 8, color: T.ink }}>
+                <span className="ft-lead-detail-info-verification">{lead.hasLocation ? <VerificationStamp status={lead.verification} /> : <NoLocationBadge />}</span>
+                <div style={{ fontSize: 13.5, fontWeight: 800 }}>Lead Information</div>
+              </div>
               {detailRows.map(([label, value]) => (
                 <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "5px 0", fontSize: 13 }}>
                   <span style={{ color: T.inkSoft }}>{label}</span>
