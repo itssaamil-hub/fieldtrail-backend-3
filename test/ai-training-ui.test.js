@@ -29,15 +29,17 @@ test("AI Training Centre includes knowledge, example review and isolated test fl
 });
 
 
-test("AI Writer V2 defaults to English without opting users into Google", () => {
+test("AI Writer defaults to English with Gemini-only generation", () => {
   const writer=read("lead/LeadAiWriter.jsx");
   const training=read("AiTrainingCentre.jsx");
   assert.match(writer,/const \[language,setLanguage\]=useState\("english"\)/);
-  assert.match(writer,/const \[useGemini,setUseGemini\]=useState\(false\)/);
+  assert.doesNotMatch(writer,/useGemini,setUseGemini|type="checkbox"/);
+  assert.match(writer,/useGemini:true/);
+  assert.match(writer,/result.source!=="gemini"/);
   assert.match(writer,/language: \[\["english","English"\]/);
   assert.match(training,/const defaults = \{ type:"after", language:"english"/);
   assert.match(training,/language: \[\["english","English"\]/);
-  assert.match(writer,/previous draft plus limited lead context are shared with Google/);
+  assert.match(writer,/AI drafting processes your request and redacted notes with Google/);
   assert.match(writer,/setDraft\(nextDraft\)/);
 });
 
@@ -54,10 +56,24 @@ test("conversational AI Writer offers one editable message and a Write My Own ty
   assert.match(writer,/More natural/);
   assert.match(writer,/Less salesy/);
   assert.match(writer,/Write your own request/);
-  assert.match(writer,/Enable Gemini AI to refine/);
+  assert.match(writer,/Ask AI to refine this message/);
+  assert.doesNotMatch(writer,/Enable Gemini AI|Private template draft|api\.generateLeadAiMessage|labels\.variant/);
   assert.match(writer,/type!=="custom"&&<SelectField name="goal"/);
   assert.doesNotMatch(writer,/Message style|setVariant|labels\.variant/);
   assert.match(writer,/Open WhatsApp/);
   assert.match(writer,/Nothing is sent automatically/);
   assert.match(writer,/onClick=\{saveGoodExample\}/);
+});
+
+test("AI-only generation has no template branch and shows errors on failure",()=>{
+  const writer=read("lead/LeadAiWriter.jsx");
+  assert.match(writer,/const result=await api\.converseLeadAiMessage/);
+  assert.match(writer,/type,goal,language,tone,notes,useGemini:true/);
+  assert.match(writer,/if\(!result\?\.message\?\.trim\(\)\|\|result\.source!=="gemini"\)/);
+  assert.match(writer,/setError\(e\?\.message\|\|/);
+  assert.doesNotMatch(writer,/useGemini:false|generateLeadAiMessage|fallbackDrafts|setUseGemini/);
+  assert.match(writer,/disabled=\{busy\}/);
+  assert.match(writer,/More natural/);
+  assert.match(writer,/Write My Own/);
+  assert.match(writer,/Nothing is sent automatically/);
 });
