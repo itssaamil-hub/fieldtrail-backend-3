@@ -103,8 +103,7 @@ export default function LeadAiWriter({ lead, onClose }) {
     try{
       const result=await api.aiTrainingSubmitExample({
         leadId:lead.id,message:draft,language,
-        // Existing approved-example categories do not yet include custom.
-        type:type==="custom"?"after":type,goal,tone
+        type,goal:type==="custom"?"stay":goal,tone
       });
       setExampleNotice(result.example?.status==="approved"?
         "Training example approved.":"Submitted for admin approval. Not used for training yet.");
@@ -196,7 +195,7 @@ export default function LeadAiWriter({ lead, onClose }) {
               style={{...linkButton,fontWeight:750,color:purple,fontSize:12,opacity:savingExample?.6:1}}>
               {savingExample?"Saving…":"☆ Save as Good Example"}
             </button>
-            <div style={{fontSize:11,color:"#7B8590",marginTop:4}}>Submit your edited message for admin approval. Known customer details are redacted; review for other private details. Write My Own examples are categorized as after-a-talk for training.</div>
+            <div style={{fontSize:11,color:"#7B8590",marginTop:4}}>Submit your edited message for admin approval. Known customer details are redacted; review for other private details. Write My Own examples are reviewed in their own training category.</div>
             {exampleNotice&&<div role="status" style={{fontSize:12,color:"#256B48",marginTop:7}}>{exampleNotice}</div>}
           </div>
           {!shareUrl&&<div style={{fontSize:11.5,color:"#7C5963"}}>Add a valid contact number to the lead to open WhatsApp directly.</div>}
