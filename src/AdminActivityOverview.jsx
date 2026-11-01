@@ -124,13 +124,13 @@ export default function AdminActivityOverview({ salesmen=[], salesmanId='all' })
       <div style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'flex-start',marginBottom:10,flexWrap:'wrap'}}>
         <div style={{minWidth:180,paddingLeft:2}}><div style={{fontSize:16,fontWeight:800,color:C.ink}}>Lead Activity</div><div style={{fontSize:12,color:C.soft,marginTop:3}}>Real activity recorded in Engage · {person}</div></div>
         <div style={{display:'flex',alignItems:'center',gap:7,flexWrap:'wrap',justifyContent:'flex-end',marginLeft:'auto'}}>
+          <select aria-label="Activity metric" value={activeKeys[0]} onChange={e=>selectMetric(e.target.value)} style={{height:34,maxWidth:'100%',border:`1px solid ${C.line}`,borderRadius:9,background:'#fff',color:C.ink,fontSize:11.5,fontWeight:650,padding:'0 28px 0 9px'}}>{metricDefs.map(m=><option key={m.key} value={m.key}>{m.label} · {Number(totals[m.key]||0)}</option>)}</select>
           <select aria-label="Activity period" value={days} onChange={e=>setDays(Number(e.target.value))} style={{height:34,border:`1px solid ${C.line}`,borderRadius:9,background:'#fff',color:C.ink,fontSize:11.5,fontWeight:650,padding:'0 28px 0 9px'}}><option value={7}>7 Days</option><option value={15}>15 Days</option><option value={30}>1 Month</option></select>
           <div style={{height:34,padding:'0 9px',border:`1px solid ${C.line}`,borderRadius:9,background:'#F8FBFA',fontSize:11.2,color:C.soft,display:'flex',alignItems:'center',gap:6,whiteSpace:'nowrap'}}>{loading?<><RefreshCw size={12} className="spin"/> Refreshing</>:<><span style={{width:7,height:7,borderRadius:'50%',background:C.green}}/> Live data</>}</div>
         </div>
       </div>
 
       {error?<div style={{padding:'18px 4px',fontSize:12.5,color:'#B42318'}}>{error}</div>:<>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(5,minmax(82px,1fr))',gap:6,overflowX:'auto'}}>{metricDefs.map(m=>{const on=activeKeys.includes(m.key),Icon=m.Icon;return <button key={m.key} aria-pressed={on} onClick={()=>selectMetric(m.key)} style={{minWidth:82,textAlign:'left',padding:'6px 8px',borderRadius:9,border:`1px solid ${on?m.color+'55':C.line}`,background:on?`${m.color}0D`:'#fff',cursor:'pointer'}}><div style={{display:'flex',alignItems:'center',gap:4,fontSize:9.2,fontWeight:750,color:C.soft,whiteSpace:'nowrap'}}><Icon size={11.5} color={m.color}/>{m.label}</div><div style={{fontSize:17,fontWeight:850,color:C.ink,marginTop:2,lineHeight:1.05}}>{Number(totals[m.key]||0)}</div></button>;})}</div>
         {rows.length?<SparkChart rows={rows} activeKeys={activeKeys} days={days}/>:!loading&&<div style={{padding:'72px 12px',textAlign:'center',color:C.soft,fontSize:12.5}}>No lead activity recorded in this period.</div>}
       </>}
     </section>
