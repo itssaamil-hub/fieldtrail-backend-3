@@ -73,10 +73,10 @@ function avatarTone(name='') {
 function SparkChart({ rows, activeKeys, days }) {
   const w=Math.max(760,rows.length*42),h=300,left=42,right=18,top=18,bottom=34;
   const values=rows.flatMap(r=>activeKeys.map(k=>Number(r[k]||0)));
-  const max=Math.max(4,...values), yMax=Math.ceil(max/4)*4;
+  const max=Math.max(20,...values), gridStep=Math.ceil(max/20)*4, yMax=gridStep*5;
   const x=i=>left+(rows.length<=1?0:i*(w-left-right)/(rows.length-1));
   const y=v=>top+(h-top-bottom)*(1-Number(v||0)/yMax);
-  const grid=[0,.25,.5,.75,1].map(p=>Math.round(yMax*p));
+  const grid=Array.from({length:6},(_,i)=>i*gridStep);
   const labelEvery=days===30?4:days===15?2:1;
   return <div style={{width:'100%',overflowX:'auto',marginTop:'auto',paddingTop:4}}>
     <svg viewBox={`0 0 ${w} ${h}`} style={{width:days===30?'auto':'100%',minWidth:days===30?920:620,height:300,display:'block'}} role="img" aria-label={`${days} day lead activity chart`}>
