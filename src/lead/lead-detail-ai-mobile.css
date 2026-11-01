@@ -1,0 +1,18 @@
+/* Lead detail action placement only. Desktop keeps the exact existing arrangement. */
+.ft-lead-detail-ai-mobile { display: none; }
+.ft-lead-detail-ai-desktop { display: inline-flex; }
+.ft-lead-detail-info-verification { display: none; }
+.ft-lead-detail-info-heading { display: block; }
+
+@media (max-width: 640px) {
+  .ft-lead-detail-ai-mobile { display: inline-flex; }
+  .ft-lead-detail-ai-desktop,
+  .ft-lead-detail-header-verification { display: none; }
+  .ft-lead-detail-info-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+  .ft-lead-detail-info-verification { display: inline-flex; align-items: center; }
+}

@@ -4,7 +4,7 @@ import { OnboardingDialog } from "./Onboarding.jsx";
 import "./ai-training.css";
 
 const choices = {
-  type: [["first","First message"],["after","After a talk"],["followup","Follow-up"]],
+  type: [["first","First message"],["after","After a talk"],["followup","Follow-up"],["custom","Write My Own"]],
   language: [["english","English"],["hinglish","Hinglish"],["hindi","Hindi"]],
   tone: [["respectful","Respectful"],["friendly","Friendly"],["casual","Casual"]],
   goal: [["demo","Book a demo"],["trial","Discuss a trial"],["pricing","Share pricing"],["decision","Get a decision"],["stay","Stay in touch"]]
@@ -65,7 +65,7 @@ export default function AiTrainingCentre({ onClose }) {
     setSuccess("Training instructions saved. They will apply to the next Gemini generation.");
   });
   const submit=()=>run(async()=>{
-    const r=await api.aiTrainingSubmitExample(example);
+    const r=await api.aiTrainingSubmitExample({...example,goal:example.type==="custom"?"stay":example.goal});
     setSuccess(r.example.status==="approved"?"Approved example saved.":"Example submitted for admin review.");
     setExample(defaults);setFilter("approved");setOffset(0);
     await loadExamples("approved",0);
@@ -82,9 +82,16 @@ export default function AiTrainingCentre({ onClose }) {
   });
   const previewTest=()=>run(async()=>{
     setPreview(null);
-    const res=await api.aiTrainingTest({...test,notes:test.message});
+    const res=await api.aiTrainingTest({
+      ...test,
+      goal:test.type==="custom"?"stay":test.goal,
+      notes:test.type==="custom"?"":test.message,
+      instruction:test.type==="custom"?test.message:"",
+      useGemini:true
+    });
+    if(res.source!=="gemini"||!res.message?.trim())throw new Error("Gemini did not generate a test message.");
     setPreview(res);
-    setSuccess(res.source==="gemini"?"Test generated using Gemini.":"Test returned private templates instead of Gemini.");
+    setSuccess("Test generated using Gemini.");
   });
 
   return <OnboardingDialog title="AI Training Centre" fullPage onClose={onClose} busy={busy}>
@@ -92,7 +99,7 @@ export default function AiTrainingCentre({ onClose }) {
       <header className="ai-training-header">
         <div className="ai-training-kicker">ADMIN · AI WRITER</div>
         <h2>Train your sales message writer</h2>
-        <p>Add verified company knowledge, set a consistent writing style, and approve good examples. Only approved content is used when someone opts in to Gemini AI.</p>
+        <p>Add verified company knowledge, set a consistent writing style, and approve good examples. Only approved content is used for Gemini-generated messages.</p>
       </header>
       <nav className="ai-training-tabs" aria-label="AI Training Centre">
         {[["knowledge","Knowledge & rules"],["examples","Sales examples"],["test","Test AI"]].map(([key,label])=>
@@ -120,12 +127,12 @@ export default function AiTrainingCentre({ onClose }) {
           <small>{(settings.writing_instructions||"").length}/3000 characters</small>
         </section>
         <div className="ai-training-actions"><button className="ai-training-primary" onClick={save} disabled={busy}>Save training instructions</button></div>
-        <p className="ai-training-note">Do not enter private customer information. These settings are provided to Google only for Gemini generation, not private templates.</p>
+        <p className="ai-training-note">Do not enter private customer information. These settings are provided to Google for Gemini generation.</p>
       </>:tab==="examples"?<>
         <section className="ai-training-panel">
           <h3>Add an approved sales example</h3>
           <p>Use placeholders [[OWNER]], [[BUSINESS]] and [[SENDER]] instead of real names. Do not include personal data. Admin-added examples are immediately approved.</p>
-          <div className="ai-training-fields">{["type","language","goal","tone"].map(name=>choice(name,example[name],update(setExample)))}</div>
+          <div className="ai-training-fields">{["type","language","goal","tone"].filter(name=>example.type!=="custom"||name!=="goal").map(name=>choice(name,example[name],update(setExample)))}</div>
           <label>Example WhatsApp message
             <textarea value={example.message} maxLength={1200} rows={6}
               placeholder="Hi [[OWNER]], it was great speaking with you about [[BUSINESS]]…"
@@ -142,7 +149,7 @@ export default function AiTrainingCentre({ onClose }) {
             </select>
           </div>
           {!examples.length?<p>No examples for this filter.</p>:examples.map(row=><article className="ai-training-example" key={row.id}>
-            <div><strong>{row.submitted_by_name||"Sales team"}</strong><span>{row.status} · {row.language} · {row.message_type} · {row.goal}</span></div>
+            <div><strong>{row.submitted_by_name||"Sales team"}</strong><span>{row.status} · {row.language} · {row.message_type==="custom"?"Write My Own":row.message_type}{row.message_type==="custom"?"":" · "+row.goal}</span></div>
             <p>{row.message}</p>
             <div className="ai-training-actions">
               {row.status!=="approved"&&<button disabled={busy} onClick={()=>review(row.id,"approved")}>Approve</button>}
@@ -160,17 +167,16 @@ export default function AiTrainingCentre({ onClose }) {
         <section className="ai-training-panel">
           <h3>Test Gemini with your training</h3>
           <p>This test uses a hypothetical scenario, not any CRM customer's record. It will not save or send a message. Gemini API limits may apply.</p>
-          <div className="ai-training-fields">{["type","language","goal","tone"].map(name=>choice(name,test[name],update(setTest)))}</div>
-          <label>Test conversation scenario
+          <div className="ai-training-fields">{["type","language","goal","tone"].filter(name=>test.type!=="custom"||name!=="goal").map(name=>choice(name,test[name],(key,value)=>{update(setTest)(key,value);setPreview(null);}))}</div>
+          <label>{test.type==="custom"?"Write My Own request":"Test conversation scenario"}
             <textarea rows={5} maxLength={600} value={test.message}
-              placeholder="The owner is interested in inventory and recipe costing, and asked for a demo next week."
+              placeholder={test.type==="custom"?"Write a polite reply to a restaurant owner concerned about pricing, without pushing for a demo.":"The owner is interested in inventory and recipe costing, and asked for a demo next week."}
               onChange={e=>{setTest(s=>({...s,message:e.target.value}));setPreview(null);}}/>
           </label>
           <div className="ai-training-actions"><button className="ai-training-primary" disabled={busy||!test.message.trim()} onClick={previewTest}>{busy?"Generating…":"Generate test message"}</button></div>
           {preview&&<section className="ai-training-preview">
-            <strong>{preview.source==="gemini"?"Generated with Gemini":"Private template fallback"}</strong>
-            {preview.notice&&<p role="status">{preview.notice}</p>}
-            {["short","natural","professional"].map(k=><div key={k}><h4>{k[0].toUpperCase()+k.slice(1)}</h4><p>{preview.drafts?.[k]}</p></div>)}
+            <strong>Generated with Gemini</strong>
+            <p style={{whiteSpace:"pre-wrap"}}>{preview.message}</p>
           </section>}
         </section>
       </>}

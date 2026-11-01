@@ -77,3 +77,39 @@ test("AI-only generation has no template branch and shows errors on failure",()=
   assert.match(writer,/Write My Own/);
   assert.match(writer,/Nothing is sent automatically/);
 });
+
+test("AI Training Centre Gemini test produces one message, with no legacy variants or fallback",()=>{
+  const screen=read("AiTrainingCentre.jsx");
+  assert.match(screen,/\["custom","Write My Own"\]/);
+  assert.match(screen,/api\.aiTrainingTest/);
+  assert.match(screen,/res\.source!=="gemini"/);
+  assert.match(screen,/setPreview\(res\)/);
+  assert.match(screen,/preview\.message/);
+  assert.doesNotMatch(screen,/preview\.drafts|Private template fallback|Test returned private templates/);
+  assert.match(screen,/test\.type==="custom"\?test\.message:""/);
+  assert.match(screen,/type==="custom"\?"stay"/);
+});
+test("Write My Own examples are submitted with the distinct type",()=>{
+  const screen=read("AiTrainingCentre.jsx");
+  const writer=read("lead/LeadAiWriter.jsx");
+  assert.match(writer,/type,goal:type==="custom"\?"stay":goal,tone/);
+  assert.doesNotMatch(writer,/type:type==="custom"\?"after":type/);
+  assert.match(writer,/Write My Own examples are reviewed in their own training category/);
+  assert.match(screen,/row\.message_type==="custom"\?"Write My Own"/);
+  assert.match(screen,/example\.type==="custom"/);
+});
+test("Phone layout swaps AI Writer and Location Verified without altering desktop",()=>{
+  const panel=read("lead/LeadFeaturesCore.jsx");
+  const css=fs.readFileSync(new URL("../src/lead/lead-detail-ai-mobile.css",import.meta.url),"utf8");
+  assert.match(panel,/import "\.\/lead-detail-ai-mobile\.css"/);
+  assert.match(panel,/ft-lead-detail-ai-mobile/);
+  assert.match(panel,/ft-lead-detail-ai-desktop/);
+  assert.match(panel,/ft-lead-detail-header-verification/);
+  assert.match(panel,/ft-lead-detail-info-verification/);
+  assert.match(panel,/Lead Information/);
+  assert.match(css,/@media \(max-width: 640px\)/);
+  assert.match(css,/\.ft-lead-detail-ai-mobile \{ display: none; \}/);
+  assert.match(css,/\.ft-lead-detail-ai-desktop \{ display: inline-flex; \}/);
+  assert.match(css,/\.ft-lead-detail-header-verification \{ display: none; \}/);
+  assert.match(css,/\.ft-lead-detail-info-verification \{ display: inline-flex/);
+});
