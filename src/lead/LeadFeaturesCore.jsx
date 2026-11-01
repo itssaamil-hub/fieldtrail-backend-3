@@ -686,8 +686,11 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
 
             <div style={{ marginTop: 12, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 14 }}>
               <div className="ft-lead-detail-info-heading" style={{ marginBottom: 8, color: T.ink }}>
+                <div style={{ fontSize: 13.5, fontWeight: 800 }}>
+                  <span className="ft-lead-detail-title-desktop">Lead Information</span>
+                  <span className="ft-lead-detail-title-mobile">Deal Information</span>
+                </div>
                 <span className="ft-lead-detail-info-verification">{lead.hasLocation ? <VerificationStamp status={lead.verification} /> : <NoLocationBadge />}</span>
-                <div style={{ fontSize: 13.5, fontWeight: 800 }}>Lead Information</div>
               </div>
               {detailRows.map(([label, value]) => (
                 <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "5px 0", fontSize: 13 }}>

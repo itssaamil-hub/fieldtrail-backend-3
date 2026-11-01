@@ -41,7 +41,7 @@ function whatsappUrl(phone,text) {
   return "https://wa.me/"+n+"?text="+encodeURIComponent(text);
 }
 export default function LeadAiWriter({ lead, onClose }) {
-  const [type,setType]=useState("after");
+  const [type,setType]=useState("custom");
   const [goal,setGoal]=useState("demo");
   const [language,setLanguage]=useState("english");
   const [tone,setTone]=useState("respectful");
@@ -146,9 +146,6 @@ export default function LeadAiWriter({ lead, onClose }) {
         <div style={{fontSize:11,color:"#7B8590",lineHeight:1.5}}>AI drafting processes your request and redacted notes with Google. Avoid sensitive details and review each message before sending.</div>
         <div style={{borderTop:"1px solid #E1E6E3",paddingTop:14,display:"flex",flexDirection:"column",gap:10}}>
           <div style={{fontWeight:800,fontSize:13,color:"#24303A"}}>Conversation</div>
-          {!messages.length&&<div style={{padding:14,borderRadius:10,background:"#fff",border:"1px solid #E1E6E3",color:"#68737E",fontSize:12.5,lineHeight:1.6}}>
-            {type==="custom"?"Write your own request below. For example: “The customer says our price is high. Reply politely without pushing a sale.”":"Generate a natural first message, then ask AI to rewrite it in your own words."}
-          </div>}
           {messages.map((item,i)=><div key={i} style={{alignSelf:item.role==="user"?"flex-end":"flex-start",maxWidth:"95%",padding:"11px 13px",borderRadius:13,background:item.role==="user"?"#F0EBFB":"#fff",border:"1px solid "+(item.role==="user"?"#DFD1FA":"#E1E6E3"),fontSize:12.5,lineHeight:1.6,color:"#26323A",whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>
             <div style={{fontSize:10.5,fontWeight:800,color:item.role==="user"?"#6035AC":"#475569",marginBottom:4}}>{item.role==="user"?"You":"Engage AI"}</div>{item.text}
           </div>)}

@@ -3,6 +3,7 @@
 .ft-lead-detail-ai-desktop { display: inline-flex; }
 .ft-lead-detail-info-verification { display: none; }
 .ft-lead-detail-info-heading { display: block; }
+.ft-lead-detail-title-mobile { display: none; }
 
 @media (max-width: 640px) {
   .ft-lead-detail-ai-mobile { display: inline-flex; }
@@ -10,9 +11,12 @@
   .ft-lead-detail-header-verification { display: none; }
   .ft-lead-detail-info-heading {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
+    justify-content: space-between;
     gap: 8px;
   }
-  .ft-lead-detail-info-verification { display: inline-flex; align-items: center; }
+  .ft-lead-detail-title-desktop { display: none; }
+  .ft-lead-detail-title-mobile { display: inline; }
+  .ft-lead-detail-info-verification { display: inline-flex; align-items: center; flex-shrink: 0; margin-left: auto; }
 }

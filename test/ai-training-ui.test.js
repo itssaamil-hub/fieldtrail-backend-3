@@ -106,10 +106,28 @@ test("Phone layout swaps AI Writer and Location Verified without altering deskto
   assert.match(panel,/ft-lead-detail-ai-desktop/);
   assert.match(panel,/ft-lead-detail-header-verification/);
   assert.match(panel,/ft-lead-detail-info-verification/);
-  assert.match(panel,/Lead Information/);
+  assert.match(panel,/ft-lead-detail-title-desktop">Lead Information/);
+  assert.match(panel,/ft-lead-detail-title-mobile">Deal Information/);
+  assert.match(css,/\.ft-lead-detail-title-mobile \{ display: none; \}/);
+  assert.match(css,/\.ft-lead-detail-title-desktop \{ display: none; \}/);
+  assert.match(css,/justify-content: space-between/);
+  assert.match(css,/\.ft-lead-detail-info-verification \{ display: inline-flex; align-items: center; flex-shrink: 0; margin-left: auto; \}/);
+  assert.ok(panel.indexOf('ft-lead-detail-title-mobile') < panel.indexOf('ft-lead-detail-info-verification', panel.indexOf('ft-lead-detail-info-heading')));
   assert.match(css,/@media \(max-width: 640px\)/);
   assert.match(css,/\.ft-lead-detail-ai-mobile \{ display: none; \}/);
   assert.match(css,/\.ft-lead-detail-ai-desktop \{ display: inline-flex; \}/);
   assert.match(css,/\.ft-lead-detail-header-verification \{ display: none; \}/);
   assert.match(css,/\.ft-lead-detail-info-verification \{ display: inline-flex/);
+});
+
+test("AI Writer defaults to Write My Own and hides empty Conversation introduction",()=>{
+  const writer=read("lead/LeadAiWriter.jsx");
+  assert.match(writer,/const \[type,setType\]=useState\("custom"\)/);
+  assert.match(writer,/\["custom","Write My Own"\]/);
+  assert.match(writer,/>Conversation<\/div>/);
+  assert.match(writer,/messages\.map\(/);
+  assert.doesNotMatch(writer,/Generate a natural first message|Write your own request below/);
+  assert.doesNotMatch(writer,/!messages\.length&&<div/);
+  assert.match(writer,/type==="custom"&&!instruction/);
+  assert.match(writer,/useGemini:true/);
 });
