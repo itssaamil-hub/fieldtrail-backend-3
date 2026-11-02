@@ -38,9 +38,27 @@ test("Geoapify is the default provider; Google remains available without adding 
   assert.match(finder,/<option value="geoapify">Geoapify<\/option>/);
   assert.match(finder,/<option value="google">Google Places<\/option>/);
   assert.doesNotMatch(finder,/<option value="(?:osm|openstreetmap)"/i);
-  assert.match(finder,/aria-label="Restaurant location"/);
+  assert.match(finder,/aria-label="Restaurant city"/);
+  assert.match(finder,/aria-label="Restaurant locality"/);
+  assert.doesNotMatch(finder,/aria-label="Restaurant sub-location"/i);
+  assert.doesNotMatch(finder,/aria-label="Restaurant location"/);
   assert.match(finder,/GEOAPIFY_API_KEY/);
   assert.match(finder,/status\?\.providers\?\.geoapify/);
   assert.match(finder,/Powered by Geoapify/);
   assert.match(finder,/provider==="google"&&status\?\.contactEnabled/);
+});
+
+test("Finder has approved four types, City/Area only and selectable Geoapify radius",()=>{
+  assert.match(finder,/\["all", "All restaurants"\]/);
+  assert.match(finder,/\["premium", "Premium \/ Fine Dining candidates"\]/);
+  assert.match(finder,/\["cafe", "Cafés"\]/);
+  assert.match(finder,/\["bakery", "Bakeries"\]/);
+  assert.doesNotMatch(finder,/Sub-location/i);
+  assert.match(finder,/const radii = \[1, 3, 5, 10, 20\]/);
+  assert.match(finder,/aria-label="Restaurant search radius"/);
+  assert.match(finder,/provider==="geoapify"\?\{radiusKm\}:\{\}/);
+  assert.match(finder,/provider==="google"\?" \(Geoapify only\)"/);
+  assert.match(finder,/Premium status not verified/);
+  assert.match(finder,/Potential premium lead/);
+  assert.match(finder,/getSession\(\)\?\.role!=="admin"/);
 });
