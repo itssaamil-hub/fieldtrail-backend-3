@@ -6,11 +6,12 @@ import { OnboardingDialog } from "./Onboarding.jsx";
 // Results exist in this component only for the current session. Google Places
 // content is never persisted into Engage's contacts/deals or browser storage.
 const categories = [
-  ["restaurant", "Restaurants"],
+  ["all", "All restaurants"],
+  ["premium", "Premium / Fine Dining candidates"],
   ["cafe", "Cafés"],
-  ["bakery", "Bakeries"],
-  ["qsr", "QSRs"]
+  ["bakery", "Bakeries"]
 ];
+const radii = [1, 3, 5, 10, 20];
 const inputStyle = {width:"100%",height:39,border:"1px solid #D8E2E6",background:"#fff",borderRadius:10,padding:"8px 11px",boxSizing:"border-box",fontSize:13,color:"#25343A"};
 const buttonStyle = {height:38,border:"1px solid #D9E2E6",borderRadius:10,padding:"0 12px",cursor:"pointer",background:"#fff",color:"#25414A",fontSize:12,fontWeight:750};
 const textStyle = {fontSize:12,color:"#687681",lineHeight:1.6};
@@ -25,11 +26,11 @@ function Attribution({items=[]}) {
 
 export default function RestaurantLeadFinder({onClose}) {
   const [provider,setProvider]=useState("geoapify");
-  const [location,setLocation]=useState("");
+  const [radiusKm,setRadiusKm]=useState(3);
   const [coverage,setCoverage]=useState(null);
   const [city,setCity]=useState("");
   const [area,setArea]=useState("");
-  const [category,setCategory]=useState("restaurant");
+  const [category,setCategory]=useState("all");
   const [results,setResults]=useState([]);
   const [nextToken,setNextToken]=useState(null);
   const [searched,setSearched]=useState(false);
@@ -55,10 +56,7 @@ export default function RestaurantLeadFinder({onClose}) {
     if(busy)return;
     setBusy(true);setError("");
     try{
-      const parts=location.trim().split(",").map(x=>x.trim()).filter(Boolean);
-      const geoCity=parts[parts.length-1]||"";
-      const geoArea=parts.length>1?parts.slice(0,-1).join(", "):"";
-      const q=more?lastQuery:(provider==="geoapify"?{city:geoCity,area:geoArea,category,provider}:{city:city.trim(),area:area.trim(),category,provider});
+      const q=more?lastQuery:{city:city.trim(),area:area.trim(),category,provider,...(provider==="geoapify"?{radiusKm}:{})};
       if(!q?.city || q.city.length<2){setError("Enter a city in India.");return}
       const response=await api.restaurantFinderSearch({...q,pageToken:more?nextToken:undefined});
       setResults(previous=>{
@@ -96,20 +94,22 @@ export default function RestaurantLeadFinder({onClose}) {
             <option value="google">Google Places</option>
           </select>
         </label>
-        <span style={{...textStyle,marginBottom:9}}>{provider==="geoapify"?"Geoapify searches around the specified area; locality searches cover approximately 3 km.":"Google Places searches restaurant listings across the selected city and locality."}</span>
+        <span style={{...textStyle,marginBottom:9}}>{provider==="geoapify"?"Geoapify searches the selected radius around your city or area.":"Google Places uses city and area text search; radius filtering is currently available only with Geoapify."}</span>
       </div>
       <form onSubmit={e=>{e.preventDefault();search(false)}} style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(170px, 1fr))",gap:11,alignItems:"end"}}>
-        {provider==="geoapify"&&<label style={{fontSize:12,fontWeight:750,color:"#354750"}}>Location (area, city)
-          <input aria-label="Restaurant location" value={location} onChange={e=>setLocation(e.target.value)} required maxLength={170} placeholder="e.g. Gomti Nagar, Lucknow" style={{...inputStyle,marginTop:5}}/>
-        </label>}
-        {provider==="google"&&<label style={{fontSize:12,fontWeight:750,color:"#354750"}}>City
+        <label style={{fontSize:12,fontWeight:750,color:"#354750"}}>City
           <input aria-label="Restaurant city" value={city} onChange={e=>setCity(e.target.value)} required maxLength={80} placeholder="e.g. Lucknow" style={{...inputStyle,marginTop:5}}/>
-        </label>}
-        {provider==="google"&&<label style={{fontSize:12,fontWeight:750,color:"#354750"}}>Locality (optional)
+        </label>
+        <label style={{fontSize:12,fontWeight:750,color:"#354750"}}>Location / Area (optional)
           <input aria-label="Restaurant locality" value={area} onChange={e=>setArea(e.target.value)} maxLength={90} placeholder="e.g. Gomti Nagar" style={{...inputStyle,marginTop:5}}/>
-        </label>}
+        </label>
         <label style={{fontSize:12,fontWeight:750,color:"#354750"}}>Type
           <select aria-label="Restaurant category" value={category} onChange={e=>setCategory(e.target.value)} style={{...inputStyle,marginTop:5}}>{categories.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select>
+        </label>
+        <label style={{fontSize:12,fontWeight:750,color:"#354750"}}>Search radius{provider==="google"?" (Geoapify only)":""}
+          <select aria-label="Restaurant search radius" value={radiusKm} disabled={busy||provider==="google"} onChange={e=>setRadiusKm(Number(e.target.value))} style={{...inputStyle,marginTop:5,opacity:provider==="google"?0.6:1}}>
+            {radii.map(value=><option key={value} value={value}>{value} km</option>)}
+          </select>
         </label>
         <button type="submit" disabled={busy||!connected} style={{...buttonStyle,display:"inline-flex",alignItems:"center",justifyContent:"center",gap:6,background:"#135F60",color:"#fff",border:0,opacity:(busy||!connected)?0.5:1}}><Search size={15}/>{busy?"Searching…":"Search restaurants"}</button>
       </form>
@@ -125,11 +125,13 @@ export default function RestaurantLeadFinder({onClose}) {
         {provider==="google"?<img src={GOOGLE_LOGO} alt="Powered by Google" style={{height:16,width:"auto"}}/>:<a href="https://www.geoapify.com/" target="_blank" rel="noopener noreferrer" style={{...textStyle}}>Powered by Geoapify</a>}
       </div>
       {coverage&&provider==="geoapify"&&<p style={{...textStyle,margin:"0 0 10px"}}>Searching within {coverage.radiusKm} km of {coverage.area}.</p>}
+      {searched&&lastQuery?.category==="premium"&&<p style={{...textStyle,margin:"0 0 12px"}}>Premium / Fine Dining is a prospecting aid. No provider here verifies restaurant pricing or luxury status. Review candidates before outreach.</p>}
       {!searched&&!busy&&<p style={{...textStyle,padding:"24px 0",textAlign:"center"}}>Search a city or locality to discover restaurants. No sample or fabricated results are shown.</p>}
       {searched&&!busy&&!results.length&&<p style={{...textStyle,padding:"24px 0",textAlign:"center"}}>No restaurants found for this search. Try another area or category.</p>}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(min(100%, 270px), 1fr))",gap:10}}>
         {results.map(p=><article key={p.id} style={{padding:13,border:"1px solid #DEE5E9",borderRadius:12,background:"#fff",minWidth:0}}>
           <strong style={{fontSize:13.5,color:"#233D42"}}>{p.name}</strong>
+          {lastQuery?.category==="premium"&&<div style={{...textStyle,marginTop:4,color:"#7B571E"}}>{p.premiumCandidate?"Potential premium lead · "+(p.premiumHint||"Unverified signal"):"Premium status not verified · Review manually"}</div>}
           <div style={{display:"flex",alignItems:"flex-start",gap:5,marginTop:7,...textStyle}}><MapPin size={13} style={{flexShrink:0,marginTop:2}}/>{p.address||"Address unavailable"}</div>
           <Attribution items={p.attributions}/>
           <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:11}}>
