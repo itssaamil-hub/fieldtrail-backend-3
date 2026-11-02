@@ -32,3 +32,15 @@ test("Finder connects to new admin API and does not write CRM records or persist
   assert.doesNotMatch(finder,/localStorage|sessionStorage|indexedDB|api\.adminCreateLead|api\.addLead/);
   assert.doesNotMatch(finder,/AIza[0-9A-Za-z_-]{20,}/);
 });
+
+test("Geoapify is the default provider; Google remains available without adding OpenStreetMap as a selector",()=>{
+  assert.match(finder,/useState\("geoapify"\)/);
+  assert.match(finder,/<option value="geoapify">Geoapify<\/option>/);
+  assert.match(finder,/<option value="google">Google Places<\/option>/);
+  assert.doesNotMatch(finder,/<option value="(?:osm|openstreetmap)"/i);
+  assert.match(finder,/aria-label="Restaurant location"/);
+  assert.match(finder,/GEOAPIFY_API_KEY/);
+  assert.match(finder,/status\?\.providers\?\.geoapify/);
+  assert.match(finder,/Powered by Geoapify/);
+  assert.match(finder,/provider==="google"&&status\?\.contactEnabled/);
+});

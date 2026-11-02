@@ -24,6 +24,9 @@ function Attribution({items=[]}) {
 }
 
 export default function RestaurantLeadFinder({onClose}) {
+  const [provider,setProvider]=useState("geoapify");
+  const [location,setLocation]=useState("");
+  const [coverage,setCoverage]=useState(null);
   const [city,setCity]=useState("");
   const [area,setArea]=useState("");
   const [category,setCategory]=useState("restaurant");
@@ -40,17 +43,22 @@ export default function RestaurantLeadFinder({onClose}) {
 
   useEffect(()=>{
     let alive=true;
-    api.restaurantFinderStatus().then(v=>{if(alive)setStatus(v)}).catch(e=>{if(alive)setError(e.message||"Could not check Google Places configuration.")});
+    api.restaurantFinderStatus().then(v=>{if(alive)setStatus(v)}).catch(e=>{if(alive)setError(e.message||"Could not check Restaurant Lead Finder providers.")});
     return()=>{alive=false};
   },[]);
 
   if(getSession()?.role!=="admin") return null;
+  const connected = provider === "geoapify" ? Boolean(status?.providers?.geoapify) : Boolean(status?.providers?.google ?? status?.configured);
+  const chooseProvider = next => {setProvider(next);setResults([]);setNextToken(null);setSearched(false);setContacts({});setContactError({});setLastQuery(null);setCoverage(null);setError("");};
 
   const search=async (more=false)=>{
     if(busy)return;
     setBusy(true);setError("");
     try{
-      const q=more?lastQuery:{city:city.trim(),area:area.trim(),category};
+      const parts=location.trim().split(",").map(x=>x.trim()).filter(Boolean);
+      const geoCity=parts[parts.length-1]||"";
+      const geoArea=parts.length>1?parts.slice(0,-1).join(", "):"";
+      const q=more?lastQuery:(provider==="geoapify"?{city:geoCity,area:geoArea,category,provider}:{city:city.trim(),area:area.trim(),category,provider});
       if(!q?.city || q.city.length<2){setError("Enter a city in India.");return}
       const response=await api.restaurantFinderSearch({...q,pageToken:more?nextToken:undefined});
       setResults(previous=>{
@@ -60,6 +68,7 @@ export default function RestaurantLeadFinder({onClose}) {
       });
       if(!more){setContacts({});setContactError({});setLastQuery(q)}
       setNextToken(response.nextPageToken||null);
+      setCoverage(response.coverage||null);
       setSearched(true);
       setStatus(current=>current?{...current,search:response.usage}:current);
     }catch(e){setError(e.message||"Restaurant search failed. No results were saved.")}
@@ -79,30 +88,43 @@ export default function RestaurantLeadFinder({onClose}) {
 
   return <OnboardingDialog title="Restaurant Lead Finder" onClose={onClose} wide fullPage desktopFull busy={busy||Boolean(contactBusy)}>
     <div style={{padding:"15px 18px 22px",overflowY:"auto",maxHeight:"calc(100vh - 110px)"}}>
-      <p style={{...textStyle,margin:"0 0 13px"}}>Find restaurant prospects across India. Admin-only · Google Places results are displayed temporarily and are not added to CRM.</p>
+      <p style={{...textStyle,margin:"0 0 13px"}}>Find restaurant prospects across India. Admin-only · Results are displayed temporarily and are not added to CRM.</p>
+      <div style={{display:"flex",alignItems:"end",gap:12,flexWrap:"wrap",marginBottom:13}}>
+        <label style={{fontSize:12,fontWeight:750,color:"#354750",minWidth:210}}>Search provider
+          <select aria-label="Restaurant search provider" value={provider} disabled={busy} onChange={e=>chooseProvider(e.target.value)} style={{...inputStyle,marginTop:5}}>
+            <option value="geoapify">Geoapify</option>
+            <option value="google">Google Places</option>
+          </select>
+        </label>
+        <span style={{...textStyle,marginBottom:9}}>{provider==="geoapify"?"Geoapify searches around the specified area; locality searches cover approximately 3 km.":"Google Places searches restaurant listings across the selected city and locality."}</span>
+      </div>
       <form onSubmit={e=>{e.preventDefault();search(false)}} style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(170px, 1fr))",gap:11,alignItems:"end"}}>
-        <label style={{fontSize:12,fontWeight:750,color:"#354750"}}>City
+        {provider==="geoapify"&&<label style={{fontSize:12,fontWeight:750,color:"#354750"}}>Location (area, city)
+          <input aria-label="Restaurant location" value={location} onChange={e=>setLocation(e.target.value)} required maxLength={170} placeholder="e.g. Gomti Nagar, Lucknow" style={{...inputStyle,marginTop:5}}/>
+        </label>}
+        {provider==="google"&&<label style={{fontSize:12,fontWeight:750,color:"#354750"}}>City
           <input aria-label="Restaurant city" value={city} onChange={e=>setCity(e.target.value)} required maxLength={80} placeholder="e.g. Lucknow" style={{...inputStyle,marginTop:5}}/>
-        </label>
-        <label style={{fontSize:12,fontWeight:750,color:"#354750"}}>Locality (optional)
+        </label>}
+        {provider==="google"&&<label style={{fontSize:12,fontWeight:750,color:"#354750"}}>Locality (optional)
           <input aria-label="Restaurant locality" value={area} onChange={e=>setArea(e.target.value)} maxLength={90} placeholder="e.g. Gomti Nagar" style={{...inputStyle,marginTop:5}}/>
-        </label>
+        </label>}
         <label style={{fontSize:12,fontWeight:750,color:"#354750"}}>Type
           <select aria-label="Restaurant category" value={category} onChange={e=>setCategory(e.target.value)} style={{...inputStyle,marginTop:5}}>{categories.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select>
         </label>
-        <button type="submit" disabled={busy||!status?.configured} style={{...buttonStyle,display:"inline-flex",alignItems:"center",justifyContent:"center",gap:6,background:"#135F60",color:"#fff",border:0,opacity:busy||!status?.configured?.5:1}}><Search size={15}/>{busy?"Searching…":"Search restaurants"}</button>
+        <button type="submit" disabled={busy||!connected} style={{...buttonStyle,display:"inline-flex",alignItems:"center",justifyContent:"center",gap:6,background:"#135F60",color:"#fff",border:0,opacity:(busy||!connected)?0.5:1}}><Search size={15}/>{busy?"Searching…":"Search restaurants"}</button>
       </form>
 
-      {status&&!status.configured&&<div role="alert" style={{marginTop:12,padding:11,borderRadius:10,background:"#FFF7E8",color:"#7E4E00",fontSize:12}}>Google Places is not connected yet. Add <strong>GOOGLE_PLACES_API_KEY</strong> to the existing Render backend environment. Never enter the key in this page or frontend code.</div>}
+      {status&&!connected&&<div role="alert" style={{marginTop:12,padding:11,borderRadius:10,background:"#FFF7E8",color:"#7E4E00",fontSize:12}}>{provider==="geoapify"?<>Geoapify is not connected yet. Enable <strong>Places API</strong> and <strong>Geocoding API</strong> for your Geoapify key, then set <strong>GEOAPIFY_API_KEY</strong> in the existing Render backend environment.</>:<>Google Places is not connected yet. Add <strong>GOOGLE_PLACES_API_KEY</strong> to the existing Render backend environment.</>} Never enter API keys in this page.</div>}
       {status&&<div style={{marginTop:11,...textStyle,display:"flex",gap:14,flexWrap:"wrap"}}>
         <span><ShieldCheck size={13} style={{verticalAlign:"-2px"}}/> Search usage: {status.search?.today??0}/{status.search?.limit?.daily??"–"} today · {status.search?.month??0}/{status.search?.limit?.monthly??"–"} this month</span>
-        <span>Contact lookup: {status.contactEnabled?"Enabled — higher Google API tier":"Off (higher Google API tier)"}</span>
+        {provider==="google"&&<span>Contact lookup: {status.contactEnabled?"Enabled — higher Google API tier":"Off (higher Google API tier)"}</span>}
       </div>}
       {error&&<p role="alert" style={{display:"flex",alignItems:"center",gap:7,fontSize:12,color:"#B42318",marginTop:12}}><AlertCircle size={15}/>{error}</p>}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8,margin:"19px 0 11px"}}>
         <strong style={{fontSize:14,color:"#233D42"}}>Restaurant results{searched?` · ${results.length}`:""}</strong>
-        <img src={GOOGLE_LOGO} alt="Powered by Google" style={{height:16,width:"auto"}}/>
+        {provider==="google"?<img src={GOOGLE_LOGO} alt="Powered by Google" style={{height:16,width:"auto"}}/>:<a href="https://www.geoapify.com/" target="_blank" rel="noopener noreferrer" style={{...textStyle}}>Powered by Geoapify</a>}
       </div>
+      {coverage&&provider==="geoapify"&&<p style={{...textStyle,margin:"0 0 10px"}}>Searching within {coverage.radiusKm} km of {coverage.area}.</p>}
       {!searched&&!busy&&<p style={{...textStyle,padding:"24px 0",textAlign:"center"}}>Search a city or locality to discover restaurants. No sample or fabricated results are shown.</p>}
       {searched&&!busy&&!results.length&&<p style={{...textStyle,padding:"24px 0",textAlign:"center"}}>No restaurants found for this search. Try another area or category.</p>}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(min(100%, 270px), 1fr))",gap:10}}>
@@ -112,7 +134,7 @@ export default function RestaurantLeadFinder({onClose}) {
           <Attribution items={p.attributions}/>
           <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:11}}>
             <a href={p.mapsUrl} target="_blank" rel="noopener noreferrer" style={{...buttonStyle,display:"inline-flex",alignItems:"center",gap:5,height:33,textDecoration:"none"}}><ExternalLink size={13}/> Open in Maps</a>
-            {status?.contactEnabled&&<button type="button" disabled={!!contactBusy||busy} onClick={()=>lookup(p.id)} style={{...buttonStyle,height:33}}><Phone size={13} style={{verticalAlign:"-2px",marginRight:4}}/>{contactBusy===p.id?"Checking…":"Look up contact"}</button>}
+            {provider==="google"&&status?.contactEnabled&&<button type="button" disabled={!!contactBusy||busy} onClick={()=>lookup(p.id)} style={{...buttonStyle,height:33}}><Phone size={13} style={{verticalAlign:"-2px",marginRight:4}}/>{contactBusy===p.id?"Checking…":"Look up contact"}</button>}
           </div>
           {contacts[p.id]&&<div style={{...textStyle,marginTop:9}}>
             {contacts[p.id].phone?<div><Phone size={12} style={{verticalAlign:"-2px"}}/> {contacts[p.id].phone}</div>:<div>Phone not listed</div>}
@@ -123,7 +145,7 @@ export default function RestaurantLeadFinder({onClose}) {
         </article>)}
       </div>
       {searched&&nextToken&&<div style={{textAlign:"center",padding:13}}><button type="button" disabled={busy} onClick={()=>search(true)} style={buttonStyle}>{busy?"Loading…":"Load more restaurants"}</button></div>}
-      <p style={{...textStyle,marginTop:15}}>Google Places content is provided for live discovery only. Listings are not stored, exported or automatically added as CRM leads. API limits are separate from Google Cloud quotas and billing alerts; verify your Google Cloud billing settings.</p>
+      <p style={{...textStyle,marginTop:15}}>{provider==="geoapify"?<>Geoapify restaurant listings are displayed for discovery only and not stored or added to CRM. Source data credit: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a>. Geoapify usage limits are separate from Engage search limits.</>:<>Google Places content is provided for live discovery only. Listings are not stored, exported or automatically added as CRM leads. API limits are separate from Google Cloud quotas and billing alerts; verify your Google Cloud billing settings.</>}</p>
     </div>
   </OnboardingDialog>;
 }
