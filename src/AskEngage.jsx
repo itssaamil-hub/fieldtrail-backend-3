@@ -107,7 +107,7 @@ export default function AskEngage({onClose}) {
           </div>}
           {part.note&&<small className="ae-note">{part.note}</small>}
         </div>)}
-        {m.data?.note&&<small className="ae-note">{m.data.note}</small>
+        {m.data?.note&&<small className="ae-note">{m.data.note}</small>}
         {m.data?.asOf&&<small className="ae-asof">Checked {new Date(m.data.asOf).toLocaleString("en-IN",{timeZone:"Asia/Kolkata",dateStyle:"medium",timeStyle:"short"})} IST</small>}
       </div>)}
       {busy&&<div className="ae-thinking" role="status">Checking live CRM data…</div>}
