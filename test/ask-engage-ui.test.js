@@ -40,6 +40,17 @@ test("Chatbot asks authenticated read-only backend with no local persistence or 
   assert.doesNotMatch(chatbot,/GEMINI_API_KEY/);
 });
 
+test("Chat supports detailed multi-part questions without affecting placement",()=>{
+  assert.match(chatbot,/maxLength={2000} rows={3}/);
+  assert.match(chatbot,/if\(question\.length>2000\)/);
+  assert.match(chatbot,/m\.data\?\.parts\?\.map/);
+  assert.match(chatbot,/part\.answer/);
+  assert.match(chatbot,/part\.totals/);
+  assert.match(chatbot,/part\.items/);
+  assert.match(chatbot,/combine up to four related CRM topics/);
+  assert.doesNotMatch(chatbot,/maxLength={280}/);
+});
+
 test("Panel is accessible on small screens and keeps desktop compact",()=>{
   const css=read("ask-engage.css");
   assert.match(css,/\.ae-panel\{position:fixed;right:24px;bottom:83px/);
