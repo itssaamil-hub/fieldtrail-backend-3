@@ -30,7 +30,9 @@ test("On phone Ask Engage is beside notifications, not in More or bottom tabs",(
 
 test("Chatbot asks authenticated read-only backend with no local persistence or invented CRM figures",()=>{
   assert.match(api,/askEngage: body => request\('\/admin\/ask-engage\/ask', \{method:'POST',body\}\)/);
-  assert.match(chatbot,/api\.askEngage\(\{question,previousQuestion\}\)/);
+  assert.match(chatbot,/api\.askEngage\(\{question,previousQuestion,context:contextRef\.current\}\)/);
+  assert.match(chatbot,/const contextRef = useRef\(null\)/);
+  assert.match(chatbot,/contextRef\.current=data\.context/);
   assert.match(chatbot,/getSession\(\)\?\.role!=="admin"/);
   assert.match(chatbot,/data\.answer/);
   assert.match(chatbot,/m\.data\?\.totals/);
@@ -59,4 +61,15 @@ test("Panel is accessible on small screens and keeps desktop compact",()=>{
   assert.match(chatbot,/role="dialog" aria-modal="true" aria-label="Ask Engage chatbot"/);
   assert.match(chatbot,/aria-label="Close Ask Engage"/);
   assert.match(chatbot,/aria-label="Send question"/);
+});
+
+test("Chat remembers only structured context in component memory; no layout changes",()=>{
+  assert.match(chatbot,/useRef\(null\)/);
+  assert.match(chatbot,/context:contextRef\.current/);
+  assert.match(chatbot,/Object\.prototype\.hasOwnProperty\.call\(data,"context"\)/);
+  assert.match(chatbot,/contextRef\.current=data\.context/);
+  assert.doesNotMatch(chatbot,/sessionStorage|localStorage|indexedDB|GEMINI_API_KEY/);
+  assert.match(chatbot,/className="ae-panel"/);
+  assert.match(chatbot,/className="ae-conversation"/);
+  assert.match(chatbot,/className="ae-composer"/);
 });
