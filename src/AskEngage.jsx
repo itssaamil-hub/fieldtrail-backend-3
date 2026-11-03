@@ -25,6 +25,9 @@ export default function AskEngage({onClose}) {
   const inputRef = useRef(null);
   const endRef = useRef(null);
   const panelRef = useRef(null);
+  // Short-term chat context only: employee names and reporting period.
+  // Stored in component memory; closing the panel discards it.
+  const contextRef = useRef(null);
   useEffect(()=>{inputRef.current?.focus()},[]);
   useEffect(()=>{endRef.current?.scrollIntoView({block:"end",behavior:"smooth"})},[messages,busy]);
   useEffect(()=>{
@@ -50,7 +53,8 @@ export default function AskEngage({onClose}) {
     setMessages(v=>[...v,{role:"user",text:question}]);
     setDraft("");setBusy(true);
     try {
-      const data=await api.askEngage({question,previousQuestion});
+      const data=await api.askEngage({question,previousQuestion,context:contextRef.current});
+      if(Object.prototype.hasOwnProperty.call(data,"context"))contextRef.current=data.context;
       setMessages(v=>[...v,{role:"assistant",text:data.answer||"No answer returned.",data}]);
     }catch(e){
       setMessages(v=>[...v,{role:"error",text:e.message||"Ask Engage could not get the CRM answer. No figures were generated."}]);
