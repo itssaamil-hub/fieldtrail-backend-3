@@ -777,7 +777,7 @@ export default function App() {
         <BotMessageSquare size={24} strokeWidth={1.8}/>
       </button>}
       {session?.role === "admin" && showAskEngage && <AskEngage key={session.id} onClose={() => setShowAskEngage(false)} />}
-      {session?.role === "admin" && showRestaurantFinder && <RestaurantLeadFinder onClose={() => setShowRestaurantFinder(false)} />
+      {session?.role === "admin" && showRestaurantFinder && <RestaurantLeadFinder onClose={() => setShowRestaurantFinder(false)} />}
       {session && quotationView && (quotationView.settings ? session.role === "admin" && <QuotationSettings onClose={() => setQuotationView(null)} /> : <QuotationsPanel key={`${session.id}-${quotationView.initialId||"list"}-${!!quotationView.approvals}-${quotationView.notificationKey||""}`} {...quotationView} onClose={() => { setQuotationView(null); if (/^#quotation=[0-9a-f-]+$/i.test(window.location.hash)) window.history.replaceState(null, "", window.location.pathname + window.location.search); }} />)}
       {session && collectionView && <CollectionsPanel {...collectionView} onClose={()=>setCollectionView(null)}/>}
       {session && showDailyReports && <DayClosingReports onClose={()=>setShowDailyReports(false)}/>}
