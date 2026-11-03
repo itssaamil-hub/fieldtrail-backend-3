@@ -60,6 +60,7 @@ import {
   Receipt,
   LayoutGrid,
   Bell,
+  BotMessageSquare,
   Lock,
   LockOpen,
   Sparkles,
@@ -104,6 +105,7 @@ const ActivityCentre = lazyDefault(() => import("./ActivityCentre.jsx"));
 const BroadcastData = lazyDefault(() => import("./BroadcastData.jsx"));
 const AiTrainingCentre = lazyDefault(() => import("./AiTrainingCentre.jsx"));
 const RestaurantLeadFinder = lazyDefault(() => import("./RestaurantLeadFinder.jsx"));
+const AskEngage = lazyDefault(() => import("./AskEngage.jsx"));
 const CollectionsPanel = lazyDefault(() => import("./Collections.jsx"));
 const CollectionsEntry = lazyNamed(() => import("./Collections.jsx"), "CollectionsEntry");
 const SalesmanBriefPopup = lazyDefault(() => import("./SalesmanBrief.jsx"));
@@ -531,6 +533,7 @@ export default function App() {
   const [showBroadcast, setShowBroadcast] = useState(false);
   const [showAiTraining, setShowAiTraining] = useState(false);
   const [showRestaurantFinder, setShowRestaurantFinder] = useState(false);
+  const [showAskEngage, setShowAskEngage] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showDailyReports,setShowDailyReports] = useState(false);
   const [collectionView,setCollectionView]=useState(null);
@@ -736,6 +739,7 @@ export default function App() {
         onOpenNotifications={session ? () => { setShowSettings(false); setShowCrmSettings(false); setShowNotifications(true); } : undefined}
         onOpenActivityCentre={session?.role === "admin" && !adminDesktop ? () => { closeNotifications(); setShowSettings(false); setShowOnboarding(false); setQuotationView(null); setCollectionView(null); setShowDailyReports(false); setShowActivityCentreMobile(true); } : undefined}
         onOpenRestaurantLeadFinder={session?.role === "admin" ? () => { closeNotifications(); setShowSettings(false); setShowRestaurantFinder(true); } : undefined}
+        onOpenAskEngage={session?.role === "admin" && !adminDesktop ? () => setShowAskEngage(true) : undefined}
         onOpenSettings={() => { closeNotifications(); setShowOnboarding(false); setShowCrmSettings(false); setShowSettings(true); }}
         onOpenCollections={()=>{closeNotifications();setShowSettings(false);setShowCrmSettings(false);setShowOnboarding(false);setQuotationView(null);setShowDailyReports(false);setCollectionView({});}}
         onOpenDailyReports={() => { closeNotifications(); setShowSettings(false); setShowCrmSettings(false); setShowOnboarding(false); setQuotationView(null); setShowDailyReports(true); }}
@@ -766,6 +770,13 @@ export default function App() {
       )}
       {session?.role === "admin" && showBroadcast && <BroadcastData onClose={() => { setShowBroadcast(false); setShowSettings(true); }} />}
       {session?.role === "admin" && showAiTraining && <AiTrainingCentre onClose={() => { setShowAiTraining(false); setShowSettings(true); }} />}
+      {adminDesktop && <button type="button" aria-label="Ask Engage" title="Ask Engage" onClick={() => setShowAskEngage(true)}
+        style={{position:"fixed",right:24,bottom:24,width:49,height:49,borderRadius:"50%",border:"1px solid #d1e8e6",
+          background:"#176365",color:"#fff",boxShadow:"0 5px 17px rgba(26,86,87,.24)",display:"grid",
+          placeItems:"center",zIndex:45,cursor:"pointer"}}>
+        <BotMessageSquare size={24} strokeWidth={1.8}/>
+      </button>}
+      {session?.role === "admin" && showAskEngage && <AskEngage key={session.id} onClose={() => setShowAskEngage(false)} />}
       {session?.role === "admin" && showRestaurantFinder && <RestaurantLeadFinder onClose={() => setShowRestaurantFinder(false)} />}
       {session && quotationView && (quotationView.settings ? session.role === "admin" && <QuotationSettings onClose={() => setQuotationView(null)} /> : <QuotationsPanel key={`${session.id}-${quotationView.initialId||"list"}-${!!quotationView.approvals}-${quotationView.notificationKey||""}`} {...quotationView} onClose={() => { setQuotationView(null); if (/^#quotation=[0-9a-f-]+$/i.test(window.location.hash)) window.history.replaceState(null, "", window.location.pathname + window.location.search); }} />)}
       {session && collectionView && <CollectionsPanel {...collectionView} onClose={()=>setCollectionView(null)}/>}

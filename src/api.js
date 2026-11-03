@@ -264,6 +264,7 @@ async function request(path, { method = "GET", body, auth = true, expectedUserId
 }
 
 export const api = {
+  askEngage: body => request('/admin/ask-engage/ask', {method:'POST',body}),
   restaurantFinderStatus: () => request('/admin/restaurant-finder/status'),
   restaurantFinderSearch: body => request('/admin/restaurant-finder/search', {method:'POST',body}),
   restaurantFinderContact: placeId => request('/admin/restaurant-finder/contact', {method:'POST',body:{placeId}}),
