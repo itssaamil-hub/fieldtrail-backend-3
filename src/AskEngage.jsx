@@ -4,7 +4,7 @@ import { api, getSession } from "./api.js";
 import "./ask-engage.css";
 
 const EXAMPLES = [
-  "How many deals did Anand add this month?",
+  "How many deals did Anand add this month, and what payments are currently overdue?",
   "What are the pending payments?",
   "Show overdue payments",
   "Show payment summary"
@@ -45,7 +45,7 @@ export default function AskEngage({onClose}) {
   const ask=async text=>{
     const question=(text||"").trim();
     if(!question||busy)return;
-    if(question.length>280){setMessages(v=>[...v,{role:"error",text:"Use a shorter question (up to 280 characters)."}]);return}
+    if(question.length>2000){setMessages(v=>[...v,{role:"error",text:"Use up to 2,000 characters per question."}]);return}
     const previousQuestion=[...messages].reverse().find(x=>x.role==="user")?.text||"";
     setMessages(v=>[...v,{role:"user",text:question}]);
     setDraft("");setBusy(true);
@@ -68,7 +68,7 @@ export default function AskEngage({onClose}) {
       {!messages.length&&<div className="ae-start">
         <div className="ae-welcome"><BotMessageSquare size={25}/></div>
         <h3>What would you like to know?</h3>
-        <p>Ask about employee deals, unpaid balances and collections. Answers come from your CRM, not sample data.</p>
+        <p>Ask detailed questions about deals and payments. You can combine up to four related CRM topics in one message. Answers use real CRM records, not sample data.</p>
         <div className="ae-suggestions">
           {EXAMPLES.map(question=><button key={question} type="button" disabled={busy} onClick={()=>ask(question)}>{question}</button>)}
         </div>
@@ -89,6 +89,24 @@ export default function AskEngage({onClose}) {
             <div><strong>{money(a.balance,a.currency)}</strong><small>{a.dueDate?"Due "+String(a.dueDate).slice(0,10):"No due date"}</small></div>
           </div>)}
         </div>}
+        {m.data?.parts?.map((part,j)=><div className="ae-part" key={j}>
+          <div className="ae-part-title">{j+1}. {part.answer}</div>
+          {part.totals?.length>0&&<div className="ae-totals">
+            {part.totals.map(t=><div key={t.currency} className="ae-total">
+              <strong>{t.currency}</strong>
+              <span>{t.accounts} account{t.accounts===1?"":"s"}</span>
+              <span>Remaining: <b>{money(t.balance,t.currency)}</b></span>
+              {part.metric==="payment_summary"&&<span>Paid: {money(t.paid,t.currency)}</span>}
+            </div>)}
+          </div>}
+          {part.items?.length>0&&<div className="ae-accounts">
+            {part.items.map((a,k)=><div className="ae-account" key={a.key||k}>
+              <div><b>{a.name}</b><span>{a.status}</span></div>
+              <div><strong>{money(a.balance,a.currency)}</strong><small>{a.dueDate?"Due "+String(a.dueDate).slice(0,10):"No due date"}</small></div>
+            </div>)}
+          </div>}
+          {part.note&&<small className="ae-note">{part.note}</small>}
+        </div>)}
         {m.data?.note&&<small className="ae-note">{m.data.note}</small>}
         {m.data?.asOf&&<small className="ae-asof">Checked {new Date(m.data.asOf).toLocaleString("en-IN",{timeZone:"Asia/Kolkata",dateStyle:"medium",timeStyle:"short"})} IST</small>}
       </div>)}
@@ -98,7 +116,7 @@ export default function AskEngage({onClose}) {
     <form className="ae-composer" onSubmit={e=>{e.preventDefault();ask(draft)}}>
       <textarea ref={inputRef} aria-label="Ask Engage question" value={draft} onChange={e=>setDraft(e.target.value)}
         onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();ask(draft)}}}
-        placeholder="Ask about deals or payments…" maxLength={280} rows={2} disabled={busy}/>
+        placeholder="Ask a detailed question about deals, payments, employees…" maxLength={2000} rows={3} disabled={busy}/>
       <button type="submit" title="Ask Engage" aria-label="Send question" disabled={busy||!draft.trim()}><Send size={18}/></button>
     </form>
     <div className="ae-footer"><AlertCircle size={12}/> Ask Engage cannot edit CRM records. Gemini receives your question, not payment or deal rows.</div>
