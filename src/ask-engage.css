@@ -34,7 +34,7 @@
 .ae-note,.ae-asof{display:block;font-size:10.5px;color:#687c81;margin-top:9px;line-height:1.5}
 .ae-thinking{align-self:flex-start;background:#f3f7f7;color:#64777c;border-radius:9px;padding:9px 12px;font-size:12px}
 .ae-composer{border-top:1px solid #e6edef;padding:11px 12px;display:flex;align-items:flex-end;gap:8px}
-.ae-composer textarea{resize:none;flex:1;min-width:0;max-height:110px;font:inherit;font-size:13px;line-height:1.5;outline:0;border:1px solid #d4e0e2;border-radius:10px;padding:10px;background:#fff;color:#263b40}
+.ae-composer textarea{resize:vertical;flex:1;min-width:0;min-height:64px;max-height:190px;font:inherit;font-size:13px;line-height:1.5;outline:0;border:1px solid #d4e0e2;border-radius:10px;padding:10px;background:#fff;color:#263b40}
 .ae-composer textarea:focus{border-color:#188080;box-shadow:0 0 0 2px rgba(24,128,128,.1)}
 .ae-composer button{border:0;background:#176365;color:white;width:41px;height:41px;border-radius:10px;cursor:pointer;display:grid;place-items:center}
 .ae-composer button:disabled{opacity:.45;cursor:not-allowed}
