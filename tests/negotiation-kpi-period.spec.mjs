@@ -53,12 +53,12 @@ for (const width of [1440,390]) {
       has:page.locator(".engage-dashboard-stat-label").filter({hasText:/^Won$/})
     });
     await expect(card.locator(".engage-dashboard-stat-value")).toHaveText("12");
-    await expect(card).toContainText("₹1,80,000");
+    await expect(card).toContainText("₹1.8L");
     await expect(won.locator(".engage-dashboard-stat-value")).toHaveText("5");
     await expect(card.getByRole("button",{name:"All time"})).toHaveAttribute("aria-pressed","true");
     await card.getByRole("button",{name:"This month"}).click();
     await expect(card.locator(".engage-dashboard-stat-value")).toHaveText("2");
-    await expect(card).toContainText("₹45,000");
+    await expect(card).toContainText("₹45.0K");
     await expect(card.getByRole("button",{name:"This month"})).toHaveAttribute("aria-pressed","true");
     expect(negotiatedQueries.some(q=>q.negotiationPeriod==="month"&&q.status==="negotiation"&&q.limit==="100")).toBeTruthy();
     await expect(won.locator(".engage-dashboard-stat-value")).toHaveText("5");
@@ -66,7 +66,6 @@ for (const width of [1440,390]) {
     await expect(page.getByText("In Negotiation · This Month")).toBeVisible();
     await expect(page.getByText("Bistro One")).toBeVisible();
     await expect(page.getByText("Cafe Two")).toBeVisible();
-    await page.getByText("In Negotiation · This Month").first().press("Escape").catch(()=>{});
     // The mode buttons only change Negotiation, not the other KPI cards.
     expect(errors).toEqual([]);
   });
