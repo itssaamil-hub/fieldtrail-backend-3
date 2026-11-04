@@ -37,9 +37,9 @@ test("KPI shows the nearest real date while preserving count calculations", () =
 test("only renewal KPI text changes; all existing KPI labels, counts and links remain", () => {
   const admin=read("admin/AdminDashboardPanel.jsx");
   const employee=read("salesman/SalesmanView.jsx");
-  assert.match(admin,/label="Renewals Due" sub=\{renewalNearest \? "nearest: " \+ renewalNearest : "next 30 days"\} value=\{upcomingRenewals\.length\}/);
+  assert.match(admin,/label="Renewals Due" sub=\{renewalNearest \|\| "next 30 days"\} value=\{upcomingRenewals\.length\}/);
   assert.match(admin,/onClick=\{\(\) => onOpenStatLeads\(\{ title: "Renewals Due \(Next 30 Days\)", leads: upcomingRenewals \}\)\}/);
-  assert.match(employee,/label="Renewals" value=\{renewalCount\} sub=\{renewalNearest \? "nearest: " \+ renewalNearest : "next 30 days"\}/);
+  assert.match(employee,/label="Renewals" value=\{renewalCount\} sub=\{renewalNearest \|\| "next 30 days"\}/);
   assert.match(employee,/const renewalCount = serverMetrics\.renewalsDue \?\? leadSummary\?\.renewalsDue \?\? upcomingRenewals\.length/);
 });
 test("only renewal reports and KPI-opened renewal lists gain per-lead countdown", () => {
