@@ -1,4 +1,5 @@
 import React, { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { nearestRenewalCountdown } from "../renewalCountdown.js";
 import {
   CalendarClock,
   CheckCircle2,
@@ -224,6 +225,7 @@ export default function AdminDashboardPanel({
     (l.renewalDate && isWithinDays(new Date(l.renewalDate), 30)) ||
     (!l.renewalDate && isUpcomingRenewalMonth(l.renewalMonth))
   );
+  const renewalNearest = nearestRenewalCountdown(upcomingRenewals);
   const converted = dashboardLeads.filter((l) => l.status === "won").length;
   const convertedValue = dashboardLeads.filter((l) => l.status === "won" && l.dealValue != null).reduce((sum, l) => sum + l.dealValue, 0);
   const upcomingFollowUps = dashboardLeads.filter((l) => l.nextFollowUpDate && new Date(l.nextFollowUpDate) >= new Date(new Date().toDateString()));
@@ -318,7 +320,7 @@ export default function AdminDashboardPanel({
         <DashboardStatCard T={T} label="Won" value={wonValue} sub={wonSub} subInline comparison={comparisons.won} comparisonPeriod={comparisonPeriod} icon={CheckCircle2} color={T.verified} onClick={openWonLeads} />
         <DashboardStatCard T={T} label="Tasks" value={adminPendingTasks ?? 0} sub="pending" icon={List} color="#145C5D" />
         <DashboardStatCard T={T} label="Upcoming Follow-up" value={upcomingFollowUps.length} icon={CalendarClock} color={T.warn} onClick={() => onOpenStatLeads({ title: "Upcoming Follow-ups", leads: upcomingFollowUps })} />
-        <DashboardStatCard T={T} label="Renewals Due" sub="next 30 days" value={upcomingRenewals.length} icon={RefreshCw} color={T.accent} onClick={() => onOpenStatLeads({ title: "Renewals Due (Next 30 Days)", leads: upcomingRenewals })} />
+        <DashboardStatCard T={T} label="Renewals Due" sub={renewalNearest ? "nearest: " + renewalNearest : "next 30 days"} value={upcomingRenewals.length} icon={RefreshCw} color={T.accent} onClick={() => onOpenStatLeads({ title: "Renewals Due (Next 30 Days)", leads: upcomingRenewals })} />
       </div>
       {!phone && <AdminActivityOverview salesmen={salesmen} salesmanId={dashboardSalesman} />}
       {phone && <AdminMobileLeadTrend leads={dashboardLeads} />}
