@@ -1,3 +1,4 @@
+import { renewalCountdown } from "../renewalCountdown.js";
 import React from "react";
 
 // Extracted from App.jsx without changing report behavior.
@@ -239,6 +240,7 @@ function RenewalsReport({ leads }) {
               </div>
               <div style={{ fontSize: 12.5, color: T.accent, fontWeight: 600, textAlign: "right" }}>
                 {l.renewalDate || l.renewalMonth || "—"}
+                {l.renewalDate && renewalCountdown(l.renewalDate) && <div style={{ fontSize: 11.5, marginTop: 3 }}>{renewalCountdown(l.renewalDate)}</div>}
               </div>
             </div>
           ))}
