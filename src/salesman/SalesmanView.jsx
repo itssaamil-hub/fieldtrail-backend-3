@@ -207,7 +207,7 @@ export default function SalesmanView({ notificationLead, session, leads, leadSum
         <StatCard label="Conversation" value={conversationCount} comparison={comparisons.conversation} comparisonPeriod={comparisonPeriod} icon={MessageSquare} color={T.accent} onClick={() => setShowConversation(true)} />
         <StatCard label="Negotiation" value={negotiationCount} sub={negotiationDealValue > 0 ? fmtMoney(negotiationDealValue) : undefined} comparison={comparisons.negotiation} comparisonPeriod={comparisonPeriod} icon={Handshake} color={T.warn} onClick={() => setShowNegotiation(true)} />
         <StatCard label="Won" value={wonCount} sub={wonValue > 0 ? fmtMoney(wonValue) : undefined} comparison={comparisons.won} comparisonPeriod={comparisonPeriod} icon={CheckCircle2} color={T.verified} onClick={() => setShowConverted(true)} />
-        <StatCard label="Renewals" value={renewalCount} sub={renewalNearest ? "nearest: " + renewalNearest : "next 30 days"} icon={CalendarClock} color={T.accent} onClick={() => setShowRenewals(true)} />
+        <StatCard label="Renewals" value={renewalCount} sub={renewalNearest || "next 30 days"} icon={CalendarClock} color={T.accent} onClick={() => setShowRenewals(true)} />
       </div>
 
       <SalesmanTargetCard
