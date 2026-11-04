@@ -1,3 +1,4 @@
+import { renewalCountdown } from "../renewalCountdown.js";
 import React from "react";
 import LeadAiWriter from "./LeadAiWriter.jsx";
 import "./lead-detail-ai-mobile.css";
@@ -1461,6 +1462,7 @@ function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads", allowD
   const [employeeDownloadOpen, setEmployeeDownloadOpen] = useState(false);
   const [employeeSortOpen, setEmployeeSortOpen] = useState(false);
   const isWonModal = title === "Won Leads";
+  const isRenewalList = title.startsWith("Renewals Due");
 
   const localDayStart = (value) => {
     if (!value) return null;
@@ -1697,7 +1699,7 @@ function MyLeadsModal({ leads, onClose, onSelectLead, title = "My Leads", allowD
                   })() : <span>{STATUS_LABEL[l.status]} · {fmtTime(l.createdAt)}</span>}
               {l.renewalDate && (
                 <span style={{ fontWeight: 700, color: T.accent }}>
-                  Renews {new Date(l.renewalDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                  Renews {new Date(l.renewalDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}{isRenewalList && renewalCountdown(l.renewalDate) ? " · " + renewalCountdown(l.renewalDate) : ""}
                 </span>
               )}
                 </div>
