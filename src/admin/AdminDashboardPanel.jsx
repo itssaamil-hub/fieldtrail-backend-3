@@ -75,7 +75,23 @@ async function fetchCompleteCurrentWonLeads(salesmanId = "all") {
   return mapped.map((lead) => resolved.has(lead.id) ? { ...lead, wonDate: resolved.get(lead.id) } : lead);
 }
 
-function DashboardStatCard({ T, label, value, sub, subInline = false, color, icon: IconC, onClick, comparison, comparisonPeriod }) {
+async function fetchCompleteCurrentMonthNegotiation(salesmanId = "all") {
+  const rows = [];
+  let page = 1;
+  let hasNext = true;
+  while (hasNext) {
+    const params = { status: "negotiation", negotiationPeriod: "month", page, limit: 100 };
+    if (salesmanId !== "all") params.salesmanId = salesmanId;
+    const result = await api.adminLeads(params);
+    rows.push(...(result.leads || []));
+    hasNext = result.hasNext === true;
+    page += 1;
+    if (page > 10000) throw new Error("Negotiation KPI pagination did not terminate safely.");
+  }
+  return rows.map(mapLeadRow);
+}
+
+function DashboardStatCard({ T, label, value, sub, subInline = false, color, icon: IconC, onClick, comparison, comparisonPeriod, periodControl }) {
   const c = color || T.ink;
   return (
     <div
@@ -111,6 +127,7 @@ function DashboardStatCard({ T, label, value, sub, subInline = false, color, ico
           <span>vs last {comparisonPeriod === "monthly" ? "month" : "week"}</span>
         </div>
       )}
+      {periodControl}
     </div>
   );
 }
@@ -140,6 +157,10 @@ export default function AdminDashboardPanel({
   const [completeWonLeads, setCompleteWonLeads] = useState(null);
   const [wonScopeLoading, setWonScopeLoading] = useState(false);
   const [wonScopeError, setWonScopeError] = useState("");
+  const [negotiationPeriod, setNegotiationPeriod] = useState("all");
+  const [monthlyNegotiationLeads, setMonthlyNegotiationLeads] = useState(null);
+  const [negotiationScopeLoading, setNegotiationScopeLoading] = useState(false);
+  const [negotiationScopeError, setNegotiationScopeError] = useState("");
 
   const refreshComparisons = useCallback(async () => {
     if (!showDashboard) return;
@@ -214,6 +235,26 @@ export default function AdminDashboardPanel({
     return () => { cancelled = true; };
   }, [showDashboard, adminWonPeriod, dashboardSalesman, leads]);
 
+  // Only Negotiation's explicit This Month selection invokes the new filter.
+  // All existing card metrics and other reporting flows are unchanged.
+  useEffect(() => {
+    if (!showDashboard || negotiationPeriod !== "month") return undefined;
+    let cancelled = false;
+    setMonthlyNegotiationLeads(null);
+    setNegotiationScopeLoading(true);
+    setNegotiationScopeError("");
+    fetchCompleteCurrentMonthNegotiation(dashboardSalesman)
+      .then((scoped) => { if (!cancelled) setMonthlyNegotiationLeads(scoped); })
+      .catch((error) => {
+        if (!cancelled) {
+          setMonthlyNegotiationLeads(null);
+          setNegotiationScopeError(error.message || "Couldn't load monthly Negotiation data.");
+        }
+      })
+      .finally(() => { if (!cancelled) setNegotiationScopeLoading(false); });
+    return () => { cancelled = true; };
+  }, [showDashboard, negotiationPeriod, dashboardSalesman, leads]);
+
   if (!showDashboard) return null;
 
   const dashboardLeads = dashboardSalesman === "all" ? leads : leads.filter((l) => l.salesmanId === dashboardSalesman);
@@ -242,6 +283,17 @@ export default function AdminDashboardPanel({
   const hotTodayValue = serverMetrics.hotToday ?? hotLeadsToday.length;
   const negotiationValue = serverMetrics.negotiation ?? inNegotiation.length;
   const negotiationDealValue = serverMetrics.negotiationValue ?? inNegotiation.reduce((sum, lead) => sum + (Number(lead.dealValue) || 0), 0);
+  const monthlyNegotiationReady = monthlyNegotiationLeads !== null;
+  const negotiationKpiCount = negotiationPeriod === "month"
+    ? (monthlyNegotiationReady ? monthlyNegotiationLeads.length : "—") : negotiationValue;
+  const negotiationKpiValue = negotiationPeriod === "month"
+    ? (monthlyNegotiationReady
+      ? monthlyNegotiationLeads.reduce((sum, lead) => sum + (Number(lead.dealValue) || 0), 0)
+      : null)
+    : negotiationDealValue;
+  const negotiationKpiSub = negotiationPeriod === "month" && !monthlyNegotiationReady
+    ? (negotiationScopeLoading ? "Loading…" : negotiationScopeError ? "Unavailable" : "—")
+    : fmtMoney(negotiationKpiValue);
   const totalValue = serverMetrics.total ?? dashboardLeads.length;
   const monthlyWonMetrics = adminWonPeriod === "month" && completeWonLeads
     ? adminWonScopeMetrics(completeWonLeads, "month")
@@ -274,6 +326,38 @@ export default function AdminDashboardPanel({
       setConversationError(error.message || "Couldn't load conversation leads.");
     }
   };
+
+  const openNegotiationLeads = async () => {
+    if (negotiationPeriod === "all") {
+      onOpenStatLeads({ title: "In Negotiation", leads: inNegotiation });
+      return;
+    }
+    try {
+      const scoped = await fetchCompleteCurrentMonthNegotiation(dashboardSalesman);
+      setMonthlyNegotiationLeads(scoped);
+      setNegotiationScopeError("");
+      onOpenStatLeads({ title: "In Negotiation · This Month", leads: scoped });
+    } catch (error) {
+      setNegotiationScopeError(error.message || "Couldn't load monthly Negotiation deals.");
+      setMonthlyNegotiationLeads(null);
+    }
+  };
+
+  const negotiationPeriodControl = (
+    <div role="group" aria-label="Negotiation KPI period" onClick={(event) => event.stopPropagation()}
+      style={{ display: "flex", gap: 2, width: "fit-content", maxWidth: "100%", padding: 2, marginTop: 5, borderRadius: 7, background: T.paperDeep }}>
+      {[["all", "All time"], ["month", "This month"]].map(([period, label]) => (
+        <button key={period} type="button" aria-pressed={negotiationPeriod === period}
+          onClick={(event) => { event.stopPropagation(); setNegotiationPeriod(period); }}
+          style={{ padding: "4px 6px", border: 0, borderRadius: 5, cursor: "pointer",
+            fontSize: 10, fontWeight: 700, whiteSpace: "nowrap",
+            background: negotiationPeriod === period ? "#fff" : "transparent",
+            color: negotiationPeriod === period ? T.ink : T.inkSoft }}>
+          {label}
+        </button>
+      ))}
+    </div>
+  );
 
   const openWonLeads = async () => {
     try {
@@ -315,7 +399,7 @@ export default function AdminDashboardPanel({
         <DashboardStatCard T={T} label="Conversation" value={conversationValue ?? "—"} comparison={comparisons.conversation} comparisonPeriod={comparisonPeriod} icon={MessageSquare} color={T.route} onClick={openConversationLeads} />
         <DashboardStatCard T={T} label="Leads Today" value={leadsTodayValue} comparison={comparisons.leadsToday} comparisonPeriod={comparisonPeriod} icon={TargetIcon} color="#3B82F6" onClick={() => onOpenStatLeads({ title: "Leads Today", leads: todayLeads })} />
         <DashboardStatCard T={T} label={<>Hot Leads <span style={{ fontSize: 8.5, opacity: 0.65 }}>TODAY</span></>} value={hotTodayValue} icon={Flame} comparison={comparisons.hotToday} comparisonPeriod={comparisonPeriod} color={T.danger} onClick={() => onOpenStatLeads({ title: "Hot Leads Today", leads: hotLeadsToday })} />
-        <DashboardStatCard T={T} label="In Negotiation" value={negotiationValue} sub={fmtMoney(negotiationDealValue)} subInline comparison={comparisons.negotiation} comparisonPeriod={comparisonPeriod} icon={Handshake} color="#8B5CF6" onClick={() => onOpenStatLeads({ title: "In Negotiation", leads: inNegotiation })} />
+        <DashboardStatCard T={T} label="In Negotiation" value={negotiationKpiCount} sub={negotiationKpiSub} subInline comparison={negotiationPeriod === "all" ? comparisons.negotiation : null} comparisonPeriod={comparisonPeriod} icon={Handshake} color="#8B5CF6" periodControl={negotiationPeriodControl} onClick={openNegotiationLeads} />
         <DashboardStatCard T={T} label="Total Leads" value={totalValue} comparison={comparisons.total} comparisonPeriod={comparisonPeriod} icon={Contact2} color="#0891B2" />
         <DashboardStatCard T={T} label="Won" value={wonValue} sub={wonSub} subInline comparison={comparisons.won} comparisonPeriod={comparisonPeriod} icon={CheckCircle2} color={T.verified} onClick={openWonLeads} />
         <DashboardStatCard T={T} label="Tasks" value={adminPendingTasks ?? 0} sub="pending" icon={List} color="#145C5D" />
