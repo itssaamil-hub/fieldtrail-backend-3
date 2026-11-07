@@ -752,7 +752,7 @@ export default function AdminLeadsPanel({
               style={{ color: T.route, border: "none", background: "transparent", fontWeight: 750, cursor: "pointer" }}>Retry</button>
           </div>
         )}
-        {sheetsError && <div style={{ fontSize: 12, color: T.danger, marginBottom: 10 }}>{sheetsError}</div>
+        {sheetsError && <div style={{ fontSize: 12, color: T.danger, marginBottom: 10 }}>{sheetsError}</div>}
         {sheetsInfo && (
           <div style={{ fontSize: 12, background: T.paperDeep, borderRadius: 11, padding: "10px 12px", marginBottom: 12 }}>
             No Google account is connected, so this can't push directly into a Sheet — but you can pull it in live:
