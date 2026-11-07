@@ -98,10 +98,10 @@ test("Admin phone tracking filter stays inside Deals without adding a filter row
   await deals.getByRole("button", { name: "List view" }).click();
   await expect(deals.getByText("Normal Pipeline Cafe")).toBeVisible();
   await deals.getByRole("button", { name: "Flagged deals filter" }).click();
-  await deals.locator('select[aria-label="Tracking view"]').selectOption("tracked");
+  await deals.locator('select[aria-label="Flagged deals view"]').selectOption("tracked");
   // Selecting a view applies immediately and closes the menu; there is no Apply button.
   await expect(deals.getByRole("button", { name: "Apply", exact: true })).toHaveCount(0);
-  await expect(deals.locator('select[aria-label="Tracking view"]')).toHaveCount(0);
+  await expect(deals.locator('select[aria-label="Flagged deals view"]')).toHaveCount(0);
   await expect(deals.getByText("Older Tracked Bistro")).toBeVisible();
   await expect(deals.getByText("Normal Pipeline Cafe")).toHaveCount(0);
   await expect(deals.getByRole("button", { name: "Flagged deals filter" })).toHaveAttribute("aria-pressed", "true");
@@ -111,12 +111,12 @@ test("Admin phone tracking filter stays inside Deals without adding a filter row
     const url = new URL(req.url());
     return url.pathname === "/admin/deal-tracking" && url.searchParams.get("month") !== month;
   });
-  await deals.locator('select[aria-label="Tracking month"]').selectOption({ index: 1 });
+  await deals.locator('select[aria-label="Flagged deals month"]').selectOption({ index: 1 });
   await previousMonthRequest;
-  await expect(deals.locator('select[aria-label="Tracking month"]')).toHaveCount(0);
+  await expect(deals.locator('select[aria-label="Flagged deals month"]')).toHaveCount(0);
   // Going back to All Deals must also immediately restore the regular pipeline.
   await deals.getByRole("button", { name: "Flagged deals filter" }).click();
-  await deals.locator('select[aria-label="Tracking view"]').selectOption("all");
+  await deals.locator('select[aria-label="Flagged deals view"]').selectOption("all");
   await expect(deals.getByText("Normal Pipeline Cafe")).toBeVisible();
   await expect(deals.getByText("Older Tracked Bistro")).toHaveCount(0);
   await expect(deals.getByRole("button", { name: "Flagged deals filter" })).toHaveAttribute("aria-pressed", "false");
