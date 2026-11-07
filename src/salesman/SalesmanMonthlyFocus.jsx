@@ -187,7 +187,7 @@ export default function SalesmanMonthlyFocus({ T, fmtMoney, employeeId, active, 
             {canEdit && (
               <button type="button" disabled={!online || !!busy} onClick={() => { setAdding(prev => !prev); setSearchError(""); }}
                 style={{ display: "inline-flex", alignItems: "center", gap: 4, background: T.route, color: "#fff", border: 0, borderRadius: 8, padding: "7px 9px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-                {adding ? <X size={12} /> : <Plus size={12} />}{adding ? "Close" : "Add Deal"}
+                {adding ? <X size={12} /> : <Plus size={12} />}{adding ? "Close" : "Add to Month"}
               </button>
             )}
           </div>
