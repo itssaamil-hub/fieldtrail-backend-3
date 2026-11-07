@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ArrowUpDown, LayoutGrid, List, Plus, Search, X } from "lucide-react";
+import { ArrowUpDown, LayoutGrid, List, Plus, Search, Target, X } from "lucide-react";
 import DesktopContacts from "../DesktopContacts.jsx";
 import MobileContacts from "../MobileContacts.jsx";
 import DesktopDealsBoard from "../DesktopDealsBoard";
 import { api, buildExportUrl } from "../api.js";
 import useAdminLeadPage from "./useAdminLeadPage.js";
+import useAdminDealTracking from "./useAdminDealTracking.js";
+import { applyTrackedDealFilters, currentTrackingMonth, trackingMonthOptions } from "../utils/dealTrackingMonth.js";
 
 const MOBILE_STATUS_STYLE = {
   cold: { background: "#F3F4F6", color: "#4B5563", border: "#E2E5E9" },
@@ -102,6 +104,9 @@ export default function AdminLeadsPanel({
   } = shared;
   const [sheetsInfo, setSheetsInfo] = useState(null);
   const [sheetsError, setSheetsError] = useState("");
+  const [trackingMode, setTrackingMode] = useState("all");
+  const [trackingMonth, setTrackingMonth] = useState(currentTrackingMonth);
+  const [trackingMenuOpen, setTrackingMenuOpen] = useState(false);
   const [mobileDealsSort, setMobileDealsSort] = useState("recent_activity");
   const [mobileDealsSortOpen, setMobileDealsSortOpen] = useState(false);
   const [mobileBoardStatus, setMobileBoardStatus] = useState("cold");
@@ -118,20 +123,39 @@ export default function AdminLeadsPanel({
     if ((desktopDeals || desktopContacts) && filterDate) setFilterDate("");
   }, [desktopDeals, desktopContacts, filterDate, setFilterDate]);
 
+  // Tracking only changes the Admin Deals Pipeline data source.
+  // It never changes a deal's CRM status, creation date, or monthly completion.
+  const dealTrackingActive = trackingMode === "tracked" &&
+    (desktopDeals || (phone && sectionNavigation && section === "deals" && !desktopSection));
+  const { rows: trackedDeals, loading: trackingLoading, error: trackingError, refresh: refreshTracking } =
+    useAdminDealTracking({ enabled: showLeads && dealTrackingActive, month: trackingMonth });
+  const cityByEmployee = useMemo(() => new Map(
+    salesmen.map(employee => [employee.id, String(employee.city || "")])
+  ), [salesmen]);
+  const trackingFilteredLeads = useMemo(() => (
+    dealTrackingActive
+      ? applyTrackedDealFilters(trackedDeals, {
+          employeeId: filterSalesman, city: filterCity, status: filterStatus,
+          date: desktopDeals ? "" : filterDate, search: searchQuery, cityByEmployee,
+        })
+      : filteredLeads
+  ), [dealTrackingActive, trackedDeals, filterSalesman, filterCity, filterStatus,
+    filterDate, searchQuery, cityByEmployee, desktopDeals, filteredLeads]);
+
   const pipelineRange = useMemo(
     () => pipelineDateRange(pipelineDatePreset, pipelineDateFrom, pipelineDateTo),
     [pipelineDatePreset, pipelineDateFrom, pipelineDateTo]
   );
   const pipelineFilteredLeads = useMemo(() => {
-    if (!desktopDeals || !pipelineRange || (!pipelineRange.from && !pipelineRange.to)) return filteredLeads;
-    return filteredLeads.filter((lead) => {
+    if (!desktopDeals || !pipelineRange || (!pipelineRange.from && !pipelineRange.to)) return trackingFilteredLeads;
+    return trackingFilteredLeads.filter((lead) => {
       const day = istDayKey(lead.createdAt);
       if (!day) return false;
       if (pipelineRange.from && day < pipelineRange.from) return false;
       if (pipelineRange.to && day > pipelineRange.to) return false;
       return true;
     });
-  }, [desktopDeals, filteredLeads, pipelineRange]);
+  }, [desktopDeals, trackingFilteredLeads, pipelineRange]);
 
   const contactsRange = useMemo(
     () => pipelineDateRange(contactsDatePreset, contactsDateFrom, contactsDateTo),
@@ -154,11 +178,11 @@ export default function AdminLeadsPanel({
   const rangeDateActive = pipelineDateActive || contactsDateActive;
   const cityFilterActive = Boolean(filterCity.trim());
   const mobileContacts = Boolean(phone && sectionNavigation && section === "leads" && !desktopSection);
-  const localFilterActive = rangeDateActive || cityFilterActive || mobileContacts;
+  const localFilterActive = rangeDateActive || cityFilterActive || mobileContacts || dealTrackingActive;
 
   useEffect(() => {
     setPipelinePage(1);
-  }, [pipelineDatePreset, pipelineDateFrom, pipelineDateTo, filterSalesman, filterCity, filterStatus, searchQuery]);
+  }, [pipelineDatePreset, pipelineDateFrom, pipelineDateTo, filterSalesman, filterCity, filterStatus, searchQuery, trackingMode, trackingMonth]);
 
   useEffect(() => {
     setContactsPage(1);
@@ -166,15 +190,15 @@ export default function AdminLeadsPanel({
 
   const mobileDeals = Boolean(phone && sectionNavigation && section === "deals" && !desktopSection);
   const mobileDealRows = useMemo(() => {
-    if (!mobileDeals) return filteredLeads;
-    const rows = [...filteredLeads];
+    if (!mobileDeals) return trackingFilteredLeads;
+    const rows = [...trackingFilteredLeads];
     const activity = (lead) => new Date(lead.updatedAt || lead.createdAt || 0).getTime();
     if (mobileDealsSort === "oldest_activity") rows.sort((a, b) => activity(a) - activity(b));
     else if (mobileDealsSort === "newest_lead") rows.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
     else if (mobileDealsSort === "oldest_lead") rows.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
     else rows.sort((a, b) => activity(b) - activity(a));
     return rows;
-  }, [filteredLeads, mobileDeals, mobileDealsSort]);
+  }, [trackingFilteredLeads, mobileDeals, mobileDealsSort]);
 
   useEffect(() => {
     if (mobileDeals && filterStatus !== "all") setMobileBoardStatus(filterStatus);
@@ -198,8 +222,8 @@ export default function AdminLeadsPanel({
     () => serverPage.rows.map((lead) => localById.get(lead.id) || lead),
     [serverPage.rows, localById]
   );
-  const rangeFilteredLeads = pipelineDateActive ? pipelineFilteredLeads : contactsDateActive ? contactsFilteredLeads : filteredLeads;
-  const rangePage = pipelineDateActive ? pipelinePage : contactsPage;
+  const rangeFilteredLeads = pipelineDateActive ? pipelineFilteredLeads : contactsDateActive ? contactsFilteredLeads : trackingFilteredLeads;
+  const rangePage = pipelineDateActive || (dealTrackingActive && desktopDeals) ? pipelinePage : contactsPage;
   const rangeTotalPages = Math.max(1, Math.ceil(rangeFilteredLeads.length / LEADS_PER_PAGE));
   const rangeCurrentPage = Math.min(rangePage, rangeTotalPages);
   const rangePagedRows = rangeFilteredLeads.slice((rangeCurrentPage - 1) * LEADS_PER_PAGE, rangeCurrentPage * LEADS_PER_PAGE);
@@ -211,6 +235,9 @@ export default function AdminLeadsPanel({
   const listCurrentPage = localFilterActive ? rangeCurrentPage : (serverPage.error && serverRows.length === 0 ? 1 : serverPage.page);
   const listLoading = localFilterActive ? false : serverPage.loading;
   const setListPage = localFilterActive ? (desktopDeals ? setPipelinePage : setContactsPage) : serverPage.setPage;
+  const handlePipelineStatusChange = dealTrackingActive
+    ? async (leadId, status) => { await onStatusChange(leadId, status); await refreshTracking(); }
+    : onStatusChange;
 
   if (mobileDeals) {
     const mobileTotalValue = mobileDealRows.reduce((sum, lead) => sum + (Number(lead.dealValue) || 0), 0);
@@ -299,6 +326,40 @@ export default function AdminLeadsPanel({
                 </div>
               )}
             </div>
+            <div style={{ position: "relative", flexShrink: 0 }}>
+              <button type="button" aria-label="Deal tracking filter" aria-pressed={dealTrackingActive}
+                aria-expanded={trackingMenuOpen} title="Deal tracking"
+                onClick={() => { setTrackingMenuOpen(value => !value); setMobileDealsSortOpen(false); }}
+                style={{ width: 38, height: 38, border: "1px solid " + (dealTrackingActive ? T.route : T.line),
+                  borderRadius: 10, background: dealTrackingActive ? "#EAF5F0" : "#fff",
+                  color: dealTrackingActive ? T.route : T.ink, display: "inline-flex",
+                  alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                <Target size={16} />
+              </button>
+              {trackingMenuOpen && (
+                <div role="group" aria-label="Monthly tracking options"
+                  style={{ position: "absolute", right: 0, top: 42, zIndex: 45, width: 210,
+                    maxWidth: "calc(100vw - 28px)", background: "#fff", border: "1px solid " + T.line,
+                    borderRadius: 11, boxShadow: "0 8px 24px rgba(20,30,35,.14)",
+                    padding: 11, display: "flex", flexDirection: "column", gap: 9 }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: T.ink }}>Deal tracking</div>
+                  <select aria-label="Tracking view" value={trackingMode} onChange={e => setTrackingMode(e.target.value)}
+                    style={{ ...controlStyle, width: "100%", boxSizing: "border-box" }}>
+                    <option value="all">All Deals</option>
+                    <option value="tracked">Tracked Deals</option>
+                  </select>
+                  {trackingMode === "tracked" && (
+                    <select aria-label="Tracking month" value={trackingMonth} onChange={e => setTrackingMonth(e.target.value)}
+                      style={{ ...controlStyle, width: "100%", boxSizing: "border-box" }}>
+                      {trackingMonthOptions().map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
+                    </select>
+                  )}
+                  <button type="button" onClick={() => setTrackingMenuOpen(false)}
+                    style={{ height: 30, borderRadius: 8, border: "none", background: T.route,
+                      color: "#fff", fontSize: 11.5, fontWeight: 750, cursor: "pointer" }}>Apply</button>
+                </div>
+              )}
+            </div>
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 7, marginBottom: 7 }}>
@@ -317,14 +378,21 @@ export default function AdminLeadsPanel({
             <input aria-label="Deal date" type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} style={{ ...controlStyle, width: "100%" }} />
           </div>
 
-          {(filterSalesman !== "all" || filterCity.trim() || filterStatus !== "all" || filterDate || searchQuery.trim()) && (
+          {(filterSalesman !== "all" || filterCity.trim() || filterStatus !== "all" || filterDate || searchQuery.trim() || dealTrackingActive) && (
             <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
-              <button type="button" onClick={() => { setFilterSalesman("all"); setFilterCity(""); setFilterStatus("all"); setFilterDate(""); setSearchQuery(""); }} style={{ border: "none", background: "transparent", color: T.route, fontSize: 11, fontWeight: 800, padding: "3px 1px", cursor: "pointer" }}>
+              <button type="button" onClick={() => { setFilterSalesman("all"); setFilterCity(""); setFilterStatus("all"); setFilterDate(""); setSearchQuery(""); setTrackingMode("all"); setTrackingMenuOpen(false); }} style={{ border: "none", background: "transparent", color: T.route, fontSize: 11, fontWeight: 800, padding: "3px 1px", cursor: "pointer" }}>
                 Reset filters
               </button>
             </div>
           )}
 
+          {dealTrackingActive && trackingLoading && <div role="status" style={{ fontSize: 11.5, color: T.inkSoft, marginBottom: 8 }}>Loading tracked deals…</div>}
+          {dealTrackingActive && trackingError && (
+            <div role="alert" style={{ fontSize: 11.5, color: T.danger, marginBottom: 8 }}>
+              {trackingError} <button type="button" onClick={refreshTracking}
+                style={{ border: "none", color: T.route, background: "transparent", fontWeight: 750, cursor: "pointer" }}>Retry</button>
+            </div>
+          )}
           {leadsViewMode === "board" ? (() => {
             const boardStatuses = filterStatus !== "all" ? [filterStatus] : STATUSES;
             const selectedStatus = boardStatuses.includes(mobileBoardStatus) ? mobileBoardStatus : boardStatuses[0];
@@ -618,6 +686,10 @@ export default function AdminLeadsPanel({
             {desktopDeals ? (
               <>
                 <Select value={pipelineDatePreset} onChange={setPipelineDatePreset} options={PIPELINE_DATE_OPTIONS} />
+                <Select value={trackingMode} onChange={setTrackingMode} options={[["all", "All Deals"], ["tracked", "Tracked Deals"]]} />
+                {trackingMode === "tracked" && (
+                  <Select value={trackingMonth} onChange={setTrackingMonth} options={trackingMonthOptions().map(({ value, label }) => [value, label])} />
+                )}
                 {pipelineDatePreset === "custom" && (
                   <>
                     <input aria-label="Pipeline date from" title="From" type="date" value={pipelineDateFrom} onChange={(e) => setPipelineDateFrom(e.target.value)} style={dateInputStyle} />
@@ -645,10 +717,10 @@ export default function AdminLeadsPanel({
                 )}
               </>
             )}
-            {(filterSalesman !== "all" || filterCity.trim() || filterStatus !== "all" || filterDate || (desktopDeals && pipelineHasDateFilter) || (desktopContacts && contactsHasDateFilter) || searchQuery.trim()) && (
+            {(filterSalesman !== "all" || filterCity.trim() || filterStatus !== "all" || filterDate || (desktopDeals && pipelineHasDateFilter) || (desktopContacts && contactsHasDateFilter) || searchQuery.trim() || (desktopDeals && dealTrackingActive)) && (
               <button
                 type="button"
-                onClick={() => { setFilterSalesman("all"); setFilterCity(""); setFilterStatus("all"); setFilterDate(""); setPipelineDatePreset("all"); setPipelineDateFrom(""); setPipelineDateTo(""); setContactsDatePreset("all"); setContactsDateFrom(""); setContactsDateTo(""); setSearchQuery(""); }}
+                onClick={() => { setFilterSalesman("all"); setFilterCity(""); setFilterStatus("all"); setFilterDate(""); setPipelineDatePreset("all"); setPipelineDateFrom(""); setPipelineDateTo(""); setContactsDatePreset("all"); setContactsDateFrom(""); setContactsDateTo(""); setSearchQuery(""); setTrackingMode("all"); }}
                 style={{ fontSize: 11.5, color: T.route, background: "#EAF5F0", border: `1px solid ${T.line}`, borderRadius: 8, cursor: "pointer", padding: "6px 9px", fontWeight: 750 }}
               >
                 Reset filters
@@ -671,6 +743,15 @@ export default function AdminLeadsPanel({
         </div>
         )}
 
+        {desktopDeals && dealTrackingActive && trackingLoading && (
+          <div role="status" style={{ fontSize: 12, color: T.inkSoft, marginBottom: 10 }}>Loading tracked deals…</div>
+        )}
+        {desktopDeals && dealTrackingActive && trackingError && (
+          <div role="alert" style={{ fontSize: 12, color: T.danger, marginBottom: 10 }}>
+            {trackingError} <button type="button" onClick={refreshTracking}
+              style={{ color: T.route, border: "none", background: "transparent", fontWeight: 750, cursor: "pointer" }}>Retry</button>
+          </div>
+        )}
         {sheetsError && <div style={{ fontSize: 12, color: T.danger, marginBottom: 10 }}>{sheetsError}</div>}
         {sheetsInfo && (
           <div style={{ fontSize: 12, background: T.paperDeep, borderRadius: 11, padding: "10px 12px", marginBottom: 12 }}>
@@ -748,7 +829,7 @@ export default function AdminLeadsPanel({
           </>
         ) : (
           desktopDeals
-            ? <DesktopDealsBoard leads={displayLeads} visibleStatus={filterStatus} onStatusChange={onStatusChange} onSelectLead={onSelectLead} />
+            ? <DesktopDealsBoard leads={displayLeads} visibleStatus={filterStatus} onStatusChange={handlePipelineStatusChange} onSelectLead={onSelectLead} />
             : <LeadsBoardView leads={filteredLeads} onStatusChange={onStatusChange} onSelectLead={onSelectLead} />
         )}
       </div>
