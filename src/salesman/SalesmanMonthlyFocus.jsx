@@ -87,6 +87,12 @@ export default function SalesmanMonthlyFocus({ T, fmtMoney, employeeId, active, 
   }, [active, online, refresh]);
 
   useEffect(() => {
+    if (!active || !online) return undefined;
+    window.addEventListener("engage:monthly-focus-changed", refresh);
+    return () => window.removeEventListener("engage:monthly-focus-changed", refresh);
+  }, [active, online, refresh]);
+
+  useEffect(() => {
     if (!active || !adding || !online || !canEdit) return;
     let cancelled = false;
     const timeout = setTimeout(async () => {
