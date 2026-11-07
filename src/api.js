@@ -376,6 +376,9 @@ export const api = {
     return request(`/admin/leads${qs ? `?${qs}` : ""}`);
   },
   adminDealTracking: (month) => request(`/admin/deal-tracking?month=${encodeURIComponent(month)}`),
+  adminDealTrackingStatus: (month, leadId) => request(`/admin/deal-tracking/${encodeURIComponent(leadId)}?month=${encodeURIComponent(month)}`),
+  adminDealTrackingAdd: (month, leadId) => request(`/admin/deal-tracking/${encodeURIComponent(leadId)}`, { method: "POST", body: { month } }),
+  adminDealTrackingRemove: (month, leadId) => request(`/admin/deal-tracking/${encodeURIComponent(leadId)}?month=${encodeURIComponent(month)}`, { method: "DELETE" }),
   adminCreateLead: (payload) => request(`/admin/leads`, { method: "POST", body: normalizeRenewalPayload(payload) }),
   adminCheckDuplicateLead: (payload) => request(`/admin/leads/duplicate-check`, { method: "POST", body: payload }),
   adminUpdateLeadStatus: (id, status) => request(`/admin/leads/${id}/status`, { method: "PATCH", body: { status } }),
