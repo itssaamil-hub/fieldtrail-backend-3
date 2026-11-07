@@ -422,7 +422,7 @@ function AdminView({ desktopSection, conversationCount, salesmen, leads, onStatu
       <AdminMobileNav active={mobileTab} onChange={switchMobileTab} />
 
       {showTeamActivity && <AdminTeamActivitySheet salesmen={salesmen} onClose={() => setShowTeamActivity(false)} />}
-      {selectedLead && <LeadDetailDrawer notificationOpenedAt={notificationLead?.id === selectedLead.id ? notificationLead.openedAt : null} lead={leads.find((l) => l.id === selectedLead.id) || selectedLead} onClose={() => setSelectedLead(null)} onStatusChange={onStatusChange} onUpdate={onUpdateLead} onDelete={onDeleteLead} fetchHistory={api.adminLeadHistory} isAdmin />}
+      {selectedLead && <LeadDetailDrawer notificationOpenedAt={notificationLead?.id === selectedLead.id ? notificationLead.openedAt : null} lead={leads.find((l) => l.id === selectedLead.id) || selectedLead} onClose={() => setSelectedLead(null)} onStatusChange={onStatusChange} onUpdate={onUpdateLead} onDelete={onDeleteLead} fetchHistory={api.adminLeadHistory} isAdmin trackingEmployeeId={selectedLead.salesmanId} />}
       {routeSalesman && <SalesmanRouteModal salesman={routeSalesman} onClose={() => setRouteSalesman(null)} />}
       {showAdminAddLead && (
         <AdminAddLeadModalV2
