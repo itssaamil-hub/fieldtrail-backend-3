@@ -18,7 +18,7 @@ function currentMonth() {
     date.find(p => p.type === "month").value;
 }
 for (const width of [390, 1440]) {
-  test("Admin Update Status shows Track Deal and keeps chevron far-right at " + width + "px", async ({ page }) => {
+  test("Admin Update Status shows Flag Deal and keeps chevron far-right at " + width + "px", async ({ page }) => {
     const actions = [];
     const errors = [];
     let tracked = false;
@@ -66,7 +66,7 @@ for (const width of [390, 1440]) {
     const update = page.getByRole("button", { name: /Update status/ }).first();
     await expect(update).toBeVisible();
     await update.click();
-    const track = page.getByRole("button", { name: "Track Deal", exact: true });
+    const track = page.getByRole("button", { name: "Flag Deal", exact: true });
     const arrow = page.getByRole("button", { name: "Collapse section" });
     await expect(track).toBeVisible();
     await expect(arrow).toBeVisible();
@@ -74,9 +74,9 @@ for (const width of [390, 1440]) {
     expect(trackBox).not.toBeNull();
     expect(arrowBox.x).toBeGreaterThan(trackBox.x + trackBox.width - 1);
     await track.click();
-    await expect(page.getByRole("button", { name: "Stop tracking deal" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Unflag Deal" })).toBeVisible();
     await expect(arrow).toBeVisible();
-    await page.getByRole("button", { name: "Stop tracking deal" }).click();
+    await page.getByRole("button", { name: "Unflag Deal" }).click();
     await expect(track).toBeVisible();
     await arrow.click();
     await expect(page.getByRole("button", { name: "Expand section" })).toBeVisible();
