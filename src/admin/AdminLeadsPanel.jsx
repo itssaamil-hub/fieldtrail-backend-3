@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ArrowUpDown, LayoutGrid, List, Plus, Search, X } from "lucide-react";
+import { ArrowUpDown, LayoutGrid, List, Plus, Search, Target, X } from "lucide-react";
 import DesktopContacts from "../DesktopContacts.jsx";
 import MobileContacts from "../MobileContacts.jsx";
 import DesktopDealsBoard from "../DesktopDealsBoard";
 import { api, buildExportUrl } from "../api.js";
 import useAdminLeadPage from "./useAdminLeadPage.js";
+import useAdminDealTracking from "./useAdminDealTracking.js";
+import { applyTrackedDealFilters, currentTrackingMonth, trackingMonthOptions } from "../utils/dealTrackingMonth.js";
 
 const MOBILE_STATUS_STYLE = {
   cold: { background: "#F3F4F6", color: "#4B5563", border: "#E2E5E9" },
@@ -102,6 +104,9 @@ export default function AdminLeadsPanel({
   } = shared;
   const [sheetsInfo, setSheetsInfo] = useState(null);
   const [sheetsError, setSheetsError] = useState("");
+  const [trackingMode, setTrackingMode] = useState("all");
+  const [trackingMonth, setTrackingMonth] = useState(currentTrackingMonth);
+  const [trackingMenuOpen, setTrackingMenuOpen] = useState(false);
   const [mobileDealsSort, setMobileDealsSort] = useState("recent_activity");
   const [mobileDealsSortOpen, setMobileDealsSortOpen] = useState(false);
   const [mobileBoardStatus, setMobileBoardStatus] = useState("cold");
@@ -118,20 +123,39 @@ export default function AdminLeadsPanel({
     if ((desktopDeals || desktopContacts) && filterDate) setFilterDate("");
   }, [desktopDeals, desktopContacts, filterDate, setFilterDate]);
 
+  // Tracking only changes the Admin Deals Pipeline data source.
+  // It never changes a deal's CRM status, creation date, or monthly completion.
+  const dealTrackingActive = trackingMode === "tracked" &&
+    (desktopDeals || (phone && sectionNavigation && section === "deals" && !desktopSection));
+  const { rows: trackedDeals, loading: trackingLoading, error: trackingError, refresh: refreshTracking } =
+    useAdminDealTracking({ enabled: showLeads && dealTrackingActive, month: trackingMonth });
+  const cityByEmployee = useMemo(() => new Map(
+    salesmen.map(employee => [employee.id, String(employee.city || "")])
+  ), [salesmen]);
+  const trackingFilteredLeads = useMemo(() => (
+    dealTrackingActive
+      ? applyTrackedDealFilters(trackedDeals, {
+          employeeId: filterSalesman, city: filterCity, status: filterStatus,
+          date: desktopDeals ? "" : filterDate, search: searchQuery, cityByEmployee,
+        })
+      : filteredLeads
+  ), [dealTrackingActive, trackedDeals, filterSalesman, filterCity, filterStatus,
+    filterDate, searchQuery, cityByEmployee, desktopDeals, filteredLeads]);
+
   const pipelineRange = useMemo(
     () => pipelineDateRange(pipelineDatePreset, pipelineDateFrom, pipelineDateTo),
     [pipelineDatePreset, pipelineDateFrom, pipelineDateTo]
   );
   const pipelineFilteredLeads = useMemo(() => {
-    if (!desktopDeals || !pipelineRange || (!pipelineRange.from && !pipelineRange.to)) return filteredLeads;
-    return filteredLeads.filter((lead) => {
+    if (!desktopDeals || !pipelineRange || (!pipelineRange.from && !pipelineRange.to)) return trackingFilteredLeads;
+    return trackingFilteredLeads.filter((lead) => {
       const day = istDayKey(lead.createdAt);
       if (!day) return false;
       if (pipelineRange.from && day < pipelineRange.from) return false;
       if (pipelineRange.to && day > pipelineRange.to) return false;
       return true;
     });
-  }, [desktopDeals, filteredLeads, pipelineRange]);
+  }, [desktopDeals, trackingFilteredLeads, pipelineRange]);
 
   const contactsRange = useMemo(
     () => pipelineDateRange(contactsDatePreset, contactsDateFrom, contactsDateTo),
@@ -154,11 +178,11 @@ export default function AdminLeadsPanel({
   const rangeDateActive = pipelineDateActive || contactsDateActive;
   const cityFilterActive = Boolean(filterCity.trim());
   const mobileContacts = Boolean(phone && sectionNavigation && section === "leads" && !desktopSection);
-  const localFilterActive = rangeDateActive || cityFilterActive || mobileContacts;
+  const localFilterActive = rangeDateActive || cityFilterActive || mobileContacts || dealTrackingActive;
 
   useEffect(() => {
     setPipelinePage(1);
-  }, [pipelineDatePreset, pipelineDateFrom, pipelineDateTo, filterSalesman, filterCity, filterStatus, searchQuery]);
+  }, [pipelineDatePreset, pipelineDateFrom, pipelineDateTo, filterSalesman, filterCity, filterStatus, searchQuery, trackingMode, trackingMonth]);
 
   useEffect(() => {
     setContactsPage(1);
@@ -166,15 +190,15 @@ export default function AdminLeadsPanel({
 
   const mobileDeals = Boolean(phone && sectionNavigation && section === "deals" && !desktopSection);
   const mobileDealRows = useMemo(() => {
-    if (!mobileDeals) return filteredLeads;
-    const rows = [...filteredLeads];
+    if (!mobileDeals) return trackingFilteredLeads;
+    const rows = [...trackingFilteredLeads];
     const activity = (lead) => new Date(lead.updatedAt || lead.createdAt || 0).getTime();
     if (mobileDealsSort === "oldest_activity") rows.sort((a, b) => activity(a) - activity(b));
     else if (mobileDealsSort === "newest_lead") rows.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
     else if (mobileDealsSort === "oldest_lead") rows.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
     else rows.sort((a, b) => activity(b) - activity(a));
     return rows;
-  }, [filteredLeads, mobileDeals, mobileDealsSort]);
+  }, [trackingFilteredLeads, mobileDeals, mobileDealsSort]);
 
   useEffect(() => {
     if (mobileDeals && filterStatus !== "all") setMobileBoardStatus(filterStatus);
@@ -198,8 +222,8 @@ export default function AdminLeadsPanel({
     () => serverPage.rows.map((lead) => localById.get(lead.id) || lead),
     [serverPage.rows, localById]
   );
-  const rangeFilteredLeads = pipelineDateActive ? pipelineFilteredLeads : contactsDateActive ? contactsFilteredLeads : filteredLeads;
-  const rangePage = pipelineDateActive ? pipelinePage : contactsPage;
+  const rangeFilteredLeads = pipelineDateActive ? pipelineFilteredLeads : contactsDateActive ? contactsFilteredLeads : trackingFilteredLeads;
+  const rangePage = pipelineDateActive || (dealTrackingActive && desktopDeals) ? pipelinePage : contactsPage;
   const rangeTotalPages = Math.max(1, Math.ceil(rangeFilteredLeads.length / LEADS_PER_PAGE));
   const rangeCurrentPage = Math.min(rangePage, rangeTotalPages);
   const rangePagedRows = rangeFilteredLeads.slice((rangeCurrentPage - 1) * LEADS_PER_PAGE, rangeCurrentPage * LEADS_PER_PAGE);
