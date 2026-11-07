@@ -2,8 +2,9 @@ import React, { useEffect, useState } from "react";
 import { api } from "../api.js";
 import { currentTrackingMonth } from "../utils/dealTrackingMonth.js";
 
-// Employee-only monthly membership control. This never changes CRM stage.
-export default function LeadTrackingButton({ leadId, employeeId, T }) {
+// Monthly focus membership for the assigned employee; admin can change it too.
+// It never changes a CRM stage or attendance.
+export default function LeadTrackingButton({ leadId, employeeId, T, isAdmin = false }) {
   const [tracked, setTracked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -14,24 +15,31 @@ export default function LeadTrackingButton({ leadId, employeeId, T }) {
     setTracked(false);
     setLoading(true);
     setError("");
-    api.salesmanMonthlyFocus(currentTrackingMonth(), employeeId)
+    (isAdmin
+      ? api.adminDealTrackingStatus(currentTrackingMonth(), leadId)
+      : api.salesmanMonthlyFocus(currentTrackingMonth(), employeeId))
       .then(result => {
-        if (alive) setTracked((result.items || []).some(item => item.id === leadId));
+        if (alive) setTracked(isAdmin ? result.tracked === true : (result.items || []).some(item => item.id === leadId));
       })
       .catch(err => {
         if (alive) setError(err.message || "Could not check monthly tracking. Reopen this section to retry.");
       })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, [leadId, employeeId]);
+  }, [leadId, employeeId, isAdmin]);
 
   const toggle = async () => {
     if (busy || loading || error) return;
     setBusy(true);
     try {
       const month = currentTrackingMonth();
-      if (tracked) await api.salesmanMonthlyFocusRemove(month, leadId, employeeId);
-      else await api.salesmanMonthlyFocusAdd(month, leadId, employeeId);
+      if (isAdmin) {
+        if (tracked) await api.adminDealTrackingRemove(month, leadId);
+        else await api.adminDealTrackingAdd(month, leadId);
+      } else {
+        if (tracked) await api.salesmanMonthlyFocusRemove(month, leadId, employeeId);
+        else await api.salesmanMonthlyFocusAdd(month, leadId, employeeId);
+      }
       setTracked(value => !value);
       window.dispatchEvent(new Event("engage:monthly-focus-changed"));
     } catch (err) {

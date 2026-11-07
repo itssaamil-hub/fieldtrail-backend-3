@@ -581,16 +581,22 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
         {onStatusChange && !editing && (
           <div style={{ marginTop: 12, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 12, padding: 13 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div role="button" tabIndex={0} aria-expanded={statusExpanded} onClick={() => setStatusExpanded((v) => !v)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setStatusExpanded((v) => !v); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer", flex: 1, minWidth: 0 }}>
-              <div>
-                <div style={{ fontSize: 11, textTransform: "uppercase", color: T.inkSoft, fontWeight: 600, letterSpacing: 0.3 }}>Update status</div>
-                <div style={{ marginTop: 5, fontSize: 13.5, fontWeight: 800, color: T.ink }}>{STATUS_LABEL[lead.status]}</div>
+              <div role="button" tabIndex={0} aria-expanded={statusExpanded} onClick={() => setStatusExpanded((v) => !v)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setStatusExpanded((v) => !v); } }} style={{ display: "flex", alignItems: "center", cursor: "pointer", flex: 1, minWidth: 0 }}>
+                <div>
+                  <div style={{ fontSize: 11, textTransform: "uppercase", color: T.inkSoft, fontWeight: 600, letterSpacing: 0.3 }}>Update status</div>
+                  <div style={{ marginTop: 5, fontSize: 13.5, fontWeight: 800, color: T.ink }}>{STATUS_LABEL[lead.status]}</div>
+                </div>
               </div>
-              <span aria-hidden="true" style={{ fontSize: 18, color: T.inkSoft }}>{statusExpanded ? "⌃" : "›"}</span>
-            </div>
-            {statusExpanded && !isAdmin && trackingEmployeeId && (
-              <LeadTrackingButton key={lead.id} leadId={lead.id} employeeId={trackingEmployeeId} T={T} />
-            )}
+              {statusExpanded && trackingEmployeeId && (
+                <LeadTrackingButton key={lead.id} leadId={lead.id} employeeId={trackingEmployeeId} isAdmin={isAdmin} T={T} />
+              )}
+              <button type="button" aria-label={statusExpanded ? "Collapse section" : "Expand section"}
+                aria-expanded={statusExpanded} onClick={() => setStatusExpanded((v) => !v)}
+                style={{ display: "inline-flex", justifyContent: "center", alignItems: "center", flexShrink: 0,
+                  width: 30, minHeight: 32, border: "none", background: "transparent", padding: 0,
+                  cursor: "pointer", color: T.inkSoft, fontSize: 18 }}>
+                <span aria-hidden="true">{statusExpanded ? "⌃" : "›"}</span>
+              </button>
             </div>
             {statusExpanded && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 11, paddingTop: 10, borderTop: `1px solid ${T.line}` }}>
