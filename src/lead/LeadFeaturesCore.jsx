@@ -1,6 +1,7 @@
 import { renewalCountdown } from "../renewalCountdown.js";
 import React from "react";
 import LeadAiWriter from "./LeadAiWriter.jsx";
+import LeadTrackingButton from "./LeadTrackingButton.jsx";
 import "./lead-detail-ai-mobile.css";
 import { ArrowUpDown, Download } from "lucide-react";
 import { buildSalesmanExportUrl } from "../api.js";
@@ -289,7 +290,7 @@ function whatsappLink(phone) {
   return `https://wa.me/${digits}`;
 }
 
-function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, fetchHistory, isAdmin = false, employeeRepliesEnabled = true, notificationOpenedAt = null }) {
+function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, fetchHistory, isAdmin = false, employeeRepliesEnabled = true, notificationOpenedAt = null, trackingEmployeeId = null }) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [editing, setEditing] = useState(false);
   const [history, setHistory] = useState(null); // null = loading, [] = loaded & empty
@@ -579,12 +580,17 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
 
         {onStatusChange && !editing && (
           <div style={{ marginTop: 12, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 12, padding: 13 }}>
-            <div role="button" tabIndex={0} aria-expanded={statusExpanded} onClick={() => setStatusExpanded((v) => !v)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setStatusExpanded((v) => !v); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div role="button" tabIndex={0} aria-expanded={statusExpanded} onClick={() => setStatusExpanded((v) => !v)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setStatusExpanded((v) => !v); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer", flex: 1, minWidth: 0 }}>
               <div>
                 <div style={{ fontSize: 11, textTransform: "uppercase", color: T.inkSoft, fontWeight: 600, letterSpacing: 0.3 }}>Update status</div>
                 <div style={{ marginTop: 5, fontSize: 13.5, fontWeight: 800, color: T.ink }}>{STATUS_LABEL[lead.status]}</div>
               </div>
               <span aria-hidden="true" style={{ fontSize: 18, color: T.inkSoft }}>{statusExpanded ? "⌃" : "›"}</span>
+            </div>
+            {statusExpanded && !isAdmin && trackingEmployeeId && (
+              <LeadTrackingButton key={lead.id} leadId={lead.id} employeeId={trackingEmployeeId} T={T} />
+            )}
             </div>
             {statusExpanded && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 11, paddingTop: 10, borderTop: `1px solid ${T.line}` }}>
