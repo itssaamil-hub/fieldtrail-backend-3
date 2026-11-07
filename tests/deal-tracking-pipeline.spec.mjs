@@ -99,10 +99,27 @@ test("Admin phone tracking filter stays inside Deals without adding a filter row
   await expect(deals.getByText("Normal Pipeline Cafe")).toBeVisible();
   await deals.getByRole("button", { name: "Deal tracking filter" }).click();
   await deals.locator('select[aria-label="Tracking view"]').selectOption("tracked");
-  await deals.getByRole("button", { name: "Apply" }).click();
+  // Selecting a view applies immediately and closes the menu; there is no Apply button.
+  await expect(deals.getByRole("button", { name: "Apply", exact: true })).toHaveCount(0);
+  await expect(deals.locator('select[aria-label="Tracking view"]')).toHaveCount(0);
   await expect(deals.getByText("Older Tracked Bistro")).toBeVisible();
   await expect(deals.getByText("Normal Pipeline Cafe")).toHaveCount(0);
   await expect(deals.getByRole("button", { name: "Deal tracking filter" })).toHaveAttribute("aria-pressed", "true");
+  // Reopen the same small menu to pick another month; that also applies instantly.
+  await deals.getByRole("button", { name: "Deal tracking filter" }).click();
+  const previousMonthRequest = page.waitForRequest(req => {
+    const url = new URL(req.url());
+    return url.pathname === "/admin/deal-tracking" && url.searchParams.get("month") !== month;
+  });
+  await deals.locator('select[aria-label="Tracking month"]').selectOption({ index: 1 });
+  await previousMonthRequest;
+  await expect(deals.locator('select[aria-label="Tracking month"]')).toHaveCount(0);
+  // Going back to All Deals must also immediately restore the regular pipeline.
+  await deals.getByRole("button", { name: "Deal tracking filter" }).click();
+  await deals.locator('select[aria-label="Tracking view"]').selectOption("all");
+  await expect(deals.getByText("Normal Pipeline Cafe")).toBeVisible();
+  await expect(deals.getByText("Older Tracked Bistro")).toHaveCount(0);
+  await expect(deals.getByRole("button", { name: "Deal tracking filter" })).toHaveAttribute("aria-pressed", "false");
   await expect(deals.locator('select[aria-label="Employee"]')).toBeVisible();
   await expect(deals.locator('select[aria-label="Deal status"]')).toBeVisible();
   expect(errors).toEqual([]);

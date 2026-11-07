@@ -343,20 +343,17 @@ export default function AdminLeadsPanel({
                     borderRadius: 11, boxShadow: "0 8px 24px rgba(20,30,35,.14)",
                     padding: 11, display: "flex", flexDirection: "column", gap: 9 }}>
                   <div style={{ fontSize: 12, fontWeight: 800, color: T.ink }}>Deal tracking</div>
-                  <select aria-label="Tracking view" value={trackingMode} onChange={e => setTrackingMode(e.target.value)}
+                  <select aria-label="Tracking view" value={trackingMode} onChange={e => { setTrackingMode(e.target.value); setTrackingMenuOpen(false); }}
                     style={{ ...controlStyle, width: "100%", boxSizing: "border-box" }}>
                     <option value="all">All Deals</option>
                     <option value="tracked">Tracked Deals</option>
                   </select>
                   {trackingMode === "tracked" && (
-                    <select aria-label="Tracking month" value={trackingMonth} onChange={e => setTrackingMonth(e.target.value)}
+                    <select aria-label="Tracking month" value={trackingMonth} onChange={e => { setTrackingMonth(e.target.value); setTrackingMenuOpen(false); }}
                       style={{ ...controlStyle, width: "100%", boxSizing: "border-box" }}>
                       {trackingMonthOptions().map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
                     </select>
                   )}
-                  <button type="button" onClick={() => setTrackingMenuOpen(false)}
-                    style={{ height: 30, borderRadius: 8, border: "none", background: T.route,
-                      color: "#fff", fontSize: 11.5, fontWeight: 750, cursor: "pointer" }}>Apply</button>
                 </div>
               )}
             </div>
