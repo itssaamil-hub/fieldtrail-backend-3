@@ -27,11 +27,13 @@ export default function useAdminDealTracking({ enabled, month }) {
     const onFocus = () => { if (document.visibilityState === "visible") refresh(); };
     const onVisible = () => { if (document.visibilityState === "visible") refresh(); };
     window.addEventListener("focus", onFocus);
+    window.addEventListener("engage:monthly-focus-changed", refresh);
     document.addEventListener("visibilitychange", onVisible);
     const timer = window.setInterval(() => { if (document.visibilityState === "visible") refresh(); }, 60000);
     return () => {
       requestSequence.current += 1;
       window.removeEventListener("focus", onFocus);
+      window.removeEventListener("engage:monthly-focus-changed", refresh);
       document.removeEventListener("visibilitychange", onVisible);
       window.clearInterval(timer);
     };
