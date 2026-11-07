@@ -590,7 +590,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
               {statusExpanded && trackingEmployeeId && (
                 <LeadTrackingButton key={lead.id} leadId={lead.id} employeeId={trackingEmployeeId} isAdmin={isAdmin} T={T} />
               )}
-              <button type="button" aria-label={statusExpanded ? "Collapse Update status" : "Expand Update status"}
+              <button type="button" aria-label={statusExpanded ? "Collapse section" : "Expand section"}
                 aria-expanded={statusExpanded} onClick={() => setStatusExpanded((v) => !v)}
                 style={{ display: "inline-flex", justifyContent: "center", alignItems: "center", flexShrink: 0,
                   width: 30, minHeight: 32, border: "none", background: "transparent", padding: 0,
