@@ -9,7 +9,8 @@ export default function useAdminDealTracking({ enabled, month }) {
 
   const refresh = useCallback(async () => {
     const sequence = ++requestSequence.current;
-    setResult({ month, rows: [], loading: true, error: "" });
+    setResult(previous => ({ month, rows: previous.month === month ? previous.rows : [],
+      loading: previous.month !== month || !previous.rows.length, error: "" }));
     try {
       const response = await api.adminDealTracking(month);
       if (requestSequence.current !== sequence) return;
