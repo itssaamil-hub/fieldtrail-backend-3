@@ -375,6 +375,7 @@ export const api = {
     const qs = new URLSearchParams(entries).toString();
     return request(`/admin/leads${qs ? `?${qs}` : ""}`);
   },
+  adminDealTracking: (month) => request(`/admin/deal-tracking?month=${encodeURIComponent(month)}`),
   adminCreateLead: (payload) => request(`/admin/leads`, { method: "POST", body: normalizeRenewalPayload(payload) }),
   adminCheckDuplicateLead: (payload) => request(`/admin/leads/duplicate-check`, { method: "POST", body: payload }),
   adminUpdateLeadStatus: (id, status) => request(`/admin/leads/${id}/status`, { method: "PATCH", body: { status } }),
