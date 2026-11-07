@@ -21,7 +21,7 @@ const row = (id, name, stage, value) => ({
   added_at:date, completed_at:null,
 });
 
-for(const width of [390,1440]) {
+for(const width of [320,390,1440]) {
   test("My Deals This Month is scoped, editable, persistent and above Needs Attention at " + width + "px",async({page})=>{
     const current=indiaMonth();
     const previous=previousMonth(current);
@@ -38,7 +38,7 @@ for(const width of [390,1440]) {
       let output={};
       let status=200;
       if(path==="/salesman/monthly-focus"&&request.method()==="GET") {
-        output={month:url.searchParams.get("month"),items:url.searchParams.get("month")===current?selected:[]};
+        output={month:url.searchParams.get("month"),items:url.searchParams.get("month")===current?selected:[row(ID_1,"Historical Bistro","hot",11000)]};
       } else if(path==="/salesman/monthly-focus/search") {
         output={leads:search.filter(x=>x.business_name.toLowerCase().includes((url.searchParams.get("q")||"").toLowerCase()))};
       } else if(path==="/salesman/monthly-focus"&&request.method()==="POST") {
@@ -92,25 +92,47 @@ for(const width of [390,1440]) {
     const fbox=await focus.boundingBox();
     const abox=await attention.boundingBox();
     expect(fbox.y).toBeLessThan(abox.y);
+    expect(await focus.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBeTruthy();
+    await expect(focus.getByRole("button",{name:"Mark done Brew Station"})).toHaveCount(0);
+    await expect(focus.getByRole("button",{name:"Remove Brew Station from month"})).toHaveCount(0);
     await focus.getByRole("button",{name:"Add to Month",exact:true}).click();
     await focus.getByRole("textbox",{name:"Search my existing deals"}).fill("Urban");
     await expect(focus.getByText("Urban Terrace")).toBeVisible();
     await focus.getByRole("button",{name:"Add Urban Terrace to my month"}).click();
     await expect(focus.getByText("Urban Terrace")).toBeVisible();
     expect(actions.some(x=>x.method==="POST"&&x.body.leadId===ID_2&&x.body.month===current)).toBeTruthy();
+    await focus.getByRole("button",{name:"Options for Brew Station"}).click();
+    await expect(focus.getByRole("button",{name:"Mark done Brew Station"})).toBeVisible();
+    await expect(focus.getByRole("button",{name:"Remove Brew Station from month"})).toBeVisible();
+    await expect(focus.getByRole("button",{name:"View Brew Station deal"})).toBeVisible();
+    await focus.getByRole("button",{name:"Options for Brew Station"}).click();
+    await expect(focus.getByRole("button",{name:"Mark done Brew Station"})).toHaveCount(0);
+    await focus.getByRole("button",{name:"Options for Brew Station"}).click();
     await focus.getByRole("button",{name:"Mark done Brew Station"}).click();
     await focus.getByRole("button",{name:"Completed",exact:true}).click();
     await expect(focus.getByText("Brew Station")).toBeVisible();
+    await expect(focus.getByRole("button",{name:"Reopen Brew Station"})).toHaveCount(0);
+    await focus.getByRole("button",{name:"Options for Brew Station"}).click();
     await focus.getByRole("button",{name:"Reopen Brew Station"}).click();
     await expect(focus.getByText("No deals in this view.")).toBeVisible();
     await focus.locator('select[aria-label="Monthly deal focus month"]').selectOption(previous);
     await expect(focus.getByText(/Past months are saved for review/)).toBeVisible();
     await expect(focus.getByRole("button",{name:"Add to Month",exact:true})).toHaveCount(0);
+    await expect(focus.getByRole("button",{name:"Options for Historical Bistro"})).toBeVisible();
+    await focus.getByRole("button",{name:"Options for Historical Bistro"}).click();
+    await expect(focus.getByRole("button",{name:"View Historical Bistro deal"})).toBeVisible();
+    await expect(focus.getByRole("button",{name:"Remove Historical Bistro from month"})).toHaveCount(0);
+    await expect(focus.getByRole("button",{name:"Mark done Historical Bistro"})).toHaveCount(0);
     await focus.locator('select[aria-label="Monthly deal focus month"]').selectOption(current);
     await focus.getByRole("button",{name:"Working",exact:true}).click();
     await expect(focus.getByText("Urban Terrace")).toBeVisible();
     await expect(focus.getByText("Brew Station")).toBeVisible();
     expect(actions.filter(x=>x.method==="PATCH").map(x=>x.body.completed)).toEqual([true,false]);
+    await focus.getByRole("button",{name:"Options for Urban Terrace"}).click();
+    await focus.getByRole("button",{name:"Remove Urban Terrace from month"}).click();
+    await expect(focus.getByText("Urban Terrace")).toHaveCount(0);
+    expect(actions.some(x=>x.method==="DELETE"&&x.id===ID_2)).toBeTruthy();
+    expect(await focus.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBeTruthy();
     expect(errors).toEqual([]);
   });
 }
