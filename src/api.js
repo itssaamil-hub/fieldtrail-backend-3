@@ -456,6 +456,12 @@ export const api = {
     return request(`/salesman/leads${qs ? `?${qs}` : ""}`, { expectedUserId });
   },
   salesmanLeadSummary: (expectedUserId) => request("/salesman/leads-summary", { expectedUserId }),
+  salesmanMonthlyFocus: (month, expectedUserId) => request("/salesman/monthly-focus?month=" + encodeURIComponent(month), { expectedUserId }),
+  salesmanMonthlyFocusSearch: (q, expectedUserId) => request("/salesman/monthly-focus/search?q=" + encodeURIComponent(q || ""), { expectedUserId }),
+  salesmanMonthlyFocusAdd: (month, leadId, expectedUserId) => request("/salesman/monthly-focus", { method: "POST", body: { month, leadId }, expectedUserId }),
+  salesmanMonthlyFocusComplete: (month, leadId, completed, expectedUserId) => request("/salesman/monthly-focus/" + encodeURIComponent(leadId), { method: "PATCH", body: { month, completed }, expectedUserId }),
+  salesmanMonthlyFocusRemove: (month, leadId, expectedUserId) => request("/salesman/monthly-focus/" + encodeURIComponent(leadId) + "?month=" + encodeURIComponent(month), { method: "DELETE", expectedUserId }),
+
   salesmanLead: (id) => request(`/salesman/leads/${id}`),
   salesmanLeadHistory: (id) => request(`/salesman/leads/${id}/history`),
   salesmanCreateLead: (payload, expectedUserId) => request("/salesman/leads", { method: "POST", body: normalizeRenewalPayload(payload), expectedUserId }),
