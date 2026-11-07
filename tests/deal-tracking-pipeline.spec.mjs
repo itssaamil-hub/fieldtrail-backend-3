@@ -94,19 +94,19 @@ test("Admin phone tracking filter stays inside Deals without adding a filter row
   await page.goto("/");
   await page.getByRole("button", { name: "Deals", exact: true }).click();
   const deals = page.locator('section[aria-label="Admin deals"]');
-  await expect(deals.getByRole("button", { name: "Deal tracking filter" })).toBeVisible();
+  await expect(deals.getByRole("button", { name: "Flagged deals filter" })).toBeVisible();
   await deals.getByRole("button", { name: "List view" }).click();
   await expect(deals.getByText("Normal Pipeline Cafe")).toBeVisible();
-  await deals.getByRole("button", { name: "Deal tracking filter" }).click();
+  await deals.getByRole("button", { name: "Flagged deals filter" }).click();
   await deals.locator('select[aria-label="Tracking view"]').selectOption("tracked");
   // Selecting a view applies immediately and closes the menu; there is no Apply button.
   await expect(deals.getByRole("button", { name: "Apply", exact: true })).toHaveCount(0);
   await expect(deals.locator('select[aria-label="Tracking view"]')).toHaveCount(0);
   await expect(deals.getByText("Older Tracked Bistro")).toBeVisible();
   await expect(deals.getByText("Normal Pipeline Cafe")).toHaveCount(0);
-  await expect(deals.getByRole("button", { name: "Deal tracking filter" })).toHaveAttribute("aria-pressed", "true");
+  await expect(deals.getByRole("button", { name: "Flagged deals filter" })).toHaveAttribute("aria-pressed", "true");
   // Reopen the same small menu to pick another month; that also applies instantly.
-  await deals.getByRole("button", { name: "Deal tracking filter" }).click();
+  await deals.getByRole("button", { name: "Flagged deals filter" }).click();
   const previousMonthRequest = page.waitForRequest(req => {
     const url = new URL(req.url());
     return url.pathname === "/admin/deal-tracking" && url.searchParams.get("month") !== month;
@@ -115,17 +115,17 @@ test("Admin phone tracking filter stays inside Deals without adding a filter row
   await previousMonthRequest;
   await expect(deals.locator('select[aria-label="Tracking month"]')).toHaveCount(0);
   // Going back to All Deals must also immediately restore the regular pipeline.
-  await deals.getByRole("button", { name: "Deal tracking filter" }).click();
+  await deals.getByRole("button", { name: "Flagged deals filter" }).click();
   await deals.locator('select[aria-label="Tracking view"]').selectOption("all");
   await expect(deals.getByText("Normal Pipeline Cafe")).toBeVisible();
   await expect(deals.getByText("Older Tracked Bistro")).toHaveCount(0);
-  await expect(deals.getByRole("button", { name: "Deal tracking filter" })).toHaveAttribute("aria-pressed", "false");
+  await expect(deals.getByRole("button", { name: "Flagged deals filter" })).toHaveAttribute("aria-pressed", "false");
   await expect(deals.locator('select[aria-label="Employee"]')).toBeVisible();
   await expect(deals.locator('select[aria-label="Deal status"]')).toBeVisible();
   expect(errors).toEqual([]);
 });
 
-test("Employee Track Deal uses monthly focus only and leaves CRM status unchanged", async ({ page }) => {
+test("Employee Flag Deal uses monthly focus only and leaves CRM status unchanged", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const errors = []; page.on("pageerror", e => errors.push(e.message));
   let added = false;
@@ -147,12 +147,12 @@ test("Employee Track Deal uses monthly focus only and leaves CRM status unchange
   await expect(page.getByText("Recommended next action", { exact: false }).last()).toBeVisible();
   await page.getByRole("button", { name: "Close", exact: true }).last().click();
   await page.getByRole("button", { name: /Update status/ }).click();
-  const track = page.getByRole("button", { name: "Track Deal", exact: true });
+  const track = page.getByRole("button", { name: "Flag Deal", exact: true });
   await expect(track).toBeVisible();
   await track.click();
-  await expect(page.getByRole("button", { name: "Stop tracking deal" })).toBeVisible();
-  await page.getByRole("button", { name: "Stop tracking deal" }).click();
-  await expect(page.getByRole("button", { name: "Track Deal", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Unflag Deal" })).toBeVisible();
+  await page.getByRole("button", { name: "Unflag Deal" }).click();
+  await expect(page.getByRole("button", { name: "Flag Deal", exact: true })).toBeVisible();
   expect(actions).toEqual([
     { type: "add", payload: { month, leadId: CURRENT_DEAL } },
     { type: "remove", month },
