@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ArrowUpDown, LayoutGrid, List, Plus, Search, Target, X } from "lucide-react";
+import { ArrowUpDown, Flag, LayoutGrid, List, Plus, Search, X } from "lucide-react";
 import DesktopContacts from "../DesktopContacts.jsx";
 import MobileContacts from "../MobileContacts.jsx";
 import DesktopDealsBoard from "../DesktopDealsBoard";
@@ -327,29 +327,29 @@ export default function AdminLeadsPanel({
               )}
             </div>
             <div style={{ position: "relative", flexShrink: 0 }}>
-              <button type="button" aria-label="Deal tracking filter" aria-pressed={dealTrackingActive}
-                aria-expanded={trackingMenuOpen} title="Deal tracking"
+              <button type="button" aria-label="Flagged deals filter" aria-pressed={dealTrackingActive}
+                aria-expanded={trackingMenuOpen} title="Flagged deals"
                 onClick={() => { setTrackingMenuOpen(value => !value); setMobileDealsSortOpen(false); }}
                 style={{ width: 38, height: 38, border: "1px solid " + (dealTrackingActive ? T.route : T.line),
                   borderRadius: 10, background: dealTrackingActive ? "#EAF5F0" : "#fff",
                   color: dealTrackingActive ? T.route : T.ink, display: "inline-flex",
                   alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-                <Target size={16} />
+                <Flag size={16} />
               </button>
               {trackingMenuOpen && (
-                <div role="group" aria-label="Monthly tracking options"
+                <div role="group" aria-label="Flagged deals options"
                   style={{ position: "absolute", right: 0, top: 42, zIndex: 45, width: 210,
                     maxWidth: "calc(100vw - 28px)", background: "#fff", border: "1px solid " + T.line,
                     borderRadius: 11, boxShadow: "0 8px 24px rgba(20,30,35,.14)",
                     padding: 11, display: "flex", flexDirection: "column", gap: 9 }}>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: T.ink }}>Deal tracking</div>
-                  <select aria-label="Tracking view" value={trackingMode} onChange={e => { setTrackingMode(e.target.value); setTrackingMenuOpen(false); }}
+                  <div style={{ fontSize: 12, fontWeight: 800, color: T.ink }}>Flagged deals</div>
+                  <select aria-label="Flagged deals view" value={trackingMode} onChange={e => { setTrackingMode(e.target.value); setTrackingMenuOpen(false); }}
                     style={{ ...controlStyle, width: "100%", boxSizing: "border-box" }}>
                     <option value="all">All Deals</option>
-                    <option value="tracked">Tracked Deals</option>
+                    <option value="tracked">Flagged Deals</option>
                   </select>
                   {trackingMode === "tracked" && (
-                    <select aria-label="Tracking month" value={trackingMonth} onChange={e => { setTrackingMonth(e.target.value); setTrackingMenuOpen(false); }}
+                    <select aria-label="Flagged deals month" value={trackingMonth} onChange={e => { setTrackingMonth(e.target.value); setTrackingMenuOpen(false); }}
                       style={{ ...controlStyle, width: "100%", boxSizing: "border-box" }}>
                       {trackingMonthOptions().map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
                     </select>
@@ -383,7 +383,7 @@ export default function AdminLeadsPanel({
             </div>
           )}
 
-          {dealTrackingActive && trackingLoading && <div role="status" style={{ fontSize: 11.5, color: T.inkSoft, marginBottom: 8 }}>Loading tracked deals…</div>}
+          {dealTrackingActive && trackingLoading && <div role="status" style={{ fontSize: 11.5, color: T.inkSoft, marginBottom: 8 }}>Loading flagged deals…</div>}
           {dealTrackingActive && trackingError && (
             <div role="alert" style={{ fontSize: 11.5, color: T.danger, marginBottom: 8 }}>
               {trackingError} <button type="button" onClick={refreshTracking}
@@ -683,7 +683,7 @@ export default function AdminLeadsPanel({
             {desktopDeals ? (
               <>
                 <Select value={pipelineDatePreset} onChange={setPipelineDatePreset} options={PIPELINE_DATE_OPTIONS} />
-                <Select value={trackingMode} onChange={setTrackingMode} options={[["all", "All Deals"], ["tracked", "Tracked Deals"]]} />
+                <Select value={trackingMode} onChange={setTrackingMode} options={[["all", "All Deals"], ["tracked", "Flagged Deals"]]} />
                 {trackingMode === "tracked" && (
                   <Select value={trackingMonth} onChange={setTrackingMonth} options={trackingMonthOptions().map(({ value, label }) => [value, label])} />
                 )}
@@ -741,7 +741,7 @@ export default function AdminLeadsPanel({
         )}
 
         {desktopDeals && dealTrackingActive && trackingLoading && (
-          <div role="status" style={{ fontSize: 12, color: T.inkSoft, marginBottom: 10 }}>Loading tracked deals…</div>
+          <div role="status" style={{ fontSize: 12, color: T.inkSoft, marginBottom: 10 }}>Loading flagged deals…</div>
         )}
         {desktopDeals && dealTrackingActive && trackingError && (
           <div role="alert" style={{ fontSize: 12, color: T.danger, marginBottom: 10 }}>
