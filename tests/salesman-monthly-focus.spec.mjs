@@ -86,13 +86,13 @@ for(const width of [390,1440]) {
     const focus=page.locator('section[aria-label="My Deals This Month"]');
     await expect(focus).toBeVisible();
     await expect(focus.getByText("Brew Station")).toBeVisible();
-    await expect(focus.getByText("Working",{exact:true})).toBeVisible();
+    await expect(focus.getByRole("button",{name:"Working",exact:true})).toBeVisible();
     const attention=page.getByText("Needs Attention",{exact:true}).first();
     await expect(attention).toBeVisible();
     const fbox=await focus.boundingBox();
     const abox=await attention.boundingBox();
     expect(fbox.y).toBeLessThan(abox.y);
-    await focus.getByRole("button",{name:"Add Deal",exact:true}).click();
+    await focus.getByRole("button",{name:"Add to Month",exact:true}).click();
     await focus.getByRole("textbox",{name:"Search my existing deals"}).fill("Urban");
     await expect(focus.getByText("Urban Terrace")).toBeVisible();
     await focus.getByRole("button",{name:"Add Urban Terrace to my month"}).click();
@@ -105,7 +105,7 @@ for(const width of [390,1440]) {
     await expect(focus.getByText("No deals in this view.")).toBeVisible();
     await focus.locator('select[aria-label="Monthly deal focus month"]').selectOption(previous);
     await expect(focus.getByText(/Past months are saved for review/)).toBeVisible();
-    await expect(focus.getByRole("button",{name:"Add Deal",exact:true})).toHaveCount(0);
+    await expect(focus.getByRole("button",{name:"Add to Month",exact:true})).toHaveCount(0);
     await focus.locator('select[aria-label="Monthly deal focus month"]').selectOption(current);
     await focus.getByRole("button",{name:"Working",exact:true}).click();
     await expect(focus.getByText("Urban Terrace")).toBeVisible();
