@@ -235,6 +235,9 @@ export default function AdminLeadsPanel({
   const listCurrentPage = localFilterActive ? rangeCurrentPage : (serverPage.error && serverRows.length === 0 ? 1 : serverPage.page);
   const listLoading = localFilterActive ? false : serverPage.loading;
   const setListPage = localFilterActive ? (desktopDeals ? setPipelinePage : setContactsPage) : serverPage.setPage;
+  const handlePipelineStatusChange = dealTrackingActive
+    ? async (leadId, status) => { await onStatusChange(leadId, status); await refreshTracking(); }
+    : onStatusChange;
 
   if (mobileDeals) {
     const mobileTotalValue = mobileDealRows.reduce((sum, lead) => sum + (Number(lead.dealValue) || 0), 0);
@@ -826,7 +829,7 @@ export default function AdminLeadsPanel({
           </>
         ) : (
           desktopDeals
-            ? <DesktopDealsBoard leads={displayLeads} visibleStatus={filterStatus} onStatusChange={onStatusChange} onSelectLead={onSelectLead} />
+            ? <DesktopDealsBoard leads={displayLeads} visibleStatus={filterStatus} onStatusChange={handlePipelineStatusChange} onSelectLead={onSelectLead} />
             : <LeadsBoardView leads={filteredLeads} onStatusChange={onStatusChange} onSelectLead={onSelectLead} />
         )}
       </div>
