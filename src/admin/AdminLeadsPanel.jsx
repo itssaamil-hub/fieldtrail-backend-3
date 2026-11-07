@@ -323,6 +323,40 @@ export default function AdminLeadsPanel({
                 </div>
               )}
             </div>
+            <div style={{ position: "relative", flexShrink: 0 }}>
+              <button type="button" aria-label="Deal tracking filter" aria-pressed={dealTrackingActive}
+                aria-expanded={trackingMenuOpen} title="Deal tracking"
+                onClick={() => { setTrackingMenuOpen(value => !value); setMobileDealsSortOpen(false); }}
+                style={{ width: 38, height: 38, border: "1px solid " + (dealTrackingActive ? T.route : T.line),
+                  borderRadius: 10, background: dealTrackingActive ? "#EAF5F0" : "#fff",
+                  color: dealTrackingActive ? T.route : T.ink, display: "inline-flex",
+                  alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                <Target size={16} />
+              </button>
+              {trackingMenuOpen && (
+                <div role="group" aria-label="Monthly tracking options"
+                  style={{ position: "absolute", right: 0, top: 42, zIndex: 45, width: 210,
+                    maxWidth: "calc(100vw - 28px)", background: "#fff", border: "1px solid " + T.line,
+                    borderRadius: 11, boxShadow: "0 8px 24px rgba(20,30,35,.14)",
+                    padding: 11, display: "flex", flexDirection: "column", gap: 9 }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: T.ink }}>Deal tracking</div>
+                  <select aria-label="Tracking view" value={trackingMode} onChange={e => setTrackingMode(e.target.value)}
+                    style={{ ...controlStyle, width: "100%", boxSizing: "border-box" }}>
+                    <option value="all">All Deals</option>
+                    <option value="tracked">Tracked Deals</option>
+                  </select>
+                  {trackingMode === "tracked" && (
+                    <select aria-label="Tracking month" value={trackingMonth} onChange={e => setTrackingMonth(e.target.value)}
+                      style={{ ...controlStyle, width: "100%", boxSizing: "border-box" }}>
+                      {trackingMonthOptions().map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
+                    </select>
+                  )}
+                  <button type="button" onClick={() => setTrackingMenuOpen(false)}
+                    style={{ height: 30, borderRadius: 8, border: "none", background: T.route,
+                      color: "#fff", fontSize: 11.5, fontWeight: 750, cursor: "pointer" }}>Apply</button>
+                </div>
+              )}
+            </div>
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 7, marginBottom: 7 }}>
@@ -341,14 +375,21 @@ export default function AdminLeadsPanel({
             <input aria-label="Deal date" type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} style={{ ...controlStyle, width: "100%" }} />
           </div>
 
-          {(filterSalesman !== "all" || filterCity.trim() || filterStatus !== "all" || filterDate || searchQuery.trim()) && (
+          {(filterSalesman !== "all" || filterCity.trim() || filterStatus !== "all" || filterDate || searchQuery.trim() || dealTrackingActive) && (
             <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
-              <button type="button" onClick={() => { setFilterSalesman("all"); setFilterCity(""); setFilterStatus("all"); setFilterDate(""); setSearchQuery(""); }} style={{ border: "none", background: "transparent", color: T.route, fontSize: 11, fontWeight: 800, padding: "3px 1px", cursor: "pointer" }}>
+              <button type="button" onClick={() => { setFilterSalesman("all"); setFilterCity(""); setFilterStatus("all"); setFilterDate(""); setSearchQuery(""); setTrackingMode("all"); setTrackingMenuOpen(false); }} style={{ border: "none", background: "transparent", color: T.route, fontSize: 11, fontWeight: 800, padding: "3px 1px", cursor: "pointer" }}>
                 Reset filters
               </button>
             </div>
           )}
 
+          {dealTrackingActive && trackingLoading && <div role="status" style={{ fontSize: 11.5, color: T.inkSoft, marginBottom: 8 }}>Loading tracked deals…</div>}
+          {dealTrackingActive && trackingError && (
+            <div role="alert" style={{ fontSize: 11.5, color: T.danger, marginBottom: 8 }}>
+              {trackingError} <button type="button" onClick={refreshTracking}
+                style={{ border: "none", color: T.route, background: "transparent", fontWeight: 750, cursor: "pointer" }}>Retry</button>
+            </div>
+          )}
           {leadsViewMode === "board" ? (() => {
             const boardStatuses = filterStatus !== "all" ? [filterStatus] : STATUSES;
             const selectedStatus = boardStatuses.includes(mobileBoardStatus) ? mobileBoardStatus : boardStatuses[0];
@@ -642,6 +683,10 @@ export default function AdminLeadsPanel({
             {desktopDeals ? (
               <>
                 <Select value={pipelineDatePreset} onChange={setPipelineDatePreset} options={PIPELINE_DATE_OPTIONS} />
+                <Select value={trackingMode} onChange={setTrackingMode} options={[["all", "All Deals"], ["tracked", "Tracked Deals"]]} />
+                {trackingMode === "tracked" && (
+                  <Select value={trackingMonth} onChange={setTrackingMonth} options={trackingMonthOptions().map(({ value, label }) => [value, label])} />
+                )}
                 {pipelineDatePreset === "custom" && (
                   <>
                     <input aria-label="Pipeline date from" title="From" type="date" value={pipelineDateFrom} onChange={(e) => setPipelineDateFrom(e.target.value)} style={dateInputStyle} />
@@ -669,10 +714,10 @@ export default function AdminLeadsPanel({
                 )}
               </>
             )}
-            {(filterSalesman !== "all" || filterCity.trim() || filterStatus !== "all" || filterDate || (desktopDeals && pipelineHasDateFilter) || (desktopContacts && contactsHasDateFilter) || searchQuery.trim()) && (
+            {(filterSalesman !== "all" || filterCity.trim() || filterStatus !== "all" || filterDate || (desktopDeals && pipelineHasDateFilter) || (desktopContacts && contactsHasDateFilter) || searchQuery.trim() || (desktopDeals && dealTrackingActive)) && (
               <button
                 type="button"
-                onClick={() => { setFilterSalesman("all"); setFilterCity(""); setFilterStatus("all"); setFilterDate(""); setPipelineDatePreset("all"); setPipelineDateFrom(""); setPipelineDateTo(""); setContactsDatePreset("all"); setContactsDateFrom(""); setContactsDateTo(""); setSearchQuery(""); }}
+                onClick={() => { setFilterSalesman("all"); setFilterCity(""); setFilterStatus("all"); setFilterDate(""); setPipelineDatePreset("all"); setPipelineDateFrom(""); setPipelineDateTo(""); setContactsDatePreset("all"); setContactsDateFrom(""); setContactsDateTo(""); setSearchQuery(""); setTrackingMode("all"); }}
                 style={{ fontSize: 11.5, color: T.route, background: "#EAF5F0", border: `1px solid ${T.line}`, borderRadius: 8, cursor: "pointer", padding: "6px 9px", fontWeight: 750 }}
               >
                 Reset filters
@@ -695,7 +740,16 @@ export default function AdminLeadsPanel({
         </div>
         )}
 
-        {sheetsError && <div style={{ fontSize: 12, color: T.danger, marginBottom: 10 }}>{sheetsError}</div>}
+        {desktopDeals && dealTrackingActive && trackingLoading && (
+          <div role="status" style={{ fontSize: 12, color: T.inkSoft, marginBottom: 10 }}>Loading tracked deals…</div>
+        )}
+        {desktopDeals && dealTrackingActive && trackingError && (
+          <div role="alert" style={{ fontSize: 12, color: T.danger, marginBottom: 10 }}>
+            {trackingError} <button type="button" onClick={refreshTracking}
+              style={{ color: T.route, border: "none", background: "transparent", fontWeight: 750, cursor: "pointer" }}>Retry</button>
+          </div>
+        )}
+        {sheetsError && <div style={{ fontSize: 12, color: T.danger, marginBottom: 10 }}>{sheetsError}</div>
         {sheetsInfo && (
           <div style={{ fontSize: 12, background: T.paperDeep, borderRadius: 11, padding: "10px 12px", marginBottom: 12 }}>
             No Google account is connected, so this can't push directly into a Sheet — but you can pull it in live:
