@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ArrowUpDown, LayoutGrid, List, Plus, Search, Target, X } from "lucide-react";
+import { ArrowUpDown, Flag, LayoutGrid, List, Plus, Search, X } from "lucide-react";
 import DesktopContacts from "../DesktopContacts.jsx";
 import MobileContacts from "../MobileContacts.jsx";
 import DesktopDealsBoard from "../DesktopDealsBoard";
@@ -334,7 +334,7 @@ export default function AdminLeadsPanel({
                   borderRadius: 10, background: dealTrackingActive ? "#EAF5F0" : "#fff",
                   color: dealTrackingActive ? T.route : T.ink, display: "inline-flex",
                   alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-                <Target size={16} />
+                <Flag size={16} />
               </button>
               {trackingMenuOpen && (
                 <div role="group" aria-label="Flagged deals options"
@@ -343,13 +343,13 @@ export default function AdminLeadsPanel({
                     borderRadius: 11, boxShadow: "0 8px 24px rgba(20,30,35,.14)",
                     padding: 11, display: "flex", flexDirection: "column", gap: 9 }}>
                   <div style={{ fontSize: 12, fontWeight: 800, color: T.ink }}>Flagged deals</div>
-                  <select aria-label="Tracking view" value={trackingMode} onChange={e => { setTrackingMode(e.target.value); setTrackingMenuOpen(false); }}
+                  <select aria-label="Flagged deals view" value={trackingMode} onChange={e => { setTrackingMode(e.target.value); setTrackingMenuOpen(false); }}
                     style={{ ...controlStyle, width: "100%", boxSizing: "border-box" }}>
                     <option value="all">All Deals</option>
                     <option value="tracked">Flagged Deals</option>
                   </select>
                   {trackingMode === "tracked" && (
-                    <select aria-label="Tracking month" value={trackingMonth} onChange={e => { setTrackingMonth(e.target.value); setTrackingMenuOpen(false); }}
+                    <select aria-label="Flagged deals month" value={trackingMonth} onChange={e => { setTrackingMonth(e.target.value); setTrackingMenuOpen(false); }}
                       style={{ ...controlStyle, width: "100%", boxSizing: "border-box" }}>
                       {trackingMonthOptions().map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
                     </select>
