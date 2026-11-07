@@ -9,6 +9,7 @@ import { showSaveFeedback } from "../saveFeedback.js";
 import MobileContacts from "../MobileContacts.jsx";
 import SalesmanTargetCard from "./SalesmanTargetCard.jsx";
 import NeedsAttentionCard from "./NeedsAttentionCard.jsx";
+import SalesmanMonthlyFocus from "./SalesmanMonthlyFocus.jsx";
 
 const lazyNamed = (loader, exportName) => {
   const LazyComponent = lazy(() => loader().then((mod) => ({ default: mod[exportName] })));
@@ -227,6 +228,7 @@ export default function SalesmanView({ notificationLead, session, leads, leadSum
 
       {!dayStarted && !allowLeadWithoutStartDay && <div style={{ marginTop: 12, fontSize: 12, color: T.warn, background: T.warnSoft, padding: "8px 10px", borderRadius: 11 }}>Start your day to enable lead capture.</div>}
 
+      <SalesmanMonthlyFocus T={T} fmtMoney={fmtMoney} employeeId={session.id} active={dashboard} online={online} onOpenLead={openBriefingLead} />
       <NeedsAttentionCard online={online} onOpenLead={openBriefingLead} />
       <div style={{ display: "none" }} aria-hidden="true"><TasksEntry onPendingChange={handlePendingTasksChange} /></div>
       </div>
