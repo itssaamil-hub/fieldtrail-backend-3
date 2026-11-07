@@ -52,6 +52,7 @@ export default function SalesmanMonthlyFocus({ T, fmtMoney, employeeId, active, 
   const [busy, setBusy] = useState("");
   const [tab, setTab] = useState("Working");
   const [showAll, setShowAll] = useState(false);
+  const [expandedDeal, setExpandedDeal] = useState(null);
   const requestSeq = useRef(0);
   const canEdit = month === currentMonth();
 
@@ -111,6 +112,7 @@ export default function SalesmanMonthlyFocus({ T, fmtMoney, employeeId, active, 
     setAdding(false);
     setTab("Working");
     setShowAll(false);
+    setExpandedDeal(null);
     setQuery("");
     setResults([]);
   };
@@ -130,6 +132,7 @@ export default function SalesmanMonthlyFocus({ T, fmtMoney, employeeId, active, 
         setTab("Working");
       }
       await refresh();
+      if (name === "remove" || name === "complete") setExpandedDeal(null);
     } catch (err) {
       setError(err.message || "Monthly deal change wasn't saved. Try again.");
     } finally {
@@ -150,18 +153,18 @@ export default function SalesmanMonthlyFocus({ T, fmtMoney, employeeId, active, 
       background: "#fff", boxShadow: "0 2px 8px rgba(20,45,46,.05)",
       padding: "13px 14px",
     }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
           <span aria-hidden="true" style={{ width: 31, height: 31, display: "grid", placeItems: "center", borderRadius: 10, background: "#EDF7F4", color: T.route }}>
             <BriefcaseBusiness size={16} />
           </span>
-          <div>
+          <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>My Deals This Month</div>
             <div style={{ fontSize: 10.5, color: T.inkSoft, marginTop: 2 }}>My monthly working list</div>
           </div>
         </div>
         <select aria-label="Monthly deal focus month" value={month} onChange={event => changeMonth(event.target.value)}
-          style={{ maxWidth: 137, fontSize: 11, color: T.ink, border: "1px solid " + T.line, borderRadius: 8, background: "#fff", padding: "6px 4px" }}>
+          style={{ maxWidth: "100%", flex: "0 1 146px", minWidth: 122, fontSize: 11, color: T.ink, border: "1px solid " + T.line, borderRadius: 8, background: "#fff", padding: "7px 4px" }}>
           {options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
         </select>
       </div>
@@ -221,39 +224,68 @@ export default function SalesmanMonthlyFocus({ T, fmtMoney, employeeId, active, 
             </div>
           )}
 
-          <div role="group" aria-label="Monthly deal status" style={{ display: "flex", gap: 5, marginTop: 11 }}>
+          <div role="group" aria-label="Monthly deal status" style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 11 }}>
             {["Working", "Completed", "All"].map(nextTab => (
               <button type="button" key={nextTab} aria-pressed={tab === nextTab}
-                onClick={() => { setTab(nextTab); setShowAll(false); }} style={textButton(T, tab === nextTab)}>{nextTab}</button>
+                onClick={() => { setTab(nextTab); setShowAll(false); setExpandedDeal(null); }} style={textButton(T, tab === nextTab)}>{nextTab}</button>
             ))}
           </div>
           <div style={{ display: "grid", gap: 8, marginTop: 9 }}>
             {visible.map(item => (
-              <div key={item.id} style={{ border: "1px solid " + T.line, borderRadius: 11, padding: "10px 11px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", gap: 8 }}>
-                  <button type="button" onClick={() => onOpenLead?.(item.id)}
-                    style={{ border: 0, padding: 0, background: "transparent", fontSize: 12.5, fontWeight: 800, textAlign: "left", cursor: "pointer", color: T.route, minWidth: 0 }}>
-                    {item.business_name}
-                  </button>
-                  <span style={{ fontSize: 10, whiteSpace: "nowrap", fontWeight: 700, color: item.status === "won" ? T.verified : item.status === "lost" ? T.danger : T.inkSoft, background: "#F1F5F4", padding: "4px 7px", borderRadius: 15 }}>
-                    {friendlyStage(item.status)}
+              <div key={item.id} style={{ border: "1px solid " + T.line, borderRadius: 11, padding: "10px 11px", minWidth: 0, overflowWrap: "anywhere" }}>
+                <button type="button" aria-label={"Options for " + item.business_name}
+                  aria-expanded={expandedDeal === item.id} aria-controls={"monthly-actions-" + item.id}
+                  onClick={() => setExpandedDeal(prev => prev === item.id ? null : item.id)}
+                  style={{ border: 0, width: "100%", display: "block", padding: 0, background: "transparent", cursor: "pointer", textAlign: "left", color: T.ink, minWidth: 0 }}>
+                  <span style={{ display: "flex", justifyContent: "space-between", alignItems: "start", gap: 8, minWidth: 0 }}>
+                    <span style={{ color: T.route, fontSize: 12.5, fontWeight: 800, minWidth: 0, overflowWrap: "anywhere" }}>
+                      {item.business_name}
+                    </span>
+                    <span style={{ display: "inline-flex", alignItems: "center", flexShrink: 0, gap: 4 }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: item.status === "won" ? T.verified : item.status === "lost" ? T.danger : T.inkSoft, background: "#F1F5F4", padding: "4px 7px", borderRadius: 15 }}>
+                        {friendlyStage(item.status)}
+                      </span>
+                      {expandedDeal === item.id ? <ChevronUp size={13} color={T.inkSoft} /> : <ChevronDown size={13} color={T.inkSoft} />}
+                    </span>
                   </span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 7, gap: 8 }}>
-                  <span style={{ fontSize: 11, color: T.inkSoft }}>Value: <strong style={{ color: T.ink }}>{item.deal_value == null ? "—" : fmtMoney(Number(item.deal_value))}</strong></span>
-                  <span style={{ fontSize: 11, color: T.inkSoft }}>Follow-up: <strong style={{ color: T.ink }}>{shortDate(item.next_follow_up_date)}</strong></span>
-                </div>
-                <div style={{ fontSize: 10, color: T.inkSoft, marginTop: 4 }}>Last updated {shortDate(item.updated_at || item.created_at)}</div>
-                {canEdit && <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 9 }}>
-                  <button type="button" disabled={!!busy || !online} aria-label={(item.completed_at ? "Reopen " : "Mark done ") + item.business_name}
-                    onClick={() => mutate("complete", item.id, !item.completed_at)}
-                    style={{ ...textButton(T), display: "inline-flex", gap: 4, alignItems: "center", color: T.route }}>
-                    {item.completed_at ? <RotateCcw size={12} /> : <Check size={12} />}{item.completed_at ? "Reopen" : "Mark done"}
-                  </button>
-                  <button type="button" disabled={!!busy || !online} aria-label={"Remove " + item.business_name + " from month"}
-                    onClick={() => mutate("remove", item.id)}
-                    style={{ border: 0, background: "transparent", color: T.inkSoft, fontSize: 11, cursor: "pointer", padding: 5 }}>Remove</button>
-                </div>}
+                  <span style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8, marginTop: 8 }}>
+                    <span style={{ fontSize: 11, color: T.inkSoft, minWidth: 0 }}>Value: <strong style={{ color: T.ink }}>{item.deal_value == null ? "—" : fmtMoney(Number(item.deal_value))}</strong></span>
+                    <span style={{ fontSize: 11, color: T.inkSoft, minWidth: 0 }}>Follow-up: <strong style={{ color: T.ink }}>{shortDate(item.next_follow_up_date)}</strong></span>
+                  </span>
+                  <span style={{ display: "block", fontSize: 10, color: T.inkSoft, marginTop: 5 }}>
+                    Last updated {shortDate(item.updated_at || item.created_at)}
+                    <span style={{ marginLeft: 5 }}>· Tap for actions</span>
+                  </span>
+                </button>
+                {expandedDeal === item.id && (
+                  <div id={"monthly-actions-" + item.id} style={{
+                    display: "flex", flexWrap: "wrap", alignItems: "center", gap: 7,
+                    marginTop: 10, paddingTop: 10, borderTop: "1px solid " + T.line,
+                  }}>
+                    <button type="button" onClick={() => onOpenLead?.(item.id)}
+                      aria-label={"View " + item.business_name + " deal"}
+                      style={{ ...textButton(T), display: "inline-flex", alignItems: "center", justifyContent: "center", flex: "1 1 92px", minHeight: 34, color: T.route }}>
+                      View deal
+                    </button>
+                    {canEdit && (
+                      <>
+                        <button type="button" disabled={!!busy || !online}
+                          aria-label={(item.completed_at ? "Reopen " : "Mark done ") + item.business_name}
+                          onClick={() => mutate("complete", item.id, !item.completed_at)}
+                          style={{ ...textButton(T), display: "inline-flex", alignItems: "center", justifyContent: "center", flex: "1 1 100px", minHeight: 34, gap: 5, color: T.route }}>
+                          {item.completed_at ? <RotateCcw size={12} /> : <Check size={12} />}
+                          {item.completed_at ? "Reopen" : "Mark done"}
+                        </button>
+                        <button type="button" disabled={!!busy || !online}
+                          aria-label={"Remove " + item.business_name + " from month"}
+                          onClick={() => mutate("remove", item.id)}
+                          style={{ ...textButton(T), display: "inline-flex", alignItems: "center", justifyContent: "center", flex: "1 1 82px", minHeight: 34, color: T.danger }}>
+                          Remove
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
             {!visible.length && <div style={{ fontSize: 11.5, color: T.inkSoft, padding: "12px 6px" }}>
