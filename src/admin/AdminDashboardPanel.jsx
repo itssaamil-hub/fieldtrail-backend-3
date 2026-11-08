@@ -73,23 +73,7 @@ async function fetchCompleteCurrentWonLeads(salesmanId = "all") {
   return mapped.map((lead) => resolved.has(lead.id) ? { ...lead, wonDate: resolved.get(lead.id) } : lead);
 }
 
-async function fetchCompleteCurrentMonthNegotiation(salesmanId = "all") {
-  const rows = [];
-  let page = 1;
-  let hasNext = true;
-  while (hasNext) {
-    const params = { status: "negotiation", negotiationPeriod: "month", page, limit: 100 };
-    if (salesmanId !== "all") params.salesmanId = salesmanId;
-    const result = await api.adminLeads(params);
-    rows.push(...(result.leads || []));
-    hasNext = result.hasNext === true;
-    page += 1;
-    if (page > 10000) throw new Error("Negotiation KPI pagination did not terminate safely.");
-  }
-  return rows.map(mapLeadRow);
-}
-
-function DashboardStatCard({ T, label, value, sub, subInline = false, color, icon: IconC, onClick, comparison, comparisonPeriod, periodControl }) {
+function DashboardStatCard({ T, label, value, sub, subInline = false, color, icon: IconC, onClick, comparison, comparisonPeriod }) {
   const c = color || T.ink;
   return (
     <div
@@ -125,7 +109,6 @@ function DashboardStatCard({ T, label, value, sub, subInline = false, color, ico
           <span>vs last {comparisonPeriod === "monthly" ? "month" : "week"}</span>
         </div>
       )}
-      {periodControl}
     </div>
   );
 }
