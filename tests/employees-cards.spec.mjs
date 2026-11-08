@@ -10,6 +10,8 @@ const employees = Array.from({ length: 10 }, (_, i) => ({
 const brief = (id) => ({ sessions: id === 'employee-2' ? [] : [id === 'employee-3' ? { startedAt: '2026-10-05T03:42:00Z' } : { startedAt: '2026-10-05T03:42:00Z', lateMinutes: id === 'employee-0' ? 22 : 0 }], glance: { leadsAdded: 8 }, followUpHealth: { dueToday: 4 }, unfinished: { pendingTasks: 2, dueTodayTasks: id === 'employee-0' ? 2 : 1, overdueTasks: id === 'employee-0' ? 1 : 0 }, closing: id === 'employee-0' ? [] : [{ status: 'submitted' }] });
 
 async function boot(page, fail = false) {
+  let requireCustomerFeedback = true;
+  const feedbackSaves = [];
   await page.route('http://127.0.0.1:9999/**', async route => {
     const url = new URL(route.request().url());
     const path = url.pathname;
@@ -30,6 +32,14 @@ async function boot(page, fail = false) {
       })),
     };
     else if (path === '/admin/employees/revenue') data = { rows: employees.map(s => ({ salesman_id: s.id, leads_created: url.searchParams.get('month') === 'all' ? 148 : 48, revenue: 45000, won: 3 })) };
+    else if (path === '/admin/employees/employee-0/follow-up-feedback') {
+      if (route.request().method() === "PUT") {
+        const body = route.request().postDataJSON();
+        feedbackSaves.push(body);
+        requireCustomerFeedback = body.requireCustomerFeedback;
+      }
+      data = { requireCustomerFeedback };
+    }
     else if (/\/salesmen\/[^/]+\/brief$/.test(path)) data = brief(path.split('/')[3]);
     else if (path.includes('/history')) data = { route: [], leads: [] };
     else if (path.includes('/leads')) data = { leads: [], total: 0 };
@@ -44,6 +54,7 @@ async function boot(page, fail = false) {
   await page.goto('/');
   await page.getByRole('button', { name: 'Employees', exact: true }).click();
   await expect(page.locator('.emp-card').first()).toBeVisible();
+  return feedbackSaves;
 }
 
 for (const width of [390, 1440]) {
@@ -177,4 +188,24 @@ test('Desktop Total Employees KPI does not open the mobile Employees Today view'
   const totalEmployees = page.locator('.engage-dashboard-stat').filter({ hasText: 'Total Employees' }).first();
   await totalEmployees.click();
   await expect(page.getByRole('dialog', { name: 'Employees Today' })).toHaveCount(0);
+});
+
+
+test("Admin can switch customer feedback ON/OFF for one employee inside existing Work Rules", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const errors = []; page.on("pageerror", e => errors.push(e.message));
+  const saves = await boot(page);
+  const anand = page.getByRole("article", { name: "Anand employee card" });
+  await anand.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("button", { name: "Work Rules", exact: true }).click();
+  const toggle = page.getByRole("switch", { name: "What did the customer say?" });
+  await expect(toggle).toBeChecked();
+  await toggle.uncheck();
+  await expect(page.getByRole("button", { name: "Save Follow-up Setting" })).toBeEnabled();
+  await page.getByRole("button", { name: "Save Follow-up Setting" }).click();
+  await expect(page.getByText("Follow-up setting saved.")).toBeVisible();
+  expect(saves).toEqual([{ requireCustomerFeedback: false }]);
+  await expect(toggle).not.toBeChecked();
+  // Saving the feedback toggle never calls the attendance Work Rules endpoint.
+  expect(errors).toEqual([]);
 });
