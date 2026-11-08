@@ -385,6 +385,7 @@ export const api = {
   adminUpdateLead: (id, payload) => request(`/admin/leads/${id}`, { method: "PATCH", body: normalizeRenewalPayload(payload) }),
   adminDeleteLead: (id) => request(`/admin/leads/${id}`, { method: "DELETE" }),
   adminLeadHistory: (id) => request(`/admin/leads/${id}/history`),
+  adminEditFollowUpNote: (id, logId, feedback, requestId) => request(`/admin/leads/${encodeURIComponent(id)}/follow-up-logs/${encodeURIComponent(logId)}/feedback`, { method: "PATCH", body: { feedback, requestId } }),
   adminReportTimeInStage: () => request(`/admin/reports/time-in-stage`),
   adminReportDailyActivity: (params) => {
     const qs = new URLSearchParams(Object.entries(params || {}).filter(([, v]) => v != null && v !== "")).toString();
@@ -468,6 +469,7 @@ export const api = {
 
   salesmanLead: (id) => request(`/salesman/leads/${id}`),
   salesmanLeadHistory: (id) => request(`/salesman/leads/${id}/history`),
+  salesmanEditFollowUpNote: (id, logId, feedback, requestId) => request(`/salesman/leads/${encodeURIComponent(id)}/follow-up-logs/${encodeURIComponent(logId)}/feedback`, { method: "PATCH", body: { feedback, requestId } }),
   salesmanCreateLead: (payload, expectedUserId) => request("/salesman/leads", { method: "POST", body: normalizeRenewalPayload(payload), expectedUserId }),
   generateLeadAiMessage: (id, payload) => request(`/ai-writer/leads/${encodeURIComponent(id)}/draft`, { method: "POST", body: payload }),
   converseLeadAiMessage: (id, payload) => request(`/ai-writer/leads/${encodeURIComponent(id)}/converse`, { method: "POST", body: payload }),
