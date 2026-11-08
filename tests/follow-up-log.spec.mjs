@@ -14,6 +14,8 @@ const json = data => ({ status: 200, contentType: "application/json", body: JSON
 
 async function setup(page, role, failOnce = false) {
   const actions = [];
+  const edits = [];
+  actions.edits = edits;
   const history = [];
   let lead = { ...baseLead };
   let failed = false;
@@ -27,6 +29,17 @@ async function setup(page, role, failOnce = false) {
       result = { lead };
     else if (path === prefix + "/leads/" + DEAL + "/history" && req.method() === "GET")
       result = { history };
+    else if (path === prefix + "/leads/" + DEAL + "/follow-up-logs/aaaaeeee-aaaa-4aaa-8aaa-aaaaaaaaaaaa/feedback" && req.method() === "PATCH") {
+      const payload = req.postDataJSON();
+      edits.push(payload);
+      const event = history.find(item => item.action === "lead.follow_up_logged");
+      if (event) {
+        const revisions = event.follow_up_edit_history || [];
+        const previous = revisions.length ? revisions[revisions.length - 1].to : event.follow_up_feedback;
+        event.follow_up_edit_history = [...revisions, { from: previous, to: payload.feedback, at: new Date().toISOString(), by: role === "admin" ? "Admin" : "Anand" }];
+      }
+      result = { edited: true, feedback: payload.feedback };
+    }
     else if (path === prefix + "/leads/" + DEAL && req.method() === "PATCH") {
       const payload = req.postDataJSON();
       actions.push(payload);
@@ -42,7 +55,8 @@ async function setup(page, role, failOnce = false) {
         changed_at: new Date().toISOString(),
         follow_up_outcome: payload.followUpLog.outcome,
         follow_up_feedback: payload.followUpLog.feedback,
-        follow_up_mode: payload.followUpLog.mode,
+        follow_up_mode: payload.followUpLog.mode, follow_up_can_edit: true,
+        follow_up_edit_history: [],
         old_value: "2026-11-12", new_value: payload.nextFollowUpDate,
       });
       result = { lead };
@@ -74,7 +88,12 @@ async function setup(page, role, failOnce = false) {
 async function openDeal(page, role) {
   if (role === "admin") {
     await page.goto("/");
-    await page.getByRole("button", { name: "Pipeline", exact: true }).click();
+    if (page.viewportSize()?.width < 600) {
+      await page.getByRole("button", { name: "Deals", exact: true }).click();
+      await page.getByRole("button", { name: "List view" }).click();
+    } else {
+      await page.getByRole("button", { name: "Pipeline", exact: true }).click();
+    }
     await page.getByText("Follow-up Log Cafe", { exact: true }).first().click();
   } else {
     await page.goto("/#lead=" + DEAL);
@@ -143,4 +162,46 @@ test("Salesman failed Follow-up Log retains unsaved draft and allows retry", asy
   await expect(form).toHaveCount(0);
   expect(actions).toHaveLength(2);
   expect(actions[0].followUpLog.requestId).toBe(actions[1].followUpLog.requestId);
+});
+
+
+for (const role of ["admin", "salesman"]) {
+  test(role + " phone reveals Follow-up Log and safely edits saved feedback", async ({ page }) => {
+    const errors = []; page.on("pageerror", error => errors.push(error.message));
+    await page.setViewportSize({ width: 390, height: 844 });
+    const actions = await setup(page, role);
+    await openDeal(page, role);
+    const openLog = page.getByRole("button", { name: "+ Follow-up Log", exact: true });
+    await expect(openLog).toBeVisible();
+    await openLog.click();
+    const log = page.locator('[aria-label="Follow-up Log"]');
+    await expect(log).toBeVisible();
+    await log.getByRole("combobox", { name: "Follow-up outcome" }).selectOption("callback_requested");
+    await log.getByRole("textbox", { name: "Customer feedback" }).fill("Owner asked to call after lunch.");
+    await log.getByRole("button", { name: "Save Follow-up" }).click();
+    await expect(log).toHaveCount(0);
+    expect(actions).toHaveLength(1);
+    await page.getByRole("button", { name: "activity", exact: true }).last().click();
+    await expect(page.getByText("Owner asked to call after lunch.")).toBeVisible();
+    await page.getByRole("button", { name: "Edit follow-up note" }).click();
+    const edit = page.locator('[aria-label="Edit Follow-up Note"]');
+    await expect(edit).toBeVisible();
+    await edit.getByRole("textbox", { name: "Edit customer feedback" }).fill("Owner asked to call after 4 PM.");
+    await edit.getByRole("button", { name: "Save note" }).click();
+    await expect(page.getByText("Owner asked to call after 4 PM.", { exact: true })).toBeVisible();
+    await expect(page.getByText("View edit history")).toBeVisible();
+    expect(actions.edits).toHaveLength(1);
+    expect(actions.edits[0].feedback).toBe("Owner asked to call after 4 PM.");
+    expect(actions.edits[0].requestId).toMatch(/^[0-9a-f-]{36}$/i);
+    expect(actions).toHaveLength(1); // Correction did not patch lead/date/status.
+    expect(errors).toEqual([]);
+  });
+}
+
+test("Desktop keeps its existing follow-up actions and has no mobile-only Log button", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await setup(page, "admin");
+  await openDeal(page, "admin");
+  await expect(page.getByRole("button", { name: "+ Follow-up Log", exact: true })).not.toBeVisible();
+  await expect(page.getByRole("button", { name: "Tomorrow", exact: true })).toBeVisible();
 });
