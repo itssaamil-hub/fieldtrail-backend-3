@@ -12,7 +12,7 @@ const baseLead = {
 };
 const json = data => ({ status: 200, contentType: "application/json", body: JSON.stringify(data) });
 
-async function setup(page, role, failOnce = false) {
+async function setup(page, role, failOnce = false, requireCustomerFeedback = true) {
   const actions = [];
   const edits = [];
   actions.edits = edits;
@@ -66,7 +66,7 @@ async function setup(page, role, failOnce = false) {
     else if (path === "/salesman/leads-summary") result = { month: 1, today: 0, hot: 0, conversation: 1, total: 1 };
     else if (path === "/salesman/settings")
       result = { locationSettings: { gpsLocation: false, continuousGpsTracking: false },
-        employeePermissions: { allowLeadWithoutStartDay: true } };
+        employeePermissions: { allowLeadWithoutStartDay: true, requireCustomerFeedback } };
     else if (path === "/salesman/profile")
       result = { profile: { daily_target: 8, monthly_target: 100 } };
     else if (path === "/notifications/sales-briefing")
@@ -237,4 +237,30 @@ for (const role of ["admin", "salesman"]) {
       expect(errors).toEqual([]);
     });
   }
+}
+
+
+for (const width of [390, 1440]) {
+  test("Employee Follow-up feedback OFF hides only the question at " + width + "px", async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const errors = []; page.on("pageerror", e => errors.push(e.message));
+    const actions = await setup(page, "salesman", false, false);
+    await openDeal(page, "salesman");
+    await page.getByRole("button", { name: "Tomorrow", exact: true }).click();
+    const form = page.locator('[aria-label="Follow-up Log"]');
+    await expect(form).toBeVisible();
+    await expect(form.getByRole("textbox", { name: "Customer feedback" })).toHaveCount(0);
+    await expect(form.getByText("What did the customer say?")).toHaveCount(0);
+    await form.getByRole("combobox", { name: "Follow-up outcome" }).selectOption("interested");
+    await expect(form.getByRole("button", { name: "Save Follow-up" })).toBeEnabled();
+    await form.getByRole("button", { name: "Save Follow-up" }).click();
+    await expect(form).toHaveCount(0);
+    expect(actions).toHaveLength(1);
+    expect(actions[0].followUpLog).toMatchObject({ outcome: "interested", feedback: "" });
+    expect(actions[0]).not.toHaveProperty("status");
+    expect(actions[0]).not.toHaveProperty("notes");
+    await page.getByRole("button", { name: "activity", exact: true }).last().click();
+    await expect(page.getByText("Follow-up logged", { exact: true })).toBeVisible();
+    expect(errors).toEqual([]);
+  });
 }
