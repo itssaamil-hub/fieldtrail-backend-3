@@ -1,6 +1,6 @@
 /* Lead detail status chooser — match the Add Lead status palette. */
-/* The status chooser is the collapsible row followed by eight pipeline buttons. */
-div[role="button"][aria-expanded] + div:has(> button:nth-child(8)) > button {
+/* Scope the original eight status pills to their own group; Flag Deal and the chevron can remain beside the heading. */
+.ft-lead-status-pills > button {
   border-radius: 999px !important;
   padding: 7px 11px !important;
   font-weight: 800 !important;
@@ -8,28 +8,28 @@ div[role="button"][aria-expanded] + div:has(> button:nth-child(8)) > button {
 }
 
 /* Cold */
-div[role="button"][aria-expanded] + div:has(> button:nth-child(8)) > button:nth-child(1):not([style*="background: rgb(20, 92, 93)"]) { background:#F3F4F6 !important; color:#4B5563 !important; border-color:transparent !important; }
+.ft-lead-status-pills > button:nth-child(1):not([aria-pressed="true"]) { background:#F3F4F6 !important; color:#4B5563 !important; border-color:transparent !important; }
 /* Conversation */
-div[role="button"][aria-expanded] + div:has(> button:nth-child(8)) > button:nth-child(2):not([style*="background: rgb(20, 92, 93)"]) { background:#EAF1FF !important; color:#315FB4 !important; border-color:transparent !important; }
+.ft-lead-status-pills > button:nth-child(2):not([aria-pressed="true"]) { background:#EAF1FF !important; color:#315FB4 !important; border-color:transparent !important; }
 /* Hot */
-div[role="button"][aria-expanded] + div:has(> button:nth-child(8)) > button:nth-child(3):not([style*="background: rgb(20, 92, 93)"]) { background:#FDECEC !important; color:#C33F3F !important; border-color:transparent !important; }
+.ft-lead-status-pills > button:nth-child(3):not([aria-pressed="true"]) { background:#FDECEC !important; color:#C33F3F !important; border-color:transparent !important; }
 /* Demo */
-div[role="button"][aria-expanded] + div:has(> button:nth-child(8)) > button:nth-child(4):not([style*="background: rgb(20, 92, 93)"]) { background:#F2ECFF !important; color:#7350A5 !important; border-color:transparent !important; }
+.ft-lead-status-pills > button:nth-child(4):not([aria-pressed="true"]) { background:#F2ECFF !important; color:#7350A5 !important; border-color:transparent !important; }
 /* Negotiation */
-div[role="button"][aria-expanded] + div:has(> button:nth-child(8)) > button:nth-child(5):not([style*="background: rgb(20, 92, 93)"]) { background:#FFF4DA !important; color:#A06B12 !important; border-color:transparent !important; }
+.ft-lead-status-pills > button:nth-child(5):not([aria-pressed="true"]) { background:#FFF4DA !important; color:#A06B12 !important; border-color:transparent !important; }
 /* Won */
-div[role="button"][aria-expanded] + div:has(> button:nth-child(8)) > button:nth-child(6):not([style*="background: rgb(20, 92, 93)"]) { background:#E6F6EF !important; color:#12805C !important; border-color:transparent !important; }
+.ft-lead-status-pills > button:nth-child(6):not([aria-pressed="true"]) { background:#E6F6EF !important; color:#12805C !important; border-color:transparent !important; }
 /* Lost */
-div[role="button"][aria-expanded] + div:has(> button:nth-child(8)) > button:nth-child(7):not([style*="background: rgb(20, 92, 93)"]) { background:#F4F4F5 !important; color:#71717A !important; border-color:transparent !important; }
+.ft-lead-status-pills > button:nth-child(7):not([aria-pressed="true"]) { background:#F4F4F5 !important; color:#71717A !important; border-color:transparent !important; }
 /* Nurture */
-div[role="button"][aria-expanded] + div:has(> button:nth-child(8)) > button:nth-child(8):not([style*="background: rgb(20, 92, 93)"]) { background:#EAF6F8 !important; color:#287C88 !important; border-color:transparent !important; }
+.ft-lead-status-pills > button:nth-child(8):not([aria-pressed="true"]) { background:#EAF6F8 !important; color:#287C88 !important; border-color:transparent !important; }
 
 /* Selected state keeps a stronger version of the same status colour + black outline. */
-div[role="button"][aria-expanded] + div:has(> button:nth-child(8)) > button:nth-child(1)[style*="background: rgb(20, 92, 93)"] { background:#4B5563 !important; color:#fff !important; border:2px solid #111827 !important; box-shadow:0 0 0 3px #F3F4F6 !important; }
-div[role="button"][aria-expanded] + div:has(> button:nth-child(8)) > button:nth-child(2)[style*="background: rgb(20, 92, 93)"] { background:#315FB4 !important; color:#fff !important; border:2px solid #111827 !important; box-shadow:0 0 0 3px #EAF1FF !important; }
-div[role="button"][aria-expanded] + div:has(> button:nth-child(8)) > button:nth-child(3)[style*="background: rgb(20, 92, 93)"] { background:#C33F3F !important; color:#fff !important; border:2px solid #111827 !important; box-shadow:0 0 0 3px #FDECEC !important; }
-div[role="button"][aria-expanded] + div:has(> button:nth-child(8)) > button:nth-child(4)[style*="background: rgb(20, 92, 93)"] { background:#7350A5 !important; color:#fff !important; border:2px solid #111827 !important; box-shadow:0 0 0 3px #F2ECFF !important; }
-div[role="button"][aria-expanded] + div:has(> button:nth-child(8)) > button:nth-child(5)[style*="background: rgb(20, 92, 93)"] { background:#A06B12 !important; color:#fff !important; border:2px solid #111827 !important; box-shadow:0 0 0 3px #FFF4DA !important; }
-div[role="button"][aria-expanded] + div:has(> button:nth-child(8)) > button:nth-child(6)[style*="background: rgb(20, 92, 93)"] { background:#12805C !important; color:#fff !important; border:2px solid #111827 !important; box-shadow:0 0 0 3px #E6F6EF !important; }
-div[role="button"][aria-expanded] + div:has(> button:nth-child(8)) > button:nth-child(7)[style*="background: rgb(20, 92, 93)"] { background:#71717A !important; color:#fff !important; border:2px solid #111827 !important; box-shadow:0 0 0 3px #F4F4F5 !important; }
-div[role="button"][aria-expanded] + div:has(> button:nth-child(8)) > button:nth-child(8)[style*="background: rgb(20, 92, 93)"] { background:#287C88 !important; color:#fff !important; border:2px solid #111827 !important; box-shadow:0 0 0 3px #EAF6F8 !important; }
+.ft-lead-status-pills > button:nth-child(1)[aria-pressed="true"] { background:#4B5563 !important; color:#fff !important; border:2px solid #111827 !important; box-shadow:0 0 0 3px #F3F4F6 !important; }
+.ft-lead-status-pills > button:nth-child(2)[aria-pressed="true"] { background:#315FB4 !important; color:#fff !important; border:2px solid #111827 !important; box-shadow:0 0 0 3px #EAF1FF !important; }
+.ft-lead-status-pills > button:nth-child(3)[aria-pressed="true"] { background:#C33F3F !important; color:#fff !important; border:2px solid #111827 !important; box-shadow:0 0 0 3px #FDECEC !important; }
+.ft-lead-status-pills > button:nth-child(4)[aria-pressed="true"] { background:#7350A5 !important; color:#fff !important; border:2px solid #111827 !important; box-shadow:0 0 0 3px #F2ECFF !important; }
+.ft-lead-status-pills > button:nth-child(5)[aria-pressed="true"] { background:#A06B12 !important; color:#fff !important; border:2px solid #111827 !important; box-shadow:0 0 0 3px #FFF4DA !important; }
+.ft-lead-status-pills > button:nth-child(6)[aria-pressed="true"] { background:#12805C !important; color:#fff !important; border:2px solid #111827 !important; box-shadow:0 0 0 3px #E6F6EF !important; }
+.ft-lead-status-pills > button:nth-child(7)[aria-pressed="true"] { background:#71717A !important; color:#fff !important; border:2px solid #111827 !important; box-shadow:0 0 0 3px #F4F4F5 !important; }
+.ft-lead-status-pills > button:nth-child(8)[aria-pressed="true"] { background:#287C88 !important; color:#fff !important; border:2px solid #111827 !important; box-shadow:0 0 0 3px #EAF6F8 !important; }
