@@ -15,6 +15,7 @@ for (const width of [390, 1440]) {
   test("Salesman Won list reads backdated owner deals with paged saved dates at " + width + "px", async ({ page }) => {
     await page.setViewportSize({width,height:950});
     const errors = [], requests = [];
+    let forbiddenAdminWonDateCalls = 0;
     let wonCount = 2;
     page.on("pageerror", e=>errors.push(e.message));
     await page.route("http://127.0.0.1:9999/**", async route => {
@@ -55,6 +56,7 @@ for (const width of [390, 1440]) {
       } else if (path.includes("/tasks")) data = {tasks:[],notifications:[]};
       else if (path.includes("/messages")) data = {messages:[]};
       else if (path.includes("/admin/leads/")) {
+        forbiddenAdminWonDateCalls += 1;
         await route.fulfill({status:403,contentType:"application/json",body:JSON.stringify({error:"Requires admin role"})});
         return;
       }
@@ -67,12 +69,7 @@ for (const width of [390, 1440]) {
     const card = page.locator('[data-kpi="won"]');
     await expect(card).toContainText("2");
     await card.click();
-    await expect(page.getByText("Backdated Restaurant")).toBeVisible().catch(async error => {
-      console.log("WON TEST DIAGNOSTIC REQUESTS", JSON.stringify(requests));
-      console.log("WON TEST DIAGNOSTIC BODY", (await page.locator("body").innerText()).slice(-4300));
-      console.log("WON TEST DIAGNOSTIC ERRORS", JSON.stringify(errors));
-      throw error;
-    });
+    await expect(page.getByText("Backdated Restaurant")).toBeVisible();
     await expect(page.getByText("Second Won Restaurant")).toHaveCount(0);
     await page.getByRole("button",{name:/Load more leads/}).click();
     await expect(page.getByText("Second Won Restaurant")).toBeVisible();
@@ -85,6 +82,7 @@ for (const width of [390, 1440]) {
     await expect(page.getByText("Historical Won Restaurant")).toHaveCount(0);
     // Protected Admin Won Date route must never be called as salesman.
     expect(errors).toEqual([]);
+    expect(forbiddenAdminWonDateCalls).toBe(0);
     expect(requests.length).toBeGreaterThan(0);
     wonCount=3;
     // Phone KPI can change after admin saves the corrected date, on focus.
