@@ -154,6 +154,25 @@ export default function SalesmanView({ notificationLead, session, leads, leadSum
     return () => window.removeEventListener("engage-display-settings", sync);
   }, [refreshComparisons]);
 
+  // A Won Date can be corrected remotely by Admin without touching this
+  // employee's lead rows. Refresh the KPI when the phone wakes or returns to
+  // Dashboard, and periodically while visible. No attendance or offline writes.
+  useEffect(() => {
+    if (!phone || !dashboard || !online || page === "reports") return undefined;
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") refreshComparisons();
+    };
+    refreshWhenVisible();
+    window.addEventListener("focus", refreshWhenVisible);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    const interval = window.setInterval(refreshWhenVisible, 60000);
+    return () => {
+      window.removeEventListener("focus", refreshWhenVisible);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+      window.clearInterval(interval);
+    };
+  }, [phone, dashboard, online, page, refreshComparisons]);
+
   const openBriefingLead = (id) => {
     const found = leads.find((lead) => String(lead.id) === String(id));
     if (found) {
