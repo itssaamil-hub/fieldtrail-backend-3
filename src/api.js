@@ -322,6 +322,9 @@ export const api = {
     if(!response.ok){let data;try{data=await response.json()}catch{}throw new ApiError(data?.error || 'Could not download the PDF',response.status)}
     return response.blob();
   },
+  // Historical stage movements (Admin Reports only, read-only).
+  stageMovementReport: (params = {}) => request("/admin/reports/stage-movements?" + new URLSearchParams(params)),
+  stageMovementEvents: (params = {}) => request("/admin/reports/stage-movements/events?" + new URLSearchParams(params)),
   dealValueReport: () => request('/admin/reports/deal-values'),
   performanceReport: (params = {}) => request(`/admin/reports/performance?${new URLSearchParams(params)}`),
   performanceInsights: (params = {}) => request(`/admin/reports/performance-insights?${new URLSearchParams(params)}`),

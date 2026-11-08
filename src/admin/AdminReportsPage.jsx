@@ -29,6 +29,7 @@ const lazyNamed = (loader, exportName) => withLazyBoundary(lazy(() => loader().t
 
 const CollectionsPanel = lazyDefault(() => import("../Collections.jsx"));
 const DealValueReport = lazyDefault(() => import("../DealValueReport.jsx"));
+const StageMovementReport = lazyDefault(() => import("../reports/StageMovementReport.jsx"));
 const AttendanceReport = lazyDefault(() => import("../AttendanceReportV2.jsx"));
 const EnhancedDailyActivityReport = lazyDefault(() => import("../EnhancedDailyActivityReport.jsx"));
 const DayClosingReports = lazyNamed(() => import("../DayClosingReportOptimized.jsx"), "DayClosingReports");
@@ -37,6 +38,7 @@ const REPORT_CARDS = [
   { key: "deal-values", title: "Deal Value", desc: "Total deal value for Cold, Hot, Negotiation and every stage.", icon: Wallet, color: "#145C5D" },
   { key: "performance", title: "Employee performance", desc: "Weekly/monthly leads, follow-ups, quotations, wins, sales and collections.", icon: Contact2, color: "#145C5D" },
   { key: "funnel", title: "Funnel and conversion", desc: "Lead count and drop-off at each pipeline stage.", icon: Handshake, color: "#7B4FC9" },
+  { key: "stage-movements", title: "Stage Movement", desc: "Monthly Hot, Conversation, Negotiation and Won movements by employee, even after later stage changes.", icon: Handshake, color: "#7B4FC9" },
   { key: "renewals", title: "Renewals due", desc: "Everything renewing in the next 30, 60 or 90 days.", icon: CalendarClock, color: "#B8791F" },
   { key: "payments", title: "Payments", desc: "Collections, pending balances, overdue payments and receipts in one place.", icon: Wallet, color: "#C0392B" },
   { key: "expenses", title: "Expenses", desc: "Salary and other spending, broken down by category.", icon: Receipt, color: "#993C1D", sidebarOnly: true },
@@ -120,6 +122,7 @@ export default function AdminReportsPage({ salesmen, leads, shared }) {
       {active === "deal-values" && <DealValueReport />}
       {active === "performance" && <SalesmanPerformanceReport salesmen={salesmen} leads={leads} />}
       {active === "funnel" && <FunnelReport leads={leads} />}
+      {active === "stage-movements" && <StageMovementReport salesmen={salesmen} T={T} />}
       {active === "renewals" && <RenewalsReport leads={leads} />}
       {active === "payments" && <CollectionsPanel embedded />}
       {active === "attendance" && <AttendanceReport salesmen={salesmen} />}
