@@ -12,6 +12,7 @@ export default function useSalesmanSettings({ setEmployeeRepliesEnabled }) {
   const [dailyTarget, setDailyTarget] = useState(8);
   const [monthlyTarget, setMonthlyTarget] = useState(200);
   const [employeeCity, setEmployeeCity] = useState("");
+  const [requireCustomerFollowUpFeedback, setRequireCustomerFollowUpFeedback] = useState(true);
 
   useEffect(() => {
     let mounted = true;
@@ -45,6 +46,7 @@ export default function useSalesmanSettings({ setEmployeeRepliesEnabled }) {
         });
         setAllowLeadWithoutStartDay(!!res.employeePermissions?.allowLeadWithoutStartDay);
         setEmployeeRepliesEnabled?.(res.messageSettings?.employeeRepliesEnabled !== false);
+        setRequireCustomerFollowUpFeedback(res.employeePermissions?.requireCustomerFeedback !== false);
         setLocationPolicyLoaded(true);
       })
       .catch(() => {
@@ -69,5 +71,6 @@ export default function useSalesmanSettings({ setEmployeeRepliesEnabled }) {
     dailyTarget,
     monthlyTarget,
     employeeCity,
+    requireCustomerFollowUpFeedback,
   };
 }

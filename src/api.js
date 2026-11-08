@@ -368,6 +368,8 @@ export const api = {
   adminCreateSalesman: (payload) => request("/admin/salesmen", { method: "POST", body: payload }),
   adminUpdateSalesman: (id, payload) => request(`/admin/salesmen/${id}`, { method: "PATCH", body: payload }),
   adminDeleteSalesman: (id) => request(`/admin/salesmen/${id}`, { method: "DELETE" }),
+  adminGetEmployeeFollowUpFeedback: (id) => request(`/admin/employees/${encodeURIComponent(id)}/follow-up-feedback`),
+  adminSaveEmployeeFollowUpFeedback: (id, required) => request(`/admin/employees/${encodeURIComponent(id)}/follow-up-feedback`, { method: "PUT", body: { requireCustomerFeedback: required } }),
   adminGetEmployeeDevicePolicy: (id) => request(`/admin/employees/${id}/device-policy`),
   adminSaveEmployeeDevicePolicy: (id, payload) => request(`/admin/employees/${id}/device-policy`, { method: "PUT", body: payload }),
   adminLeads: (params = {}) => {
