@@ -1,5 +1,7 @@
 import React, { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { nearestRenewalCountdown } from "../renewalCountdown.js";
+import DashboardMonthFilter, { currentIstMonth, periodMonth } from "./DashboardMonthFilter.jsx";
+import { loadAdminDashboardMonthMetrics } from "../dashboardComparisons.js";
 import {
   CalendarClock,
   CheckCircle2,
@@ -14,11 +16,7 @@ import {
 import { api, getApiBase, getSession, mapLeadRow } from "../api.js";
 import { loadAdminDashboardComparisons } from "../dashboardComparisons.js";
 import AdminActivityOverview from "../AdminActivityOverview.jsx";
-import {
-  ADMIN_WON_PERIOD_CHANGE_EVENT,
-  adminWonScopeMetrics,
-  readAdminWonPeriod,
-} from "../lead/wonPeriod.js";
+
 
 const lazyNamed = (loader, exportName) => {
   const LazyComponent = lazy(() => loader().then((mod) => ({ default: mod[exportName] })));
@@ -153,14 +151,12 @@ export default function AdminDashboardPanel({
   const [comparisonData, setComparisonData] = useState(null);
   const [conversationError, setConversationError] = useState("");
   const [adminPendingTasks, setAdminPendingTasks] = useState(null);
-  const [adminWonPeriod, setAdminWonPeriod] = useState(() => readAdminWonPeriod());
-  const [completeWonLeads, setCompleteWonLeads] = useState(null);
-  const [wonScopeLoading, setWonScopeLoading] = useState(false);
-  const [wonScopeError, setWonScopeError] = useState("");
-  const [negotiationPeriod, setNegotiationPeriod] = useState("all");
-  const [monthlyNegotiationLeads, setMonthlyNegotiationLeads] = useState(null);
-  const [negotiationScopeLoading, setNegotiationScopeLoading] = useState(false);
-  const [negotiationScopeError, setNegotiationScopeError] = useState("");
+  const [monthPeriod, setMonthPeriod] = useState("all");
+  const [customMonth, setCustomMonth] = useState(currentIstMonth);
+  const selectedMonth = periodMonth(monthPeriod, customMonth);
+  const [monthData, setMonthData] = useState(null);
+  const [monthLoading, setMonthLoading] = useState(false);
+  const [monthError, setMonthError] = useState("");
 
   const refreshComparisons = useCallback(async () => {
     if (!showDashboard) return;
@@ -183,77 +179,29 @@ export default function AdminDashboardPanel({
   }, [refreshComparisons]);
 
   useEffect(() => {
-    const syncWonPeriod = (event) => setAdminWonPeriod(event?.detail?.period || readAdminWonPeriod());
-    const syncStorage = (event) => {
-      if (event.key === "engage:admin-won-period") setAdminWonPeriod(readAdminWonPeriod());
-    };
-    window.addEventListener(ADMIN_WON_PERIOD_CHANGE_EVENT, syncWonPeriod);
-    window.addEventListener("storage", syncStorage);
-    return () => {
-      window.removeEventListener(ADMIN_WON_PERIOD_CHANGE_EVENT, syncWonPeriod);
-      window.removeEventListener("storage", syncStorage);
-    };
-  }, []);
-
-  const loadCompleteWonScope = useCallback(async () => {
-    setWonScopeLoading(true);
-    setWonScopeError("");
-    try {
-      const wonLeads = await fetchCompleteCurrentWonLeads(dashboardSalesman);
-      const metrics = adminWonScopeMetrics(wonLeads, "month");
-      if (!metrics.ready) throw new Error("Canonical Won Date is missing for one or more Won deals.");
-      setCompleteWonLeads(wonLeads);
-      return wonLeads;
-    } catch (error) {
-      setCompleteWonLeads(null);
-      setWonScopeError(error.message || "Couldn't verify Won totals.");
-      throw error;
-    } finally {
-      setWonScopeLoading(false);
+    if (!showDashboard || !selectedMonth) {
+      setMonthData(null);
+      setMonthError("");
+      setMonthLoading(false);
+      return undefined;
     }
-  }, [dashboardSalesman]);
-
-  useEffect(() => {
-    if (!showDashboard || adminWonPeriod !== "month") return undefined;
     let cancelled = false;
-    setWonScopeLoading(true);
-    setWonScopeError("");
-    fetchCompleteCurrentWonLeads(dashboardSalesman)
-      .then((wonLeads) => {
-        if (cancelled) return;
-        const metrics = adminWonScopeMetrics(wonLeads, "month");
-        if (!metrics.ready) throw new Error("Canonical Won Date is missing for one or more Won deals.");
-        setCompleteWonLeads(wonLeads);
+    setMonthData(null);
+    setMonthError("");
+    setMonthLoading(true);
+    loadAdminDashboardMonthMetrics(selectedMonth, dashboardSalesman)
+      .then(data => {
+        if (!cancelled) setMonthData({ month: data.month, employee: dashboardSalesman, metrics: data.metrics });
       })
-      .catch((error) => {
+      .catch(error => {
         if (!cancelled) {
-          setCompleteWonLeads(null);
-          setWonScopeError(error.message || "Couldn't verify Won totals.");
+          setMonthData(null);
+          setMonthError(error.message || "Monthly KPI data unavailable");
         }
       })
-      .finally(() => { if (!cancelled) setWonScopeLoading(false); });
+      .finally(() => { if (!cancelled) setMonthLoading(false); });
     return () => { cancelled = true; };
-  }, [showDashboard, adminWonPeriod, dashboardSalesman, leads]);
-
-  // Only Negotiation's explicit This Month selection invokes the new filter.
-  // All existing card metrics and other reporting flows are unchanged.
-  useEffect(() => {
-    if (!showDashboard || negotiationPeriod !== "month") return undefined;
-    let cancelled = false;
-    setMonthlyNegotiationLeads(null);
-    setNegotiationScopeLoading(true);
-    setNegotiationScopeError("");
-    fetchCompleteCurrentMonthNegotiation(dashboardSalesman)
-      .then((scoped) => { if (!cancelled) setMonthlyNegotiationLeads(scoped); })
-      .catch((error) => {
-        if (!cancelled) {
-          setMonthlyNegotiationLeads(null);
-          setNegotiationScopeError(error.message || "Couldn't load monthly Negotiation data.");
-        }
-      })
-      .finally(() => { if (!cancelled) setNegotiationScopeLoading(false); });
-    return () => { cancelled = true; };
-  }, [showDashboard, negotiationPeriod, dashboardSalesman, leads]);
+  }, [showDashboard, selectedMonth, dashboardSalesman, leads]);
 
   if (!showDashboard) return null;
 
