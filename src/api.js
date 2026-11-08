@@ -466,6 +466,7 @@ export const api = {
     return request(`/salesman/leads${qs ? `?${qs}` : ""}`, { expectedUserId });
   },
   salesmanLeadSummary: (expectedUserId) => request("/salesman/leads-summary", { expectedUserId }),
+  salesmanWonLeads: (params = {}, expectedUserId) => request("/salesman/won-leads?" + new URLSearchParams(params), { expectedUserId }),
   salesmanMonthlyFocus: (month, expectedUserId) => request("/salesman/monthly-focus?month=" + encodeURIComponent(month), { expectedUserId }),
   salesmanMonthlyFocusSearch: (q, expectedUserId) => request("/salesman/monthly-focus/search?q=" + encodeURIComponent(q || ""), { expectedUserId }),
   salesmanMonthlyFocusAdd: (month, leadId, expectedUserId) => request("/salesman/monthly-focus", { method: "POST", body: { month, leadId }, expectedUserId }),
@@ -563,6 +564,8 @@ export function mapLeadRow(row) {
     phone: row.phone,
     category: row.category,
     status: row.status,
+    // Canonical saved Won Date, returned only by lead reads that include it.
+    wonDate: row.won_date || row.wonDate || null,
     hasLocation,
     lat: hasLocation ? Number(row.latitude) : null,
     lng: hasLocation ? Number(row.longitude) : null,
