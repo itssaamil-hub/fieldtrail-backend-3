@@ -171,9 +171,8 @@ for (const role of ["admin", "salesman"]) {
     await page.setViewportSize({ width: 390, height: 844 });
     const actions = await setup(page, role);
     await openDeal(page, role);
-    const openLog = page.getByRole("button", { name: "+ Follow-up Log", exact: true });
-    await expect(openLog).toBeVisible();
-    await openLog.click();
+    await expect(page.getByRole("button", { name: "+ Follow-up Log", exact: true })).toHaveCount(0);
+    await page.getByRole("button", { name: "Tomorrow", exact: true }).click();
     const log = page.locator('[aria-label="Follow-up Log"]');
     await expect(log).toBeVisible();
     await log.getByRole("combobox", { name: "Follow-up outcome" }).selectOption("callback_requested");
@@ -205,3 +204,37 @@ test("Desktop keeps its existing follow-up actions and has no mobile-only Log bu
   await expect(page.getByRole("button", { name: "+ Follow-up Log", exact: true })).not.toBeVisible();
   await expect(page.getByRole("button", { name: "Tomorrow", exact: true })).toBeVisible();
 });
+
+
+for (const role of ["admin", "salesman"]) {
+  for (const width of [390, 1440]) {
+    test(role + " retains all eight original color-coded rounded status pills at " + width + "px", async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      const errors = []; page.on("pageerror", err => errors.push(err.message));
+      await setup(page, role);
+      await openDeal(page, role);
+      await page.getByRole("button", { name: /Update status/ }).click();
+      const pills = page.locator(".ft-lead-status-pills > button");
+      await expect(pills).toHaveCount(8);
+      const styles = await pills.evaluateAll(items => items.map(button => ({
+        radius: getComputedStyle(button).borderTopLeftRadius,
+        background: getComputedStyle(button).backgroundColor,
+        pressed: button.getAttribute("aria-pressed"),
+      })));
+      // Preserve the existing eight-status palette and strong selected-state treatment.
+      expect(styles.map(x => x.radius)).toEqual(Array(8).fill("999px"));
+      expect(styles.map(x => x.background)).toEqual([
+        "rgb(243, 244, 246)", // Cold
+        "rgb(49, 95, 180)",   // Conversation (selected)
+        "rgb(253, 236, 236)", // Hot
+        "rgb(242, 236, 255)", // Demo
+        "rgb(255, 244, 218)", // Negotiation
+        "rgb(230, 246, 239)", // Won
+        "rgb(244, 244, 245)", // Lost
+        "rgb(234, 246, 248)", // Nurture
+      ]);
+      expect(styles.map(x => x.pressed)).toEqual(["false", "true", "false", "false", "false", "false", "false", "false"]);
+      expect(errors).toEqual([]);
+    });
+  }
+}

@@ -636,9 +636,9 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
               </button>
             </div>
             {statusExpanded && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 11, paddingTop: 10, borderTop: `1px solid ${T.line}` }}>
+              <div className="ft-lead-status-pills" style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 11, paddingTop: 10, borderTop: `1px solid ${T.line}` }}>
                 {STATUSES.map((s) => (
-                  <button key={s} onClick={(e) => { e.stopPropagation(); changeStatus(s); }} style={{ fontSize: 11.5, padding: "5px 9px", borderRadius: 6, cursor: "pointer", border: `1px solid ${lead.status === s ? T.route : T.line}`, background: lead.status === s ? T.route : "#fff", color: lead.status === s ? "#fff" : T.ink, fontWeight: 600 }}>{STATUS_LABEL[s]}</button>
+                  <button key={s} aria-pressed={lead.status === s} onClick={(e) => { e.stopPropagation(); changeStatus(s); }} style={{ fontSize: 11.5, padding: "5px 9px", borderRadius: 6, cursor: "pointer", border: `1px solid ${lead.status === s ? T.route : T.line}`, background: lead.status === s ? T.route : "#fff", color: lead.status === s ? "#fff" : T.ink, fontWeight: 600 }}>{STATUS_LABEL[s]}</button>
                 ))}
               </div>
             )}
@@ -693,9 +693,6 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                   </div>
                   <span aria-hidden="true" style={{ fontSize: 18, color: T.inkSoft }}>{followUpExpanded ? "⌃" : "›"}</span>
                 </div>
-                <button type="button" className="ft-followup-log-mobile-entry"
-                  onClick={() => beginFollowUpLog("reschedule", String(displayLead.nextFollowUpDate || "").slice(0, 10))}
-                  disabled={followUpSaving}>+ Follow-up Log</button>
                 {followUpExpanded && (
                   <div style={{ marginTop: 12, paddingTop: 10, borderTop: `1px solid ${T.line}` }}>
                     <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 9 }}>
@@ -718,8 +715,6 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
             {!formattedFollowUp && onUpdate && (
               <div style={{ marginTop: 12, background: T.warnSoft, border: "1px solid #F0D89A", borderRadius: 14, padding: 14 }}>
                 <div style={{ fontSize: 13.5, fontWeight: 800, color: T.ink }}>Next Follow-up</div>
-                <button type="button" className="ft-followup-log-mobile-entry"
-                  onClick={() => beginFollowUpLog("reschedule")} disabled={followUpSaving}>+ Follow-up Log</button>
                 <div style={{ marginTop: 3, fontSize: 12.5, color: T.inkSoft }}>Not set. Pick a quick date:</div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
                   {FOLLOWUP_QUICK.map(([label, days]) => (
