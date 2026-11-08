@@ -63,7 +63,7 @@ for (const width of [1440, 390]) {
     await expect(page.getByRole("button", { name: "Dashboard filters" })).toBeVisible();
     await page.getByRole("button", { name: "Dashboard filters" }).click();
     await page.getByRole("combobox", { name: "Dashboard month period" }).selectOption("custom");
-    await page.getByRole("textbox", { name: "Dashboard choose month" }).fill("2026-10");
+    await page.getByLabel("Dashboard choose month").fill("2026-10");
     await expect(card("In Negotiation").locator(".engage-dashboard-stat-value")).toHaveText("5");
     await expect(card("In Negotiation")).toContainText("₹52.0K");
     await expect(card("Conversation").locator(".engage-dashboard-stat-value")).toHaveText("4");
