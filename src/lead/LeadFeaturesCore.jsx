@@ -276,6 +276,15 @@ function SalesmanFormModal({ existingCount, salesman, onClose, onSubmit }) {
 // to whatever the lead actually has (nullable GPS when Location Settings
 // have GPS off, optional sub-location/POS/renewal fields, etc).
 const FOLLOWUP_QUICK = [["Tomorrow", 1], ["+3 days", 3]];
+const FOLLOWUP_OUTCOMES = [
+  ["interested", "Interested"],
+  ["callback_requested", "Callback requested"],
+  ["no_answer", "No answer"],
+  ["demo_requested", "Demo requested"],
+  ["pricing_concern", "Pricing concern"],
+  ["not_interested", "Not interested"],
+];
+const FOLLOWUP_OUTCOME_LABELS = Object.fromEntries(FOLLOWUP_OUTCOMES);
 function isoDaysFromToday(days) {
   const d = new Date();
   d.setDate(d.getDate() + days);
@@ -299,8 +308,8 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
   const [showAiWriter, setShowAiWriter] = useState(false);
   useEffect(() => { if (notificationOpenedAt) setShowBrief(true); }, [notificationOpenedAt, lead.id]);
   const [detailTab, setDetailTab] = useState("overview");
-  const [showReschedule, setShowReschedule] = useState(false);
-  const [rescheduleDate, setRescheduleDate] = useState("");
+  const [followUpDraft, setFollowUpDraft] = useState(null);
+  const [followUpError, setFollowUpError] = useState("");
   const [followUpSaving, setFollowUpSaving] = useState(false);
   const [followUpExpanded, setFollowUpExpanded] = useState(false);
   const [statusExpanded, setStatusExpanded] = useState(false);
@@ -435,41 +444,38 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
     ? followUpDate.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
     : "";
 
-  const markFollowUpDone = async () => {
+  const beginFollowUpLog = (mode, date = "") => {
     if (!onUpdate || followUpSaving) return;
-    setFollowUpSaving(true);
-    try {
-      await onUpdate(lead.id, { nextFollowUpDate: null });
-      setSavedOverrides((prev) => ({ ...prev, nextFollowUpDate: "" }));
-      setForm((prev) => ({ ...prev, nextFollowUpDate: "" }));
-    } catch (err) { window.alert(err.message || "The follow-up could not be saved. Please try again."); } finally {
-      setFollowUpSaving(false);
-    }
+    setFollowUpError("");
+    setFollowUpDraft({ mode, date, outcome: "", feedback: "", requestId: uuid() });
+    setFollowUpExpanded(true);
   };
-
-  const saveReschedule = async () => {
-    if (!onUpdate || !rescheduleDate || followUpSaving) return;
-    setFollowUpSaving(true);
-    try {
-      await onUpdate(lead.id, { nextFollowUpDate: rescheduleDate });
-      setSavedOverrides((prev) => ({ ...prev, nextFollowUpDate: rescheduleDate }));
-      setForm((prev) => ({ ...prev, nextFollowUpDate: rescheduleDate }));
-      setShowReschedule(false);
-      setRescheduleDate("");
-    } catch (err) { window.alert(err.message || "The follow-up could not be saved. Please try again."); } finally {
-      setFollowUpSaving(false);
+  const saveFollowUpLog = async () => {
+    if (!followUpDraft || !onUpdate || followUpSaving) return;
+    const { mode, date, outcome, feedback, requestId } = followUpDraft;
+    if (!outcome) { setFollowUpError("Select a follow-up outcome."); return; }
+    if (outcome !== "no_answer" && !feedback.trim()) {
+      setFollowUpError("Write what the customer said."); return;
     }
-  };
-
-  const applyFollowUp = async (iso) => {
-    if (!onUpdate || !iso || followUpSaving) return;
+    if (mode === "reschedule" && !date) {
+      setFollowUpError("Select the next follow-up date."); return;
+    }
     setFollowUpSaving(true);
+    setFollowUpError("");
     try {
-      await onUpdate(lead.id, { nextFollowUpDate: iso });
-      setSavedOverrides((prev) => ({ ...prev, nextFollowUpDate: iso }));
-      setForm((prev) => ({ ...prev, nextFollowUpDate: iso }));
-      setShowReschedule(false);
-    } catch (err) { window.alert(err.message || "The follow-up could not be saved. Please try again."); } finally {
+      // Same PATCH transaction stores the date and the append-only activity log.
+      await onUpdate(lead.id, {
+        nextFollowUpDate: date || null,
+        followUpLog: { mode, outcome, feedback: feedback.trim(), requestId },
+      });
+      setSavedOverrides(prev => ({ ...prev, nextFollowUpDate: date || "" }));
+      setForm(prev => ({ ...prev, nextFollowUpDate: date || "" }));
+      setHistoryRefresh(value => value + 1);
+      setFollowUpDraft(null);
+      setFollowUpExpanded(false);
+    } catch (err) {
+      setFollowUpError(err.message || "Follow-up wasn't saved. Check your connection and retry.");
+    } finally {
       setFollowUpSaving(false);
     }
   };
@@ -659,15 +665,15 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                 {followUpExpanded && (
                   <div style={{ marginTop: 12, paddingTop: 10, borderTop: `1px solid ${T.line}` }}>
                     <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 9 }}>
-                      <button disabled={followUpSaving} onClick={markFollowUpDone} style={{ minHeight: 30, padding: "0 9px", border: `1px solid ${T.route}`, borderRadius: 8, background: "#fff", color: T.route, fontSize: 11.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>{followUpSaving ? "Saving…" : "✓ Mark Done"}</button>
+                      <button disabled={followUpSaving} onClick={() => beginFollowUpLog("done")} style={{ minHeight: 30, padding: "0 9px", border: `1px solid ${T.route}`, borderRadius: 8, background: "#fff", color: T.route, fontSize: 11.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>{followUpSaving ? "Saving…" : "✓ Mark Done"}</button>
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 8 }}>
                       {FOLLOWUP_QUICK.map(([label, days]) => (
-                        <button key={label} disabled={followUpSaving} onClick={() => { const date = isoDaysFromToday(days); if (window.confirm(`Set next follow-up to ${label.toLowerCase()}?`)) applyFollowUp(date); }} style={{ minHeight: 36, padding: "0 11px", borderRadius: 8, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{label}</button>
+                        <button key={label} disabled={followUpSaving} onClick={() => beginFollowUpLog("reschedule", isoDaysFromToday(days))} style={{ minHeight: 36, padding: "0 11px", borderRadius: 8, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{label}</button>
                       ))}
                       <label aria-label="Reschedule follow-up" title="Reschedule" style={{ minWidth: 40, minHeight: 36, padding: "0 10px", border: `1px solid ${T.line}`, borderRadius: 10, background: "#fff", color: T.ink, fontSize: 17, fontWeight: 700, cursor: followUpSaving ? "default" : "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", position: "relative", boxSizing: "border-box" }}>
                         📅
-                        <input type="date" disabled={followUpSaving} value="" onChange={(e) => { if (e.target.value) applyFollowUp(e.target.value); }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer" }} />
+                        <input type="date" disabled={followUpSaving} value="" onChange={(e) => { if (e.target.value) beginFollowUpLog("reschedule", e.target.value); }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer" }} />
                       </label>
                     </div>
                   </div>
@@ -681,12 +687,51 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                 <div style={{ marginTop: 3, fontSize: 12.5, color: T.inkSoft }}>Not set. Pick a quick date:</div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
                   {FOLLOWUP_QUICK.map(([label, days]) => (
-                    <button key={label} disabled={followUpSaving} onClick={() => { const date = isoDaysFromToday(days); if (window.confirm(`Set next follow-up to ${label.toLowerCase()}?`)) applyFollowUp(date); }} style={{ minHeight: 40, padding: "0 13px", borderRadius: 999, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{label}</button>
+                    <button key={label} disabled={followUpSaving} onClick={() => beginFollowUpLog("reschedule", isoDaysFromToday(days))} style={{ minHeight: 40, padding: "0 13px", borderRadius: 999, border: `1px solid ${T.line}`, background: "#fff", color: T.ink, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{label}</button>
                   ))}
                   <label aria-label="Schedule follow-up date" title="Choose date" style={{ minWidth: 40, minHeight: 36, padding: "0 10px", border: `1px solid ${T.line}`, borderRadius: 8, background: "#fff", color: T.ink, fontSize: 17, fontWeight: 700, cursor: followUpSaving ? "default" : "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", position: "relative", boxSizing: "border-box" }}>
                     📅
-                    <input type="date" disabled={followUpSaving} value="" onChange={(e) => { if (e.target.value) applyFollowUp(e.target.value); }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer" }} />
+                    <input type="date" disabled={followUpSaving} value="" onChange={(e) => { if (e.target.value) beginFollowUpLog("reschedule", e.target.value); }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer" }} />
                   </label>
+                </div>
+              </div>
+            )}
+
+            {followUpDraft && (
+              <div aria-label="Follow-up Log" style={{ marginTop: 12, background: "#fff", border: "1px solid " + T.line, borderRadius: 14, padding: 14 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 800, color: T.ink, marginBottom: 10 }}>Follow-up Log</div>
+                <label htmlFor="ft-followup-outcome" style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 5 }}>Follow-up outcome *</label>
+                <select id="ft-followup-outcome" aria-label="Follow-up outcome" value={followUpDraft.outcome}
+                  onChange={e => { const value = e.target.value; setFollowUpDraft(d => ({ ...d, outcome: value })); setFollowUpError(""); }}
+                  style={{ ...inputStyle, width: "100%", marginBottom: 11 }}>
+                  <option value="">Select outcome</option>
+                  {FOLLOWUP_OUTCOMES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
+                <label htmlFor="ft-followup-feedback" style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 5 }}>
+                  What did the customer say? {followUpDraft.outcome === "no_answer" ? "(optional)" : "*"}
+                </label>
+                <textarea id="ft-followup-feedback" aria-label="Customer feedback" rows={3} maxLength={2000}
+                  value={followUpDraft.feedback}
+                  onChange={e => { setFollowUpDraft(d => ({ ...d, feedback: e.target.value })); setFollowUpError(""); }}
+                  placeholder="Write the customer's response or reason…"
+                  style={{ ...inputStyle, width: "100%", boxSizing: "border-box", resize: "vertical", marginBottom: 11 }} />
+                <label htmlFor="ft-followup-next" style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 5 }}>
+                  Next follow-up date {followUpDraft.mode === "done" ? "(optional)" : "*"}
+                </label>
+                <input id="ft-followup-next" aria-label="Next follow-up date" type="date"
+                  value={followUpDraft.date}
+                  onChange={e => { setFollowUpDraft(d => ({ ...d, date: e.target.value })); setFollowUpError(""); }}
+                  style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} />
+                {followUpError && <div role="alert" style={{ fontSize: 12, color: T.danger, marginTop: 8 }}>{followUpError}</div>}
+                <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                  <button type="button" disabled={followUpSaving} onClick={() => { setFollowUpDraft(null); setFollowUpError(""); }}
+                    style={{ flex: 1, minHeight: 38, borderRadius: 9, border: "1px solid " + T.line, background: "#fff", color: T.ink, cursor: "pointer" }}>Cancel</button>
+                  <button type="button" disabled={followUpSaving || !followUpDraft.outcome || (followUpDraft.outcome !== "no_answer" && !followUpDraft.feedback.trim()) || (followUpDraft.mode === "reschedule" && !followUpDraft.date)}
+                    onClick={saveFollowUpLog}
+                    style={{ flex: 1, minHeight: 38, borderRadius: 9, border: "none", background: T.route, color: "#fff", fontWeight: 800, cursor: "pointer",
+                      opacity: followUpSaving || !followUpDraft.outcome || (followUpDraft.outcome !== "no_answer" && !followUpDraft.feedback.trim()) || (followUpDraft.mode === "reschedule" && !followUpDraft.date) ? .6 : 1 }}>
+                    {followUpSaving ? "Saving…" : "Save Follow-up"}
+                  </button>
                 </div>
               </div>
             )}
@@ -837,6 +882,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                                   "lead.follow_up_scheduled": "Follow-up scheduled",
                                   "lead.follow_up_rescheduled": "Follow-up rescheduled",
                                   "lead.follow_up_done": "Follow-up completed",
+                                  "lead.follow_up_logged": "Follow-up logged",
                                   "lead.comment_updated": "Comment updated",
                                   "lead.edited": "Lead information updated",
                                   "lead.admin_mention": "Admin instruction",
@@ -855,6 +901,14 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                                   detail = <span style={{ fontWeight: 700, color: T.route }}>{fmtDate(newValue)}</span>;
                                 } else if (action === "lead.follow_up_rescheduled") {
                                   detail = <><span style={{ color: T.inkSoft }}>{fmtDate(oldValue)}</span><span style={{ color: T.inkSoft }}> → </span><span style={{ fontWeight: 700, color: T.route }}>{fmtDate(newValue)}</span></>;
+                                } else if (action === "lead.follow_up_logged") {
+                                  detail = (
+                                    <div style={{ color: T.ink, whiteSpace: "normal", width: "100%" }}>
+                                      <div style={{ fontWeight: 700, color: T.route }}>{FOLLOWUP_OUTCOME_LABELS[h.follow_up_outcome] || "Follow-up"} · {h.follow_up_mode === "done" ? "Completed" : "Rescheduled"}</div>
+                                      <div style={{ marginTop: 4, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{h.follow_up_feedback || "No answer; no customer response."}</div>
+                                      <div style={{ color: T.inkSoft, marginTop: 4 }}>{newValue ? "Next follow-up: " + fmtDate(newValue) : "No next follow-up scheduled"}</div>
+                                    </div>
+                                  );
                                 } else if (action === "lead.follow_up_done") {
                                   detail = <span style={{ color: T.inkSoft }}>{oldValue ? `Completed follow-up for ${fmtDate(oldValue)}` : "Marked done"}</span>;
                                 } else if (action === "lead.conversation") {

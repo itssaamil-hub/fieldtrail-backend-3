@@ -201,6 +201,20 @@ export default function useAdminData({ online, session }) {
   }, [loadAll, refreshSummary]);
 
   const onUpdateLead = useCallback(async (id, payload) => {
+    // Follow-up Log must confirm the server write before updating local date.
+    // Keep the rest of the legacy edit flow exactly as it is.
+    if (payload?.followUpLog) {
+      try {
+        const result = await api.adminUpdateLead(id, payload);
+        const mapped = mappedLeadFromResponse(result);
+        if (mapped) setLeads(prev => prev.map(lead => lead.id === id ? { ...mapped, wonDate: mapped.wonDate ?? lead.wonDate } : lead));
+        setLoadError("");
+        return result;
+      } catch (err) {
+        setLoadError(errorMessage(err, "Couldn't save follow-up."));
+        throw err;
+      }
+    }
     setLeads((prev) => prev.map((lead) => lead.id === id ? {
       ...lead,
       business: payload.businessName ?? lead.business,
