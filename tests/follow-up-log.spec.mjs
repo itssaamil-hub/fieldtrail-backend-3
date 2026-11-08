@@ -106,7 +106,7 @@ for (const role of ["admin", "salesman"]) {
     expect(actions[0].nextFollowUpDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(actions[0]).not.toHaveProperty("notes");
     expect(actions[0]).not.toHaveProperty("status");
-    await page.getByRole("button", { name: "Activity", exact: true }).last().click();
+    await page.getByRole("button", { name: "activity", exact: true }).last().click();
     await expect(page.getByText("Follow-up logged", { exact: true })).toBeVisible();
     await expect(page.getByText("Owner asked for the Swirl POS demo tomorrow.")).toBeVisible();
     expect(errors).toEqual([]);
