@@ -316,38 +316,38 @@ export default function AdminDashboardPanel({
             </div>
             <div style={{ fontSize: 13, color: T.inkSoft, marginTop: 2 }}>A quick look at what needs your attention today.</div>
           </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
           <select aria-label="Dashboard employee desktop" value={dashboardSalesman} onChange={(e) => setDashboardSalesman(e.target.value)} style={{ minWidth: 128, height: 34, padding: "5px 30px 5px 10px", borderRadius: 9, fontSize: 12.5, fontWeight: 600, background: "#fff", border: `1px solid ${T.line}`, color: T.ink }}>
             <option value="all">👥 All Team</option>
             {salesmen.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
+          <DashboardMonthFilter T={T} employee={dashboardSalesman} onEmployeeChange={setDashboardSalesman} salesmen={salesmen} period={monthPeriod} onPeriodChange={setMonthPeriod} customMonth={customMonth} onCustomMonthChange={setCustomMonth} />
+          </div>
         </div>
       )}
       {phone && (
         <div id="engage-admin-mobile-dashboard-utility" className="engage-admin-mobile-dashboard-utility">
           <div className="engage-admin-mobile-greeting">{greeting}, {adminName} 👋</div>
           <div className="engage-admin-mobile-team-slot">
-            <select aria-label="Dashboard employee" value={dashboardSalesman} onChange={(e) => setDashboardSalesman(e.target.value)}>
-              <option value="all">All Team</option>
-              {salesmen.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
+            <DashboardMonthFilter T={T} phone employee={dashboardSalesman} onEmployeeChange={setDashboardSalesman} salesmen={salesmen} period={monthPeriod} onPeriodChange={setMonthPeriod} customMonth={customMonth} onCustomMonthChange={setCustomMonth} />
           </div>
         </div>
       )}
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
         <DashboardStatCard T={T} label="Total Employees" value={salesmen.length} sub={<span style={{ color: T.verified }}>{activeSalesmen} active now</span>} icon={Contact2} color="#64748B" onClick={phone ? onShowTeamActivity : undefined} />
-        <DashboardStatCard T={T} label="Conversation" value={conversationValue ?? "—"} comparison={comparisons.conversation} comparisonPeriod={comparisonPeriod} icon={MessageSquare} color={T.route} onClick={openConversationLeads} />
+        <DashboardStatCard T={T} label="Conversation" value={conversationKpi} comparison={selectedMonth ? null : comparisons.conversation} comparisonPeriod={comparisonPeriod} icon={MessageSquare} color={T.route} onClick={openConversationLeads} />
         <DashboardStatCard T={T} label="Leads Today" value={leadsTodayValue} comparison={comparisons.leadsToday} comparisonPeriod={comparisonPeriod} icon={TargetIcon} color="#3B82F6" onClick={() => onOpenStatLeads({ title: "Leads Today", leads: todayLeads })} />
-        <DashboardStatCard T={T} label={<>Hot Leads <span style={{ fontSize: 8.5, opacity: 0.65 }}>TODAY</span></>} value={hotTodayValue} icon={Flame} comparison={comparisons.hotToday} comparisonPeriod={comparisonPeriod} color={T.danger} onClick={() => onOpenStatLeads({ title: "Hot Leads Today", leads: hotLeadsToday })} />
-        <DashboardStatCard T={T} label="In Negotiation" value={negotiationKpiCount} sub={negotiationKpiSub} subInline comparison={negotiationPeriod === "all" ? comparisons.negotiation : null} comparisonPeriod={comparisonPeriod} icon={Handshake} color="#8B5CF6" periodControl={negotiationPeriodControl} onClick={openNegotiationLeads} />
-        <DashboardStatCard T={T} label="Total Leads" value={totalValue} comparison={comparisons.total} comparisonPeriod={comparisonPeriod} icon={Contact2} color="#0891B2" />
-        <DashboardStatCard T={T} label="Won" value={wonValue} sub={wonSub} subInline comparison={comparisons.won} comparisonPeriod={comparisonPeriod} icon={CheckCircle2} color={T.verified} onClick={openWonLeads} />
+        <DashboardStatCard T={T} label={selectedMonth ? "Hot Leads" : <>Hot Leads <span style={{ fontSize: 8.5, opacity: 0.65 }}>TODAY</span></>} value={hotKpi} icon={Flame} comparison={selectedMonth ? null : comparisons.hotToday} comparisonPeriod={comparisonPeriod} color={T.danger} onClick={selectedMonth ? () => openMonthlyDrilldown("hot", "Hot Leads") : () => onOpenStatLeads({ title: "Hot Leads Today", leads: hotLeadsToday })} />
+        <DashboardStatCard T={T} label="In Negotiation" value={negotiationKpiCount} sub={negotiationKpiSub} subInline comparison={selectedMonth ? null : comparisons.negotiation} comparisonPeriod={comparisonPeriod} icon={Handshake} color="#8B5CF6" onClick={openNegotiationLeads} />
+        <DashboardStatCard T={T} label="Total Leads" value={totalValue} comparison={selectedMonth ? null : comparisons.total} comparisonPeriod={comparisonPeriod} icon={Contact2} color="#0891B2" onClick={selectedMonth ? () => openMonthlyDrilldown(null, "Total Leads") : undefined} />
+        <DashboardStatCard T={T} label="Won" value={wonValue} sub={wonSub} subInline comparison={selectedMonth ? null : comparisons.won} comparisonPeriod={comparisonPeriod} icon={CheckCircle2} color={T.verified} onClick={openWonLeads} />
         <DashboardStatCard T={T} label="Tasks" value={adminPendingTasks ?? 0} sub="pending" icon={List} color="#145C5D" />
         <DashboardStatCard T={T} label="Upcoming Follow-up" value={upcomingFollowUps.length} icon={CalendarClock} color={T.warn} onClick={() => onOpenStatLeads({ title: "Upcoming Follow-ups", leads: upcomingFollowUps })} />
         <DashboardStatCard T={T} label="Renewals Due" sub={renewalNearest || "next 30 days"} value={upcomingRenewals.length} icon={RefreshCw} color={T.accent} onClick={() => onOpenStatLeads({ title: "Renewals Due (Next 30 Days)", leads: upcomingRenewals })} />
       </div>
       {!phone && <AdminActivityOverview salesmen={salesmen} salesmanId={dashboardSalesman} />}
       {phone && <AdminMobileLeadTrend leads={dashboardLeads} />}
-      {conversationError && <p role="alert" style={{ color: T.danger }}>{conversationError}</p>}
+      {(conversationError || monthError) && <p role="alert" style={{ color: T.danger }}>{conversationError || monthError}</p>}
       <div style={{ display: "none" }} aria-hidden="true"><TasksEntry onPendingChange={setAdminPendingTasks} /></div>
     </>
   );
