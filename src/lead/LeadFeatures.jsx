@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { createLeadFeatures as createCoreLeadFeatures } from "./LeadFeaturesCore.jsx";
-import { getApiBase, getSession } from "../api.js";
+import { getApiBase, getSession, mapLeadRow } from "../api.js";
 import { isWonDateInCurrentIstMonth, readAdminWonPeriod, writeAdminWonPeriod } from "./wonPeriod.js";
 
 const WonDateContext = createContext(null);
@@ -91,19 +91,61 @@ export function createLeadFeatures(deps) {
     },
   };
 
-  const core = createCoreLeadFeatures({ ...deps, api: leadCaptureApi, useState: locationSafeUseState, Field: FieldWithWonDate });
+  const core = createCoreLeadFeatures({ ...deps, api: leadCaptureApi, useState: locationSafeUseState, Field: FieldWithWonDate, EmployeeWonLeadsModal: MyLeadsModal });
   const CoreLeadDetailDrawer = core.LeadDetailDrawer;
   const CoreMyLeadsModal = core.MyLeadsModal;
 
   function MyLeadsModal(props) {
     const isWonModal = props.title === "Won Leads";
-    const [period, setPeriod] = useState(() => readAdminWonPeriod());
+    const isEmployeeWonModal = isWonModal && Boolean(props.employeeWonUserId);
+    const [period, setPeriod] = useState(() => isEmployeeWonModal ? "month" : readAdminWonPeriod());
     const [resolvedWonDates, setResolvedWonDates] = useState({});
     const [wonDatesLoading, setWonDatesLoading] = useState(false);
     const [wonDatesError, setWonDatesError] = useState("");
+    const [employeeRows, setEmployeeRows] = useState([]);
+    const [employeePage, setEmployeePage] = useState(1);
+    const [employeeCount, setEmployeeCount] = useState(0);
+    const [employeeRevenue, setEmployeeRevenue] = useState(0);
+    const [employeeHasNext, setEmployeeHasNext] = useState(false);
+    const [employeeLoading, setEmployeeLoading] = useState(false);
+    const [employeeError, setEmployeeError] = useState("");
+    const [employeeRetry, setEmployeeRetry] = useState(0);
+
+    // This salesperson-owned query fetches real Won Date values directly from
+    // the backend. Admin-only per-lead Won Date lookup must never run here.
+    useEffect(() => {
+      if (!isEmployeeWonModal) return undefined;
+      let cancelled = false;
+      if (employeePage === 1) {
+        setEmployeeRows([]);
+        setEmployeeCount(0);
+        setEmployeeRevenue(0);
+        setEmployeeHasNext(false);
+      }
+      setEmployeeLoading(true);
+      setEmployeeError("");
+      leadCaptureApi.salesmanWonLeads({
+        period, page: employeePage, limit: 50,
+      }, props.employeeWonUserId)
+        .then((result) => {
+          if (cancelled) return;
+          const incoming = (result.leads || []).map(mapLeadRow);
+          setEmployeeRows((existing) => employeePage === 1
+            ? incoming
+            : [...existing, ...incoming.filter((lead) => !existing.some((current) => current.id === lead.id))]);
+          setEmployeeCount(Number(result.total || 0));
+          setEmployeeRevenue(Number(result.wonValue || 0));
+          setEmployeeHasNext(result.hasNext === true);
+        })
+        .catch((err) => {
+          if (!cancelled) setEmployeeError(err?.message || "Couldn't load your Won deals.");
+        })
+        .finally(() => { if (!cancelled) setEmployeeLoading(false); });
+      return () => { cancelled = true; };
+    }, [isEmployeeWonModal, props.employeeWonUserId, employeePage, period, employeeRetry]);
 
     useEffect(() => {
-      if (!isWonModal) return undefined;
+      if (!isWonModal || isEmployeeWonModal) return undefined;
       const currentWon = (props.leads || []).filter((lead) => lead.status === "won");
       const missing = currentWon.filter((lead) => !lead.wonDate && !resolvedWonDates[lead.id]);
       if (!missing.length) {
@@ -129,25 +171,36 @@ export function createLeadFeatures(deps) {
         })
         .finally(() => { if (!cancelled) setWonDatesLoading(false); });
       return () => { cancelled = true; };
-    }, [isWonModal, props.leads]);
+    }, [isWonModal, isEmployeeWonModal, props.leads]);
 
     if (!isWonModal) return <CoreMyLeadsModal {...props} />;
 
-    const currentWon = (props.leads || [])
+    const currentWon = isEmployeeWonModal ? employeeRows : (props.leads || [])
       .filter((lead) => lead.status === "won")
       .map((lead) => ({ ...lead, wonDate: lead.wonDate || resolvedWonDates[lead.id] || null }));
-    const missingCanonicalWonDate = currentWon.some((lead) => !lead.wonDate);
+    const missingCanonicalWonDate = !isEmployeeWonModal && currentWon.some((lead) => !lead.wonDate);
     const monthDataVerified = !wonDatesLoading && !missingCanonicalWonDate && !wonDatesError;
-    const periodWon = period === "month"
-      ? (monthDataVerified ? currentWon.filter((lead) => isWonDateInCurrentIstMonth(lead.wonDate)) : [])
-      : currentWon;
-    const revenue = period === "month" && !monthDataVerified
-      ? null
-      : periodWon.reduce((sum, lead) => sum + (Number(lead.dealValue) || 0), 0);
+    const periodWon = isEmployeeWonModal ? employeeRows
+      : period === "month"
+        ? (monthDataVerified ? currentWon.filter((lead) => isWonDateInCurrentIstMonth(lead.wonDate)) : [])
+        : currentWon;
+    const revenue = isEmployeeWonModal ? (employeeLoading && employeePage === 1 ? null : employeeRevenue)
+      : period === "month" && !monthDataVerified
+        ? null
+        : periodWon.reduce((sum, lead) => sum + (Number(lead.dealValue) || 0), 0);
 
     const choosePeriod = (next) => {
-      const saved = writeAdminWonPeriod(next);
-      setPeriod(saved);
+      if (isEmployeeWonModal) {
+        setEmployeeRows([]);
+        setEmployeePage(1);
+        setEmployeeCount(0);
+        setEmployeeRevenue(0);
+        setEmployeeHasNext(false);
+        setPeriod(next);
+        if (next === period) setEmployeeRetry((value) => value + 1);
+      } else {
+        setPeriod(writeAdminWonPeriod(next));
+      }
     };
 
     return (
@@ -172,14 +225,28 @@ export function createLeadFeatures(deps) {
             </button>
           </div>
         </div>
-        {period === "month" && wonDatesLoading && <div role="status" style={{ marginBottom: 10, fontSize: 12, color: deps.T.inkSoft }}>Verifying canonical Won Dates…</div>}
-        {period === "month" && !wonDatesLoading && (wonDatesError || missingCanonicalWonDate) && <div role="alert" style={{ marginBottom: 10, padding: "8px 10px", borderRadius: 9, background: deps.T.warnSoft, color: deps.T.warn, fontSize: 12, fontWeight: 650 }}>This Month is hidden until every Won Date is verified. All Time remains accurate.</div>}
+        {isEmployeeWonModal && employeeLoading && employeePage === 1 &&
+          <div role="status" style={{ marginBottom: 10, fontSize: 12, color: deps.T.inkSoft }}>Loading your Won deals…</div>}
+        {isEmployeeWonModal && employeeError &&
+          <div role="alert" style={{ marginBottom: 10, fontSize: 12, color: deps.T.danger }}>
+            {employeeError}
+            <button type="button" onClick={() => setEmployeeRetry((value) => value + 1)}
+              style={{ marginLeft: 9, border: "1px solid " + deps.T.line, background: "#fff", borderRadius: 6, padding: "5px 9px", cursor: "pointer" }}>
+              Retry
+            </button>
+          </div>}
+        {!isEmployeeWonModal && period === "month" && wonDatesLoading && <div role="status" style={{ marginBottom: 10, fontSize: 12, color: deps.T.inkSoft }}>Verifying canonical Won Dates…</div>}
+        {!isEmployeeWonModal && period === "month" && !wonDatesLoading && (wonDatesError || missingCanonicalWonDate) && <div role="alert" style={{ marginBottom: 10, padding: "8px 10px", borderRadius: 9, background: deps.T.warnSoft, color: deps.T.warn, fontSize: 12, fontWeight: 650 }}>This Month is hidden until every Won Date is verified. All Time remains accurate.</div>}
         <CoreMyLeadsModal
           {...props}
           title=" "
           leads={periodWon}
           embedded
           onClose={props.onClose}
+          hasMore={isEmployeeWonModal ? employeeHasNext && !employeeError : props.hasMore}
+          onLoadMore={isEmployeeWonModal ? () => { if (!employeeLoading) setEmployeePage((value) => value + 1); } : props.onLoadMore}
+          loadingMore={isEmployeeWonModal ? employeeLoading : props.loadingMore}
+          totalCount={isEmployeeWonModal ? employeeCount : props.totalCount}
         />
       </deps.Overlay>
     );

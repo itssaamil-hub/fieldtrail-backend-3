@@ -1220,7 +1220,7 @@ function SalesmanApp({ session, online, page, notificationLead }) {
       page={page}
       shared={{
         T, fmtMoney, isToday, isThisMonth, isWithinDays, isUpcomingRenewalMonth,
-        SalesmanReportsPage, StatCard, MessagesSection, MyLeadsModal, AddLeadModal, LeadDetailDrawer, VerificationStamp, NoLocationBadge,
+        SalesmanReportsPage, StatCard, MessagesSection, MyLeadsModal, EmployeeWonLeadsModal: deps.EmployeeWonLeadsModal, AddLeadModal, LeadDetailDrawer, VerificationStamp, NoLocationBadge,
       }}
     />
     </>
