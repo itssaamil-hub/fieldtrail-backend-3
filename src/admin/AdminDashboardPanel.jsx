@@ -231,36 +231,52 @@ export default function AdminDashboardPanel({
   const hotTodayValue = serverMetrics.hotToday ?? hotLeadsToday.length;
   const negotiationValue = serverMetrics.negotiation ?? inNegotiation.length;
   const negotiationDealValue = serverMetrics.negotiationValue ?? inNegotiation.reduce((sum, lead) => sum + (Number(lead.dealValue) || 0), 0);
-  const monthlyNegotiationReady = monthlyNegotiationLeads !== null;
-  const negotiationKpiCount = negotiationPeriod === "month"
-    ? (monthlyNegotiationReady ? monthlyNegotiationLeads.length : "—") : negotiationValue;
-  const negotiationKpiValue = negotiationPeriod === "month"
-    ? (monthlyNegotiationReady
-      ? monthlyNegotiationLeads.reduce((sum, lead) => sum + (Number(lead.dealValue) || 0), 0)
-      : null)
-    : negotiationDealValue;
-  const negotiationKpiSub = negotiationPeriod === "month" && !monthlyNegotiationReady
-    ? (negotiationScopeLoading ? "Loading…" : negotiationScopeError ? "Unavailable" : "—")
-    : fmtMoney(negotiationKpiValue);
-  const totalValue = serverMetrics.total ?? dashboardLeads.length;
-  const monthlyWonMetrics = adminWonPeriod === "month" && completeWonLeads
-    ? adminWonScopeMetrics(completeWonLeads, "month")
-    : null;
-  const wonValue = adminWonPeriod === "month"
-    ? (monthlyWonMetrics?.ready ? monthlyWonMetrics.count : "—")
-    : (serverMetrics.won ?? converted);
-  const wonDealValue = adminWonPeriod === "month"
-    ? (monthlyWonMetrics?.ready ? monthlyWonMetrics.value : null)
-    : (serverMetrics.wonValue ?? convertedValue);
-  const wonSub = adminWonPeriod === "month" && !monthlyWonMetrics?.ready
-    ? (wonScopeLoading ? "Loading…" : wonScopeError ? "Unavailable" : "—")
-    : fmtMoney(wonDealValue);
+  const monthMetrics = selectedMonth && monthData?.month === selectedMonth
+    && monthData?.employee === dashboardSalesman ? monthData.metrics : null;
+  const scopedValue = (key, allTimeValue) =>
+    selectedMonth ? (monthMetrics ? monthMetrics[key] : "—") : allTimeValue;
+  const monthlyHint = monthLoading ? "Loading…" : monthError ? "Unavailable" : "—";
+  const conversationKpi = scopedValue("conversation", conversationValue);
+  const hotKpi = scopedValue("hot", hotTodayValue);
+  const negotiationKpiCount = scopedValue("negotiation", negotiationValue);
+  const negotiationKpiValue = scopedValue("negotiationValue", negotiationDealValue);
+  const negotiationKpiSub = selectedMonth && !monthMetrics ? monthlyHint : fmtMoney(negotiationKpiValue);
+  const totalValue = scopedValue("total", serverMetrics.total ?? dashboardLeads.length);
+  const wonValue = scopedValue("won", serverMetrics.won ?? converted);
+  const wonDealValue = scopedValue("wonValue", serverMetrics.wonValue ?? convertedValue);
+  const wonSub = selectedMonth && !monthMetrics ? monthlyHint : fmtMoney(wonDealValue);
+  const monthLabel = selectedMonth
+    ? new Intl.DateTimeFormat("en-IN", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(selectedMonth + "-01T00:00:00Z"))
+    : "";
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const adminName = (getSession()?.fullName || getSession()?.full_name || getSession()?.name || "Admin").split(/\s+/)[0];
 
+  const openMonthlyDrilldown = async (status, label) => {
+    if (!selectedMonth || !monthMetrics) return;
+    try {
+      setConversationError("");
+      const rows = [];
+      let page = 1;
+      let hasNext = true;
+      while (hasNext) {
+        const params = { dashboardMonth: selectedMonth, page, limit: 100 };
+        if (status) params.status = status;
+        if (dashboardSalesman !== "all") params.salesmanId = dashboardSalesman;
+        const response = await api.adminLeads(params);
+        rows.push(...(response.leads || []));
+        hasNext = response.hasNext === true;
+        if (++page > 10000) throw new Error("Monthly deal pagination did not finish.");
+      }
+      onOpenStatLeads({ title: label + " · " + monthLabel, leads: rows.map(mapLeadRow) });
+    } catch (error) {
+      setConversationError(error.message || "Couldn't load the selected month's deals.");
+    }
+  };
+
   const openConversationLeads = async () => {
+    if (selectedMonth) return openMonthlyDrilldown("conversation", "Conversation");
     try {
       setConversationError("");
       const params = { status: "conversation" };
@@ -275,43 +291,18 @@ export default function AdminDashboardPanel({
     }
   };
 
-  const openNegotiationLeads = async () => {
-    if (negotiationPeriod === "all") {
-      onOpenStatLeads({ title: "In Negotiation", leads: inNegotiation });
-      return;
-    }
-    try {
-      const scoped = await fetchCompleteCurrentMonthNegotiation(dashboardSalesman);
-      setMonthlyNegotiationLeads(scoped);
-      setNegotiationScopeError("");
-      onOpenStatLeads({ title: "In Negotiation · This Month", leads: scoped });
-    } catch (error) {
-      setNegotiationScopeError(error.message || "Couldn't load monthly Negotiation deals.");
-      setMonthlyNegotiationLeads(null);
-    }
-  };
-
-  const negotiationPeriodControl = (
-    <div role="group" aria-label="Negotiation KPI period" onClick={(event) => event.stopPropagation()}
-      style={{ display: "flex", gap: 2, width: "fit-content", maxWidth: "100%", padding: 2, marginTop: 5, borderRadius: 7, background: T.paperDeep }}>
-      {[["all", "All time"], ["month", "This month"]].map(([period, label]) => (
-        <button key={period} type="button" aria-pressed={negotiationPeriod === period}
-          onClick={(event) => { event.stopPropagation(); setNegotiationPeriod(period); }}
-          style={{ padding: "4px 6px", border: 0, borderRadius: 5, cursor: "pointer",
-            fontSize: 10, fontWeight: 700, whiteSpace: "nowrap",
-            background: negotiationPeriod === period ? "#fff" : "transparent",
-            color: negotiationPeriod === period ? T.ink : T.inkSoft }}>
-          {label}
-        </button>
-      ))}
-    </div>
-  );
+  const openNegotiationLeads = () => selectedMonth
+    ? openMonthlyDrilldown("negotiation", "In Negotiation")
+    : onOpenStatLeads({ title: "In Negotiation", leads: inNegotiation });
 
   const openWonLeads = async () => {
+    if (selectedMonth) return openMonthlyDrilldown("won", "Won Leads");
     try {
-      const wonLeads = await loadCompleteWonScope();
+      setConversationError("");
+      const wonLeads = await fetchCompleteCurrentWonLeads(dashboardSalesman);
       onOpenStatLeads({ title: "Won Leads", leads: wonLeads });
-    } catch {
+    } catch (error) {
+      setConversationError(error.message || "Couldn't load Won leads.");
     }
   };
 
