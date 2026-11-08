@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { createLeadFeatures as createCoreLeadFeatures } from "./LeadFeaturesCore.jsx";
-import { getApiBase, getSession } from "../api.js";
+import { getApiBase, getSession, mapLeadRow } from "../api.js";
 import { isWonDateInCurrentIstMonth, readAdminWonPeriod, writeAdminWonPeriod } from "./wonPeriod.js";
 
 const WonDateContext = createContext(null);
@@ -97,13 +97,22 @@ export function createLeadFeatures(deps) {
 
   function MyLeadsModal(props) {
     const isWonModal = props.title === "Won Leads";
-    const [period, setPeriod] = useState(() => readAdminWonPeriod());
+    const isEmployeeWonModal = isWonModal && Boolean(props.employeeWonUserId);
+    const [period, setPeriod] = useState(() => isEmployeeWonModal ? "month" : readAdminWonPeriod());
     const [resolvedWonDates, setResolvedWonDates] = useState({});
     const [wonDatesLoading, setWonDatesLoading] = useState(false);
     const [wonDatesError, setWonDatesError] = useState("");
+    const [employeeRows, setEmployeeRows] = useState([]);
+    const [employeePage, setEmployeePage] = useState(1);
+    const [employeeCount, setEmployeeCount] = useState(0);
+    const [employeeRevenue, setEmployeeRevenue] = useState(0);
+    const [employeeHasNext, setEmployeeHasNext] = useState(false);
+    const [employeeLoading, setEmployeeLoading] = useState(false);
+    const [employeeError, setEmployeeError] = useState("");
+    const [employeeRetry, setEmployeeRetry] = useState(0);
 
     useEffect(() => {
-      if (!isWonModal) return undefined;
+      if (!isWonModal || isEmployeeWonModal) return undefined;
       const currentWon = (props.leads || []).filter((lead) => lead.status === "won");
       const missing = currentWon.filter((lead) => !lead.wonDate && !resolvedWonDates[lead.id]);
       if (!missing.length) {
@@ -129,7 +138,7 @@ export function createLeadFeatures(deps) {
         })
         .finally(() => { if (!cancelled) setWonDatesLoading(false); });
       return () => { cancelled = true; };
-    }, [isWonModal, props.leads]);
+    }, [isWonModal, isEmployeeWonModal, props.leads]);
 
     if (!isWonModal) return <CoreMyLeadsModal {...props} />;
 
