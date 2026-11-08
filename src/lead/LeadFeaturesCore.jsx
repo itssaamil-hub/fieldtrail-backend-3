@@ -693,6 +693,9 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                   </div>
                   <span aria-hidden="true" style={{ fontSize: 18, color: T.inkSoft }}>{followUpExpanded ? "⌃" : "›"}</span>
                 </div>
+                <button type="button" className="ft-followup-log-mobile-entry"
+                  onClick={() => beginFollowUpLog("reschedule", String(displayLead.nextFollowUpDate || "").slice(0, 10))}
+                  disabled={followUpSaving}>+ Follow-up Log</button>
                 {followUpExpanded && (
                   <div style={{ marginTop: 12, paddingTop: 10, borderTop: `1px solid ${T.line}` }}>
                     <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 9 }}>
@@ -715,6 +718,8 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
             {!formattedFollowUp && onUpdate && (
               <div style={{ marginTop: 12, background: T.warnSoft, border: "1px solid #F0D89A", borderRadius: 14, padding: 14 }}>
                 <div style={{ fontSize: 13.5, fontWeight: 800, color: T.ink }}>Next Follow-up</div>
+                <button type="button" className="ft-followup-log-mobile-entry"
+                  onClick={() => beginFollowUpLog("reschedule")} disabled={followUpSaving}>+ Follow-up Log</button>
                 <div style={{ marginTop: 3, fontSize: 12.5, color: T.inkSoft }}>Not set. Pick a quick date:</div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
                   {FOLLOWUP_QUICK.map(([label, days]) => (
