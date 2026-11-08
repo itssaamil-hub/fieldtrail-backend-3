@@ -111,6 +111,39 @@ export function createLeadFeatures(deps) {
     const [employeeError, setEmployeeError] = useState("");
     const [employeeRetry, setEmployeeRetry] = useState(0);
 
+    // This salesperson-owned query fetches real Won Date values directly from
+    // the backend. Admin-only per-lead Won Date lookup must never run here.
+    useEffect(() => {
+      if (!isEmployeeWonModal) return undefined;
+      let cancelled = false;
+      if (employeePage === 1) {
+        setEmployeeRows([]);
+        setEmployeeCount(0);
+        setEmployeeRevenue(0);
+        setEmployeeHasNext(false);
+      }
+      setEmployeeLoading(true);
+      setEmployeeError("");
+      leadCaptureApi.salesmanWonLeads({
+        period, page: employeePage, limit: 50,
+      }, props.employeeWonUserId)
+        .then((result) => {
+          if (cancelled) return;
+          const incoming = (result.leads || []).map(mapLeadRow);
+          setEmployeeRows((existing) => employeePage === 1
+            ? incoming
+            : [...existing, ...incoming.filter((lead) => !existing.some((current) => current.id === lead.id))]);
+          setEmployeeCount(Number(result.total || 0));
+          setEmployeeRevenue(Number(result.wonValue || 0));
+          setEmployeeHasNext(result.hasNext === true);
+        })
+        .catch((err) => {
+          if (!cancelled) setEmployeeError(err?.message || "Couldn't load your Won deals.");
+        })
+        .finally(() => { if (!cancelled) setEmployeeLoading(false); });
+      return () => { cancelled = true; };
+    }, [isEmployeeWonModal, props.employeeWonUserId, employeePage, period, employeeRetry]);
+
     useEffect(() => {
       if (!isWonModal || isEmployeeWonModal) return undefined;
       const currentWon = (props.leads || []).filter((lead) => lead.status === "won");
