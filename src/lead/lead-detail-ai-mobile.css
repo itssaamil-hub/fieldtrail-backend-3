@@ -1,7 +1,5 @@
 /* Lead detail action placement only. Desktop keeps the exact existing arrangement. */
 .ft-lead-detail-ai-mobile { display: none; }
-/* Follow-up Log entry point is phone-only; existing desktop controls are untouched. */
-.ft-followup-log-mobile-entry { display: none; }
 .ft-lead-detail-ai-desktop { display: inline-flex; }
 .ft-lead-detail-info-verification { display: none; }
 .ft-lead-detail-info-heading { display: block; }
@@ -9,13 +7,6 @@
 
 @media (max-width: 640px) {
   .ft-lead-detail-ai-mobile { display: inline-flex; }
-  .ft-followup-log-mobile-entry {
-    display: inline-flex; align-items: center; justify-content: center;
-    min-height: 34px; margin-top: 9px; padding: 7px 10px;
-    border: 1px solid #CFE6DC; border-radius: 8px;
-    background: #fff; color: #14624E; font-size: 12px;
-    font-weight: 750; cursor: pointer;
-  }
   .ft-lead-detail-ai-desktop,
   .ft-lead-detail-header-verification { display: none; }
   .ft-lead-detail-info-heading {
