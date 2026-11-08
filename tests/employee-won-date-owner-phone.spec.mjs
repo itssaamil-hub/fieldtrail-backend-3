@@ -67,7 +67,12 @@ for (const width of [390, 1440]) {
     const card = page.locator('[data-kpi="won"]');
     await expect(card).toContainText("2");
     await card.click();
-    await expect(page.getByText("Backdated Restaurant")).toBeVisible();
+    await expect(page.getByText("Backdated Restaurant")).toBeVisible().catch(async error => {
+      console.log("WON TEST DIAGNOSTIC REQUESTS", JSON.stringify(requests));
+      console.log("WON TEST DIAGNOSTIC BODY", (await page.locator("body").innerText()).slice(-4300));
+      console.log("WON TEST DIAGNOSTIC ERRORS", JSON.stringify(errors));
+      throw error;
+    });
     await expect(page.getByText("Second Won Restaurant")).toHaveCount(0);
     await page.getByRole("button",{name:/Load more leads/}).click();
     await expect(page.getByText("Second Won Restaurant")).toBeVisible();
