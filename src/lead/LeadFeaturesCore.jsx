@@ -299,7 +299,7 @@ function whatsappLink(phone) {
   return `https://wa.me/${digits}`;
 }
 
-function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, fetchHistory, isAdmin = false, employeeRepliesEnabled = true, notificationOpenedAt = null, trackingEmployeeId = null }) {
+function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, fetchHistory, isAdmin = false, employeeRepliesEnabled = true, notificationOpenedAt = null, trackingEmployeeId = null, requireCustomerFeedback = true }) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [editing, setEditing] = useState(false);
   const [history, setHistory] = useState(null); // null = loading, [] = loaded & empty
@@ -308,6 +308,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
   const [showAiWriter, setShowAiWriter] = useState(false);
   useEffect(() => { if (notificationOpenedAt) setShowBrief(true); }, [notificationOpenedAt, lead.id]);
   const [detailTab, setDetailTab] = useState("overview");
+  const showCustomerFeedbackQuestion = isAdmin || requireCustomerFeedback !== false;
   const [followUpDraft, setFollowUpDraft] = useState(null);
   const [followUpError, setFollowUpError] = useState("");
   const [followUpSaving, setFollowUpSaving] = useState(false);
@@ -457,7 +458,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
     if (!followUpDraft || !onUpdate || followUpSaving) return;
     const { mode, date, outcome, feedback, requestId } = followUpDraft;
     if (!outcome) { setFollowUpError("Select a follow-up outcome."); return; }
-    if (outcome !== "no_answer" && !feedback.trim()) {
+    if (showCustomerFeedbackQuestion && outcome !== "no_answer" && !feedback.trim()) {
       setFollowUpError("Write what the customer said."); return;
     }
     if (mode === "reschedule" && !date) {
@@ -738,6 +739,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                   <option value="">Select outcome</option>
                   {FOLLOWUP_OUTCOMES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                 </select>
+                {showCustomerFeedbackQuestion && <>
                 <label htmlFor="ft-followup-feedback" style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 5 }}>
                   What did the customer say? {followUpDraft.outcome === "no_answer" ? "(optional)" : "*"}
                 </label>
@@ -746,6 +748,7 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                   onChange={e => { setFollowUpDraft(d => ({ ...d, feedback: e.target.value })); setFollowUpError(""); }}
                   placeholder="Write the customer's response or reason…"
                   style={{ ...inputStyle, width: "100%", boxSizing: "border-box", resize: "vertical", marginBottom: 11 }} />
+                </>}
                 <label htmlFor="ft-followup-next" style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 5 }}>
                   Next follow-up date {followUpDraft.mode === "done" ? "(optional)" : "*"}
                 </label>
@@ -757,10 +760,10 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                 <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
                   <button type="button" disabled={followUpSaving} onClick={() => { setFollowUpDraft(null); setFollowUpError(""); }}
                     style={{ flex: 1, minHeight: 38, borderRadius: 9, border: "1px solid " + T.line, background: "#fff", color: T.ink, cursor: "pointer" }}>Cancel</button>
-                  <button type="button" disabled={followUpSaving || !followUpDraft.outcome || (followUpDraft.outcome !== "no_answer" && !followUpDraft.feedback.trim()) || (followUpDraft.mode === "reschedule" && !followUpDraft.date)}
+                  <button type="button" disabled={followUpSaving || !followUpDraft.outcome || (showCustomerFeedbackQuestion && followUpDraft.outcome !== "no_answer" && !followUpDraft.feedback.trim()) || (followUpDraft.mode === "reschedule" && !followUpDraft.date)}
                     onClick={saveFollowUpLog}
                     style={{ flex: 1, minHeight: 38, borderRadius: 9, border: "none", background: T.route, color: "#fff", fontWeight: 800, cursor: "pointer",
-                      opacity: followUpSaving || !followUpDraft.outcome || (followUpDraft.outcome !== "no_answer" && !followUpDraft.feedback.trim()) || (followUpDraft.mode === "reschedule" && !followUpDraft.date) ? .6 : 1 }}>
+                      opacity: followUpSaving || !followUpDraft.outcome || (showCustomerFeedbackQuestion && followUpDraft.outcome !== "no_answer" && !followUpDraft.feedback.trim()) || (followUpDraft.mode === "reschedule" && !followUpDraft.date) ? .6 : 1 }}>
                     {followUpSaving ? "Saving…" : "Save Follow-up"}
                   </button>
                 </div>
@@ -1127,6 +1130,7 @@ function SalesmanApp({ session, online, page, notificationLead }) {
     dailyTarget,
     monthlyTarget,
     employeeCity,
+    requireCustomerFollowUpFeedback,
   } = useSalesmanSettings({ setEmployeeRepliesEnabled });
 
   const getBatteryPct = useCallback(async () => {
@@ -1209,6 +1213,7 @@ function SalesmanApp({ session, online, page, notificationLead }) {
       onDeleteMessage={deleteMessage}
       onReplyMessage={replyToMessage}
       employeeRepliesEnabled={employeeRepliesEnabled}
+      requireCustomerFollowUpFeedback={requireCustomerFollowUpFeedback}
       dailyTarget={dailyTarget}
       monthlyTarget={monthlyTarget}
       employeeCity={employeeCity}
