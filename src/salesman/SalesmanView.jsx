@@ -284,8 +284,7 @@ export default function SalesmanView({ notificationLead, session, leads, leadSum
         />
       )}
       {showConverted && (
-        <MyLeadsModal {...leadPagingProps}
-          leads={leads.filter((l) => l.status === "won")}
+        <MyLeadsModal employeeWonUserId={session.id}
           title="Won Leads"
           onClose={() => setShowConverted(false)}
           onSelectLead={(l) => { setShowConverted(false); setViewingLead(l); }}
