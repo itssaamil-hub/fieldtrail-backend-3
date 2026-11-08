@@ -320,6 +320,9 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
   const [mentionError, setMentionError] = useState("");
   const [mentionSaved, setMentionSaved] = useState("");
   const [historyRefresh, setHistoryRefresh] = useState(0);
+  const [noteEditDraft, setNoteEditDraft] = useState(null);
+  const [noteEditError, setNoteEditError] = useState("");
+  const [noteEditSaving, setNoteEditSaving] = useState(false);
   const [showLeadConversation, setShowLeadConversation] = useState(false);
   const [deletingMessageId, setDeletingMessageId] = useState(null);
   const [form, setForm] = useState({
@@ -477,6 +480,34 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
       setFollowUpError(err.message || "Follow-up wasn't saved. Check your connection and retry.");
     } finally {
       setFollowUpSaving(false);
+    }
+  };
+
+
+  const beginFollowUpNoteEdit = (entry) => {
+    const edits = Array.isArray(entry.follow_up_edit_history) ? entry.follow_up_edit_history : [];
+    const latest = edits.length ? edits[edits.length - 1].to : entry.follow_up_feedback;
+    setNoteEditDraft({ logId: entry.id, feedback: String(latest ?? ""), requestId: uuid() });
+    setNoteEditError("");
+  };
+  const saveFollowUpNoteEdit = async () => {
+    if (!noteEditDraft || noteEditSaving) return;
+    const entry = (history || []).find(item => item.id === noteEditDraft.logId);
+    if (!entry) { setNoteEditError("Follow-up entry is unavailable. Reopen the deal and retry."); return; }
+    if (entry.follow_up_outcome !== "no_answer" && !noteEditDraft.feedback.trim()) {
+      setNoteEditError("Record what the customer said."); return;
+    }
+    setNoteEditSaving(true);
+    setNoteEditError("");
+    try {
+      const write = isAdmin ? api.adminEditFollowUpNote : api.salesmanEditFollowUpNote;
+      await write(lead.id, noteEditDraft.logId, noteEditDraft.feedback.trim(), noteEditDraft.requestId);
+      setNoteEditDraft(null);
+      setHistoryRefresh(n => n + 1);
+    } catch (err) {
+      setNoteEditError(err.message || "Couldn't save the follow-up correction. Retry.");
+    } finally {
+      setNoteEditSaving(false);
     }
   };
 
@@ -902,11 +933,52 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                                 } else if (action === "lead.follow_up_rescheduled") {
                                   detail = <><span style={{ color: T.inkSoft }}>{fmtDate(oldValue)}</span><span style={{ color: T.inkSoft }}> → </span><span style={{ fontWeight: 700, color: T.route }}>{fmtDate(newValue)}</span></>;
                                 } else if (action === "lead.follow_up_logged") {
+                                  const revisions = Array.isArray(h.follow_up_edit_history) ? h.follow_up_edit_history : [];
+                                  const latestFeedback = String((revisions.length ? revisions[revisions.length - 1].to : h.follow_up_feedback) ?? "");
+                                  const isEditingThisNote = noteEditDraft?.logId === h.id;
                                   detail = (
                                     <div style={{ color: T.ink, whiteSpace: "normal", width: "100%" }}>
-                                      <div style={{ fontWeight: 700, color: T.route }}>{FOLLOWUP_OUTCOME_LABELS[h.follow_up_outcome] || "Follow-up"} · {h.follow_up_mode === "done" ? "Completed" : "Rescheduled"}</div>
-                                      <div style={{ marginTop: 4, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{h.follow_up_feedback || "No answer; no customer response."}</div>
+                                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+                                        <span style={{ fontWeight: 700, color: T.route }}>{FOLLOWUP_OUTCOME_LABELS[h.follow_up_outcome] || "Follow-up"} · {h.follow_up_mode === "done" ? "Completed" : "Rescheduled"}</span>
+                                        {(isAdmin || h.follow_up_can_edit === true) && !isEditingThisNote &&
+                                          <button type="button" aria-label="Edit follow-up note" onClick={() => beginFollowUpNoteEdit(h)}
+                                            style={{ fontSize: 11.5, color: T.route, background: "none", border: "none", padding: "4px 0", fontWeight: 700, cursor: "pointer" }}>✎ Edit</button>}
+                                      </div>
+                                      {isEditingThisNote ? (
+                                        <div aria-label="Edit Follow-up Note" style={{ marginTop: 8 }}>
+                                          <textarea aria-label="Edit customer feedback" value={noteEditDraft.feedback} maxLength={2000} rows={3}
+                                            onChange={event => { setNoteEditDraft(d => ({ ...d, feedback: event.target.value })); setNoteEditError(""); }}
+                                            style={{ ...inputStyle, width: "100%", boxSizing: "border-box", resize: "vertical" }} />
+                                          {noteEditError && <div role="alert" style={{ color: T.danger, fontSize: 11.5, marginTop: 5 }}>{noteEditError}</div>}
+                                          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 7 }}>
+                                            <button type="button" disabled={noteEditSaving}
+                                              onClick={() => { setNoteEditDraft(null); setNoteEditError(""); }}
+                                              style={{ padding: "7px 11px", background: "#fff", border: "1px solid " + T.line, borderRadius: 8, color: T.ink, cursor: "pointer" }}>Cancel</button>
+                                            <button type="button" disabled={noteEditSaving || (h.follow_up_outcome !== "no_answer" && !noteEditDraft.feedback.trim())}
+                                              onClick={saveFollowUpNoteEdit}
+                                              style={{ padding: "7px 11px", background: T.route, border: "none", borderRadius: 8, color: "#fff", fontWeight: 700, opacity: noteEditSaving ? .65 : 1, cursor: "pointer" }}>{noteEditSaving ? "Saving…" : "Save note"}</button>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div style={{ marginTop: 4, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{latestFeedback || "No answer; no customer response."}</div>
+                                      )}
                                       <div style={{ color: T.inkSoft, marginTop: 4 }}>{newValue ? "Next follow-up: " + fmtDate(newValue) : "No next follow-up scheduled"}</div>
+                                      {revisions.length > 0 && (
+                                        <div style={{ color: T.inkSoft, fontSize: 11.5, marginTop: 5 }}>
+                                          Edited · {revisions[revisions.length - 1].by || "User"} · {new Date(revisions[revisions.length - 1].at).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
+                                          <details style={{ marginTop: 4 }}>
+                                            <summary style={{ cursor: "pointer", color: T.route }}>View edit history</summary>
+                                            <div style={{ marginTop: 5, display: "grid", gap: 7 }}>
+                                              {revisions.map((revision, index) => (
+                                                <div key={index} style={{ borderLeft: "2px solid " + T.line, paddingLeft: 8 }}>
+                                                  <div>{revision.by || "User"} · {new Date(revision.at).toLocaleString("en-IN")}</div>
+                                                  <div style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>Previous: {revision.from || "(empty)"}</div>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </details>
+                                        </div>
+                                      )}
                                     </div>
                                   );
                                 } else if (action === "lead.follow_up_done") {
