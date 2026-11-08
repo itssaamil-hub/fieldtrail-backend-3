@@ -32,7 +32,8 @@ function greetingForNow() {
 }
 
 export default function SalesmanView({ notificationLead, session, leads, leadSummary, hasMoreLeads, loadMoreLeads, loadingMoreLeads, totalLeadCount, dayStarted, allowLeadWithoutStartDay, onToggleDay, togglingDay, justToggledDay, onAddLead, onUpdateLeadStatus, onUpdateLeadDetails, online, gpsStatus, loadError, messages, onMarkMessageRead, onDeleteMessage, onReplyMessage, employeeRepliesEnabled = true, requireCustomerFollowUpFeedback = true, dailyTarget, monthlyTarget, employeeCity = "", page, shared }) {
-  const { T, fmtMoney, isToday, isThisMonth, isWithinDays, isUpcomingRenewalMonth, SalesmanReportsPage, StatCard, MessagesSection, MyLeadsModal, AddLeadModal, LeadDetailDrawer, VerificationStamp, NoLocationBadge } = shared;
+  const { T, fmtMoney, isToday, isThisMonth, isWithinDays, isUpcomingRenewalMonth, SalesmanReportsPage, StatCard, MessagesSection, MyLeadsModal, EmployeeWonLeadsModal, AddLeadModal, LeadDetailDrawer, VerificationStamp, NoLocationBadge } = shared;
+  const WonLeadsModal = EmployeeWonLeadsModal || MyLeadsModal;
   const { pendingTasks, handlePendingTasksChange } = useSalesmanTasks();
   const phone = useAdminPhone();
   const [mobileTab, setMobileTab] = useState("dashboard");
@@ -303,7 +304,7 @@ export default function SalesmanView({ notificationLead, session, leads, leadSum
         />
       )}
       {showConverted && (
-        <MyLeadsModal employeeWonUserId={session.id}
+        <WonLeadsModal employeeWonUserId={session.id}
           title="Won Leads"
           onClose={() => setShowConverted(false)}
           onSelectLead={(l) => { setShowConverted(false); setViewingLead(l); }}
