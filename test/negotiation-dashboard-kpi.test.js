@@ -7,7 +7,7 @@ const employee = readFileSync(new URL("../src/salesman/SalesmanView.jsx", import
 
 test("Admin Negotiation KPI reuses Won inline amount layout for phone and PC", () => {
   assert.match(admin, /const negotiationDealValue = serverMetrics\.negotiationValue \?\?/);
-  assert.match(admin, /label="In Negotiation" value=\{negotiationValue\} sub=\{fmtMoney\(negotiationDealValue\)\} subInline/);
+  assert.match(admin, /label="In Negotiation" value=\{negotiationKpiCount\} sub=\{negotiationKpiSub\} subInline/);
   assert.match(admin, /label="Won" value=\{wonValue\} sub=\{wonSub\} subInline/);
   assert.match(admin, /const dashboardLeads = dashboardSalesman === "all" \? leads : leads\.filter/);
 });

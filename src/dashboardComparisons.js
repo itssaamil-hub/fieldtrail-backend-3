@@ -58,6 +58,14 @@ export async function loadAdminDashboardComparisons(salesmanId = "all") {
   return dashboardRequest(`/admin/dashboard-comparisons${suffix}`);
 }
 
+// Historical-performance KPI month scope is opt-in and separate from the
+// live weekly/monthly comparison percentages.
+export async function loadAdminDashboardMonthMetrics(month, salesmanId = "all") {
+  const params = new URLSearchParams({ month });
+  if (salesmanId && salesmanId !== "all") params.set("salesmanId", salesmanId);
+  return dashboardRequest("/admin/dashboard-comparisons/month?" + params.toString());
+}
+
 export async function loadEmployeeDashboardComparisons() {
   return dashboardRequest("/salesman/dashboard-comparisons");
 }

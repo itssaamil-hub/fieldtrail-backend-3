@@ -1,5 +1,7 @@
 import React, { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { nearestRenewalCountdown } from "../renewalCountdown.js";
+import DashboardMonthFilter, { currentIstMonth, periodMonth } from "./DashboardMonthFilter.jsx";
+import { loadAdminDashboardMonthMetrics } from "../dashboardComparisons.js";
 import {
   CalendarClock,
   CheckCircle2,
@@ -14,11 +16,7 @@ import {
 import { api, getApiBase, getSession, mapLeadRow } from "../api.js";
 import { loadAdminDashboardComparisons } from "../dashboardComparisons.js";
 import AdminActivityOverview from "../AdminActivityOverview.jsx";
-import {
-  ADMIN_WON_PERIOD_CHANGE_EVENT,
-  adminWonScopeMetrics,
-  readAdminWonPeriod,
-} from "../lead/wonPeriod.js";
+
 
 const lazyNamed = (loader, exportName) => {
   const LazyComponent = lazy(() => loader().then((mod) => ({ default: mod[exportName] })));
@@ -75,23 +73,7 @@ async function fetchCompleteCurrentWonLeads(salesmanId = "all") {
   return mapped.map((lead) => resolved.has(lead.id) ? { ...lead, wonDate: resolved.get(lead.id) } : lead);
 }
 
-async function fetchCompleteCurrentMonthNegotiation(salesmanId = "all") {
-  const rows = [];
-  let page = 1;
-  let hasNext = true;
-  while (hasNext) {
-    const params = { status: "negotiation", negotiationPeriod: "month", page, limit: 100 };
-    if (salesmanId !== "all") params.salesmanId = salesmanId;
-    const result = await api.adminLeads(params);
-    rows.push(...(result.leads || []));
-    hasNext = result.hasNext === true;
-    page += 1;
-    if (page > 10000) throw new Error("Negotiation KPI pagination did not terminate safely.");
-  }
-  return rows.map(mapLeadRow);
-}
-
-function DashboardStatCard({ T, label, value, sub, subInline = false, color, icon: IconC, onClick, comparison, comparisonPeriod, periodControl }) {
+function DashboardStatCard({ T, label, value, sub, subInline = false, color, icon: IconC, onClick, comparison, comparisonPeriod }) {
   const c = color || T.ink;
   return (
     <div
@@ -127,7 +109,6 @@ function DashboardStatCard({ T, label, value, sub, subInline = false, color, ico
           <span>vs last {comparisonPeriod === "monthly" ? "month" : "week"}</span>
         </div>
       )}
-      {periodControl}
     </div>
   );
 }
@@ -153,14 +134,12 @@ export default function AdminDashboardPanel({
   const [comparisonData, setComparisonData] = useState(null);
   const [conversationError, setConversationError] = useState("");
   const [adminPendingTasks, setAdminPendingTasks] = useState(null);
-  const [adminWonPeriod, setAdminWonPeriod] = useState(() => readAdminWonPeriod());
-  const [completeWonLeads, setCompleteWonLeads] = useState(null);
-  const [wonScopeLoading, setWonScopeLoading] = useState(false);
-  const [wonScopeError, setWonScopeError] = useState("");
-  const [negotiationPeriod, setNegotiationPeriod] = useState("all");
-  const [monthlyNegotiationLeads, setMonthlyNegotiationLeads] = useState(null);
-  const [negotiationScopeLoading, setNegotiationScopeLoading] = useState(false);
-  const [negotiationScopeError, setNegotiationScopeError] = useState("");
+  const [monthPeriod, setMonthPeriod] = useState("all");
+  const [customMonth, setCustomMonth] = useState(currentIstMonth);
+  const selectedMonth = periodMonth(monthPeriod, customMonth);
+  const [monthData, setMonthData] = useState(null);
+  const [monthLoading, setMonthLoading] = useState(false);
+  const [monthError, setMonthError] = useState("");
 
   const refreshComparisons = useCallback(async () => {
     if (!showDashboard) return;
@@ -183,77 +162,29 @@ export default function AdminDashboardPanel({
   }, [refreshComparisons]);
 
   useEffect(() => {
-    const syncWonPeriod = (event) => setAdminWonPeriod(event?.detail?.period || readAdminWonPeriod());
-    const syncStorage = (event) => {
-      if (event.key === "engage:admin-won-period") setAdminWonPeriod(readAdminWonPeriod());
-    };
-    window.addEventListener(ADMIN_WON_PERIOD_CHANGE_EVENT, syncWonPeriod);
-    window.addEventListener("storage", syncStorage);
-    return () => {
-      window.removeEventListener(ADMIN_WON_PERIOD_CHANGE_EVENT, syncWonPeriod);
-      window.removeEventListener("storage", syncStorage);
-    };
-  }, []);
-
-  const loadCompleteWonScope = useCallback(async () => {
-    setWonScopeLoading(true);
-    setWonScopeError("");
-    try {
-      const wonLeads = await fetchCompleteCurrentWonLeads(dashboardSalesman);
-      const metrics = adminWonScopeMetrics(wonLeads, "month");
-      if (!metrics.ready) throw new Error("Canonical Won Date is missing for one or more Won deals.");
-      setCompleteWonLeads(wonLeads);
-      return wonLeads;
-    } catch (error) {
-      setCompleteWonLeads(null);
-      setWonScopeError(error.message || "Couldn't verify Won totals.");
-      throw error;
-    } finally {
-      setWonScopeLoading(false);
+    if (!showDashboard || !selectedMonth) {
+      setMonthData(null);
+      setMonthError("");
+      setMonthLoading(false);
+      return undefined;
     }
-  }, [dashboardSalesman]);
-
-  useEffect(() => {
-    if (!showDashboard || adminWonPeriod !== "month") return undefined;
     let cancelled = false;
-    setWonScopeLoading(true);
-    setWonScopeError("");
-    fetchCompleteCurrentWonLeads(dashboardSalesman)
-      .then((wonLeads) => {
-        if (cancelled) return;
-        const metrics = adminWonScopeMetrics(wonLeads, "month");
-        if (!metrics.ready) throw new Error("Canonical Won Date is missing for one or more Won deals.");
-        setCompleteWonLeads(wonLeads);
+    setMonthData(null);
+    setMonthError("");
+    setMonthLoading(true);
+    loadAdminDashboardMonthMetrics(selectedMonth, dashboardSalesman)
+      .then(data => {
+        if (!cancelled) setMonthData({ month: data.month, employee: dashboardSalesman, metrics: data.metrics });
       })
-      .catch((error) => {
+      .catch(error => {
         if (!cancelled) {
-          setCompleteWonLeads(null);
-          setWonScopeError(error.message || "Couldn't verify Won totals.");
+          setMonthData(null);
+          setMonthError(error.message || "Monthly KPI data unavailable");
         }
       })
-      .finally(() => { if (!cancelled) setWonScopeLoading(false); });
+      .finally(() => { if (!cancelled) setMonthLoading(false); });
     return () => { cancelled = true; };
-  }, [showDashboard, adminWonPeriod, dashboardSalesman, leads]);
-
-  // Only Negotiation's explicit This Month selection invokes the new filter.
-  // All existing card metrics and other reporting flows are unchanged.
-  useEffect(() => {
-    if (!showDashboard || negotiationPeriod !== "month") return undefined;
-    let cancelled = false;
-    setMonthlyNegotiationLeads(null);
-    setNegotiationScopeLoading(true);
-    setNegotiationScopeError("");
-    fetchCompleteCurrentMonthNegotiation(dashboardSalesman)
-      .then((scoped) => { if (!cancelled) setMonthlyNegotiationLeads(scoped); })
-      .catch((error) => {
-        if (!cancelled) {
-          setMonthlyNegotiationLeads(null);
-          setNegotiationScopeError(error.message || "Couldn't load monthly Negotiation data.");
-        }
-      })
-      .finally(() => { if (!cancelled) setNegotiationScopeLoading(false); });
-    return () => { cancelled = true; };
-  }, [showDashboard, negotiationPeriod, dashboardSalesman, leads]);
+  }, [showDashboard, selectedMonth, dashboardSalesman, leads]);
 
   if (!showDashboard) return null;
 
@@ -283,36 +214,52 @@ export default function AdminDashboardPanel({
   const hotTodayValue = serverMetrics.hotToday ?? hotLeadsToday.length;
   const negotiationValue = serverMetrics.negotiation ?? inNegotiation.length;
   const negotiationDealValue = serverMetrics.negotiationValue ?? inNegotiation.reduce((sum, lead) => sum + (Number(lead.dealValue) || 0), 0);
-  const monthlyNegotiationReady = monthlyNegotiationLeads !== null;
-  const negotiationKpiCount = negotiationPeriod === "month"
-    ? (monthlyNegotiationReady ? monthlyNegotiationLeads.length : "—") : negotiationValue;
-  const negotiationKpiValue = negotiationPeriod === "month"
-    ? (monthlyNegotiationReady
-      ? monthlyNegotiationLeads.reduce((sum, lead) => sum + (Number(lead.dealValue) || 0), 0)
-      : null)
-    : negotiationDealValue;
-  const negotiationKpiSub = negotiationPeriod === "month" && !monthlyNegotiationReady
-    ? (negotiationScopeLoading ? "Loading…" : negotiationScopeError ? "Unavailable" : "—")
-    : fmtMoney(negotiationKpiValue);
-  const totalValue = serverMetrics.total ?? dashboardLeads.length;
-  const monthlyWonMetrics = adminWonPeriod === "month" && completeWonLeads
-    ? adminWonScopeMetrics(completeWonLeads, "month")
-    : null;
-  const wonValue = adminWonPeriod === "month"
-    ? (monthlyWonMetrics?.ready ? monthlyWonMetrics.count : "—")
-    : (serverMetrics.won ?? converted);
-  const wonDealValue = adminWonPeriod === "month"
-    ? (monthlyWonMetrics?.ready ? monthlyWonMetrics.value : null)
-    : (serverMetrics.wonValue ?? convertedValue);
-  const wonSub = adminWonPeriod === "month" && !monthlyWonMetrics?.ready
-    ? (wonScopeLoading ? "Loading…" : wonScopeError ? "Unavailable" : "—")
-    : fmtMoney(wonDealValue);
+  const monthMetrics = selectedMonth && monthData?.month === selectedMonth
+    && monthData?.employee === dashboardSalesman ? monthData.metrics : null;
+  const scopedValue = (key, allTimeValue) =>
+    selectedMonth ? (monthMetrics ? monthMetrics[key] : "—") : allTimeValue;
+  const monthlyHint = monthLoading ? "Loading…" : monthError ? "Unavailable" : "—";
+  const conversationKpi = scopedValue("conversation", conversationValue);
+  const hotKpi = scopedValue("hot", hotTodayValue);
+  const negotiationKpiCount = scopedValue("negotiation", negotiationValue);
+  const negotiationKpiValue = scopedValue("negotiationValue", negotiationDealValue);
+  const negotiationKpiSub = selectedMonth && !monthMetrics ? monthlyHint : fmtMoney(negotiationKpiValue);
+  const totalValue = scopedValue("total", serverMetrics.total ?? dashboardLeads.length);
+  const wonValue = scopedValue("won", serverMetrics.won ?? converted);
+  const wonDealValue = scopedValue("wonValue", serverMetrics.wonValue ?? convertedValue);
+  const wonSub = selectedMonth && !monthMetrics ? monthlyHint : fmtMoney(wonDealValue);
+  const monthLabel = selectedMonth
+    ? new Intl.DateTimeFormat("en-IN", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(selectedMonth + "-01T00:00:00Z"))
+    : "";
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const adminName = (getSession()?.fullName || getSession()?.full_name || getSession()?.name || "Admin").split(/\s+/)[0];
 
+  const openMonthlyDrilldown = async (status, label) => {
+    if (!selectedMonth || !monthMetrics) return;
+    try {
+      setConversationError("");
+      const rows = [];
+      let page = 1;
+      let hasNext = true;
+      while (hasNext) {
+        const params = { dashboardMonth: selectedMonth, page, limit: 100 };
+        if (status) params.status = status;
+        if (dashboardSalesman !== "all") params.salesmanId = dashboardSalesman;
+        const response = await api.adminLeads(params);
+        rows.push(...(response.leads || []));
+        hasNext = response.hasNext === true;
+        if (++page > 10000) throw new Error("Monthly deal pagination did not finish.");
+      }
+      onOpenStatLeads({ title: label + " · " + monthLabel, leads: rows.map(mapLeadRow) });
+    } catch (error) {
+      setConversationError(error.message || "Couldn't load the selected month's deals.");
+    }
+  };
+
   const openConversationLeads = async () => {
+    if (selectedMonth) return openMonthlyDrilldown("conversation", "Conversation");
     try {
       setConversationError("");
       const params = { status: "conversation" };
@@ -327,43 +274,18 @@ export default function AdminDashboardPanel({
     }
   };
 
-  const openNegotiationLeads = async () => {
-    if (negotiationPeriod === "all") {
-      onOpenStatLeads({ title: "In Negotiation", leads: inNegotiation });
-      return;
-    }
-    try {
-      const scoped = await fetchCompleteCurrentMonthNegotiation(dashboardSalesman);
-      setMonthlyNegotiationLeads(scoped);
-      setNegotiationScopeError("");
-      onOpenStatLeads({ title: "In Negotiation · This Month", leads: scoped });
-    } catch (error) {
-      setNegotiationScopeError(error.message || "Couldn't load monthly Negotiation deals.");
-      setMonthlyNegotiationLeads(null);
-    }
-  };
-
-  const negotiationPeriodControl = (
-    <div role="group" aria-label="Negotiation KPI period" onClick={(event) => event.stopPropagation()}
-      style={{ display: "flex", gap: 2, width: "fit-content", maxWidth: "100%", padding: 2, marginTop: 5, borderRadius: 7, background: T.paperDeep }}>
-      {[["all", "All time"], ["month", "This month"]].map(([period, label]) => (
-        <button key={period} type="button" aria-pressed={negotiationPeriod === period}
-          onClick={(event) => { event.stopPropagation(); setNegotiationPeriod(period); }}
-          style={{ padding: "4px 6px", border: 0, borderRadius: 5, cursor: "pointer",
-            fontSize: 10, fontWeight: 700, whiteSpace: "nowrap",
-            background: negotiationPeriod === period ? "#fff" : "transparent",
-            color: negotiationPeriod === period ? T.ink : T.inkSoft }}>
-          {label}
-        </button>
-      ))}
-    </div>
-  );
+  const openNegotiationLeads = () => selectedMonth
+    ? openMonthlyDrilldown("negotiation", "In Negotiation")
+    : onOpenStatLeads({ title: "In Negotiation", leads: inNegotiation });
 
   const openWonLeads = async () => {
+    if (selectedMonth) return openMonthlyDrilldown("won", "Won Leads");
     try {
-      const wonLeads = await loadCompleteWonScope();
+      setConversationError("");
+      const wonLeads = await fetchCompleteCurrentWonLeads(dashboardSalesman);
       onOpenStatLeads({ title: "Won Leads", leads: wonLeads });
-    } catch {
+    } catch (error) {
+      setConversationError(error.message || "Couldn't load Won leads.");
     }
   };
 
@@ -377,38 +299,38 @@ export default function AdminDashboardPanel({
             </div>
             <div style={{ fontSize: 13, color: T.inkSoft, marginTop: 2 }}>A quick look at what needs your attention today.</div>
           </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
           <select aria-label="Dashboard employee desktop" value={dashboardSalesman} onChange={(e) => setDashboardSalesman(e.target.value)} style={{ minWidth: 128, height: 34, padding: "5px 30px 5px 10px", borderRadius: 9, fontSize: 12.5, fontWeight: 600, background: "#fff", border: `1px solid ${T.line}`, color: T.ink }}>
             <option value="all">👥 All Team</option>
             {salesmen.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
+          <DashboardMonthFilter T={T} employee={dashboardSalesman} onEmployeeChange={setDashboardSalesman} salesmen={salesmen} period={monthPeriod} onPeriodChange={setMonthPeriod} customMonth={customMonth} onCustomMonthChange={setCustomMonth} />
+          </div>
         </div>
       )}
       {phone && (
         <div id="engage-admin-mobile-dashboard-utility" className="engage-admin-mobile-dashboard-utility">
           <div className="engage-admin-mobile-greeting">{greeting}, {adminName} 👋</div>
           <div className="engage-admin-mobile-team-slot">
-            <select aria-label="Dashboard employee" value={dashboardSalesman} onChange={(e) => setDashboardSalesman(e.target.value)}>
-              <option value="all">All Team</option>
-              {salesmen.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
+            <DashboardMonthFilter T={T} phone employee={dashboardSalesman} onEmployeeChange={setDashboardSalesman} salesmen={salesmen} period={monthPeriod} onPeriodChange={setMonthPeriod} customMonth={customMonth} onCustomMonthChange={setCustomMonth} />
           </div>
         </div>
       )}
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
         <DashboardStatCard T={T} label="Total Employees" value={salesmen.length} sub={<span style={{ color: T.verified }}>{activeSalesmen} active now</span>} icon={Contact2} color="#64748B" onClick={phone ? onShowTeamActivity : undefined} />
-        <DashboardStatCard T={T} label="Conversation" value={conversationValue ?? "—"} comparison={comparisons.conversation} comparisonPeriod={comparisonPeriod} icon={MessageSquare} color={T.route} onClick={openConversationLeads} />
+        <DashboardStatCard T={T} label="Conversation" value={conversationKpi} comparison={selectedMonth ? null : comparisons.conversation} comparisonPeriod={comparisonPeriod} icon={MessageSquare} color={T.route} onClick={openConversationLeads} />
         <DashboardStatCard T={T} label="Leads Today" value={leadsTodayValue} comparison={comparisons.leadsToday} comparisonPeriod={comparisonPeriod} icon={TargetIcon} color="#3B82F6" onClick={() => onOpenStatLeads({ title: "Leads Today", leads: todayLeads })} />
-        <DashboardStatCard T={T} label={<>Hot Leads <span style={{ fontSize: 8.5, opacity: 0.65 }}>TODAY</span></>} value={hotTodayValue} icon={Flame} comparison={comparisons.hotToday} comparisonPeriod={comparisonPeriod} color={T.danger} onClick={() => onOpenStatLeads({ title: "Hot Leads Today", leads: hotLeadsToday })} />
-        <DashboardStatCard T={T} label="In Negotiation" value={negotiationKpiCount} sub={negotiationKpiSub} subInline comparison={negotiationPeriod === "all" ? comparisons.negotiation : null} comparisonPeriod={comparisonPeriod} icon={Handshake} color="#8B5CF6" periodControl={negotiationPeriodControl} onClick={openNegotiationLeads} />
-        <DashboardStatCard T={T} label="Total Leads" value={totalValue} comparison={comparisons.total} comparisonPeriod={comparisonPeriod} icon={Contact2} color="#0891B2" />
-        <DashboardStatCard T={T} label="Won" value={wonValue} sub={wonSub} subInline comparison={comparisons.won} comparisonPeriod={comparisonPeriod} icon={CheckCircle2} color={T.verified} onClick={openWonLeads} />
+        <DashboardStatCard T={T} label={selectedMonth ? "Hot Leads" : <>Hot Leads <span style={{ fontSize: 8.5, opacity: 0.65 }}>TODAY</span></>} value={hotKpi} icon={Flame} comparison={selectedMonth ? null : comparisons.hotToday} comparisonPeriod={comparisonPeriod} color={T.danger} onClick={selectedMonth ? () => openMonthlyDrilldown("hot", "Hot Leads") : () => onOpenStatLeads({ title: "Hot Leads Today", leads: hotLeadsToday })} />
+        <DashboardStatCard T={T} label="In Negotiation" value={negotiationKpiCount} sub={negotiationKpiSub} subInline comparison={selectedMonth ? null : comparisons.negotiation} comparisonPeriod={comparisonPeriod} icon={Handshake} color="#8B5CF6" onClick={openNegotiationLeads} />
+        <DashboardStatCard T={T} label="Total Leads" value={totalValue} comparison={selectedMonth ? null : comparisons.total} comparisonPeriod={comparisonPeriod} icon={Contact2} color="#0891B2" onClick={selectedMonth ? () => openMonthlyDrilldown(null, "Total Leads") : undefined} />
+        <DashboardStatCard T={T} label="Won" value={wonValue} sub={wonSub} subInline comparison={selectedMonth ? null : comparisons.won} comparisonPeriod={comparisonPeriod} icon={CheckCircle2} color={T.verified} onClick={openWonLeads} />
         <DashboardStatCard T={T} label="Tasks" value={adminPendingTasks ?? 0} sub="pending" icon={List} color="#145C5D" />
         <DashboardStatCard T={T} label="Upcoming Follow-up" value={upcomingFollowUps.length} icon={CalendarClock} color={T.warn} onClick={() => onOpenStatLeads({ title: "Upcoming Follow-ups", leads: upcomingFollowUps })} />
         <DashboardStatCard T={T} label="Renewals Due" sub={renewalNearest || "next 30 days"} value={upcomingRenewals.length} icon={RefreshCw} color={T.accent} onClick={() => onOpenStatLeads({ title: "Renewals Due (Next 30 Days)", leads: upcomingRenewals })} />
       </div>
       {!phone && <AdminActivityOverview salesmen={salesmen} salesmanId={dashboardSalesman} />}
       {phone && <AdminMobileLeadTrend leads={dashboardLeads} />}
-      {conversationError && <p role="alert" style={{ color: T.danger }}>{conversationError}</p>}
+      {(conversationError || monthError) && <p role="alert" style={{ color: T.danger }}>{conversationError || monthError}</p>}
       <div style={{ display: "none" }} aria-hidden="true"><TasksEntry onPendingChange={setAdminPendingTasks} /></div>
     </>
   );
