@@ -91,7 +91,7 @@ export function createLeadFeatures(deps) {
     },
   };
 
-  const core = createCoreLeadFeatures({ ...deps, api: leadCaptureApi, useState: locationSafeUseState, Field: FieldWithWonDate });
+  const core = createCoreLeadFeatures({ ...deps, api: leadCaptureApi, useState: locationSafeUseState, Field: FieldWithWonDate, EmployeeWonLeadsModal: MyLeadsModal });
   const CoreLeadDetailDrawer = core.LeadDetailDrawer;
   const CoreMyLeadsModal = core.MyLeadsModal;
 
