@@ -3,7 +3,8 @@ import React from "react";
 import LeadAiWriter from "./LeadAiWriter.jsx";
 import LeadTrackingButton from "./LeadTrackingButton.jsx";
 import "./lead-detail-ai-mobile.css";
-import { ArrowUpDown, Download, Camera, Images, CheckCircle2 } from "lucide-react";
+import { ArrowUpDown, Download, Camera, Images, CheckCircle2, RotateCcw } from "lucide-react";
+import { EMPTY_SALESMAN_LEAD_FORM, loadSalesmanLeadDraft, saveSalesmanLeadDraft, clearSalesmanLeadDraft } from "./salesmanLeadDraft.js";
 import { compressLeadPhoto } from "./photoCompression.js";
 import { getLeadPhotoObjectUrl } from "../api.js";
 import { buildSalesmanExportUrl } from "../api.js";
@@ -1389,13 +1390,17 @@ function MessagesSection({ messages, onMarkRead, onDelete, onReply, employeeRepl
 }
 
 
-function AddLeadOverlay({ onClose, children }) {
+function AddLeadOverlay({ onClose, onReset, resetDisabled = false, children }) {
   return (
     <div className="engage-add-lead-overlay" style={{ position:"fixed", inset:0, zIndex:2000, background:"rgba(28,36,48,0.42)", display:"flex", alignItems:"flex-end", justifyContent:"center" }} onMouseDown={(e)=>{ if(e.target===e.currentTarget) onClose(); }}>
       <section className="engage-mobile-add-lead-polish" role="dialog" aria-modal="true" aria-label="Add Lead" style={{ width:"100%", maxWidth:480, maxHeight:"88vh", overflowY:"auto", background:T.card, padding:18, boxSizing:"border-box" }} onMouseDown={(e)=>e.stopPropagation()}>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, marginBottom:14 }}>
           <div style={{ fontFamily:"'Space Grotesk', sans-serif", fontWeight:700, fontSize:18 }}>Add Lead</div>
-          <button type="button" aria-label="Close Add Lead" onClick={onClose} style={{ border:"none", background:"transparent", cursor:"pointer", color:T.ink }}><X size={19}/></button>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            {onReset && <button type="button" aria-label="Reset Add Lead draft" title="Clear unfinished deal" disabled={resetDisabled} onClick={onReset}
+              style={{border:"none",background:"transparent",cursor:resetDisabled?"not-allowed":"pointer",color:T.ink,display:"flex",alignItems:"center",justifyContent:"center",padding:3,opacity:resetDisabled ? 0.5 : 1}}><RotateCcw size={19}/></button>}
+            <button type="button" aria-label="Close Add Lead" onClick={onClose} style={{ border:"none", background:"transparent", cursor:"pointer", color:T.ink }}><X size={19}/></button>
+          </div>
         </div>
         {children}
       </section>
@@ -1404,10 +1409,18 @@ function AddLeadOverlay({ onClose, children }) {
 }
 
 function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
-  const [form, setForm] = useState({
-    business: "", subLocation: "", posName: "", renewalMonth: "", renewalDate: "",
-    owner: "", phone: "", category: "", status: "cold", notes: "", dealValue: "", nextFollowUpDate: "",
-  });
+  // Restore only this signed-in employee's unfinished form on this device.
+  // Never persist captured GPS: a fresh location is obtained on every opening.
+  const initialDraftRef = useRef(null);
+  if (!initialDraftRef.current) {
+    initialDraftRef.current = loadSalesmanLeadDraft(session.id) || {
+      form: {...EMPTY_SALESMAN_LEAD_FORM}, photo: null, clientUuid: uuid(),
+    };
+  }
+  const [form, setForm] = useState(() => initialDraftRef.current.form);
+  const [renewalResetVersion, setRenewalResetVersion] = useState(0);
+  const submittedRef = useRef(false);
+  const photoSelectionVersionRef = useRef(0);
   const [leadSettings, setLeadSettings] = useState(DEFAULT_LEAD_SETTINGS);
   const [locationSettings, setLocationSettings] = useState(DEFAULT_LOCATION_SETTINGS);
   const [fieldOptions, setFieldOptions] = useState({ category: [], pos_name: [], sub_location: [] });
@@ -1415,9 +1428,9 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [duplicateResult, setDuplicateResult] = useState(null);
-  const clientUuidRef = useRef(uuid());
+  const clientUuidRef = useRef(initialDraftRef.current.clientUuid);
   const [photoRequired,setPhotoRequired]=useState(false);
-  const [photo,setPhoto]=useState(null);
+  const [photo,setPhoto]=useState(() => initialDraftRef.current.photo);
   const [photoBusy,setPhotoBusy]=useState(false);
   const [photoError,setPhotoError]=useState('');
   const [photoMenu,setPhotoMenu]=useState(false);
@@ -1427,10 +1440,36 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
     const file=event.target.files?.[0];
     event.target.value='';
     if(!file)return;
+    const version = ++photoSelectionVersionRef.current;
     setPhotoBusy(true);setPhotoError('');
-    try{setPhoto(await compressLeadPhoto(file));setPhotoMenu(false);}
-    catch(err){setPhotoError(err.message||'Could not prepare this photo.');}
-    finally{setPhotoBusy(false);}
+    try{
+      const compressed=await compressLeadPhoto(file);
+      if(version===photoSelectionVersionRef.current){setPhoto(compressed);setPhotoMenu(false);}
+    }catch(err){
+      if(version===photoSelectionVersionRef.current)setPhotoError(err.message||'Could not prepare this photo.');
+    }finally{
+      if(version===photoSelectionVersionRef.current)setPhotoBusy(false);
+    }
+  };
+  useEffect(() => {
+    if (!submittedRef.current) {
+      saveSalesmanLeadDraft(session.id, {form, photo, clientUuid:clientUuidRef.current});
+    }
+  }, [session.id, form, photo]);
+
+  const resetDraft = () => {
+    if (submitting) return;
+    photoSelectionVersionRef.current += 1;
+    clearSalesmanLeadDraft(session.id);
+    clientUuidRef.current = uuid();
+    setForm({...EMPTY_SALESMAN_LEAD_FORM});
+    setPhoto(null);
+    setPhotoBusy(false);
+    setPhotoError('');
+    setPhotoMenu(false);
+    setDuplicateResult(null);
+    setError('');
+    setRenewalResetVersion(value => value + 1);
   };
   const [contactPickerSupported] = useState(() => typeof navigator !== "undefined" && "contacts" in navigator && "ContactsManager" in window);
 
@@ -1470,11 +1509,13 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
   useEffect(() => {
     if (!online || leadSettings.duplicateProtectionEnabled === false) { setDuplicateResult(null); return; }
     if (!form.phone.trim() && !(form.business.trim() && form.subLocation.trim())) { setDuplicateResult(null); return; }
+    let live = true;
     const timer = setTimeout(() => {
       api.salesmanCheckDuplicateLead({ phone: form.phone, businessName: form.business, subLocation: form.subLocation })
-        .then(setDuplicateResult).catch(() => setDuplicateResult(null));
+        .then(result => { if (live) setDuplicateResult(result); })
+        .catch(() => { if (live) setDuplicateResult(null); });
     }, 450);
-    return () => clearTimeout(timer);
+    return () => { live = false; clearTimeout(timer); };
   }, [online, form.phone, form.business, form.subLocation, leadSettings]);
 
   useEffect(() => {
@@ -1540,12 +1581,15 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
     };
     const result = await onSubmit(payload);
     setSubmitting(false);
-    if (result.ok) onSaved(result.lead);
-    else setError(result.error || "Couldn't save the lead — try again.");
+    if (result.ok) {
+      submittedRef.current = true;
+      clearSalesmanLeadDraft(session.id);
+      onSaved(result.lead);
+    } else setError(result.error || "Couldn't save the lead — try again.");
   };
 
   return (
-    <AddLeadOverlay onClose={onClose}>
+    <AddLeadOverlay onClose={onClose} onReset={resetDraft} resetDisabled={submitting}>
 
       {locationSettings.gpsLocation && (
         <div style={{ display: "flex", flexDirection: "column", gap: 5, marginBottom: 14 }}>
@@ -1634,6 +1678,7 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
         </div>
       </div>
       <RenewalInput
+        key={renewalResetVersion}
         renewalMonth={form.renewalMonth}
         renewalDate={form.renewalDate}
         onMonthChange={(value)=>setForm((current)=>({...current,renewalMonth:value,renewalDate:""}))}

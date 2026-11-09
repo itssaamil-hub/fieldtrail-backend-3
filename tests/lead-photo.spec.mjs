@@ -77,3 +77,73 @@ test('Admin can set Photo Required for one employee under Work Rules',async({pag
  await expect(page.getByText('Photo requirement saved.')).toBeVisible();
  expect(writes).toEqual([{required:true}]);
 });
+
+
+test('Salesman Add Deal draft survives closing and refreshing; reset icon left of X clears it',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await boot(page,salesmanSession);
+ await page.getByRole('button',{name:'Add Deal'}).click();
+ let dialog=page.getByRole('dialog',{name:'Add Lead'});
+ await dialog.getByPlaceholder('e.g. Ganga Cafe').fill('Unfinished Café');
+ await dialog.getByPlaceholder('e.g. Gomti Nagar').fill('Draft Area');
+ await dialog.locator('input[type=date]').first().fill('2026-12-01');
+ await dialog.getByRole('button',{name:'Close Add Lead'}).click();
+
+ await page.getByRole('button',{name:'Add Deal'}).click();
+ dialog=page.getByRole('dialog',{name:'Add Lead'});
+ await expect(dialog.getByPlaceholder('e.g. Ganga Cafe')).toHaveValue('Unfinished Café');
+ await expect(dialog.getByPlaceholder('e.g. Gomti Nagar')).toHaveValue('Draft Area');
+ await dialog.getByRole('button',{name:'Close Add Lead'}).click();
+
+ await page.reload({waitUntil:'domcontentloaded'});
+ await page.getByRole('button',{name:'Add Deal'}).click();
+ dialog=page.getByRole('dialog',{name:'Add Lead'});
+ await expect(dialog.getByPlaceholder('e.g. Ganga Cafe')).toHaveValue('Unfinished Café');
+ await expect(dialog.getByPlaceholder('e.g. Gomti Nagar')).toHaveValue('Draft Area');
+
+ const reset=dialog.getByRole('button',{name:'Reset Add Lead draft'});
+ const close=dialog.getByRole('button',{name:'Close Add Lead'});
+ await expect(reset).toBeVisible();
+ const a=await reset.boundingBox(),b=await close.boundingBox();
+ expect(a.x+a.width).toBeLessThanOrEqual(b.x+1);
+ await reset.click();
+ await expect(dialog.getByPlaceholder('e.g. Ganga Cafe')).toHaveValue('');
+ await expect(dialog.getByPlaceholder('e.g. Gomti Nagar')).toHaveValue('');
+ await expect(dialog.locator('input[type=date]').first()).toHaveValue('');
+ await expect(dialog.locator('button[data-mobile-lead-save="true"]')).toBeDisabled();
+ await close.click();
+
+ await page.getByRole('button',{name:'Add Deal'}).click();
+ dialog=page.getByRole('dialog',{name:'Add Lead'});
+ await expect(dialog.getByPlaceholder('e.g. Ganga Cafe')).toHaveValue('');
+ await expect(dialog.getByPlaceholder('e.g. Gomti Nagar')).toHaveValue('');
+ const keys=await page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('engage:salesman-add-lead-draft:v1:')));
+ expect(keys).toHaveLength(0);
+});
+
+test('Salesman draft retains compressed photo until reset, without uploading it',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await boot(page,salesmanSession);
+ await page.getByRole('button',{name:'Add Deal'}).click();
+ let dialog=page.getByRole('dialog',{name:'Add Lead'});
+ await dialog.getByPlaceholder('e.g. Ganga Cafe').fill('Photo Draft');
+ await dialog.getByRole('button',{name:'Add restaurant photo'}).click();
+ const pngBytes=await page.evaluate(async()=>{
+  const canvas=document.createElement('canvas');canvas.width=320;canvas.height=180;
+  const c=canvas.getContext('2d');
+  c.fillStyle='#29493d';c.fillRect(0,0,320,180);
+  c.fillStyle='#ffffff';c.fillRect(15,15,160,90);
+  return Array.from(new Uint8Array(await (await new Promise(resolve=>canvas.toBlob(resolve,'image/png'))).arrayBuffer()));
+ });
+ await dialog.locator('input[type=file]').last().setInputFiles({name:'draft.png',mimeType:'image/png',buffer:Buffer.from(pngBytes)});
+ await expect(dialog.getByText(/Photo ready/)).toBeVisible();
+ await dialog.getByRole('button',{name:'Close Add Lead'}).click();
+ await page.reload({waitUntil:'domcontentloaded'});
+ await page.getByRole('button',{name:'Add Deal'}).click();
+ dialog=page.getByRole('dialog',{name:'Add Lead'});
+ await expect(dialog.getByText(/Photo ready/)).toBeVisible();
+ await expect(dialog.getByRole('button',{name:'Change restaurant photo'})).toBeVisible();
+ await dialog.getByRole('button',{name:'Reset Add Lead draft'}).click();
+ await expect(dialog.getByText(/Photo ready/)).toHaveCount(0);
+ await expect(dialog.getByRole('button',{name:'Add restaurant photo'})).toBeVisible();
+});
