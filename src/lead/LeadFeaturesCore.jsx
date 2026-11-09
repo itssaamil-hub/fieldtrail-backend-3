@@ -1594,7 +1594,7 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
       </div>}
       {photoBusy&&<div role="status" style={{fontSize:11.5,color:T.inkSoft,marginBottom:8}}>Compressing photo…</div>}
       {photo&&<div role="status" style={{fontSize:11.5,color:'#12805C',marginBottom:8}}>Photo ready · {Math.ceil(photo.bytes/1024)} KB · uploads with Save Lead</div>}
-      {photoError&&<div role="alert" style={{fontSize:11.5,color:T.danger,marginBottom:8}}>{photoError}</div>
+      {photoError&&<div role="alert" style={{fontSize:11.5,color:T.danger,marginBottom:8}}>{photoError}</div>}
       <div data-mobile-lead-section="contact"><AddLeadSection>Contact details</AddLeadSection></div>
       <AddLeadField label={`Contact Name${leadSettings.requireContactName ? " *" : ""}`}>
         <input style={inputStyle} value={form.owner} onChange={set("owner")} />
