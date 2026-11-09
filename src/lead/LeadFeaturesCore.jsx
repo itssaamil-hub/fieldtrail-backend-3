@@ -3,7 +3,9 @@ import React from "react";
 import LeadAiWriter from "./LeadAiWriter.jsx";
 import LeadTrackingButton from "./LeadTrackingButton.jsx";
 import "./lead-detail-ai-mobile.css";
-import { ArrowUpDown, Download } from "lucide-react";
+import { ArrowUpDown, Download, Camera, Images, CheckCircle2 } from "lucide-react";
+import { compressLeadPhoto } from "./photoCompression.js";
+import { getLeadPhotoObjectUrl } from "../api.js";
 import { buildSalesmanExportUrl } from "../api.js";
 
 // Lead and salesman UI extracted from App.jsx without changing business behavior.
@@ -297,6 +299,53 @@ function whatsappLink(phone) {
   if (digits.length === 11 && digits.startsWith("0")) digits = digits.slice(1);
   if (digits.length === 10) digits = "91" + digits;
   return `https://wa.me/${digits}`;
+}
+
+function LeadPhotoSection({leadId,isAdmin,onRemoved}) {
+  const [imageUrl,setImageUrl]=useState('');
+  const [error,setError]=useState('');
+  const [deleting,setDeleting]=useState(false);
+  const [expanded,setExpanded]=useState(false);
+  useEffect(()=>{
+    let active=true,created='';
+    setError('');setImageUrl('');
+    getLeadPhotoObjectUrl(leadId,isAdmin).then(url=>{
+      created=url;
+      if(active)setImageUrl(url);else URL.revokeObjectURL(url);
+    }).catch(err=>{if(active)setError(err.message||'Photo unavailable.');});
+    return()=>{active=false;if(created)URL.revokeObjectURL(created);};
+  },[leadId,isAdmin]);
+  const remove=async()=>{
+    if(deleting||!window.confirm('Permanently delete this restaurant photo?'))return;
+    setDeleting(true);setError('');
+    try{
+      await api.adminDeleteLeadPhoto(leadId);
+      onRemoved();
+      setExpanded(false);
+    }catch(err){setError(err.message||'Could not delete photo.');}
+    finally{setDeleting(false);}
+  };
+  return <section style={{marginTop:12,background:'#fff',border:`1px solid ${T.line}`,borderRadius:14,padding:14}}>
+    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:8,marginBottom:9}}>
+      <strong style={{fontSize:13.5}}>Restaurant Photo</strong>
+      {isAdmin&&<button type="button" aria-label="Delete restaurant photo" disabled={deleting} onClick={remove}
+       style={{border:`1px solid ${T.line}`,color:'#B33434',background:'#fff',borderRadius:8,padding:'5px 9px',fontSize:12,cursor:'pointer'}}>
+        {deleting?'Deleting…':'Delete'}
+      </button>}
+    </div>
+    {error&&<p role="alert" style={{color:'#B33434',fontSize:12}}>{error}</p>}
+    {imageUrl?<button type="button" aria-label="Enlarge restaurant photo" onClick={()=>setExpanded(true)}
+      style={{width:'100%',padding:0,border:0,background:'#F5F7F6',cursor:'zoom-in',borderRadius:10,overflow:'hidden'}}>
+        <img alt="Restaurant photo" src={imageUrl}
+          style={{display:'block',width:'100%',aspectRatio:'16 / 9',objectFit:'contain'}}/>
+      </button>:!error&&<span style={{fontSize:12,color:T.inkSoft}}>Loading photo…</span>}
+    {expanded&&imageUrl&&<div role="dialog" aria-modal="true" aria-label="Restaurant photo enlarged"
+     style={{position:'fixed',inset:0,zIndex:3000,background:'rgba(0,0,0,.9)',display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+       <button aria-label="Close photo" type="button" onClick={()=>setExpanded(false)}
+        style={{position:'absolute',top:20,right:20,padding:'8px 14px',background:'#fff',border:0,borderRadius:8}}>Close</button>
+       <img alt="Restaurant photo, full view" src={imageUrl} style={{maxWidth:'100%',maxHeight:'90vh',objectFit:'contain'}}/>
+     </div>}
+  </section>;
 }
 
 function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, fetchHistory, isAdmin = false, employeeRepliesEnabled = true, notificationOpenedAt = null, trackingEmployeeId = null, requireCustomerFeedback = true }) {
@@ -801,6 +850,8 @@ function LeadDetailDrawer({ lead, onClose, onStatusChange, onUpdate, onDelete, f
                 <span style={{ fontWeight: 600 }}>{lead.createdAt.toLocaleString("en-IN")}</span>
               </div>
             </div>
+
+            {displayLead.hasPhoto && <LeadPhotoSection leadId={lead.id} isAdmin={isAdmin} onRemoved={()=>setSavedOverrides(prev=>({...prev,hasPhoto:false}))}/>}
 
             {lead.hasLocation ? (
               <div style={{ marginTop: 12, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 14, fontSize: 12.5 }}>
@@ -1364,6 +1415,23 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [duplicateResult, setDuplicateResult] = useState(null);
+  const clientUuidRef = useRef(uuid());
+  const [photoRequired,setPhotoRequired]=useState(false);
+  const [photo,setPhoto]=useState(null);
+  const [photoBusy,setPhotoBusy]=useState(false);
+  const [photoError,setPhotoError]=useState('');
+  const [photoMenu,setPhotoMenu]=useState(false);
+  const cameraInputRef=useRef(null);
+  const galleryInputRef=useRef(null);
+  const selectPhoto=async(event)=>{
+    const file=event.target.files?.[0];
+    event.target.value='';
+    if(!file)return;
+    setPhotoBusy(true);setPhotoError('');
+    try{setPhoto(await compressLeadPhoto(file));setPhotoMenu(false);}
+    catch(err){setPhotoError(err.message||'Could not prepare this photo.');}
+    finally{setPhotoBusy(false);}
+  };
   const [contactPickerSupported] = useState(() => typeof navigator !== "undefined" && "contacts" in navigator && "ContactsManager" in window);
 
   const pickContact = async () => {
@@ -1384,6 +1452,7 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
     api.salesmanGetSettings()
       .then((res) => {
         if (res.leadSettings) setLeadSettings(res.leadSettings);
+        setPhotoRequired(res.photoSettings?.required===true);
         if (res.locationSettings) setLocationSettings(res.locationSettings);
         if (!res.locationSettings?.gpsLocation) {
           setGps({ state: "off" }); // GPS turned off entirely — don't even ask for it
@@ -1432,6 +1501,7 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
     (!leadSettings.requireComments || form.notes.trim().length > 0) &&
     (!leadSettings.requireDealValue || form.dealValue.trim().length > 0) &&
     (!leadSettings.requireFollowUpDate || form.nextFollowUpDate.trim().length > 0) &&
+    (!photoRequired || !!photo?.base64) && !photoBusy &&
     locationReady;
 
   const verification = gps.state === "ok" ? (gps.accuracy > 50 ? "poor_accuracy" : "verified") : null;
@@ -1446,7 +1516,8 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
     setError("");
     const hasGps = gps.state === "ok";
     const payload = {
-      clientUuid: uuid(),
+      clientUuid: clientUuidRef.current,
+      photoBase64: photo?.base64 || null,
       businessName: form.business,
       subLocation: form.subLocation || null,
       posName: form.posName || null,
@@ -1498,12 +1569,32 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
           {(fieldOptions.pos_name || []).map((v) => <option key={v} value={v} />)}
         </datalist>
       </AddLeadField>
-      <AddLeadField label="Category">
-        <input style={inputStyle} value={form.category} onChange={set("category")} placeholder="e.g. Cafe" list="category-options" />
-        <datalist id="category-options">
-          {(fieldOptions.category?.length ? fieldOptions.category : ["Cafe", "QSR", "Casual Dining", "Fine Dining", "Cloud Kitchen", "Bakery"]).map((v) => <option key={v} value={v} />)}
-        </datalist>
-      </AddLeadField>
+      <div data-lead-category-photo="true" style={{display:'grid',gridTemplateColumns:'minmax(0,7fr) minmax(0,3fr)',gap:8,alignItems:'start'}}>
+        <AddLeadField label="Category">
+          <input style={inputStyle} value={form.category} onChange={set("category")} placeholder="e.g. Cafe" list="category-options" />
+          <datalist id="category-options">
+            {(fieldOptions.category?.length ? fieldOptions.category : ["Cafe", "QSR", "Casual Dining", "Fine Dining", "Cloud Kitchen", "Bakery"]).map((v) => <option key={v} value={v} />)}
+          </datalist>
+        </AddLeadField>
+        <AddLeadField label={`Photo${photoRequired?' *':''}`}>
+          <button type="button" aria-label={photo?'Change restaurant photo':'Add restaurant photo'} onClick={()=>setPhotoMenu(v=>!v)}
+            style={{height:42,width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:5,borderRadius:9,
+              background:photo?'#EAF7EF':'#fff',color:photo?'#14805C':T.route,border:`1px solid ${photo?'#90CDAE':T.line}`,
+              fontWeight:750,fontSize:12,cursor:'pointer'}}>
+            {photo?<CheckCircle2 size={16}/>:<Camera size={16}/>} {photo?'Added':'Add'}
+          </button>
+        </AddLeadField>
+      </div>
+      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={selectPhoto} style={{display:'none'}}/>
+      <input ref={galleryInputRef} type="file" accept="image/*" onChange={selectPhoto} style={{display:'none'}}/>
+      {photoMenu&&<div style={{display:'flex',gap:8,marginBottom:9}}>
+        <button type="button" onClick={()=>cameraInputRef.current?.click()} style={{flex:1,padding:9,borderRadius:9,border:`1px solid ${T.line}`,background:'#fff',fontSize:12}}><Camera size={14} style={{verticalAlign:'-3px'}}/> Camera</button>
+        <button type="button" onClick={()=>galleryInputRef.current?.click()} style={{flex:1,padding:9,borderRadius:9,border:`1px solid ${T.line}`,background:'#fff',fontSize:12}}><Images size={14} style={{verticalAlign:'-3px'}}/> Gallery</button>
+        {photo&&<button type="button" onClick={()=>{setPhoto(null);setPhotoMenu(false)}} style={{padding:9,borderRadius:9,border:`1px solid ${T.line}`,background:'#fff',fontSize:12}}>Remove</button>}
+      </div>}
+      {photoBusy&&<div role="status" style={{fontSize:11.5,color:T.inkSoft,marginBottom:8}}>Compressing photo…</div>}
+      {photo&&<div role="status" style={{fontSize:11.5,color:'#12805C',marginBottom:8}}>Photo ready · {Math.ceil(photo.bytes/1024)} KB · uploads with Save Lead</div>}
+      {photoError&&<div role="alert" style={{fontSize:11.5,color:T.danger,marginBottom:8}}>{photoError}</div>
       <div data-mobile-lead-section="contact"><AddLeadSection>Contact details</AddLeadSection></div>
       <AddLeadField label={`Contact Name${leadSettings.requireContactName ? " *" : ""}`}>
         <input style={inputStyle} value={form.owner} onChange={set("owner")} />
