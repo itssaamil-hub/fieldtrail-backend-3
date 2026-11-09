@@ -1398,7 +1398,7 @@ function AddLeadOverlay({ onClose, onReset, resetDisabled = false, children }) {
           <div style={{ fontFamily:"'Space Grotesk', sans-serif", fontWeight:700, fontSize:18 }}>Add Lead</div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             {onReset && <button type="button" aria-label="Reset Add Lead draft" title="Clear unfinished deal" disabled={resetDisabled} onClick={onReset}
-              style={{border:"none",background:"transparent",cursor:resetDisabled?"not-allowed":"pointer",color:T.ink,display:"flex",alignItems:"center",justifyContent:"center",padding:3,opacity:resetDisabled?.5:1}}><RotateCcw size={19}/></button>}
+              style={{border:"none",background:"transparent",cursor:resetDisabled?"not-allowed":"pointer",color:T.ink,display:"flex",alignItems:"center",justifyContent:"center",padding:3,opacity:resetDisabled ? 0.5 : 1}}><RotateCcw size={19}/></button>}
             <button type="button" aria-label="Close Add Lead" onClick={onClose} style={{ border:"none", background:"transparent", cursor:"pointer", color:T.ink }}><X size={19}/></button>
           </div>
         </div>
