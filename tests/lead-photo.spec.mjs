@@ -44,8 +44,16 @@ test('Salesman Add Lead keeps Category 70% and Photo 30%, with mandatory image g
  expect(columns[0]/(columns[0]+columns[1])).toBeLessThan(.75);
  await area.getByRole('button',{name:'Add restaurant photo'}).click();
  await expect(page.getByRole('button',{name:'Gallery'})).toBeVisible();
- const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+3mS8AAAAASUVORK5CYII=','base64');
- await page.locator('input[type=file]').last().setInputFiles({name:'restaurant.png',mimeType:'image/png',buffer:png});
+ const pngBytes=await page.evaluate(async()=>{
+   const canvas=document.createElement('canvas');
+   canvas.width=320;canvas.height=180;
+   const context=canvas.getContext('2d');
+   context.fillStyle='#284c42';context.fillRect(0,0,320,180);
+   context.fillStyle='#ffffff';context.fillRect(20,20,180,100);
+   const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
+   return Array.from(new Uint8Array(await blob.arrayBuffer()));
+ });
+ await page.locator('input[type=file]').last().setInputFiles({name:'restaurant.png',mimeType:'image/png',buffer:Buffer.from(pngBytes)});
  await expect(page.getByText(/Photo ready/)).toBeVisible();
  await expect(area.getByRole('button',{name:'Change restaurant photo'})).toBeVisible();
 });
