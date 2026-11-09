@@ -53,7 +53,7 @@ test('Salesman Add Lead keeps Category 70% and Photo 30%, with mandatory image g
    const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
    return Array.from(new Uint8Array(await blob.arrayBuffer()));
  });
- await page.locator('input[type=file]').last().setInputFiles({name:'restaurant.png',mimeType:'image/png',buffer:Buffer.from(pngBytes)});
+ await page.getByRole('dialog',{name:'Add Lead'}).locator('input[type=file]').last().setInputFiles({name:'restaurant.png',mimeType:'image/png',buffer:Buffer.from(pngBytes)});
  await expect(page.getByText(/Photo ready/)).toBeVisible();
  await expect(area.getByRole('button',{name:'Change restaurant photo'})).toBeVisible();
 });
