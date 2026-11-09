@@ -49,6 +49,49 @@ function EmployeeFollowUpFeedbackControl({ employeeId }) {
  </div>;
 }
 
+
+function EmployeeLeadPhotoControl({employeeId}) {
+ const [required,setRequired]=useState(false);
+ const [saved,setSaved]=useState(null);
+ const [loading,setLoading]=useState(true);
+ const [saving,setSaving]=useState(false);
+ const [error,setError]=useState('');
+ const [message,setMessage]=useState('');
+ const [retry,setRetry]=useState(0);
+ useEffect(()=>{
+  let active=true;
+  setLoading(true);setError('');setMessage('');
+  api.adminGetEmployeePhotoPolicy(employeeId)
+   .then(data=>{if(active){setRequired(data.required===true);setSaved(data.required===true);}})
+   .catch(err=>{if(active){setSaved(null);setError(err.message||'Could not load photo setting.');}})
+   .finally(()=>{if(active)setLoading(false);});
+  return()=>{active=false;};
+ },[employeeId,retry]);
+ const save=async()=>{
+  setSaving(true);setError('');setMessage('');
+  try{
+   const result=await api.adminSaveEmployeePhotoPolicy(employeeId,required);
+   setRequired(result.required===true);setSaved(result.required===true);
+   setMessage('Photo requirement saved.');
+  }catch(err){setError(err.message||'Could not save photo requirement.');}
+  finally{setSaving(false);}
+ };
+ return <div className="ft-q-box" style={{marginTop:14}}>
+  <h3 style={{marginTop:0}}>Lead Photo</h3>
+  <p className="ft-ob-muted">Control photo capture for this employee when creating a new lead.</p>
+  {error&&<p role="alert">{error} <button type="button" onClick={()=>setRetry(v=>v+1)}>Reload</button></p>}
+  {loading?<p className="ft-ob-muted">Loading photo setting…</p>:<>
+   <label className="ft-q-check">
+    <input type="checkbox" role="switch" aria-label="Photo Required" checked={required} disabled={saving||saved===null} onChange={e=>{setRequired(e.target.checked);setMessage('');}}/>
+    <span>Photo Required — <strong>{required?'ON':'OFF'}</strong></span>
+   </label>
+   <p className="ft-ob-muted">ON: this employee must attach one restaurant photo before saving a new lead. OFF: a photo is optional. The Admin Add Lead form is unchanged.</p>
+   <button className="ft-ob-primary" disabled={saving||saved===null||saved===required} onClick={save}>{saving?'Saving…':'Save Photo Setting'}</button>
+   {message&&<p role="status">{message}</p>}
+  </>}
+ </div>;
+}
+
 export function EmployeeSettings({employee,isActive=true,onClose,onEdit,onDelete,onToggleActive}){
  const [p,setP]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[saved,setSaved]=useState(''),[reload,setReload]=useState(0);
  const month=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit'}).format(new Date())+'-01';
@@ -72,6 +115,7 @@ export function EmployeeSettings({employee,isActive=true,onClose,onEdit,onDelete
    <div className="ft-q-box"><h3 style={{marginTop:0}}>Day Closing</h3>{error&&<p role="alert">{error} <button onClick={()=>setReload(v=>v+1)}>Reload</button></p>}{p?<><p className="ft-ob-muted">Control how this employee starts, works and ends the day.</p>{[['require_closing','Require Day Closing before End Day'],['allow_skip','Allow salesman to skip Day Closing'],['require_skip_reason','Require reason when skipped'],['allow_multiple_starts','Allow multiple Start Day / End Day cycles per day']].map(([k,label])=><label className="ft-q-check" key={k}><input type="checkbox" role="switch" checked={!!p[k]} disabled={busy} onChange={e=>{setP(v=>({...v,[k]:e.target.checked}));setSaved('')}}/><span>{label} — <strong>{p[k]?'ON':'OFF'}</strong></span></label>)}</>:!error&&<p>Loading permissions…</p>}</div>
    {p&&<div className="ft-q-box" style={{marginTop:14}}><h3 style={{marginTop:0}}>Lead Permissions</h3><label className="ft-q-check"><input type="checkbox" role="switch" checked={!!p.allow_lead_without_start_day} disabled={busy} onChange={e=>{setP(v=>({...v,allow_lead_without_start_day:e.target.checked}));setSaved('')}}/><span>Allow lead entry without Start Day / GPS — <strong>{p.allow_lead_without_start_day?'ON':'OFF'}</strong></span></label><p className="ft-ob-muted">Use this only for trusted employees who may add leads without starting their day or capturing GPS.</p></div>}
    <EmployeeFollowUpFeedbackControl employeeId={employee.id}/>
+   <EmployeeLeadPhotoControl employeeId={employee.id}/>
    <EmployeeLocationSettings employeeId={employee.id}/>
    {p&&<><button className="ft-ob-primary" style={{marginTop:14}} disabled={busy} onClick={async()=>{setBusy(true);setError('');try{setP(await api.saveEmployeeClosingPermissions(employee.id,p));setSaved('Work rules saved.')}catch(e){setError(e.message)}finally{setBusy(false)}}}>Save Work Rules</button>{saved&&<p role="status">{saved}</p>}</>}
   </>}
