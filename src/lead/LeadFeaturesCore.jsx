@@ -1442,6 +1442,7 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
     if(!file)return;
     const version = ++photoSelectionVersionRef.current;
     setPhotoBusy(true);setPhotoError('');
+    setError(current => current === "Please upload a restaurant photo." ? "" : current);
     try{
       const compressed=await compressLeadPhoto(file);
       if(version===photoSelectionVersionRef.current){setPhoto(compressed);setPhotoMenu(false);}
@@ -1542,13 +1543,19 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
     (!leadSettings.requireComments || form.notes.trim().length > 0) &&
     (!leadSettings.requireDealValue || form.dealValue.trim().length > 0) &&
     (!leadSettings.requireFollowUpDate || form.nextFollowUpDate.trim().length > 0) &&
-    (!photoRequired || !!photo?.base64) && !photoBusy &&
+    !photoBusy &&
     locationReady;
 
   const verification = gps.state === "ok" ? (gps.accuracy > 50 ? "poor_accuracy" : "verified") : null;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
+    // Make a missing mandatory photo actionable: do not start the save spinner.
+    if (photoRequired && !photo?.base64) {
+      setPhotoError("Please upload a restaurant photo.");
+      setError("Please upload a restaurant photo.");
+      return;
+    }
     if (!online) {
       setError("No connection — this deal has not been saved. Reconnect and try again.");
       return;
@@ -1585,6 +1592,12 @@ function AddLeadModal({ session, online, onClose, onSubmit, onSaved }) {
       submittedRef.current = true;
       clearSalesmanLeadDraft(session.id);
       onSaved(result.lead);
+    } else if (/restaurant photo is required/i.test(result.error || "")) {
+      // If the employee policy was changed while the form was open, honor the
+      // authoritative server response and guide the employee to add a photo.
+      setPhotoRequired(true);
+      setPhotoError("Please upload a restaurant photo.");
+      setError("Please upload a restaurant photo.");
     } else setError(result.error || "Couldn't save the lead — try again.");
   };
 

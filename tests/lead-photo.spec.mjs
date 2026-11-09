@@ -147,3 +147,39 @@ test('Salesman draft retains compressed photo until reset, without uploading it'
  await expect(dialog.getByText(/Photo ready/)).toHaveCount(0);
  await expect(dialog.getByRole('button',{name:'Add restaurant photo'})).toBeVisible();
 });
+
+
+test('mandatory photo missing: Save Lead shows upload warning immediately without spinner or request',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await boot(page,salesmanSession);
+ let leadPosts=0;
+ await page.route('**/salesman/leads', async route=>{
+   if(route.request().method()==='POST')leadPosts++;
+   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({leads:[],total:0})});
+ });
+ await page.getByRole('button',{name:'Add Deal'}).click();
+ const dialog=page.getByRole('dialog',{name:'Add Lead'});
+ await expect(dialog.getByText('Photo *')).toBeVisible();
+ await dialog.getByPlaceholder('e.g. Ganga Cafe').fill('Cafe Missing Photo');
+ const save=dialog.locator('[data-mobile-lead-save="true"]');
+ await expect(save).toBeEnabled();
+ await save.click();
+ await expect(dialog.getByText('Please upload a restaurant photo.').first()).toBeVisible();
+ await expect(dialog.getByText('Photo ready')).toHaveCount(0);
+ await expect(save).toHaveText('Save Lead');
+ await expect(save).toBeEnabled();
+ expect(leadPosts).toBe(0);
+
+ await dialog.getByRole('button',{name:'Add restaurant photo'}).click();
+ const pixels=await page.evaluate(async()=>{
+  const canvas=document.createElement('canvas');canvas.width=320;canvas.height=180;
+  const ctx=canvas.getContext('2d');ctx.fillStyle='#284c42';ctx.fillRect(0,0,320,180);
+  ctx.fillStyle='#ffffff';ctx.fillRect(20,20,180,90);
+  const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
+  return Array.from(new Uint8Array(await blob.arrayBuffer()));
+ });
+ await dialog.locator('input[type=file]').last().setInputFiles({name:'restaurant.png',mimeType:'image/png',buffer:Buffer.from(pixels)});
+ await expect(dialog.getByText(/Photo ready/)).toBeVisible();
+ await expect(dialog.getByText('Please upload a restaurant photo.')).toHaveCount(0);
+ expect(leadPosts).toBe(0);
+});
