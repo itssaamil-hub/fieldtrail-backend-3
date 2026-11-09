@@ -371,6 +371,8 @@ export const api = {
   adminCreateSalesman: (payload) => request("/admin/salesmen", { method: "POST", body: payload }),
   adminUpdateSalesman: (id, payload) => request(`/admin/salesmen/${id}`, { method: "PATCH", body: payload }),
   adminDeleteSalesman: (id) => request(`/admin/salesmen/${id}`, { method: "DELETE" }),
+  adminGetEmployeePhotoPolicy: (id) => request(`/admin/employees/${encodeURIComponent(id)}/photo-policy`),
+  adminSaveEmployeePhotoPolicy: (id, required) => request(`/admin/employees/${encodeURIComponent(id)}/photo-policy`, {method:'PUT',body:{required}}),
   adminGetEmployeeFollowUpFeedback: (id) => request(`/admin/employees/${encodeURIComponent(id)}/follow-up-feedback`),
   adminSaveEmployeeFollowUpFeedback: (id, required) => request(`/admin/employees/${encodeURIComponent(id)}/follow-up-feedback`, { method: "PUT", body: { requireCustomerFeedback: required } }),
   adminGetEmployeeDevicePolicy: (id) => request(`/admin/employees/${id}/device-policy`),
@@ -388,6 +390,7 @@ export const api = {
   adminCheckDuplicateLead: (payload) => request(`/admin/leads/duplicate-check`, { method: "POST", body: payload }),
   adminUpdateLeadStatus: (id, status) => request(`/admin/leads/${id}/status`, { method: "PATCH", body: { status } }),
   adminUpdateLead: (id, payload) => request(`/admin/leads/${id}`, { method: "PATCH", body: normalizeRenewalPayload(payload) }),
+  adminDeleteLeadPhoto: (id) => request(`/admin/leads/${encodeURIComponent(id)}/photo`, {method:'DELETE'}),
   adminDeleteLead: (id) => request(`/admin/leads/${id}`, { method: "DELETE" }),
   adminLeadHistory: (id) => request(`/admin/leads/${id}/history`),
   adminEditFollowUpNote: (id, logId, feedback, requestId) => request(`/admin/leads/${encodeURIComponent(id)}/follow-up-logs/${encodeURIComponent(logId)}/feedback`, { method: "PATCH", body: { feedback, requestId } }),
@@ -563,6 +566,7 @@ export function mapLeadRow(row) {
     owner: row.contact_name,
     phone: row.phone,
     category: row.category,
+    hasPhoto: !!row.photo_url,
     status: row.status,
     // Canonical saved Won Date, returned only by lead reads that include it.
     wonDate: row.won_date || row.wonDate || null,
@@ -578,4 +582,18 @@ export function mapLeadRow(row) {
     notes: row.notes || "",
     syncStatus: "synced",
   };
+}
+
+/** Retrieve a private WebP through the authenticated Engage API, never via a public URL. */
+export async function getLeadPhotoObjectUrl(leadId, isAdmin) {
+  const base=getApiBase(), token=getSession()?.token;
+  if(!base || !token) throw new Error('Sign in to view restaurant photos.');
+  const scope=isAdmin?'admin':'salesman';
+  const response=await fetch(`${base}/${scope}/leads/${encodeURIComponent(leadId)}/photo`,{
+    headers:{Authorization:`Bearer ${token}`},cache:'no-store'
+  });
+  if(!response.ok) throw new Error(response.status===404?'Photo is unavailable.':'Could not load restaurant photo.');
+  const blob=await response.blob();
+  if(blob.type!=='image/webp') throw new Error('The uploaded photo has an invalid format.');
+  return URL.createObjectURL(blob);
 }
